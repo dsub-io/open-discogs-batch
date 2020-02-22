@@ -2,7 +2,7 @@
 A simplified, one-shot based batch uploader for all artists, releases, labels and master releases and their relationships.
 
 ## About this project...
-  Inspired by dump xml monthly exports from [discogs.com](https://www.discogs.com), I personally made this to be used as rest service with hateoas as a mirror DB for my other projects.
+  Inspired by dump xml monthly exports from [discogs.com](https://www.discogs.com), I personally made this to be used as rest service with hateoas as a mirror DB for my other projects. Currently, the entire steps to build a full collections of Mongo DB will take 6~7 hours with 3 concurrent TaskExecutors.
 
 ### Built with
 *[Spring-Boot starter](https://spring.io/projects/spring-boot) - Base framework.
