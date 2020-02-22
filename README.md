@@ -33,6 +33,11 @@ I highly recommend to upload to local MongoDB first, then migrate.
   
 Note that there is a reason why I ditched the beloved rdbms for this project. However, I may provide updates upon any supports to MySQL or PostGRES if time allows... (or maybe with a Golang)
 
+### REST Service
+Since the project is built upon spring-boot, it is simple to implement rest service.
+Simply add Spring-Boot Web Starter as a dependency from pom.xml, then utilize service classes.
+For further instructions, please read official documentations from spring boot reference.
+
 ### Future Plans
 1. Refactoring codes for duplicated, boilerplate codes.
 2. Reconsider project structure.
