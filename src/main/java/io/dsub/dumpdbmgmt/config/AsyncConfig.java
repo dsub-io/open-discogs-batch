@@ -13,6 +13,8 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
  * Also, as of we are reading a single xml file, the reading speed may vary and
  * it is highly doubted to use more than 3 threads for processors and writers
  * will bring better performance. (But you may try)
+ *
+ * NOTE: @EnableAsync is currently redundant, but remained for future reference.
  */
 
 @EnableAsync

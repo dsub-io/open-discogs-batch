@@ -16,7 +16,7 @@ import javax.sql.DataSource;
 
 /**
  * Typical batch configurer, but with shared TaskExecutor injection.
- * <p>
+ *
  * todo: consider more specified job launcher.
  */
 

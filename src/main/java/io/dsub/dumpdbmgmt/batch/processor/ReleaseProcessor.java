@@ -31,7 +31,7 @@ public class ReleaseProcessor implements ItemProcessor<XmlRelease, Release> {
 
         Release release = new Release(xmlRelease.getReleaseId());
 
-        // Single values
+        // Insert "Unknown" as value if an xml does not contain corresponding element.
         String unknown = "Unknown";
 
         if (xmlRelease.getNotes() != null) {
@@ -70,7 +70,6 @@ public class ReleaseProcessor implements ItemProcessor<XmlRelease, Release> {
             release = release.withViewDate("Unknown");
         }
 
-        // Check for occasional blank entry
         if (xmlRelease.getMaster() != null) {
             boolean isMaster = false;
             try {
