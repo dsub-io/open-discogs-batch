@@ -27,6 +27,11 @@ This project utilizes MySQL to record such data, while batch processing xml data
 I highly recommend to upload to local MongoDB first, then migrate.
 
   Also, do note that I will not develop any possible command-line based configurations as of this project requires too many environment variables required, and its nature of one-shot process.
+  
+### Concurrency Issue
+  By default, Spring Data Jpa utilizes OGM for NoSQL databases. Currently, there are no issues when running a step with concurrent setups. However, do note that there will be significant deadlocks and retries, plus exception handlings will be required if you wish to run a job against relational databases. Moreover, the xml itself contains many empty holes such as release dates are not exactly formatted to be naturally fit into any database date time format. Thus, one must assume that it omit many exceptions during parse then persist procedure during each release steps.
+  
+Note that there is a reason why I ditched the beloved rdbms for this project. However, I may provide updates upon any supports to MySQL or PostGRES if time allows... (or maybe with a Golang)
 
 ### Future Plans
 1. Refactoring codes for duplicated, boilerplate codes.
