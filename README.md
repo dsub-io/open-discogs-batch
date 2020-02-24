@@ -41,4 +41,4 @@ For further instructions, please read official documentations from spring boot r
 ### Future Plans
 1. Refactoring codes for duplicated, boilerplate codes.
 2. Reconsider project structure.
-3. Implement slow, but secure MySQL variant (meaning two separate schema)
+3. Implement slow, but secure MySQL variant (meaning two separate schema; JobRepository DataSource, actual DataSource)
