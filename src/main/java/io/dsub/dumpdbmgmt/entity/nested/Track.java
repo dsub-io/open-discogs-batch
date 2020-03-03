@@ -4,6 +4,7 @@ import io.dsub.dumpdbmgmt.entity.BaseEntity;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.With;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Field;
 
 import java.util.Objects;
@@ -13,6 +14,7 @@ import java.util.Objects;
 @AllArgsConstructor
 public final class Track extends BaseEntity {
     @Field(name = "title")
+    @Indexed
     private final String title;
     @Field(name = "duration")
     private final String duration;

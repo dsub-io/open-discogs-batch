@@ -10,6 +10,7 @@ import io.dsub.dumpdbmgmt.entity.nested.Video;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.With;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
@@ -29,6 +30,7 @@ public final class Release extends BaseEntity {
     @Field(name = "status")
     private final String status;
     @Field(name = "title")
+    @Indexed
     private final String title;
     @Field(name = "country")
     private final String country;
@@ -39,16 +41,20 @@ public final class Release extends BaseEntity {
     @Field(name = "data_quality")
     private final String dataQuality;
     @Field(name = "release_date")
+    @Indexed
     private final LocalDate releaseDate;
     @Field(name = "view_date")
+    @Indexed
     private final String viewDate;
     @DBRef
     private final MasterRelease masterRelease;
     @Field(name = "tracks")
+    @Indexed
     private Set<Track> tracks = Collections.synchronizedSet(new HashSet<>());
     @Field(name = "identifiers")
     private Set<Identifier> identifiers = Collections.synchronizedSet(new HashSet<>());
     @Field(name = "formats")
+    @Indexed
     private Set<Format> formats = Collections.synchronizedSet(new HashSet<>());
     @Field(name = "videos")
     private Set<Video> videos = Collections.synchronizedSet(new HashSet<>());

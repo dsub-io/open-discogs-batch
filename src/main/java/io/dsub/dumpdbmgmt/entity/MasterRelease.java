@@ -3,6 +3,7 @@ package io.dsub.dumpdbmgmt.entity;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.With;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
@@ -21,18 +22,22 @@ public final class MasterRelease extends BaseEntity {
     @Id
     private final Long id;
     @Field(name = "title")
+    @Indexed
     private final String title;
     @Field(name = "data_quality")
     private final String dataQuality;
     @Field(name = "release_year")
+    @Indexed
     private final Short releaseYear;
     @DBRef(lazy = true)
     private Set<Release> releases = Collections.synchronizedSet(new HashSet<>());
     @DBRef(lazy = true)
     private Set<Artist> artists = Collections.synchronizedSet(new HashSet<>());
     @Field(name = "genres")
+    @Indexed
     private Set<String> genres = Collections.synchronizedSet(new HashSet<>());
     @Field(name = "styles")
+    @Indexed
     private Set<String> styles = Collections.synchronizedSet(new HashSet<>());
 
     protected MasterRelease() {

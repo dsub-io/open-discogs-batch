@@ -5,6 +5,7 @@ import io.dsub.dumpdbmgmt.entity.intermed.WorkRelease;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.With;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
@@ -23,6 +24,7 @@ public final class Label extends BaseEntity {
     @Id
     private final Long id;
     @Field(name = "name")
+    @Indexed
     private final String name;
     @Field(name = "contact_info")
     private final String contactInfo;
