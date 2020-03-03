@@ -70,6 +70,7 @@ public class ReleaseUpdateProcessor implements ItemProcessor<XmlRelease, Release
                 if (artist != null) {
                     artist = artist.withAddReleases(release);
                     release = release.withAddArtists(artist);
+                    artistService.save(artist);
                 }
             }
         }
@@ -87,6 +88,7 @@ public class ReleaseUpdateProcessor implements ItemProcessor<XmlRelease, Release
                     labelRelease = labelReleaseService.save(labelRelease);
 
                     label = label.withAddLabelRelease(labelRelease);
+                    labelService.save(label);
                     release = release.withAddLabelReleases(labelRelease);
                 }
             }
@@ -105,6 +107,7 @@ public class ReleaseUpdateProcessor implements ItemProcessor<XmlRelease, Release
                     workRelease = workRelease.withRelease(release);
                     workRelease = workReleaseService.save(workRelease);
                     label = label.withAddWorkReleases(workRelease);
+                    labelService.save(label);
                     release = release.withAddWorkReleases(workRelease);
                 }
             }
@@ -122,6 +125,7 @@ public class ReleaseUpdateProcessor implements ItemProcessor<XmlRelease, Release
                     artistCredit = artistCredit.withRelease(release);
                     artistCredit = artistCreditService.save(artistCredit);
                     artist = artist.withAddCredits(artistCredit);
+                    artistService.save(artist);
                     release = release.withAddCreditedArtists(artistCredit);
                 }
             }

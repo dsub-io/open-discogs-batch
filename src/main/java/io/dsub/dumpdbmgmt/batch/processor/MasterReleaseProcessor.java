@@ -55,6 +55,7 @@ public class MasterReleaseProcessor implements ItemProcessor<XmlMaster, MasterRe
                 Artist artist = artistService.findById(source.getId());
                 if (artist != null) {
                     artist = artist.withAddMasterReleases(masterRelease);
+                    artistService.save(artist);
                     masterRelease = masterRelease.withAddArtists(artist);
                 }
             }
