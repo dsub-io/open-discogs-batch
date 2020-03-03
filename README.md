@@ -20,10 +20,17 @@ src/main/resources/application.properties
   Almost all required properties reside in application.properties file, hence it is
 highly recommended to look at the file before begin batch process. Especially, the directory, or a file name of xml source materials must be specified in [application.properties](https://raw.githubusercontent.com/sehy0121/dump-db-mgmt-mongodb/master/src/main/resources/application.properties).
 
+## How to use
+  1. Open the project in any IDE of your choice, import dependencies as usual.
+  2. Put each extracted* xml files (artists, labels, masters, releases) in classpath (where your maven wrapper resides)
+  3. Go to application.properties, set each file name accordingly, set db connections (for local, just set user id and password will be suffice)
+  4. Run the sql (schema-mysql.sql) to create schema for the batch log in MySQL.
+  5. Launch.....
+
 ### Notes
   By default, Spring-Batch relies on one datasource (a database) to upload its status and progress reports.
-This project utilizes MySQL to record such data, while batch processing xml data itself to be persisted in separate Mongo DB. Note that traditional relational databases will require extra steps to ensure the transcation, due to the deadlocks caused by multithreadings.
-  One way to solve the issue (and possibly the best) would be to stick with single threaded job execution, however, will take very long time (approx 3 to 4 days)
+This project utilizes MySQL to record such data, while batch processing xml data itself to be persisted in separate Mongo DB. Note that traditional relational databases will require extra steps to ensure the ACID transaction.
+  One way to tackle the transaction issue (and possibly the best) would be to stick with single threaded job execution, however, will take very long time (approx 3 to 4 days)
 I highly recommend to upload to local MongoDB first, then migrate.
 
   Also, do note that I will not develop any possible command-line based configurations as of this project requires too many environment variables required, and its nature of one-shot process.
