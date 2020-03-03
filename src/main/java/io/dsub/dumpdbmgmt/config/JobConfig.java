@@ -51,6 +51,20 @@ public class JobConfig {
         this.taskExecutor = taskExecutor;
     }
 
+    // A one-shot job operate on following:
+    //
+    //  1. First four steps
+    //  Persist each individual entities (release, artist, label, master-release)
+    //  represented as each steps' names with corresponding entities.
+    //    NOTE:: masterReleaseStep is exception as it requires releases and artists, hence
+    //           each row will be persisted WHILE having document refs.
+    //
+    //  2. Second four steps
+    //  Referencing corresponded entities (i.e. label and release, artist with release...)
+    //  These steps MUST be put after 1st step, otherwise, docs will referencing non-existing documents,
+    //  which will obviously lead to batch failure.
+    //
+
     @Bean
     public Job job(
             @Qualifier("releaseStep") Step releaseStep,
