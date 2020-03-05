@@ -47,3 +47,11 @@ secrets.yml
 /masters-sample.xml
 /labels-sample.xml
 /artists-sample.xml
+/discogs_20200220_artists.xml
+/discogs_20200220_artists.xml.gz
+/discogs_20200220_labels.xml
+/discogs_20200220_labels.xml.gz
+/discogs_20200220_masters.xml
+/discogs_20200220_masters.xml.gz
+/discogs_20200220_releases.xml
+/discogs_20200220_releases.xml.gz

@@ -32,34 +32,6 @@ public class AppConfig {
         this.env = env;
     }
 
-    @Bean(name = "entityManagerFactory")
-    public LocalContainerEntityManagerFactoryBean entityManagerFactory(
-            EntityManagerFactoryBuilder builder,
-            @Qualifier("batchDataSource") DataSource ds,
-            @Qualifier("batchTaskExecutor") ThreadPoolTaskExecutor taskExecutor) {
-
-        JpaVendorAdapter vendorAdapter = new HibernateJpaVendorAdapter();
-        LocalContainerEntityManagerFactoryBean emf;
-
-        emf = builder
-                .dataSource(ds)
-                .packages("io.dsub.dumpdbmgmt")
-                .persistenceUnit("batchPU")
-                .build();
-
-        emf.setBootstrapExecutor(taskExecutor);
-        emf.setValidationMode(ValidationMode.AUTO);
-        emf.setJpaVendorAdapter(vendorAdapter);
-        Properties prop = new Properties();
-        prop.put("hibernate.hbm2ddl.auto", "update");
-        prop.put("hibernate.dialect", "org.hibernate.dialect.MySQL8Dialect");
-        prop.put("hibernate.show_sql", "false");
-        prop.put("hibernate.event.merge.entity_copy_observer", "allow");
-        prop.put("hibernate.order_inserts", "true");
-        emf.setJpaProperties(prop);
-        return emf;
-    }
-
     @Primary
     @Bean(value = "jpaTransactionManager")
     public JpaTransactionManager transactionManager(
@@ -74,5 +46,15 @@ public class AppConfig {
         manager.setValidateExistingTransaction(true);
         manager.setNestedTransactionAllowed(true);
         return manager;
+    }
+
+    @Bean("batchTaskExecutor")
+    public ThreadPoolTaskExecutor taskExecutor() {
+        ThreadPoolTaskExecutor taskExecutor = new ThreadPoolTaskExecutor();
+        taskExecutor.setThreadNamePrefix("Batch_TaskExecutor_");
+        taskExecutor.setMaxPoolSize(env.getProperty("taskex.maxpoolsize", Integer.class, 4));
+        taskExecutor.setCorePoolSize(env.getProperty("taskex.corepoolsize", Integer.class, 2));
+        taskExecutor.afterPropertiesSet();
+        return taskExecutor;
     }
 }

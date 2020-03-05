@@ -75,9 +75,9 @@ public class JobConfig {
             @Qualifier("artistUpdateStep") Step artistUpdateStep,
             @Qualifier("releaseUpdateStep") Step releaseUpdateStep) {
         return jobBuilderFactory.get(LocalDateTime.now().toString())
-                .start(releaseStep)
-                .next(artistStep)
-                .next(artistUpdateStep)
+//                .start(releaseStep)
+//                .next(artistStep)
+                .start(artistUpdateStep)
                 .next(labelStep)
                 .next(masterReleaseStep)
                 .next(labelUpdateStep)
@@ -95,7 +95,6 @@ public class JobConfig {
                 .processor(releaseProcessor)
                 .writer(releaseWriter)
                 .taskExecutor(taskExecutor)
-                .transactionManager(tm)
                 .build();
     }
 
@@ -109,7 +108,6 @@ public class JobConfig {
                 .processor(labelProcessor)
                 .writer(labelWriter)
                 .taskExecutor(taskExecutor)
-                .transactionManager(tm)
                 .build();
     }
 
@@ -123,7 +121,6 @@ public class JobConfig {
                 .processor(artistProcessor)
                 .writer(artistWriter)
                 .taskExecutor(taskExecutor)
-                .transactionManager(tm)
                 .build();
     }
 
@@ -137,7 +134,6 @@ public class JobConfig {
                 .processor(processor)
                 .writer(writer)
                 .taskExecutor(taskExecutor)
-                .transactionManager(tm)
                 .build();
     }
 
@@ -151,7 +147,6 @@ public class JobConfig {
                 .processor(processor)
                 .writer(writer)
                 .taskExecutor(taskExecutor)
-                .transactionManager(tm)
                 .build();
     }
 
@@ -165,7 +160,6 @@ public class JobConfig {
                 .processor(artistProcessor)
                 .writer(artistWriter)
                 .taskExecutor(taskExecutor)
-                .transactionManager(tm)
                 .build();
     }
 
@@ -180,7 +174,6 @@ public class JobConfig {
                 .processor(releaseProcessor)
                 .writer(releaseWriter)
                 .taskExecutor(taskExecutor)
-                .transactionManager(tm)
                 .build();
     }
 }

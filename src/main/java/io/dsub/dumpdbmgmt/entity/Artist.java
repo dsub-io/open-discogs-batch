@@ -106,63 +106,27 @@ public final class Artist extends BaseEntity {
 
 
     public Artist withAddAliasArtists(Artist... artists) {
-        Set<Artist> modifiedSet = Collections.synchronizedSet(new HashSet<>());
-        modifiedSet.addAll(this.alias);
-        modifiedSet.forEach(entry -> {
-            for (Artist artist : artists) {
-                if (!entry.getId().equals(artist.getId())) {
-                    modifiedSet.add(artist);
-                }
-            }
-        });
-        return this.withAlias(modifiedSet);
+        return this.withAlias(getCopiedArtistSet(this.alias, artists));
     }
 
     public Artist withRemoveAliasArtist(Artist artist) {
-        Set<Artist> modifiedSet = Collections.synchronizedSet(new HashSet<>());
-        modifiedSet.addAll(this.alias);
-        modifiedSet.removeIf(candidate -> candidate.getId().equals(artist.getId()));
-        return this.withAlias(modifiedSet);
+        return this.withAlias(getRemovedArtistSet(this.alias, artist));
     }
 
     public Artist withAddMemberArtists(Artist... artists) {
-        Set<Artist> modifiedSet = Collections.synchronizedSet(new HashSet<>());
-        modifiedSet.addAll(this.members);
-        modifiedSet.forEach(entry -> {
-            for (Artist artist : artists) {
-                if (!entry.getId().equals(artist.getId())) {
-                    modifiedSet.add(artist);
-                }
-            }
-        });
-        return this.withMembers(modifiedSet);
+        return this.withMembers(getCopiedArtistSet(this.members, artists));
     }
 
     public Artist withRemoveMemberArtist(Artist artist) {
-        Set<Artist> modifiedSet = Collections.synchronizedSet(new HashSet<>());
-        modifiedSet.addAll(this.members);
-        modifiedSet.removeIf(candidate -> candidate.getId().equals(artist.getId()));
-        return this.withMembers(modifiedSet);
+        return this.withMembers(getRemovedArtistSet(this.members, artist));
     }
 
     public Artist withAddGroupArtists(Artist... artists) {
-        Set<Artist> modifiedSet = Collections.synchronizedSet(new HashSet<>());
-        modifiedSet.addAll(this.groups);
-        modifiedSet.forEach(entry -> {
-            for (Artist artist : artists) {
-                if (!entry.getId().equals(artist.getId())) {
-                    modifiedSet.add(artist);
-                }
-            }
-        });
-        return this.withGroups(modifiedSet);
+        return this.withGroups(getCopiedArtistSet(this.groups, artists));
     }
 
     public Artist withRemoveGroupArtist(Artist artist) {
-        Set<Artist> modifiedSet = Collections.synchronizedSet(new HashSet<>());
-        modifiedSet.addAll(this.groups);
-        modifiedSet.removeIf(candidate -> candidate.getId().equals(artist.getId()));
-        return this.withGroups(modifiedSet);
+        return this.withGroups(getRemovedArtistSet(this.groups, artist));
     }
 
     @Override
@@ -191,5 +155,21 @@ public final class Artist extends BaseEntity {
                 ", profile='" + profile + '\'' +
                 ", dataQuality='" + dataQuality + '\'' +
                 '}';
+    }
+
+    public Set<Artist> getCopiedArtistSet(Set<Artist> source, Artist... artists) {
+        Set<Artist> modifiedSet = Collections.synchronizedSet(new HashSet<>());
+        modifiedSet.addAll(source);
+        modifiedSet.addAll(Arrays.asList(artists));
+        return modifiedSet;
+    }
+
+    public Set<Artist> getRemovedArtistSet(Set<Artist> source, Artist... artists) {
+        Set<Artist> modifiedSet = Collections.synchronizedSet(new HashSet<>());
+        modifiedSet.addAll(source);
+        for (Artist artist : artists) {
+            modifiedSet.removeIf(entry -> entry.getId().equals(artist.getId()));
+        }
+        return modifiedSet;
     }
 }

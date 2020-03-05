@@ -3,10 +3,17 @@ package io.dsub.dumpdbmgmt.batch.processor;
 import io.dsub.dumpdbmgmt.entity.Artist;
 import io.dsub.dumpdbmgmt.service.ArtistService;
 import io.dsub.dumpdbmgmt.xmlobj.XmlArtist;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.stereotype.Component;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+
+@Slf4j
 @StepScope
 @Component("artistUpdateProcessor")
 public class ArtistUpdateProcessor implements ItemProcessor<XmlArtist, Artist> {

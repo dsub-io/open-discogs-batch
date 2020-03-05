@@ -173,4 +173,21 @@ class ArtistTest {
                 && result.contains(artist.getRealName())
                 && result.contains(String.valueOf(artist.getId())));
     }
+
+    @Test
+    void testWithAddAliasArtist() {
+        for (int i = 0; i < 10; i++) {
+           artist = artist.withAddAliasArtists(new Artist((long)i));
+        }
+        assertEquals(10, artist.getAlias().size());
+    }
+
+    @Test
+    void testWithRemoveAliasArtist() {
+        for (int i = 0; i < 10; i++) {
+            artist = artist.withAddAliasArtists(new Artist((long)i));
+        }
+        artist = artist.withRemoveAliasArtist(new Artist(6L));
+        assertEquals(9, artist.getAlias().size());
+    }
 }
