@@ -90,7 +90,7 @@ public class JobConfig {
                             @Qualifier("releaseProcessor") ItemProcessor<XmlRelease, Release> releaseProcessor,
                             RepositoryItemWriter<Release> releaseWriter) {
         return stepBuilderFactory.get("releaseStep")
-                .<XmlRelease, Release>chunk(3000)
+                .<XmlRelease, Release>chunk(1000)
                 .reader(releaseReader)
                 .processor(releaseProcessor)
                 .writer(releaseWriter)
@@ -104,7 +104,7 @@ public class JobConfig {
                           @Qualifier("labelProcessor") ItemProcessor<XmlLabel, Label> labelProcessor,
                           RepositoryItemWriter<Label> labelWriter) {
         return stepBuilderFactory.get("labelStep")
-                .<XmlLabel, Label>chunk(3000)
+                .<XmlLabel, Label>chunk(1000)
                 .reader(labelReader)
                 .processor(labelProcessor)
                 .writer(labelWriter)
@@ -118,7 +118,7 @@ public class JobConfig {
                            @Qualifier("artistProcessor") ItemProcessor<XmlArtist, Artist> artistProcessor,
                            RepositoryItemWriter<Artist> artistWriter) {
         return stepBuilderFactory.get("artistStep")
-                .<XmlArtist, Artist>chunk(3000)
+                .<XmlArtist, Artist>chunk(1000)
                 .reader(artistReader)
                 .processor(artistProcessor)
                 .writer(artistWriter)
@@ -132,7 +132,7 @@ public class JobConfig {
                                   @Qualifier("masterReleaseProcessor") ItemProcessor<XmlMaster, MasterRelease> processor,
                                   RepositoryItemWriter<MasterRelease> writer) {
         return stepBuilderFactory.get("masterReleaseStep")
-                .<XmlMaster, MasterRelease>chunk(3000)
+                .<XmlMaster, MasterRelease>chunk(1000)
                 .reader(reader)
                 .processor(processor)
                 .writer(writer)
@@ -146,7 +146,7 @@ public class JobConfig {
                                 @Qualifier("labelUpdateProcessor") ItemProcessor<XmlLabel, Label> processor,
                                 RepositoryItemWriter<Label> writer) {
         return stepBuilderFactory.get("labelUpdateStep")
-                .<XmlLabel, Label>chunk(3000)
+                .<XmlLabel, Label>chunk(1000)
                 .reader(reader)
                 .processor(processor)
                 .writer(writer)
