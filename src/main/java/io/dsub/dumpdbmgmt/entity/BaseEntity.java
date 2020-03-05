@@ -21,5 +21,4 @@ public abstract class BaseEntity {
     @DateTimeFormat(style = "M-")
     @LastModifiedDate
     protected LocalDate updatedAt;
-
 }
