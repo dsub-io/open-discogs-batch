@@ -16,6 +16,9 @@ public class DateParser {
      *          however, the result will be 1500-01-01, due to high risk of
      *          batch failure.
      * @return formatted release date of LocalDate type.
+     *
+     * NOTE: IF any malformed date is detected AND it does NOT have year info
+     * >> the date will be parsed as Jan 01 1500.
      */
     public static LocalDate parse(String s) {
         if (s == null || s.equals("None")) {

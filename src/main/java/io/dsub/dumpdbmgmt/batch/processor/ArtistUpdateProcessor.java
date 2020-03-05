@@ -64,6 +64,8 @@ public class ArtistUpdateProcessor implements ItemProcessor<XmlArtist, Artist> {
             }
             return artist;
         }
+        // Not found artist as of filtered during ArtistProcessor.
+        // Skip the entry.
         return null;
     }
 }
