@@ -8,11 +8,6 @@ import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.stereotype.Component;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
-
 @Slf4j
 @StepScope
 @Component("artistUpdateProcessor")
@@ -44,31 +39,43 @@ public class ArtistUpdateProcessor implements ItemProcessor<XmlArtist, Artist> {
 
         Artist artist = artistService.findById(item.getId());
 
+        // Artist is present. Begin Processing.
         if (artist != null && artist.getId() != null) {
+
+            // Find aliases, add document references of them to the current artist document.
             if (item.getAliases() != null) {
                 for (XmlArtist.Aliase alias : item.getAliases()) {
                     Artist aliasArtist = artistService.findById(alias.getId());
-                    if (aliasArtist != null && aliasArtist.getId() != null) {
-                        artist = artist.withAddAliasArtists(aliasArtist);
+                    if (aliasArtist == null || aliasArtist.getId() == null) {
+                        continue;
                     }
+                    artist = artist.withAddAliasArtists(aliasArtist);
                 }
             }
+
+            // Find member artists, add document references of them to the current artist document.
             if (item.getMembers() != null) {
                 for (XmlArtist.Member member : item.getMembers()) {
                     Artist memberArtist = artistService.findById(member.getId());
-                    if (memberArtist != null && memberArtist.getId() != null) {
-                        artist = artist.withAddMemberArtists(memberArtist);
+                    if (memberArtist == null || memberArtist.getId() == null) {
+                        continue;
                     }
+                    artist = artist.withAddMemberArtists(memberArtist);
                 }
             }
+
+            // Find groups of artists then add document references of them to the current artist document.
             if (item.getGroups() != null) {
                 for (XmlArtist.Group group : item.getGroups()) {
                     Artist groupArtist = artistService.findById(group.getId());
-                    if (groupArtist != null && groupArtist.getId() != null) {
-                        artist = artist.withAddGroupArtists(groupArtist);
+                    if (groupArtist == null || groupArtist.getId() == null) {
+                        continue;
                     }
+                    artist = artist.withAddGroupArtists(groupArtist);
                 }
             }
+
+            // Done and send back the processed artist document.
             return artist;
         }
         // Not found artist as of filtered during ArtistProcessor.

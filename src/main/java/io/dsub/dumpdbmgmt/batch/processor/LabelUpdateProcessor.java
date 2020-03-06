@@ -37,7 +37,6 @@ public class LabelUpdateProcessor implements ItemProcessor<XmlLabel, Label> {
                 Label subLabel = labelService.findById(source.getId());
                 if (subLabel != null) {
                     subLabel = subLabel.withAddParentLabel(label);
-                    labelService.save(subLabel);
                     label = label.withAddSubLabel(subLabel);
                 }
             }

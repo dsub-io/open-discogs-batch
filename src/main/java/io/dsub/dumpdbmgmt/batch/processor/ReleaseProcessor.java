@@ -62,6 +62,10 @@ public class ReleaseProcessor implements ItemProcessor<XmlRelease, Release> {
 
         // Check for null date
         if (xmlRelease.getReleaseDate() != null) {
+            // Attempt parse the raw string into Date format.
+            // If the string is malformed, the result will be Jan 01 1500.
+            // If only the year is valid, the result will be Jun 06, YYYY.
+            // If only year and month is valid, the result will be MM 06, YYYY.
             LocalDate date = DateParser.parse(xmlRelease.getReleaseDate());
             release = release.withReleaseDate(date);
             release = release.withViewDate(xmlRelease.getReleaseDate());

@@ -11,6 +11,7 @@ import io.dsub.dumpdbmgmt.repository.ReleaseRepository;
 import io.dsub.dumpdbmgmt.service.ArtistCreditService;
 import io.dsub.dumpdbmgmt.service.LabelReleaseService;
 import io.dsub.dumpdbmgmt.service.WorkReleaseService;
+import lombok.Synchronized;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.item.data.RepositoryItemWriter;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -63,6 +64,7 @@ public class RepositoryItemWriterProvider {
 
         RepositoryItemWriter<Release> writer = new RepositoryItemWriter<>() {
             @Override
+            @Synchronized
             public void write(List<? extends Release> items) throws Exception {
                 super.write(items);
                 log.info("started writing from {}", items.get(0).getId().toString());
@@ -78,6 +80,7 @@ public class RepositoryItemWriterProvider {
     public RepositoryItemWriter<Label> labelRepositoryItemWriter() throws Exception {
         RepositoryItemWriter<Label> writer = new RepositoryItemWriter<>() {
             @Override
+            @Synchronized
             public void write(List<? extends Label> items) throws Exception {
                 super.write(items);
                 log.info("started writing from {}", items.get(0).getId().toString());
@@ -93,6 +96,7 @@ public class RepositoryItemWriterProvider {
     public RepositoryItemWriter<Artist> artistRepositoryItemWriter() throws Exception {
         RepositoryItemWriter<Artist> writer = new RepositoryItemWriter<>() {
             @Override
+            @Synchronized
             public void write(List<? extends Artist> items) throws Exception {
                 super.write(items);
                 log.info("started writing from {}", items.get(0).getId().toString());
@@ -109,6 +113,7 @@ public class RepositoryItemWriterProvider {
     public RepositoryItemWriter<MasterRelease> masterReleaseRepositoryItemWriter() throws Exception {
         RepositoryItemWriter<MasterRelease> writer = new RepositoryItemWriter<>() {
             @Override
+            @Synchronized
             public void write(List<? extends MasterRelease> items) throws Exception {
                 super.write(items);
                 log.info("started writing from {}", items.get(0).getId().toString());
