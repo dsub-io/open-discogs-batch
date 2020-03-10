@@ -9,10 +9,10 @@ import io.dsub.dumpdbmgmt.repository.LabelRepository;
 import io.dsub.dumpdbmgmt.repository.MasterReleaseRepository;
 import io.dsub.dumpdbmgmt.repository.ReleaseRepository;
 import io.dsub.dumpdbmgmt.service.ArtistCreditService;
+import io.dsub.dumpdbmgmt.service.CompanyReleaseService;
 import io.dsub.dumpdbmgmt.service.LabelReleaseService;
-import io.dsub.dumpdbmgmt.service.WorkReleaseService;
-import lombok.Synchronized;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.batch.integration.async.AsyncItemWriter;
 import org.springframework.batch.item.data.RepositoryItemWriter;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
@@ -30,7 +30,7 @@ import java.util.List;
 
 @Slf4j
 @Component
-public class RepositoryItemWriterProvider {
+public class ItemWriterProvider {
 
     ReleaseRepository releaseRepository;
     LabelRepository labelRepository;
@@ -38,25 +38,67 @@ public class RepositoryItemWriterProvider {
     MasterReleaseRepository masterReleaseRepository;
     ArtistCreditService artistCreditService;
     LabelReleaseService labelReleaseService;
-    WorkReleaseService workReleaseService;
+    CompanyReleaseService companyReleaseService;
     EntityManagerFactory emf;
 
-    public RepositoryItemWriterProvider(ReleaseRepository releaseRepository,
-                                        LabelRepository labelRepository,
-                                        ArtistRepository artistRepository,
-                                        MasterReleaseRepository masterReleaseRepository,
-                                        ArtistCreditService artistCreditService,
-                                        LabelReleaseService labelReleaseService,
-                                        WorkReleaseService workReleaseService,
-                                        @Qualifier("entityManagerFactory") EntityManagerFactory emf) {
+    public ItemWriterProvider(ReleaseRepository releaseRepository,
+                              LabelRepository labelRepository,
+                              ArtistRepository artistRepository,
+                              MasterReleaseRepository masterReleaseRepository,
+                              ArtistCreditService artistCreditService,
+                              LabelReleaseService labelReleaseService,
+                              CompanyReleaseService companyReleaseService,
+                              @Qualifier("entityManagerFactory") EntityManagerFactory emf) {
         this.releaseRepository = releaseRepository;
         this.labelRepository = labelRepository;
         this.artistRepository = artistRepository;
         this.masterReleaseRepository = masterReleaseRepository;
         this.artistCreditService = artistCreditService;
         this.labelReleaseService = labelReleaseService;
-        this.workReleaseService = workReleaseService;
+        this.companyReleaseService = companyReleaseService;
         this.emf = emf;
+    }
+
+    @Bean(value = "asyncLabelWriter")
+    public AsyncItemWriter<Label> labelAsyncItemWriter(
+            @Qualifier("labelRepositoryWriter") RepositoryItemWriter<Label> writer) throws Exception {
+        AsyncItemWriter<Label> asyncWriter = new AsyncItemWriter<>();
+        asyncWriter.setDelegate(writer);
+        try {
+            asyncWriter.afterPropertiesSet();
+        } catch (Exception e) {
+            log.debug("failed initialize bean <asyncLabelWriter>");
+            throw e;
+        }
+        return asyncWriter;
+    }
+
+    @Bean(value = "asyncReleaseWriter")
+    public AsyncItemWriter<Release> releaseAsyncItemWriter(
+            @Qualifier("releaseRepositoryWriter") RepositoryItemWriter<Release> writer) throws Exception {
+        AsyncItemWriter<Release> asyncWriter = new AsyncItemWriter<>();
+        asyncWriter.setDelegate(writer);
+        try {
+            asyncWriter.afterPropertiesSet();
+        } catch (Exception e) {
+            log.debug("failed initialize bean <asyncReleaseWriter>");
+            throw e;
+        }
+        return asyncWriter;
+    }
+
+
+    @Bean(value = "asyncArtistWriter")
+    public AsyncItemWriter<Artist> artistAsyncItemWriter(@Qualifier("artistRepositoryWriter") RepositoryItemWriter<Artist> writer) throws Exception {
+        AsyncItemWriter<Artist> asyncWriter = new AsyncItemWriter<>();
+        asyncWriter.setDelegate(writer);
+        try {
+            asyncWriter.afterPropertiesSet();
+        } catch (Exception e) {
+            log.debug("failed initialize bean <asyncArtistWriter>");
+            throw e;
+        }
+        return asyncWriter;
     }
 
     @Bean(value = "releaseRepositoryWriter")
@@ -64,10 +106,9 @@ public class RepositoryItemWriterProvider {
 
         RepositoryItemWriter<Release> writer = new RepositoryItemWriter<>() {
             @Override
-            @Synchronized
             public void write(List<? extends Release> items) throws Exception {
+                log.info("Writing release ID " + items.get(0).getId());
                 super.write(items);
-                log.info("started writing from {}", items.get(0).getId().toString());
             }
         };
         writer.setMethodName("save");
@@ -80,10 +121,9 @@ public class RepositoryItemWriterProvider {
     public RepositoryItemWriter<Label> labelRepositoryItemWriter() throws Exception {
         RepositoryItemWriter<Label> writer = new RepositoryItemWriter<>() {
             @Override
-            @Synchronized
             public void write(List<? extends Label> items) throws Exception {
+                log.info("Writing label ID " + items.get(0).getId());
                 super.write(items);
-                log.info("started writing from {}", items.get(0).getId().toString());
             }
         };
         writer.setMethodName("save");
@@ -96,10 +136,11 @@ public class RepositoryItemWriterProvider {
     public RepositoryItemWriter<Artist> artistRepositoryItemWriter() throws Exception {
         RepositoryItemWriter<Artist> writer = new RepositoryItemWriter<>() {
             @Override
-            @Synchronized
             public void write(List<? extends Artist> items) throws Exception {
+                if (items.size() > 0) {
+                    log.info("Writing artist ID " + items.get(0).getId());
+                }
                 super.write(items);
-                log.info("started writing from {}", items.get(0).getId().toString());
             }
         };
         writer.setMethodName("save");
@@ -113,10 +154,9 @@ public class RepositoryItemWriterProvider {
     public RepositoryItemWriter<MasterRelease> masterReleaseRepositoryItemWriter() throws Exception {
         RepositoryItemWriter<MasterRelease> writer = new RepositoryItemWriter<>() {
             @Override
-            @Synchronized
             public void write(List<? extends MasterRelease> items) throws Exception {
+                log.info("Writing masterRelease ID " + items.get(0).getId());
                 super.write(items);
-                log.info("started writing from {}", items.get(0).getId().toString());
             }
         };
         writer.setMethodName("save");

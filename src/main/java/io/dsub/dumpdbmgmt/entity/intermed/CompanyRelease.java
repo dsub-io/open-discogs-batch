@@ -1,14 +1,11 @@
 package io.dsub.dumpdbmgmt.entity.intermed;
 
 import io.dsub.dumpdbmgmt.entity.BaseEntity;
-import io.dsub.dumpdbmgmt.entity.Label;
-import io.dsub.dumpdbmgmt.entity.Release;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.With;
 import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
@@ -24,17 +21,17 @@ import java.util.Objects;
 @With
 @AllArgsConstructor
 @Document(collection = "work_release")
-public final class WorkRelease extends BaseEntity {
+public final class CompanyRelease extends BaseEntity {
     @Id
     private final ObjectId id;
     @Field(name = "service_note")
     private final String serviceNote;
-    @DBRef
-    private final Release release;
-    @DBRef
-    private final Label label;
+    @Field("release_id")
+    private final Long release;
+    @Field(name = "company_id")
+    private final Long label;
 
-    public WorkRelease() {
+    public CompanyRelease() {
         this.id = null;
         this.serviceNote = null;
         this.release = null;
@@ -53,7 +50,7 @@ public final class WorkRelease extends BaseEntity {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        WorkRelease that = (WorkRelease) o;
+        CompanyRelease that = (CompanyRelease) o;
         return Objects.equals(id, that.id) &&
                 Objects.equals(serviceNote, that.serviceNote);
     }

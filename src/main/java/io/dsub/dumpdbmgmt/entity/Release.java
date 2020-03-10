@@ -1,17 +1,15 @@
 package io.dsub.dumpdbmgmt.entity;
 
-import io.dsub.dumpdbmgmt.entity.intermed.ArtistCredit;
-import io.dsub.dumpdbmgmt.entity.intermed.LabelRelease;
-import io.dsub.dumpdbmgmt.entity.intermed.WorkRelease;
 import io.dsub.dumpdbmgmt.entity.nested.Format;
 import io.dsub.dumpdbmgmt.entity.nested.Identifier;
 import io.dsub.dumpdbmgmt.entity.nested.Track;
 import io.dsub.dumpdbmgmt.entity.nested.Video;
+import io.dsub.dumpdbmgmt.util.ArraysUtil;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.With;
+import org.bson.types.ObjectId;
 import org.springframework.data.mongodb.core.index.Indexed;
-import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
@@ -24,7 +22,6 @@ import java.util.*;
 @AllArgsConstructor
 @Document(collection = "releases")
 public final class Release extends BaseEntity {
-
     @Id
     private final Long id;
     @Field(name = "status")
@@ -46,8 +43,10 @@ public final class Release extends BaseEntity {
     @Field(name = "view_date")
     @Indexed
     private final String viewDate;
-    @DBRef
-    private final MasterRelease masterRelease;
+    @Field(name = "master_release")
+    private final Long masterRelease;
+    @Field(name = "artists")
+    private Long[] artists = new Long[0];
     @Field(name = "tracks")
     @Indexed
     private Set<Track> tracks = Collections.synchronizedSet(new HashSet<>());
@@ -58,14 +57,12 @@ public final class Release extends BaseEntity {
     private Set<Format> formats = Collections.synchronizedSet(new HashSet<>());
     @Field(name = "videos")
     private Set<Video> videos = Collections.synchronizedSet(new HashSet<>());
-    @DBRef(lazy = true)
-    private Set<Artist> artists = Collections.synchronizedSet(new HashSet<>());
-    @DBRef(lazy = true)
-    private Set<ArtistCredit> creditedArtists = Collections.synchronizedSet(new HashSet<>());
-    @DBRef(lazy = true)
-    private Set<LabelRelease> labelReleases = Collections.synchronizedSet(new HashSet<>());
-    @DBRef(lazy = true)
-    private Set<WorkRelease> workReleases = Collections.synchronizedSet(new HashSet<>());
+    @Field("artist_credits")
+    private Set<ObjectId> creditedArtists = Collections.synchronizedSet(new HashSet<>());
+    @Field(name = "label_releases")
+    private Set<ObjectId> labelReleases = Collections.synchronizedSet(new HashSet<>());
+    @Field(name = "company_releases")
+    private Set<ObjectId> companyReleases = Collections.synchronizedSet(new HashSet<>());
 
     protected Release() {
         this.id = null;
@@ -118,18 +115,12 @@ public final class Release extends BaseEntity {
                 Objects.equals(isMain, release.isMain);
     }
 
-    public Release withAddArtists(Artist... artists) {
-        Set<Artist> modifiedSet = Collections.synchronizedSet(new HashSet<>());
-        modifiedSet.addAll(this.artists);
-        modifiedSet.addAll(Arrays.asList(artists));
-        return this.withArtists(modifiedSet);
+    public Release withAddArtists(Long... artistIds) {
+        return this.withArtists(ArraysUtil.merge(this.artists, artistIds));
     }
 
-    public Release withRemoveArtist(Artist artist) {
-        Set<Artist> modifiedSet = Collections.synchronizedSet(new HashSet<>());
-        modifiedSet.addAll(this.artists);
-        modifiedSet.removeIf(candidate -> candidate.getId().equals(artist.getId()));
-        return this.withArtists(modifiedSet);
+    public Release withRemoveArtist(Long artistId) {
+        return this.withArtists(ArraysUtil.remove(this.artists, artistId));
     }
 
     public Release withAddTracks(Track... tracks) {
@@ -188,46 +179,46 @@ public final class Release extends BaseEntity {
         return this.withVideos(modifiedSet);
     }
 
-    public Release withAddLabelReleases(LabelRelease... labelReleases) {
-        Set<LabelRelease> modifiedSet = Collections.synchronizedSet(new HashSet<>());
-        modifiedSet.addAll(this.labelReleases);
-        modifiedSet.addAll(Arrays.asList(labelReleases));
-        return this.withLabelReleases(modifiedSet);
+    public Release withAddLabelReleases(ObjectId... labelReleaseIds) {
+        Set<ObjectId> idSet = Collections.synchronizedSet(new HashSet<>());
+        idSet.addAll(this.labelReleases);
+        idSet.addAll(Arrays.asList(labelReleaseIds));
+        return this.withLabelReleases(idSet);
     }
 
-    public Release withRemoveLabelRelease(LabelRelease labelRelease) {
-        Set<LabelRelease> modifiedSet = Collections.synchronizedSet(new HashSet<>());
-        modifiedSet.addAll(this.labelReleases);
-        modifiedSet.removeIf(candidate -> candidate.equals(labelRelease));
-        return this.withLabelReleases(modifiedSet);
+    public Release withRemoveLabelRelease(ObjectId labelReleaseId) {
+        Set<ObjectId> idSet = Collections.synchronizedSet(new HashSet<>());
+        idSet.addAll(this.labelReleases);
+        idSet.removeIf(entry -> entry.equals(labelReleaseId));
+        return this.withLabelReleases(idSet);
     }
 
-    public Release withAddWorkReleases(WorkRelease... workReleases) {
-        Set<WorkRelease> modifiedSet = Collections.synchronizedSet(new HashSet<>());
-        modifiedSet.addAll(this.workReleases);
-        modifiedSet.addAll(Arrays.asList(workReleases));
-        return this.withWorkReleases(modifiedSet);
+    public Release withAddCompaniesReleases(ObjectId... workReleaseIds) {
+        Set<ObjectId> idSet = Collections.synchronizedSet(new HashSet<>());
+        idSet.addAll(this.companyReleases);
+        idSet.addAll(Arrays.asList(workReleaseIds));
+        return this.withCompanyReleases(idSet);
     }
 
-    public Release withRemoveWorkRelease(WorkRelease workRelease) {
-        Set<WorkRelease> modifiedSet = Collections.synchronizedSet(new HashSet<>());
-        modifiedSet.addAll(this.workReleases);
-        modifiedSet.removeIf(candidate -> candidate.equals(workRelease));
-        return this.withWorkReleases(modifiedSet);
+    public Release withRemoveCompanyRelease(ObjectId workReleaseId) {
+        Set<ObjectId> idSet = Collections.synchronizedSet(new HashSet<>());
+        idSet.addAll(this.companyReleases);
+        idSet.removeIf(entry -> entry.equals(workReleaseId));
+        return this.withCompanyReleases(idSet);
     }
 
-    public Release withAddCreditedArtists(ArtistCredit... artistCredits) {
-        Set<ArtistCredit> modifiedSet = Collections.synchronizedSet(new HashSet<>());
-        modifiedSet.addAll(this.creditedArtists);
-        modifiedSet.addAll(Arrays.asList(artistCredits));
-        return this.withCreditedArtists(modifiedSet);
+    public Release withAddCreditedArtists(ObjectId... creditedArtistsIds) {
+        Set<ObjectId> idSet = Collections.synchronizedSet(new HashSet<>());
+        idSet.addAll(this.creditedArtists);
+        idSet.addAll(Arrays.asList(creditedArtistsIds));
+        return this.withCreditedArtists(idSet);
     }
 
-    public Release withRemoveCreditedArtists(ArtistCredit artistCredit) {
-        Set<ArtistCredit> modifiedSet = Collections.synchronizedSet(new HashSet<>());
-        modifiedSet.addAll(this.creditedArtists);
-        modifiedSet.removeIf(candidate -> candidate.getCredit().equals(artistCredit.getCredit()));
-        return this.withCreditedArtists(modifiedSet);
+    public Release withRemoveCreditedArtists(ObjectId artistCreditId) {
+        Set<ObjectId> idSet = Collections.synchronizedSet(new HashSet<>());
+        idSet.addAll(this.creditedArtists);
+        idSet.removeIf(entry -> entry.equals(artistCreditId));
+        return this.withCreditedArtists(idSet);
     }
 
     @Override

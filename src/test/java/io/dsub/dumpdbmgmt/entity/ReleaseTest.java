@@ -1,10 +1,9 @@
 package io.dsub.dumpdbmgmt.entity;
 
-import io.dsub.dumpdbmgmt.entity.intermed.ArtistCredit;
-import io.dsub.dumpdbmgmt.entity.intermed.LabelRelease;
 import io.dsub.dumpdbmgmt.entity.nested.Format;
 import io.dsub.dumpdbmgmt.entity.nested.Identifier;
 import io.dsub.dumpdbmgmt.entity.nested.Track;
+import io.dsub.dumpdbmgmt.util.ArraysUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -99,40 +98,18 @@ class ReleaseTest {
     void withMasterRelease() {
         MasterRelease masterRelease = new MasterRelease();
         masterRelease = masterRelease.withId(33L);
-        release = release.withMasterRelease(masterRelease);
+        release = release.withMasterRelease(masterRelease.getId());
         assertNotNull(release.getMasterRelease());
-        assertEquals(masterRelease, release.getMasterRelease());
-        assertSame(masterRelease, release.getMasterRelease());
-        assertEquals(33L, release.getMasterRelease().getId());
+        assertEquals(masterRelease.getId(), release.getMasterRelease());
+        assertEquals(33L, release.getMasterRelease());
     }
 
     @Test
     void withArtists() {
-        Artist artist = new Artist();
-        artist = artist.withId(3245L);
-        Set<Artist> target = Collections.synchronizedSet(new HashSet<>());
-        target.add(artist);
-        release = release.withArtists(target);
+        release = release.withAddArtists(324L);
         assertNotNull(release.getArtists());
-        assertEquals(1, release.getArtists().size());
-        assertEquals(3245L, release.getArtists().iterator().next().getId());
-    }
-
-    @Test
-    void withCreditedArtists() {
-        ArtistCredit artistCredit = new ArtistCredit();
-        Artist artist = new Artist();
-        artist = artist.withId(3L);
-        artistCredit = artistCredit.withArtist(artist);
-        artistCredit = artistCredit.withCredit("Did Something!");
-        artistCredit = artistCredit.withRelease(release);
-        Set<ArtistCredit> target = Collections.synchronizedSet(new HashSet<>());
-        target.add(artistCredit);
-        release = release.withCreditedArtists(target);
-
-        assertNotNull(release.getCreditedArtists());
-        assertEquals(3L, release.getCreditedArtists().iterator().next().getArtist().getId());
-        assertEquals("Did Something!", release.getCreditedArtists().iterator().next().getCredit());
+        assertEquals(1, release.getArtists().length);
+        assertEquals(324L, release.getArtists()[0]);
     }
 
     @Test
@@ -178,34 +155,10 @@ class ReleaseTest {
     }
 
     @Test
-    void withLabelReleases() {
-        LabelRelease labelRelease = new LabelRelease();
-        Label label = new Label();
-        label = label.withId(43L);
-
-        labelRelease = labelRelease.withLabel(label);
-        labelRelease = labelRelease.withCatNo("CATEGORY");
-        labelRelease = labelRelease.withRelease(release);
-
-        Set<LabelRelease> target = Collections.synchronizedSet(new HashSet<>());
-        target.add(labelRelease);
-
-        release = release.withLabelReleases(target);
-
-        release.getLabelReleases().forEach(item -> log.info(item.toString()));
-
-        assertEquals(43L, release.getLabelReleases().iterator().next().getLabel().getId());
-        assertEquals(release.getId(), release.getLabelReleases().iterator().next().getRelease().getId());
-    }
-
-    @Test
     void withAddArtistTest() {
-        Artist artist = new Artist();
-        artist = artist.withId(33L);
-        release = release.withAddArtists(artist);
+        release = release.withAddArtists(33L);
         assertNotNull(release.getArtists());
-        assertTrue(release.getArtists().contains(artist));
-        assertEquals(33L, release.getArtists().iterator().next().getId());
+        assertEquals(33L, release.getArtists()[0]);
     }
 
     @Test
@@ -214,14 +167,14 @@ class ReleaseTest {
 
         Artist artist = new Artist();
         artist = artist.withId(33L);
-        release = release.withAddArtists(artist);
+        release = release.withAddArtists(artist.getId());
         assertNotNull(release.getArtists());
-        assertTrue(release.getArtists().contains(artist));
-        assertEquals(33L, release.getArtists().iterator().next().getId());
+        assertTrue(ArraysUtil.contains(release.getArtists(), artist.getId()));
+        assertEquals(33L, release.getArtists()[0]);
 
-        release = release.withRemoveArtist(artist);
+        release = release.withRemoveArtist(artist.getId());
 
-        assertEquals(0, release.getArtists().size());
+        assertEquals(0, release.getArtists().length);
     }
 
     @Test

@@ -59,7 +59,7 @@ public class JobConfig {
     //    NOTE:: masterReleaseStep is exception as it requires releases and artists, hence
     //           each row will be persisted WHILE having document refs.
     //
-    //  2. Second four steps
+    //  2. Second three steps
     //  Referencing corresponded entities (i.e. label and release, artist with release...)
     //  These steps MUST be put after 1st step, otherwise, docs will referencing non-existing documents,
     //  which will obviously lead to batch failure.
@@ -70,18 +70,12 @@ public class JobConfig {
             @Qualifier("releaseStep") Step releaseStep,
             @Qualifier("labelStep") Step labelStep,
             @Qualifier("artistStep") Step artistStep,
-            @Qualifier("masterReleaseStep") Step masterReleaseStep,
-            @Qualifier("labelUpdateStep") Step labelUpdateStep,
-            @Qualifier("artistUpdateStep") Step artistUpdateStep,
-            @Qualifier("releaseUpdateStep") Step releaseUpdateStep) {
+            @Qualifier("masterReleaseStep") Step masterReleaseStep) {
         return jobBuilderFactory.get(LocalDateTime.now().toString())
-//                .start(releaseStep)
-//                .next(artistStep)
-                .start(artistUpdateStep)
-                .next(labelStep)
-                .next(masterReleaseStep)
-                .next(labelUpdateStep)
-                .next(releaseUpdateStep)
+//                .start(artistStep)
+//                .next(labelStep)
+//                .next(masterReleaseStep)
+                .start(releaseStep)
                 .build();
     }
 
@@ -136,49 +130,6 @@ public class JobConfig {
                 .reader(reader)
                 .processor(processor)
                 .writer(writer)
-                .taskExecutor(taskExecutor)
-                .transactionManager(tm)
-                .build();
-    }
-
-    @Bean("labelUpdateStep")
-    public Step labelUpdateStep(CustomStaxEventItemReader<XmlLabel> reader,
-                                @Qualifier("labelUpdateProcessor") ItemProcessor<XmlLabel, Label> processor,
-                                RepositoryItemWriter<Label> writer) {
-        return stepBuilderFactory.get("labelUpdateStep")
-                .<XmlLabel, Label>chunk(3000)
-                .reader(reader)
-                .processor(processor)
-                .writer(writer)
-                .taskExecutor(taskExecutor)
-                .transactionManager(tm)
-                .build();
-    }
-
-    @Bean("artistUpdateStep")
-    public Step artistUpdateStep(CustomStaxEventItemReader<XmlArtist> artistReader,
-                                 @Qualifier("artistUpdateProcessor") ItemProcessor<XmlArtist, Artist> artistProcessor,
-                                 RepositoryItemWriter<Artist> artistWriter) {
-        return stepBuilderFactory.get("artistUpdateStep")
-                .<XmlArtist, Artist>chunk(3000)
-                .reader(artistReader)
-                .processor(artistProcessor)
-                .writer(artistWriter)
-                .taskExecutor(taskExecutor)
-                .transactionManager(tm)
-                .build();
-    }
-
-    @Bean("releaseUpdateStep")
-    public Step releaseUpdateStep(CustomStaxEventItemReader<XmlRelease> releaseReader,
-                                  @Qualifier("releaseUpdateProcessor") ItemProcessor<XmlRelease, Release> releaseProcessor,
-                                  RepositoryItemWriter<Release> releaseWriter) {
-
-        return stepBuilderFactory.get("releaseUpdateStep")
-                .<XmlRelease, Release>chunk(3000)
-                .reader(releaseReader)
-                .processor(releaseProcessor)
-                .writer(releaseWriter)
                 .taskExecutor(taskExecutor)
                 .transactionManager(tm)
                 .build();

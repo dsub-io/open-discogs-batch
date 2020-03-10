@@ -27,4 +27,8 @@ public class ArtistService {
         Optional<Artist> artist = this.artistRepository.findById(id);
         return artist.orElse(null);
     }
+
+    public Boolean existsById(Long id) {
+        return this.artistRepository.existsById(id);
+    }
 }

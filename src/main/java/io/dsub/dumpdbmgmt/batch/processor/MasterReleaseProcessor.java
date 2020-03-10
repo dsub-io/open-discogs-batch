@@ -4,6 +4,7 @@ import io.dsub.dumpdbmgmt.entity.Artist;
 import io.dsub.dumpdbmgmt.entity.MasterRelease;
 import io.dsub.dumpdbmgmt.service.ArtistService;
 import io.dsub.dumpdbmgmt.xmlobj.XmlMaster;
+import lombok.Synchronized;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.stereotype.Component;
@@ -28,6 +29,10 @@ public class MasterReleaseProcessor implements ItemProcessor<XmlMaster, MasterRe
      */
     @Override
     public MasterRelease process(XmlMaster item) {
+        if (item.getId() == null) {
+            return null;
+        }
+
         MasterRelease masterRelease = new MasterRelease(item.getId());
 
         if (item.getDataQuality() != null) {
@@ -52,14 +57,26 @@ public class MasterReleaseProcessor implements ItemProcessor<XmlMaster, MasterRe
 
         if (item.getArtists() != null) {
             for (XmlMaster.ArtistInfo source : item.getArtists()) {
-                Artist artist = artistService.findById(source.getId());
-                if (artist != null) {
-                    artist = artist.withAddMasterReleases(masterRelease);
-                    masterRelease = masterRelease.withAddArtists(artist);
-                    artistService.save(artist);
-                }
+                masterRelease = addArtist(source.getId(), masterRelease);
             }
         }
+
+        return masterRelease;
+    }
+
+    @Synchronized
+    private MasterRelease addArtist(Long artistId, MasterRelease masterRelease) {
+        if (artistId == null) {
+            return masterRelease;
+        }
+        Artist artist = artistService.findById(artistId);
+        if (artist == null) {
+            return masterRelease;
+        }
+
+        artist = artist.withAddMasterReleases(masterRelease.getId());
+        artistService.save(artist);
+        masterRelease = masterRelease.withAddArtists(artistId);
 
         return masterRelease;
     }

@@ -108,7 +108,7 @@ class ArtistTest {
         instance = instance.withId(null);
         assertNull(instance.getId());
         instance = artist.withId(10L);
-        assertEquals(10L, instance.getId());
+        assertEquals (10L, instance.getId());
         instance = instance.withId(null);
         assertNotEquals(instance, artist);
     }
@@ -176,18 +176,18 @@ class ArtistTest {
 
     @Test
     void testWithAddAliasArtist() {
-        for (int i = 0; i < 10; i++) {
-           artist = artist.withAddAliasArtists(new Artist((long)i));
+        for (int i = 1; i < 11; i++) {
+           artist = artist.withAddAliasArtists((long)i);
         }
-        assertEquals(10, artist.getAlias().size());
+        assertEquals(10, artist.getAliases().length);
     }
 
     @Test
     void testWithRemoveAliasArtist() {
-        for (int i = 0; i < 10; i++) {
-            artist = artist.withAddAliasArtists(new Artist((long)i));
+        for (int i = 1; i < 11; i++) {
+            artist = artist.withAddAliasArtists((long)i);
         }
-        artist = artist.withRemoveAliasArtist(new Artist(6L));
-        assertEquals(9, artist.getAlias().size());
+        artist = artist.withRemoveAliasArtist(6L);
+        assertEquals(9, artist.getAliases().length);
     }
 }

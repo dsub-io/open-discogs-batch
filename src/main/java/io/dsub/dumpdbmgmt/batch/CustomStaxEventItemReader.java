@@ -12,9 +12,8 @@ import org.springframework.core.io.Resource;
 import org.springframework.oxm.Unmarshaller;
 
 /**
- * Generified item reader which wraps a standard StaxEventItemReader,
- * with synchronized read function. The main purpose is to distribute
- * read elements in synchronized manner to prevent duplicated transaction.
+ * ItemReader which wraps a standard StaxEventItemReader
+ * with synchronized read function.
  *
  * @param <T> type of entity.
  */

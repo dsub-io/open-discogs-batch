@@ -1,5 +1,6 @@
 package io.dsub.dumpdbmgmt.entity;
 
+import io.dsub.dumpdbmgmt.util.ArraysUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -23,8 +24,8 @@ class MasterReleaseTest {
         assertEquals(1L, masterRelease.getId());
         assertEquals(0, masterRelease.getStyles().size());
         assertEquals(0, masterRelease.getGenres().size());
-        assertEquals(0, masterRelease.getArtists().size());
-        assertEquals(0, masterRelease.getReleases().size());
+        assertEquals(0, masterRelease.getArtists().length);
+        assertEquals(0, masterRelease.getReleases().length);
         assertNull(masterRelease.getTitle());
         assertNull(masterRelease.getReleaseYear());
     }
@@ -50,21 +51,19 @@ class MasterReleaseTest {
     @Test
     void withReleases() {
         Release release = new Release(3L);
-        Set<Release> releases = Collections.synchronizedSet(new HashSet<>());
-        releases.add(release);
+        Long[] releases = ArraysUtil.merge(new Long[0], release.getId());
         masterRelease = masterRelease.withReleases(releases);
-        assertEquals(1, masterRelease.getReleases().size());
-        assertEquals(3L, masterRelease.getReleases().iterator().next().getId());
+        assertEquals(1, masterRelease.getReleases().length);
+        assertEquals(3L, masterRelease.getReleases()[0]);
     }
 
     @Test
     void withArtists() {
         Artist artist = new Artist(3L);
-        Set<Artist> artists = Collections.synchronizedSet(new HashSet<>());
-        artists.add(artist);
+        Long[] artists = ArraysUtil.merge(new Long[0], artist.getId());
         masterRelease = masterRelease.withArtists(artists);
-        assertEquals(3L, masterRelease.getArtists().iterator().next().getId());
-        assertEquals(1, masterRelease.getArtists().size());
+        assertEquals(3L, masterRelease.getArtists()[0]);
+        assertEquals(1, masterRelease.getArtists().length);
     }
 
     @Test

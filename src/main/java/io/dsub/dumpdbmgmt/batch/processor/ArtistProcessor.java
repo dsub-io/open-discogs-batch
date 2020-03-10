@@ -12,6 +12,9 @@ public class ArtistProcessor implements ItemProcessor<XmlArtist, Artist> {
 
     @Override
     public Artist process(XmlArtist item) {
+        if (item.getId() == null) {
+            return null;
+        }
 
         Artist artist = new Artist(item.getId());
 
@@ -37,6 +40,24 @@ public class ArtistProcessor implements ItemProcessor<XmlArtist, Artist> {
 
         if (item.getDataQuality() != null) {
             artist = artist.withDataQuality(item.getDataQuality());
+        }
+
+        if (item.getAliases() != null) {
+            for (XmlArtist.Aliase alias : item.getAliases()) {
+                artist = artist.withAddAliasArtists(alias.getId());
+            }
+        }
+
+        if (item.getMembers() != null) {
+            for (XmlArtist.Member member : item.getMembers()) {
+                artist = artist.withAddMemberArtists(member.getId());
+            }
+        }
+
+        if (item.getGroups() != null) {
+            for (XmlArtist.Group group : item.getGroups()) {
+                artist = artist.withAddGroupArtists(group.getId());
+            }
         }
 
         return artist;

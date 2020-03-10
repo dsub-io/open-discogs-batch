@@ -19,8 +19,8 @@ class ArtistCreditTest {
         Artist artist = new Artist();
         artist = artist.withId(1L);
 
-        artistCredit = artistCredit.withArtist(artist);
-        assertEquals(artist, artistCredit.getArtist());
+        artistCredit = artistCredit.withArtist(artist.getId());
+        assertEquals(artist.getId(), artistCredit.getArtist());
 
     }
 
@@ -28,8 +28,8 @@ class ArtistCreditTest {
     void withRelease() {
         Release release = new Release(1L);
 
-        artistCredit = artistCredit.withRelease(release);
-        assertEquals(release, artistCredit.getRelease());
+        artistCredit = artistCredit.withRelease(release.getId());
+        assertEquals(release.getId(), artistCredit.getRelease());
     }
 
     @Test
@@ -44,15 +44,15 @@ class ArtistCreditTest {
     void getArtist() {
         Artist artist = new Artist();
         artist = artist.withId(1L);
-        artistCredit = artistCredit.withArtist(artist);
-        assertEquals(artist, artistCredit.getArtist());
+        artistCredit = artistCredit.withArtist(artist.getId());
+        assertEquals(artist.getId(), artistCredit.getArtist());
     }
 
     @Test
     void getRelease() {
         Release release = new Release(1L);
-        artistCredit = artistCredit.withRelease(release);
-        assertEquals(release, artistCredit.getRelease());
+        artistCredit = artistCredit.withRelease(release.getId());
+        assertEquals(release.getId(), artistCredit.getRelease());
     }
 
     @Test

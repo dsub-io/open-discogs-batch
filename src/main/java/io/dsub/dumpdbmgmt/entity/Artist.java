@@ -1,11 +1,11 @@
 package io.dsub.dumpdbmgmt.entity;
 
-import io.dsub.dumpdbmgmt.entity.intermed.ArtistCredit;
+import io.dsub.dumpdbmgmt.util.ArraysUtil;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.With;
+import org.bson.types.ObjectId;
 import org.springframework.data.mongodb.core.index.Indexed;
-import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
@@ -29,22 +29,22 @@ public final class Artist extends BaseEntity {
     private final String profile;
     @Field(name = "data_quality")
     private final String dataQuality;
-    @DBRef(lazy = true)
-    private Set<Artist> members = Collections.synchronizedSet(new HashSet<>());
-    @DBRef(lazy = true)
-    private Set<Artist> groups = Collections.synchronizedSet(new HashSet<>());
-    @DBRef(lazy = true)
-    private Set<Artist> alias = Collections.synchronizedSet(new HashSet<>());
-    @DBRef(lazy = true)
-    private Set<Release> releases = Collections.synchronizedSet(new HashSet<>());
-    @DBRef(lazy = true)
-    private Set<MasterRelease> masterReleases = Collections.synchronizedSet(new HashSet<>());
-    @DBRef(lazy = true)
-    private Set<ArtistCredit> credits = Collections.synchronizedSet(new HashSet<>());
+    @Field(name = "members")
+    private Long[] members = new Long[0];
+    @Field(name = "groups")
+    private Long[] groups = new Long[0];
+    @Field(name = "aliases")
+    private Long[] aliases = new Long[0];
+    @Field(name = "releases")
+    private Long[] releases = new Long[0];
+    @Field(name = "master_releases")
+    private Long[] masterReleases = new Long[0];
     @Field(name = "urls")
     private Set<String> urls = Collections.synchronizedSet(new HashSet<>());
     @Field(name = "name_variations")
     private Set<String> nameVariations = Collections.synchronizedSet(new HashSet<>());
+    @Field(name = "credits")
+    private Set<ObjectId> credits = Collections.synchronizedSet(new HashSet<>());
 
     public Artist() {
         this.id = null;
@@ -62,71 +62,68 @@ public final class Artist extends BaseEntity {
         this.dataQuality = null;
     }
 
-    public Artist withAddReleases(Release... releases) {
-        Set<Release> modifiedSet = Collections.synchronizedSet(new HashSet<>());
-        modifiedSet.addAll(this.releases);
-        modifiedSet.addAll(Arrays.asList(releases));
-        return this.withReleases(modifiedSet);
+    public Artist withAddCredits(ObjectId... artistCreditIds) {
+        Set<ObjectId> idSet = Collections.synchronizedSet(new HashSet<>());
+        idSet.addAll(this.credits);
+        idSet.addAll(Arrays.asList(artistCreditIds));
+        return this.withCredits(idSet);
     }
 
-    public Artist withRemoveRelease(Release release) {
-        Set<Release> modifiedSet = Collections.synchronizedSet(new HashSet<>());
-        modifiedSet.addAll(this.releases);
-        modifiedSet.removeIf(candidate -> candidate.getId().equals(release.getId()));
-        return this.withReleases(modifiedSet);
+    public Artist withRemoveCredit(ObjectId artistCreditId) {
+        Set<ObjectId> idSet = Collections.synchronizedSet(new HashSet<>());
+        idSet.addAll(this.credits);
+        idSet.removeIf(entry -> entry.equals(artistCreditId));
+        return this.withCredits(idSet);
     }
 
-    public Artist withAddMasterReleases(MasterRelease... masterReleases) {
-        Set<MasterRelease> modifiedSet = Collections.synchronizedSet(new HashSet<>());
-        modifiedSet.addAll(this.masterReleases);
-        modifiedSet.addAll(Arrays.asList(masterReleases));
-        return this.withMasterReleases(modifiedSet);
+    public Artist withAddMasterReleases(Long... masterReleaseIds) {
+        Long[] arr = ArraysUtil.merge(masterReleases, masterReleaseIds);
+        return this.withMasterReleases(arr);
     }
 
-    public Artist withRemoveMasterRelease(MasterRelease masterRelease) {
-        Set<MasterRelease> modifiedSet = Collections.synchronizedSet(new HashSet<>());
-        modifiedSet.addAll(this.masterReleases);
-        modifiedSet.removeIf(candidate -> candidate.getId().equals(masterRelease.getId()));
-        return this.withMasterReleases(modifiedSet);
+    public Artist withRemoveMasterRelease(Long masterReleaseId) {
+        Long[] arr = ArraysUtil.remove(masterReleases, masterReleaseId);
+        return this.withMasterReleases(arr);
     }
 
-    public Artist withAddCredits(ArtistCredit... artistCredits) {
-        Set<ArtistCredit> modifiedSet = Collections.synchronizedSet(new HashSet<>());
-        modifiedSet.addAll(this.credits);
-        modifiedSet.addAll(Arrays.asList(artistCredits));
-        return this.withCredits(modifiedSet);
+    public Artist withAddReleases(Long... releaseIds) {
+        Long[] arr = ArraysUtil.merge(this.releases, releaseIds);
+        return this.withReleases(arr);
     }
 
-    public Artist withRemoveCredit(ArtistCredit artistCredit) {
-        Set<ArtistCredit> modifiedSet = Collections.synchronizedSet(new HashSet<>());
-        modifiedSet.addAll(this.credits);
-        modifiedSet.removeIf(candidate -> candidate.getCredit().equals(artistCredit.getCredit()));
-        return this.withCredits(modifiedSet);
+    public Artist withRemoveReleases(Long releaseId) {
+        Long[] arr = ArraysUtil.remove(this.releases, releaseId);
+        return this.withReleases(arr);
     }
 
-
-    public Artist withAddAliasArtists(Artist... artists) {
-        return this.withAlias(getCopiedArtistSet(this.alias, artists));
+    public Artist withAddAliasArtists(Long... artistIds) {
+        Long[] arr = ArraysUtil.merge(this.aliases, artistIds);
+        return this.withAliases(arr);
     }
 
-    public Artist withRemoveAliasArtist(Artist artist) {
-        return this.withAlias(getRemovedArtistSet(this.alias, artist));
+    public Artist withRemoveAliasArtist(Long artistId) {
+        Long[] arr = ArraysUtil.remove(this.aliases, artistId);
+        return this.withAliases(arr);
     }
 
-    public Artist withAddMemberArtists(Artist... artists) {
-        return this.withMembers(getCopiedArtistSet(this.members, artists));
+    public Artist withAddMemberArtists(Long... artistIds) {
+        Long[] arr = ArraysUtil.merge(this.members, artistIds);
+        return this.withMembers(arr);
     }
 
-    public Artist withRemoveMemberArtist(Artist artist) {
-        return this.withMembers(getRemovedArtistSet(this.members, artist));
+    public Artist withRemoveMemberArtist(Long artistId) {
+        Long[] arr = ArraysUtil.remove(this.members, artistId);
+        return this.withMembers(arr);
     }
 
-    public Artist withAddGroupArtists(Artist... artists) {
-        return this.withGroups(getCopiedArtistSet(this.groups, artists));
+    public Artist withAddGroupArtists(Long... artistIds) {
+        Long[] arr = ArraysUtil.merge(this.groups, artistIds);
+        return this.withGroups(arr);
     }
 
-    public Artist withRemoveGroupArtist(Artist artist) {
-        return this.withGroups(getRemovedArtistSet(this.groups, artist));
+    public Artist withRemoveGroupArtist(Long artistId) {
+        Long[] arr = ArraysUtil.remove(this.groups, artistId);
+        return this.withGroups(arr);
     }
 
     @Override
@@ -155,21 +152,5 @@ public final class Artist extends BaseEntity {
                 ", profile='" + profile + '\'' +
                 ", dataQuality='" + dataQuality + '\'' +
                 '}';
-    }
-
-    public Set<Artist> getCopiedArtistSet(Set<Artist> source, Artist... artists) {
-        Set<Artist> modifiedSet = Collections.synchronizedSet(new HashSet<>());
-        modifiedSet.addAll(source);
-        modifiedSet.addAll(Arrays.asList(artists));
-        return modifiedSet;
-    }
-
-    public Set<Artist> getRemovedArtistSet(Set<Artist> source, Artist... artists) {
-        Set<Artist> modifiedSet = Collections.synchronizedSet(new HashSet<>());
-        modifiedSet.addAll(source);
-        for (Artist artist : artists) {
-            modifiedSet.removeIf(entry -> entry.getId().equals(artist.getId()));
-        }
-        return modifiedSet;
     }
 }
