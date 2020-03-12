@@ -1,10 +1,10 @@
 package io.dsub.dumpdbmgmt.entity;
 
+import io.dsub.dumpdbmgmt.entity.nested.CreditedRelease;
 import io.dsub.dumpdbmgmt.util.ArraysUtil;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.With;
-import org.bson.types.ObjectId;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
@@ -43,8 +43,11 @@ public final class Artist extends BaseEntity {
     private Set<String> urls = Collections.synchronizedSet(new HashSet<>());
     @Field(name = "name_variations")
     private Set<String> nameVariations = Collections.synchronizedSet(new HashSet<>());
+
+    //List of credits listed on each release.
+    //Opposite (release) will also have credits with artist id as a nested document.
     @Field(name = "credits")
-    private Set<ObjectId> credits = Collections.synchronizedSet(new HashSet<>());
+    private Set<CreditedRelease> credits = Collections.synchronizedSet(new HashSet<>());
 
     public Artist() {
         this.id = null;
@@ -62,17 +65,17 @@ public final class Artist extends BaseEntity {
         this.dataQuality = null;
     }
 
-    public Artist withAddCredits(ObjectId... artistCreditIds) {
-        Set<ObjectId> idSet = Collections.synchronizedSet(new HashSet<>());
+    public Artist withAddCredits(CreditedRelease... creditedReleases) {
+        Set<CreditedRelease> idSet = Collections.synchronizedSet(new HashSet<>());
         idSet.addAll(this.credits);
-        idSet.addAll(Arrays.asList(artistCreditIds));
+        idSet.addAll(Arrays.asList(creditedReleases));
         return this.withCredits(idSet);
     }
 
-    public Artist withRemoveCredit(ObjectId artistCreditId) {
-        Set<ObjectId> idSet = Collections.synchronizedSet(new HashSet<>());
+    public Artist withRemoveCredit(CreditedRelease creditedRelease) {
+        Set<CreditedRelease> idSet = Collections.synchronizedSet(new HashSet<>());
         idSet.addAll(this.credits);
-        idSet.removeIf(entry -> entry.equals(artistCreditId));
+        idSet.removeIf(entry -> entry.equals(creditedRelease));
         return this.withCredits(idSet);
     }
 

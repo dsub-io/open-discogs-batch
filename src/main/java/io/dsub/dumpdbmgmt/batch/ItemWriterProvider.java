@@ -8,18 +8,17 @@ import io.dsub.dumpdbmgmt.repository.ArtistRepository;
 import io.dsub.dumpdbmgmt.repository.LabelRepository;
 import io.dsub.dumpdbmgmt.repository.MasterReleaseRepository;
 import io.dsub.dumpdbmgmt.repository.ReleaseRepository;
-import io.dsub.dumpdbmgmt.service.ArtistCreditService;
-import io.dsub.dumpdbmgmt.service.CompanyReleaseService;
-import io.dsub.dumpdbmgmt.service.LabelReleaseService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.integration.async.AsyncItemWriter;
 import org.springframework.batch.item.data.RepositoryItemWriter;
+import org.springframework.batch.item.support.ClassifierCompositeItemProcessor;
+import org.springframework.batch.item.support.CompositeItemWriter;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
 
 import javax.persistence.EntityManagerFactory;
-import java.util.List;
+import java.util.*;
 
 /**
  * A component to provide writers for each entities.
@@ -36,26 +35,17 @@ public class ItemWriterProvider {
     LabelRepository labelRepository;
     ArtistRepository artistRepository;
     MasterReleaseRepository masterReleaseRepository;
-    ArtistCreditService artistCreditService;
-    LabelReleaseService labelReleaseService;
-    CompanyReleaseService companyReleaseService;
     EntityManagerFactory emf;
 
     public ItemWriterProvider(ReleaseRepository releaseRepository,
                               LabelRepository labelRepository,
                               ArtistRepository artistRepository,
                               MasterReleaseRepository masterReleaseRepository,
-                              ArtistCreditService artistCreditService,
-                              LabelReleaseService labelReleaseService,
-                              CompanyReleaseService companyReleaseService,
                               @Qualifier("entityManagerFactory") EntityManagerFactory emf) {
         this.releaseRepository = releaseRepository;
         this.labelRepository = labelRepository;
         this.artistRepository = artistRepository;
         this.masterReleaseRepository = masterReleaseRepository;
-        this.artistCreditService = artistCreditService;
-        this.labelReleaseService = labelReleaseService;
-        this.companyReleaseService = companyReleaseService;
         this.emf = emf;
     }
 
@@ -148,7 +138,6 @@ public class ItemWriterProvider {
         writer.afterPropertiesSet();
         return writer;
     }
-
 
     @Bean(value = "masterReleaseRepositoryWriter")
     public RepositoryItemWriter<MasterRelease> masterReleaseRepositoryItemWriter() throws Exception {

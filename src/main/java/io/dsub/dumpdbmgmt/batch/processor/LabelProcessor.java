@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 @Component("labelProcessor")
 public class LabelProcessor implements ItemProcessor<XmlLabel, Label> {
 
-    LabelService labelService;
+    private final LabelService labelService;
 
     public LabelProcessor(LabelService labelService) {
         this.labelService = labelService;

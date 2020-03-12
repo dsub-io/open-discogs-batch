@@ -1,22 +1,10 @@
 package io.dsub.dumpdbmgmt.batch.processor;
 
-import io.dsub.dumpdbmgmt.entity.Artist;
-import io.dsub.dumpdbmgmt.entity.Label;
-import io.dsub.dumpdbmgmt.entity.MasterRelease;
 import io.dsub.dumpdbmgmt.entity.Release;
-import io.dsub.dumpdbmgmt.entity.intermed.ArtistCredit;
-import io.dsub.dumpdbmgmt.entity.intermed.CompanyRelease;
-import io.dsub.dumpdbmgmt.entity.intermed.LabelRelease;
-import io.dsub.dumpdbmgmt.entity.nested.Format;
-import io.dsub.dumpdbmgmt.entity.nested.Identifier;
-import io.dsub.dumpdbmgmt.entity.nested.Track;
-import io.dsub.dumpdbmgmt.entity.nested.Video;
-import io.dsub.dumpdbmgmt.service.*;
+import io.dsub.dumpdbmgmt.entity.nested.*;
 import io.dsub.dumpdbmgmt.util.DateParser;
 import io.dsub.dumpdbmgmt.xmlobj.XmlRelease;
-import lombok.Synchronized;
 import lombok.extern.slf4j.Slf4j;
-import org.bson.types.ObjectId;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.stereotype.Component;
@@ -28,26 +16,6 @@ import java.util.Set;
 @Slf4j
 @Component("releaseProcessor")
 public class ReleaseProcessor implements ItemProcessor<XmlRelease, Release> {
-
-    MasterReleaseService masterReleaseService;
-    LabelService labelService;
-    ArtistService artistService;
-    ReleaseService releaseService;
-    ArtistCreditService artistCreditService;
-    LabelReleaseService labelReleaseService;
-    CompanyReleaseService companyReleaseService;
-    DateParser dateParser;
-
-    public ReleaseProcessor(MasterReleaseService masterReleaseService, LabelService labelService, ArtistService artistService, ReleaseService releaseService, ArtistCreditService artistCreditService, LabelReleaseService labelReleaseService, CompanyReleaseService companyReleaseService, DateParser dateParser) {
-        this.masterReleaseService = masterReleaseService;
-        this.labelService = labelService;
-        this.artistService = artistService;
-        this.releaseService = releaseService;
-        this.artistCreditService = artistCreditService;
-        this.labelReleaseService = labelReleaseService;
-        this.companyReleaseService = companyReleaseService;
-        this.dateParser = dateParser;
-    }
 
     @Override
     public Release process(XmlRelease xmlRelease) {
@@ -142,43 +110,32 @@ public class ReleaseProcessor implements ItemProcessor<XmlRelease, Release> {
 
         if (xmlRelease.getMaster() != null) {
             if (xmlRelease.getMaster().getMasterId() != null) {
-                this.addReleaseToMaster(xmlRelease.getMaster().getMasterId(), release.getId());
                 release = release.withMasterRelease(xmlRelease.getMaster().getMasterId());
             }
         }
 
         if (xmlRelease.getAlbumArtists() != null) {
             for (XmlRelease.AlbumArtist source : xmlRelease.getAlbumArtists()) {
-                addReleaseToArtist(source.getId(), release.getId());
                 release = release.withAddArtists(source.getId());
             }
         }
 
         if (xmlRelease.getLabels() != null) {
             for (XmlRelease.Label entry : xmlRelease.getLabels()) {
-                ObjectId id = makeLabelRelease(entry.getCatno(), entry.getId(), release.getId());
-                if (id != null) {
-                    release = release.withAddLabelReleases(id);
-                }
+                release = release.withAddCatalogRefs(new CatalogRef(entry.getId(), entry.getCatno()));
             }
         }
 
 
         if (xmlRelease.getCompanies() != null) {
             for (XmlRelease.Company company : xmlRelease.getCompanies()) {
-                ObjectId id = makeCompanyRelease(company.getJob(), company.getId(), release.getId());
-                if (id != null) {
-                    release = release.withAddCompaniesReleases(id);
-                }
+                release = release.withAddCompanies(new Company(company.getId(), company.getJob()));
             }
         }
 
         if (xmlRelease.getCreditedArtists() != null) {
             for (XmlRelease.CreditedArtist creditedArtist : xmlRelease.getCreditedArtists()) {
-                ObjectId id = makeCreditedArtist(creditedArtist.getRole(), creditedArtist.getId(), release.getId());
-                if (id != null) {
-                    release = release.withAddCreditedArtists(id);
-                }
+                release = release.withAddCreditedArtists(new CreditedArtist(creditedArtist.getId(), creditedArtist.getRole()));
             }
         }
 
@@ -243,79 +200,5 @@ public class ReleaseProcessor implements ItemProcessor<XmlRelease, Release> {
             track = track.withDuration(source.getDuration());
         }
         return track;
-    }
-
-//    @Synchronized
-    private void addReleaseToMaster(Long masterId, Long releaseId) {
-        MasterRelease masterRelease = masterReleaseService.findById(masterId);
-        if (masterRelease != null) {
-            masterRelease = masterRelease.withAddReleases(releaseId);
-            masterReleaseService.save(masterRelease);
-        }
-    }
-
-//    @Synchronized
-    private void addReleaseToArtist(Long artistId, Long releaseId) {
-        Artist artist = artistService.findById(artistId);
-        if (artist != null) {
-            artist = artist.withAddReleases(releaseId);
-            artistService.save(artist);
-        }
-    }
-
-//    @Synchronized
-    private ObjectId makeLabelRelease(String catNo, Long labelId, Long releaseId) {
-        Label label = labelService.findById(labelId);
-
-        if (label != null) {
-            LabelRelease labelRelease = new LabelRelease();
-            labelRelease = labelRelease.withCatNo(catNo);
-            labelRelease = labelRelease.withLabel(labelId);
-            labelRelease = labelRelease.withRelease(releaseId);
-            labelRelease = labelReleaseService.save(labelRelease);
-
-            label = label.withAddLabelRelease(labelRelease.getId());
-            labelService.save(label);
-            return labelRelease.getId();
-        }
-        return null;
-    }
-
-//    @Synchronized
-    private ObjectId makeCompanyRelease(String serviceNote, Long labelId, Long releaseId) {
-        Label label = labelService.findById(labelId);
-
-        if (label != null) {
-            CompanyRelease companyRelease = new CompanyRelease();
-            companyRelease = companyRelease.withServiceNote(serviceNote);
-            companyRelease = companyRelease.withLabel(label.getId());
-            companyRelease = companyRelease.withRelease(releaseId);
-            companyRelease = companyReleaseService.save(companyRelease);
-
-            label = label.withAddCompanyReleases(companyRelease.getId());
-            labelService.save(label);
-            return companyRelease.getId();
-        }
-
-        return null;
-    }
-
-//    @Synchronized
-    private ObjectId makeCreditedArtist(String role, Long artistId, Long releaseId) {
-        Artist artist = artistService.findById(artistId);
-
-        if (artist != null) {
-            ArtistCredit artistCredit = new ArtistCredit();
-            artistCredit = artistCredit.withCredit(role);
-            artistCredit = artistCredit.withArtist(artistId);
-            artistCredit = artistCredit.withRelease(releaseId);
-            artistCredit = artistCreditService.save(artistCredit);
-
-            artist = artist.withAddCredits(artistCredit.getId());
-            artistService.save(artist);
-            return artistCredit.getId();
-        }
-
-        return null;
     }
 }

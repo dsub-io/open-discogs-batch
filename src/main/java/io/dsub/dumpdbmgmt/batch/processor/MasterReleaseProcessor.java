@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 @Component("masterReleaseProcessor")
 public class MasterReleaseProcessor implements ItemProcessor<XmlMaster, MasterRelease> {
 
-    private ArtistService artistService;
+    private final ArtistService artistService;
 
     public MasterReleaseProcessor(ArtistService artistService) {
         this.artistService = artistService;

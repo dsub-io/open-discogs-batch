@@ -1,10 +1,11 @@
 package io.dsub.dumpdbmgmt.entity;
 
+import io.dsub.dumpdbmgmt.entity.nested.Catalog;
+import io.dsub.dumpdbmgmt.entity.nested.Service;
 import io.dsub.dumpdbmgmt.util.ArraysUtil;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.With;
-import org.bson.types.ObjectId;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
@@ -37,10 +38,10 @@ public final class Label extends BaseEntity {
     private Long[] parentLabels = new Long[0];
     @Field(name = "urls")
     private Set<String> urls = Collections.synchronizedSet(new HashSet<>());
-    @Field(name = "releases_ids")
-    private Set<ObjectId> labelReleases = Collections.synchronizedSet(new HashSet<>());
-    @Field(name = "company_releases")
-    private Set<ObjectId> companyReleases = Collections.synchronizedSet(new HashSet<>());
+    @Field(name = "catalogs")
+    private Set<Catalog> catalogs = Collections.synchronizedSet(new HashSet<>());
+    @Field(name = "services")
+    private Set<Service> services = Collections.synchronizedSet(new HashSet<>());
 
     protected Label() {
         this.id = null;
@@ -92,32 +93,32 @@ public final class Label extends BaseEntity {
         return this.withParentLabels(arr);
     }
 
-    public Label withAddLabelRelease(ObjectId... labelReleaseIds) {
-        Set<ObjectId> idSet =  Collections.synchronizedSet(new HashSet<>());
-        idSet.addAll(labelReleases);
-        idSet.addAll(Arrays.asList(labelReleaseIds));
-        return this.withLabelReleases(idSet);
+    public Label withAddCatalogs(Catalog... catalogs) {
+        Set<Catalog> set =  Collections.synchronizedSet(new HashSet<>());
+        set.addAll(this.catalogs);
+        set.addAll(Arrays.asList(catalogs));
+        return this.withCatalogs(set);
     }
 
-    public Label withRemoveLabelRelease(ObjectId labelReleaseId) {
-        Set<ObjectId> idSet =  Collections.synchronizedSet(new HashSet<>());
-        idSet.addAll(labelReleases);
-        idSet.removeIf(entry -> entry.equals(labelReleaseId));
-        return this.withLabelReleases(idSet);
+    public Label withRemoveCatalog(Catalog catalog) {
+        Set<Catalog> set =  Collections.synchronizedSet(new HashSet<>());
+        set.addAll(catalogs);
+        set.removeIf(entry -> entry.equals(catalog));
+        return this.withCatalogs(set);
     }
 
-    public Label withAddCompanyReleases(ObjectId... companyReleaseIds) {
-        Set<ObjectId> idSet =  Collections.synchronizedSet(new HashSet<>());
-        idSet.addAll(companyReleases);
-        idSet.addAll(Arrays.asList(companyReleaseIds));
-        return this.withCompanyReleases(idSet);
+    public Label withAddServices(Service... services) {
+        Set<Service> set =  Collections.synchronizedSet(new HashSet<>());
+        set.addAll(this.services);
+        set.addAll(Arrays.asList(services));
+        return this.withServices(set);
     }
 
-    public Label withRemoveComapnyRelease(ObjectId companyReleaseId) {
-        Set<ObjectId> idSet =  Collections.synchronizedSet(new HashSet<>());
-        idSet.addAll(companyReleases);
-        idSet.removeIf(entry -> entry.equals(companyReleaseId));
-        return this.withCompanyReleases(idSet);
+    public Label withRemoveComapnyRelease(Service service) {
+        Set<Service> set =  Collections.synchronizedSet(new HashSet<>());
+        set.addAll(this.services);
+        set.removeIf(entry -> entry.equals(service));
+        return this.withServices(set);
     }
 
 
