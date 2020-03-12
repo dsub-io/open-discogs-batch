@@ -3,13 +3,12 @@
 # Batch uploader for MongoDB and Discogs Dump.
 A simplified, one-shot based batch uploader for all artists, releases, labels and master releases and their relationships.
 
+If you have any suggestions, critics or equivalent, don't hesitate.
+I am currently wide open to accept any contributors!
+
 ## About this project...
 Inspired by dump xml monthly exports from [discogs.com](https://www.discogs.com), I personally made this to be used as rest service with hateoas as a mirror DB for my other projects. 
 Estimates for total procedure may vary depends on operating system.
-
-## Feel Free to Fork, Issue, Request Pull
-If you have any suggestions, critics or equivalent, don't hesitate.
-I am currently wide open to accept any contributors!
 
 ### Built with
 *[Spring-Boot starter](https://spring.io/projects/spring-boot) - Base framework.
