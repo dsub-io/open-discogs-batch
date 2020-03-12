@@ -1,3 +1,5 @@
+![Java CI with Maven](https://github.com/ther3tyle/dump-db-mgmt-mongodb/workflows/Java%20CI%20with%20Maven/badge.svg?event=fork)
+
 # Batch uploader for MongoDB and Discogs Dump.
 A simplified, one-shot based batch uploader for all artists, releases, labels and master releases and their relationships.
 
