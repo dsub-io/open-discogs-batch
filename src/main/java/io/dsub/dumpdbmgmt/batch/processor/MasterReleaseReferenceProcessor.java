@@ -19,11 +19,23 @@ public class MasterReleaseReferenceProcessor implements ItemProcessor<XmlRelease
 
     @Override
     public MasterRelease process(XmlRelease item) {
-        MasterRelease masterRelease = masterReleaseService.findById(item.getMaster().getMasterId());
+        if (item.getMaster() == null) {
+            return null;
+        }
+
+        Long id = item.getMaster().getMasterId();
+
+        if (id == null) {
+            return null;
+        }
+
+        MasterRelease masterRelease = masterReleaseService.findById(id);
+
         if (masterRelease != null) {
             masterRelease = masterRelease.withAddReleases(item.getReleaseId());
             return masterRelease;
         }
+
         return null;
     }
 }
