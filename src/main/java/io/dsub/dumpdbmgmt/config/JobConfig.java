@@ -183,7 +183,7 @@ public class JobConfig {
                                    @Qualifier("masterReleaseReferenceProcessor") ItemProcessor<XmlRelease, MasterRelease> processor,
                                    RepositoryItemWriter<MasterRelease> writer) {
 
-        return stepBuilderFactory.get("labelReferenceStep")
+        return stepBuilderFactory.get("masterReleaseReferenceStep")
                 .<XmlRelease, MasterRelease>chunk(1000)
                 .reader(reader)
                 .processor(processor)
