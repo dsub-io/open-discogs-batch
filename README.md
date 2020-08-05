@@ -37,9 +37,9 @@ This project utilizes MySQL to record such data, while batch processing xml data
 
 One way to tackle the transaction issue (and possibly the best) would be to stick with single threaded job execution, however, will take very long time (approx 3 to 4 days)
 
-I highly recommend to upload to local MongoDB first, then migrate.
+I highly recommend to upload to local MongoDB first; then migrate.
 
-Also, do note that I will not develop any possible command-line based configurations as of this project requires too many environment variables required, and its nature of one-shot process.
+Also, do note that I will not develop features in terms of command-line interface as the nature of project requires too many environment variables to be generalized. It would be wiser for you to fork or clone the project; then bring cli features that meets your req.
   
 ### Parallel Processing
 Set core size to define parellel operation.
