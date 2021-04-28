@@ -1,0 +1,12 @@
+spring:
+  datasource:
+    url: jdbc:mysql://www.dsub.io:19191/discogs_data
+    username: root
+    password: gozldwmf77
+    driver-class-name: com.mysql.cj.jdbc.Driver
+server:
+  error:
+    include-stacktrace: never
+    whitelabel:
+      enabled: false
+  port: 5791

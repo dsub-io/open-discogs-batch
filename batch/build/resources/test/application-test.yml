@@ -1,0 +1,13 @@
+spring:
+  datasource:
+    username: sa
+    password:
+    url: jdbc:h2:mem:testdb;MODE=MYSQL;
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    generate-ddl: true
+logging:
+  level:
+    root: OFF
