@@ -1,37 +1,17 @@
 spring:
   main:
     web-application-type: NONE
+    banner-mode: OFF
   datasource:
     hikari:
       data-source-properties:
         rewriteBatchedStatements: true
       maximum-pool-size: 20
   batch:
-    initialize-schema: ALWAYS
     job:
       enabled: false
-  mvc:
-    throw-exception-if-no-handler-found: true
   jpa:
-    generate-ddl: true
-    hibernate:
-      ddl-auto: update
     properties:
       hibernate:
         jdbc:
           time_zone: UTC
-logging:
-  level:
-    io.dsub: DEBUG
-    org:
-      reflections: OFF
-      springframework:
-        batch:
-          core:
-            step:
-              item: ERROR
-server:
-  error:
-    include-stacktrace: never
-    whitelabel:
-      enabled: false

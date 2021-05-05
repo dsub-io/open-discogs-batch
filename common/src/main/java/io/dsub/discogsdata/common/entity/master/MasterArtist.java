@@ -18,7 +18,7 @@ public class MasterArtist extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @JoinColumn(name = "master_id",  unique = false)
+    @JoinColumn(name = "master_id", unique = false)
     @ManyToOne
     private Master master;
 

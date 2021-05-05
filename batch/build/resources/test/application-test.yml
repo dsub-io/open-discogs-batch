@@ -8,6 +8,10 @@ spring:
     hibernate:
       ddl-auto: update
     generate-ddl: true
+  main:
+    banner-mode: OFF
 logging:
   level:
     root: OFF
+    org:
+      springframework: OFF

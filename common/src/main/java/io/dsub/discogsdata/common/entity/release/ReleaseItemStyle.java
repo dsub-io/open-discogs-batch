@@ -12,7 +12,7 @@ import javax.persistence.*;
 @EqualsAndHashCode(callSuper = false)
 @NoArgsConstructor
 @AllArgsConstructor
-@Table (uniqueConstraints = @UniqueConstraint(columnNames = {"release_item_id", "style"}))
+@Table(uniqueConstraints = @UniqueConstraint(columnNames = {"release_item_id", "style"}))
 public class ReleaseItemStyle extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

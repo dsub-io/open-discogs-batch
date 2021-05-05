@@ -7,5 +7,6 @@ import java.util.List;
 
 public interface ArtistNameVariationRepository extends JpaRepository<ArtistNameVariation, Long> {
     boolean existsByArtistIdAndName(Long artistId, String name);
+
     List<ArtistNameVariation> findAllByArtistId(Long artistId);
 }
