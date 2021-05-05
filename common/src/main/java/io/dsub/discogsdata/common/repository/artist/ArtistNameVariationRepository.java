@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface ArtistNameVariationRepository extends JpaRepository<ArtistNameVariation, Long> {
-    boolean existsByArtistIdAndName(Long artistId, String name);
+  boolean existsByArtistIdAndName(Long artistId, String name);
 
-    List<ArtistNameVariation> findAllByArtistId(Long artistId);
+  List<ArtistNameVariation> findAllByArtistId(Long artistId);
 }

@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface ReleaseArtistRepository extends JpaRepository<ReleaseItemArtist, Long> {
-    boolean existsByArtistAndReleaseItem(Artist artist, ReleaseItem releaseItem);
+  boolean existsByArtistAndReleaseItem(Artist artist, ReleaseItem releaseItem);
 
-    List<ReleaseItemArtist> findAllByReleaseItemId(Long releaseItemId);
+  List<ReleaseItemArtist> findAllByReleaseItemId(Long releaseItemId);
 }

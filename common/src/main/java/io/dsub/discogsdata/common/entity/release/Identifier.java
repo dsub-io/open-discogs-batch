@@ -12,18 +12,18 @@ import javax.persistence.*;
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = false)
 public class Identifier extends BaseEntity {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
-    private String type;
+  private String type;
 
-    @Column(columnDefinition = "TEXT")
-    private String description;
+  @Column(columnDefinition = "TEXT")
+  private String description;
 
-    private String value;
+  private String value;
 
-    @ManyToOne
-    @JoinColumn(name = "release_item_id")
-    private ReleaseItem releaseItem;
+  @ManyToOne
+  @JoinColumn(name = "release_item_id")
+  private ReleaseItem releaseItem;
 }

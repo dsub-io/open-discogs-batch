@@ -13,19 +13,22 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = false)
-@Table(uniqueConstraints = @UniqueConstraint(columnNames = {"name", "qty", "text", "release_item_id"}))
+@Table(
+    uniqueConstraints = @UniqueConstraint(columnNames = {"name", "qty", "text", "release_item_id"}))
 public class Format extends BaseEntity {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    private String name;
-    private Integer qty;
-    @Column(columnDefinition = "TEXT")
-    private String text;
-    @ElementCollection
-    @Builder.Default
-    private Set<String> description = new HashSet<>();
-    @ManyToOne
-    @JoinColumn(name = "release_item_id")
-    private ReleaseItem releaseItem;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
+
+  private String name;
+  private Integer qty;
+
+  @Column(columnDefinition = "TEXT")
+  private String text;
+
+  @ElementCollection @Builder.Default private Set<String> description = new HashSet<>();
+
+  @ManyToOne
+  @JoinColumn(name = "release_item_id")
+  private ReleaseItem releaseItem;
 }

@@ -14,42 +14,41 @@ import java.time.LocalDate;
 @RequiredArgsConstructor
 @AllArgsConstructor
 public class ReleaseItem extends BaseEntity {
-    @Id
-    private Long id;
+  @Id private Long id;
 
-    private boolean isMaster;
+  private boolean isMaster;
 
-    private String status;
+  private String status;
 
-    @Column(length = 5000)
-    private String title;
+  @Column(length = 5000)
+  private String title;
 
-    private String country;
+  private String country;
 
-    @Column(columnDefinition = "LONGTEXT")
-    private String notes;
+  @Column(columnDefinition = "LONGTEXT")
+  private String notes;
 
-    private String dataQuality;
+  private String dataQuality;
 
-    @ManyToOne
-    @JoinColumn(name = "master_id")
-    private Master master;
+  @ManyToOne
+  @JoinColumn(name = "master_id")
+  private Master master;
 
-    private boolean hasValidMonth;
+  private boolean hasValidMonth;
 
-    private boolean hasValidDay;
+  private boolean hasValidDay;
 
-    private boolean hasValidYear;
+  private boolean hasValidYear;
 
-    private String listedReleaseDate;
+  private String listedReleaseDate;
 
-    private LocalDate releaseDate;
+  private LocalDate releaseDate;
 
-    public boolean getIsMaster() {
-        return this.isMaster;
-    }
+  public boolean getIsMaster() {
+    return this.isMaster;
+  }
 
-    public Long getMasterId() {
-        return master == null ? null : master.getId();
-    }
+  public Long getMasterId() {
+    return master == null ? null : master.getId();
+  }
 }

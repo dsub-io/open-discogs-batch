@@ -14,7 +14,7 @@ import javax.persistence.Id;
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = false)
 public class Genre extends BaseEntity {
-    @Id
-    @Column(name = "name")
-    private String name;
+  @Id
+  @Column(name = "name")
+  private String name;
 }

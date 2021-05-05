@@ -14,15 +14,16 @@ import javax.persistence.Id;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Artist extends BaseTimeEntity {
-    @Id
-    private Long id;
-    @Column(length = 1000)
-    private String name;
-    @Column(length = 2000)
-    private String realName;
+  @Id private Long id;
 
-    @Column(columnDefinition = "LONGTEXT")
-    private String profile;
+  @Column(length = 1000)
+  private String name;
 
-    private String dataQuality;
+  @Column(length = 2000)
+  private String realName;
+
+  @Column(columnDefinition = "LONGTEXT")
+  private String profile;
+
+  private String dataQuality;
 }

@@ -12,18 +12,20 @@ import javax.persistence.*;
 @EqualsAndHashCode(callSuper = false)
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "master_genre", uniqueConstraints = @UniqueConstraint(columnNames = {"master_id", "genre"}))
+@Table(
+    name = "master_genre",
+    uniqueConstraints = @UniqueConstraint(columnNames = {"master_id", "genre"}))
 public class MasterGenre extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
-    @JoinColumn(name = "master_id")
-    @ManyToOne
-    private Master master;
+  @JoinColumn(name = "master_id")
+  @ManyToOne
+  private Master master;
 
-    @JoinColumn(name = "genre")
-    @ManyToOne
-    private Genre genre;
+  @JoinColumn(name = "genre")
+  @ManyToOne
+  private Genre genre;
 }

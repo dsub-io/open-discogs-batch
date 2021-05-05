@@ -10,26 +10,27 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 class KnownArgumentValidatorTest {
 
-    private KnownArgumentValidator validator;
+  private KnownArgumentValidator validator;
 
-    @BeforeEach
-    void setUp() {
-        validator = new KnownArgumentValidator();
-    }
+  @BeforeEach
+  void setUp() {
+    validator = new KnownArgumentValidator();
+  }
 
-    @Test
-    void validate() {
-        ValidationResult result = validator.validate(
-                new DefaultApplicationArguments("--hello", "--world", "--string", "--chunk", "--t"));
+  @Test
+  void validate() {
+    ValidationResult result =
+        validator.validate(
+            new DefaultApplicationArguments("--hello", "--world", "--string", "--chunk", "--t"));
 
-        List<String> issues = result.getIssues();
-        assertThat(issues.size()).isEqualTo(3);
+    List<String> issues = result.getIssues();
+    assertThat(issues.size()).isEqualTo(3);
 
-        assertThat("unknown argument: string").isIn(issues);
-        assertThat("unknown argument: hello").isIn(issues);
-        assertThat("unknown argument: world").isIn(issues);
+    assertThat("unknown argument: string").isIn(issues);
+    assertThat("unknown argument: hello").isIn(issues);
+    assertThat("unknown argument: world").isIn(issues);
 
-        assertThat("unknown argument: t").isNotIn(issues);
-        assertThat("unknown argument: chunk").isNotIn(issues);
-    }
+    assertThat("unknown argument: t").isNotIn(issues);
+    assertThat("unknown argument: chunk").isNotIn(issues);
+  }
 }

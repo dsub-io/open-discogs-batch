@@ -16,19 +16,20 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class DataSourceConfig {
 
-    private final ApplicationArguments applicationArguments;
+  private final ApplicationArguments applicationArguments;
 
-    @Bean(name = "batchDataSource")
-    public DataSource batchDataSource() {
-        Map<String, String> arguments = applicationArguments.getNonOptionArgs().stream()
-                .map(s -> s.split("="))
-                .collect(Collectors.toMap(parts -> parts[0], parts -> parts[1]));
+  @Bean(name = "batchDataSource")
+  public DataSource batchDataSource() {
+    Map<String, String> arguments =
+        applicationArguments.getNonOptionArgs().stream()
+            .map(s -> s.split("="))
+            .collect(Collectors.toMap(parts -> parts[0], parts -> parts[1]));
 
-        return DataSourceBuilder.create()
-                .url(arguments.get("url"))
-                .username(arguments.get("username"))
-                .password(arguments.get("password"))
-                .driverClassName("com.mysql.cj.jdbc.Driver")
-                .build();
-    }
+    return DataSourceBuilder.create()
+        .url(arguments.get("url"))
+        .username(arguments.get("username"))
+        .password(arguments.get("password"))
+        .driverClassName("com.mysql.cj.jdbc.Driver")
+        .build();
+  }
 }

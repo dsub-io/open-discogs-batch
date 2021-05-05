@@ -15,15 +15,20 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 @EnableBatchProcessing
 @EntityScan(basePackages = {"io.dsub.discogsdata.common", "io.dsub.discogsdata.batch"})
 @EnableJpaRepositories(basePackages = {"io.dsub.discogsdata.common", "io.dsub.discogsdata.batch"})
-@SpringBootApplication(scanBasePackages = {"io.dsub.discogsdata.common", "io.dsub.discogsdata.batch"})
+@SpringBootApplication(
+    scanBasePackages = {"io.dsub.discogsdata.common", "io.dsub.discogsdata.batch"})
 public class BatchApplication {
-    public static void main(String[] args) {
-        try {
-            args = new DefaultArgumentHandler().resolve(args);
-        } catch (InvalidArgumentException e) {
-            System.out.println(e.getMessage());
-            System.exit(1);
-        }
-        SpringApplication.run(BatchApplication.class, args);
+  public static void main(String[] args) {
+    try {
+      args = new DefaultArgumentHandler().resolve(args);
+    } catch (InvalidArgumentException e) {
+      System.out.println(e.getMessage());
+      System.exit(1);
     }
+    try {
+      SpringApplication.run(BatchApplication.class, args);
+    } catch (Throwable e) {
+      System.out.println(e.getMessage());
+    }
+  }
 }

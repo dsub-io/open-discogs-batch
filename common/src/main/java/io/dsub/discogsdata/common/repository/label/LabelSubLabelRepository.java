@@ -5,7 +5,7 @@ import io.dsub.discogsdata.common.entity.label.LabelSubLabel;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface LabelSubLabelRepository extends JpaRepository<LabelSubLabel, Long> {
-    boolean existsByParentAndSubLabel(Label parent, Label subLabel);
+  boolean existsByParentAndSubLabel(Label parent, Label subLabel);
 
-    boolean deleteAllByParent(Label parent);
+  boolean deleteAllByParent(Label parent);
 }

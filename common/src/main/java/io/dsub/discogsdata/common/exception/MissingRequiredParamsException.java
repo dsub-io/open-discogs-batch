@@ -5,7 +5,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 
 @ResponseStatus(value = HttpStatus.BAD_REQUEST)
 public class MissingRequiredParamsException extends InvalidArgumentException {
-    public MissingRequiredParamsException(String reason) {
-        super(reason);
-    }
+  public MissingRequiredParamsException(String reason) {
+    super(reason);
+  }
 }

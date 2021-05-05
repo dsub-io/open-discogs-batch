@@ -13,14 +13,14 @@ import javax.persistence.*;
 @AllArgsConstructor
 @Table(uniqueConstraints = @UniqueConstraint(columnNames = {"label_id", "url"}))
 public class LabelUrl extends BaseEntity {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "label_id")
-    private Label label;
+  @ManyToOne(optional = false)
+  @JoinColumn(name = "label_id")
+  private Label label;
 
-    @Column(columnDefinition = "TEXT", name = "url")
-    private String url;
+  @Column(columnDefinition = "TEXT", name = "url")
+  private String url;
 }

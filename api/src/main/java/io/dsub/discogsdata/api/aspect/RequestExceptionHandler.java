@@ -31,65 +31,69 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class RequestExceptionHandler extends ResponseEntityExceptionHandler {
 
-    private HttpServletRequest givenRequest() {
-        return ((ServletRequestAttributes) RequestContextHolder
-                .currentRequestAttributes())
-                .getRequest();
+  private HttpServletRequest givenRequest() {
+    return ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes())
+        .getRequest();
+  }
+
+  private URI getRequestURI() {
+    return URI.create(givenRequest().getRequestURI());
+  }
+
+  private ResponseEntity<Object> makeResponse(String exceptionReason, HttpStatus httpStatus) {
+    Map<String, Object> responseBody = new HashMap<>();
+    responseBody.put("message", exceptionReason);
+    responseBody.put("time", OffsetDateTime.now(ZoneId.of("UTC")).toString());
+    return ResponseEntity.status(httpStatus)
+        .contentType(MediaType.APPLICATION_JSON)
+        .location(getRequestURI())
+        .body(responseBody);
+  }
+
+  private ResponseEntity<Object> makeResponse(
+      String exceptionReason, HttpStatus httpStatus, HttpServletRequest request) {
+    Map<String, Object> responseBody = new HashMap<>();
+    responseBody.put("message", exceptionReason);
+    responseBody.put("time", OffsetDateTime.now(ZoneId.of("UTC")).toString());
+
+    return ResponseEntity.status(httpStatus)
+        .contentType(MediaType.APPLICATION_JSON)
+        .location(URI.create(request.getRequestURI()))
+        .body(responseBody);
+  }
+
+  private ResponseEntity<Object> makeResponse(BaseException e) {
+    return makeResponse(e.getMessage(), e.getHttpStatus());
+  }
+
+  @ExceptionHandler({BaseException.class})
+  public ResponseEntity<?> handleBaseException(BaseException e) {
+    return makeResponse(e);
+  }
+
+  @Override
+  protected ResponseEntity<Object> handleTypeMismatch(
+      TypeMismatchException ex, HttpHeaders headers, HttpStatus status, WebRequest request) {
+    String cause =
+        String.format(
+            "Parameter type mismatch: [%s] expected type: [%s]",
+            ex.getValue(), Objects.requireNonNull(ex.getRequiredType()).getSimpleName());
+    return makeResponse(cause, HttpStatus.NOT_ACCEPTABLE);
+  }
+
+  @Override
+  protected ResponseEntity<Object> handleExceptionInternal(
+      Exception ex, Object body, HttpHeaders headers, HttpStatus status, WebRequest request) {
+    String cause = ex.getMessage();
+
+    if (ex instanceof SQLException) {
+      SQLException sqlException = (SQLException) ex;
+      while (sqlException.getNextException() != null) {
+        sqlException = sqlException.getNextException();
+      }
+      return makeResponse(sqlException.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
-    private URI getRequestURI() {
-        return URI.create(givenRequest().getRequestURI());
-    }
-
-    private ResponseEntity<Object> makeResponse(String exceptionReason, HttpStatus httpStatus) {
-        Map<String, Object> responseBody = new HashMap<>();
-        responseBody.put("message", exceptionReason);
-        responseBody.put("time", OffsetDateTime.now(ZoneId.of("UTC")).toString());
-        return ResponseEntity.status(httpStatus)
-                .contentType(MediaType.APPLICATION_JSON)
-                .location(getRequestURI())
-                .body(responseBody);
-    }
-
-    private ResponseEntity<Object> makeResponse(String exceptionReason, HttpStatus httpStatus, HttpServletRequest request) {
-        Map<String, Object> responseBody = new HashMap<>();
-        responseBody.put("message", exceptionReason);
-        responseBody.put("time", OffsetDateTime.now(ZoneId.of("UTC")).toString());
-
-        return ResponseEntity.status(httpStatus)
-                .contentType(MediaType.APPLICATION_JSON)
-                .location(URI.create(request.getRequestURI()))
-                .body(responseBody);
-    }
-
-    private ResponseEntity<Object> makeResponse(BaseException e) {
-        return makeResponse(e.getMessage(), e.getHttpStatus());
-    }
-
-    @ExceptionHandler({BaseException.class})
-    public ResponseEntity<?> handleBaseException(BaseException e) {
-        return makeResponse(e);
-    }
-
-    @Override
-    protected ResponseEntity<Object> handleTypeMismatch(TypeMismatchException ex, HttpHeaders headers, HttpStatus status, WebRequest request) {
-        String cause = String.format("Parameter type mismatch: [%s] expected type: [%s]", ex.getValue(), Objects.requireNonNull(ex.getRequiredType()).getSimpleName());
-        return makeResponse(cause, HttpStatus.NOT_ACCEPTABLE);
-    }
-
-    @Override
-    protected ResponseEntity<Object> handleExceptionInternal(Exception ex, Object body, HttpHeaders headers, HttpStatus status, WebRequest request) {
-        String cause = ex.getMessage();
-
-        if (ex instanceof SQLException) {
-            SQLException sqlException = (SQLException) ex;
-            while (sqlException.getNextException() != null) {
-                sqlException = sqlException.getNextException();
-            }
-            return makeResponse(sqlException.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-
-        return makeResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
-    }
-
+    return makeResponse(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+  }
 }

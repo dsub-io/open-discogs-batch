@@ -14,18 +14,18 @@ import javax.persistence.*;
 @AllArgsConstructor
 public class ReleaseItemCreditedArtist extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
-    @JoinColumn(name = "release_item_id")
-    @ManyToOne
-    private ReleaseItem releaseItem;
+  @JoinColumn(name = "release_item_id")
+  @ManyToOne
+  private ReleaseItem releaseItem;
 
-    @JoinColumn(name = "artist_id")
-    @ManyToOne
-    private Artist artist;
+  @JoinColumn(name = "artist_id")
+  @ManyToOne
+  private Artist artist;
 
-    @Column(columnDefinition = "TEXT")
-    private String role;
+  @Column(columnDefinition = "TEXT")
+  private String role;
 }

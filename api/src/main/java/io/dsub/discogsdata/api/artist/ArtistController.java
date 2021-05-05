@@ -14,20 +14,21 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ArtistController {
 
-    private final ArtistService artistService;
+  private final ArtistService artistService;
 
-    @GetMapping
-    public List<ArtistDto> getArtists() {
-        return artistService.getArtists();
-    }
+  @GetMapping
+  public List<ArtistDto> getArtists() {
+    return artistService.getArtists();
+  }
 
-    @GetMapping("/{id}")
-    public ArtistDto getArtistById(@PathVariable(name = "id") long id) throws ArtistNotFoundException {
-        return artistService.getArtistById(id);
-    }
+  @GetMapping("/{id}")
+  public ArtistDto getArtistById(@PathVariable(name = "id") long id)
+      throws ArtistNotFoundException {
+    return artistService.getArtistById(id);
+  }
 
-    @GetMapping(params = "name")
-    public List<ArtistDto> getArtistsByNameLike(String name) {
-        return artistService.getArtistsByName(name);
-    }
+  @GetMapping(params = "name")
+  public List<ArtistDto> getArtistsByNameLike(String name) {
+    return artistService.getArtistsByName(name);
+  }
 }

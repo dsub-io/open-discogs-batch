@@ -14,18 +14,18 @@ import javax.persistence.*;
 @AllArgsConstructor
 public class ReleaseItemWork extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
-    @ManyToOne
-    @JoinColumn(name = "release_item_id")
-    private ReleaseItem releaseItem;
+  @ManyToOne
+  @JoinColumn(name = "release_item_id")
+  private ReleaseItem releaseItem;
 
-    @ManyToOne
-    @JoinColumn(name = "label_id")
-    private Label label;
+  @ManyToOne
+  @JoinColumn(name = "label_id")
+  private Label label;
 
-    private String name;
-    private String job;
+  private String name;
+  private String job;
 }

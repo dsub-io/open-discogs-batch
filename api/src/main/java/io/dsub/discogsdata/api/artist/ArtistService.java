@@ -5,9 +5,9 @@ import io.dsub.discogsdata.api.exception.ArtistNotFoundException;
 import java.util.List;
 
 public interface ArtistService {
-    ArtistDto getArtistById(long id) throws ArtistNotFoundException;
+  ArtistDto getArtistById(long id) throws ArtistNotFoundException;
 
-    List<ArtistDto> getArtists();
+  List<ArtistDto> getArtists();
 
-    List<ArtistDto> getArtistsByName(String name);
+  List<ArtistDto> getArtistsByName(String name);
 }

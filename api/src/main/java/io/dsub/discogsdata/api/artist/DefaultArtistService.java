@@ -18,37 +18,37 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class DefaultArtistService implements ArtistService {
 
-    private final ArtistRepository artistRepository;
-    private final ArtistMemberRepository artistMemberRepository;
-    private final ArtistGroupRepository artistGroupRepository;
-    private final ArtistAliasRepository artistAliasRepository;
+  private final ArtistRepository artistRepository;
+  private final ArtistMemberRepository artistMemberRepository;
+  private final ArtistGroupRepository artistGroupRepository;
+  private final ArtistAliasRepository artistAliasRepository;
 
-    @Override
-    public ArtistDto getArtistById(long id) throws ArtistNotFoundException {
-        Optional<Artist> optionalArtist = artistRepository.findById(id);
-        if (optionalArtist.isEmpty()) {
-            throw new ArtistNotFoundException("artist with id " + id + " not found");
-        }
-        return this.makeArtistDto(optionalArtist.get());
+  @Override
+  public ArtistDto getArtistById(long id) throws ArtistNotFoundException {
+    Optional<Artist> optionalArtist = artistRepository.findById(id);
+    if (optionalArtist.isEmpty()) {
+      throw new ArtistNotFoundException("artist with id " + id + " not found");
     }
+    return this.makeArtistDto(optionalArtist.get());
+  }
 
-    @Override
-    public List<ArtistDto> getArtists() {
-        return artistRepository.findAll(PageRequest.of(1, 50)).stream()
-                .map(this::makeArtistDto)
-                .collect(Collectors.toList());
-    }
+  @Override
+  public List<ArtistDto> getArtists() {
+    return artistRepository.findAll(PageRequest.of(1, 50)).stream()
+        .map(this::makeArtistDto)
+        .collect(Collectors.toList());
+  }
 
-    @Override
-    public List<ArtistDto> getArtistsByName(String name) {
-        return artistRepository.findAllByNameContains(name).stream()
-                .map(this::makeArtistDto)
-                .collect(Collectors.toList());
-    }
+  @Override
+  public List<ArtistDto> getArtistsByName(String name) {
+    return artistRepository.findAllByNameContains(name).stream()
+        .map(this::makeArtistDto)
+        .collect(Collectors.toList());
+  }
 
-    // todo: impl
+  // todo: impl
 
-    private ArtistDto makeArtistDto(Artist artist) {
-        return null;
-    }
+  private ArtistDto makeArtistDto(Artist artist) {
+    return null;
+  }
 }

@@ -14,21 +14,19 @@ import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class DataSourceConfigTestWithPropertiesGiven {
-    @Mock
-    ApplicationArguments applicationArguments;
+  @Mock ApplicationArguments applicationArguments;
 
-    @InjectMocks
-    private DataSourceConfig dataSourceConfig;
+  @InjectMocks private DataSourceConfig dataSourceConfig;
 
-    @Test
-    void shouldProvideDataSource() {
-        DataSource dataSource = dataSourceConfig.batchDataSource();
-        verify(applicationArguments).getNonOptionArgs();
-        assertThat(dataSource).isNotNull();
-    }
+  @Test
+  void shouldProvideDataSource() {
+    DataSource dataSource = dataSourceConfig.batchDataSource();
+    verify(applicationArguments).getNonOptionArgs();
+    assertThat(dataSource).isNotNull();
+  }
 
-    @Test
-    void getApplicationArgumentsShouldNotReturnNull() {
-        assertThat(dataSourceConfig.getApplicationArguments()).isNotNull();
-    }
+  @Test
+  void getApplicationArgumentsShouldNotReturnNull() {
+    assertThat(dataSourceConfig.getApplicationArguments()).isNotNull();
+  }
 }

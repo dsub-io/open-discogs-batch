@@ -13,15 +13,15 @@ import javax.persistence.*;
 @AllArgsConstructor
 @Table(uniqueConstraints = @UniqueConstraint(columnNames = {"artist_id", "group_id"}))
 public class ArtistGroup extends BaseEntity {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
-    @ManyToOne
-    @JoinColumn(name = "artist_id")
-    private Artist artist;
+  @ManyToOne
+  @JoinColumn(name = "artist_id")
+  private Artist artist;
 
-    @ManyToOne
-    @JoinColumn(name = "group_id")
-    private Artist group;
+  @ManyToOne
+  @JoinColumn(name = "group_id")
+  private Artist group;
 }

@@ -21,36 +21,39 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class RestControllerLogger extends RestControllerAspect {
 
-    private final Function<Map<String, String[]>, String> stringifyMap = map ->
-            map.entrySet().stream()
-                    .map(entry -> String.format(
-                            "%s >> %s", entry.getKey(), String.join(",", entry.getValue())))
-                    .collect(Collectors.joining(", "));
+  private final Function<Map<String, String[]>, String> stringifyMap =
+      map ->
+          map.entrySet().stream()
+              .map(
+                  entry ->
+                      String.format("%s >> %s", entry.getKey(), String.join(",", entry.getValue())))
+              .collect(Collectors.joining(", "));
 
-    @Around("restControllers()")
-    public Object logRestControllerRequest(ProceedingJoinPoint proceedingJoinPoint) throws Throwable {
+  @Around("restControllers()")
+  public Object logRestControllerRequest(ProceedingJoinPoint proceedingJoinPoint) throws Throwable {
 
-        HttpServletRequest request =
-                ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes()).getRequest();
+    HttpServletRequest request =
+        ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes()).getRequest();
 
-        String params = stringifyMap.apply(request.getParameterMap());
-        if (!params.isBlank()) {
-            params = "[" + params + "]";
-        }
-
-        long start = System.currentTimeMillis();
-
-        try {
-            return proceedingJoinPoint.proceed(proceedingJoinPoint.getArgs());
-        } finally {
-            long timeTook = System.currentTimeMillis() - start;
-
-            log.debug("Request: {} {}{} < {} ({}ms)",
-                    request.getMethod(),
-                    request.getRequestURI(),
-                    params,
-                    request.getRemoteHost() + ":" + request.getRemotePort(),
-                    timeTook);
-        }
+    String params = stringifyMap.apply(request.getParameterMap());
+    if (!params.isBlank()) {
+      params = "[" + params + "]";
     }
+
+    long start = System.currentTimeMillis();
+
+    try {
+      return proceedingJoinPoint.proceed(proceedingJoinPoint.getArgs());
+    } finally {
+      long timeTook = System.currentTimeMillis() - start;
+
+      log.debug(
+          "Request: {} {}{} < {} ({}ms)",
+          request.getMethod(),
+          request.getRequestURI(),
+          params,
+          request.getRemoteHost() + ":" + request.getRemotePort(),
+          timeTook);
+    }
+  }
 }

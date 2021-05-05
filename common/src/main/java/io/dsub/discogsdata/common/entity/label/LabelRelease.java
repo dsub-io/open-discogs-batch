@@ -12,20 +12,21 @@ import javax.persistence.*;
 @EqualsAndHashCode(callSuper = false)
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "label_release",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"release_id", "label_id"}))
+@Table(
+    name = "label_release",
+    uniqueConstraints = @UniqueConstraint(columnNames = {"release_id", "label_id"}))
 public class LabelRelease extends BaseEntity {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
-    @ManyToOne
-    @JoinColumn(name = "release_id")
-    private ReleaseItem releaseItem;
+  @ManyToOne
+  @JoinColumn(name = "release_id")
+  private ReleaseItem releaseItem;
 
-    @ManyToOne
-    @JoinColumn(name = "label_id")
-    private Label label;
+  @ManyToOne
+  @JoinColumn(name = "label_id")
+  private Label label;
 
-    private String categoryNumber;
+  private String categoryNumber;
 }

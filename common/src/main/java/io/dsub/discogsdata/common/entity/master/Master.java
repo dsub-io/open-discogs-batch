@@ -16,16 +16,14 @@ import javax.persistence.OneToOne;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Master extends BaseEntity {
-    @Id
-    private Long id;
+  @Id private Long id;
 
-    private short year;
+  private short year;
 
-    @Column(length = 2000)
-    private String title;
+  @Column(length = 2000)
+  private String title;
 
-    private String dataQuality;
+  private String dataQuality;
 
-    @OneToOne
-    private ReleaseItem mainReleaseItem;
+  @OneToOne private ReleaseItem mainReleaseItem;
 }

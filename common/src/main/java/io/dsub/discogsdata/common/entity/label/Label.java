@@ -14,16 +14,15 @@ import javax.persistence.Id;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Label extends BaseTimeEntity {
-    @Id
-    private Long id;
+  @Id private Long id;
 
-    private String name;
+  private String name;
 
-    @Column(columnDefinition = "LONGTEXT")
-    private String contactInfo;
+  @Column(columnDefinition = "LONGTEXT")
+  private String contactInfo;
 
-    @Column(columnDefinition = "LONGTEXT")
-    private String profile;
+  @Column(columnDefinition = "LONGTEXT")
+  private String profile;
 
-    private String dataQuality;
+  private String dataQuality;
 }

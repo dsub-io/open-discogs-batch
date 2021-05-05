@@ -17,24 +17,25 @@ import java.util.stream.Collectors;
 @Component
 public class ServiceExceptionLogger extends ServiceAspect {
 
-    @Around("services()")
-    public Object handleError(ProceedingJoinPoint joinPoint) throws Throwable {
-        try {
-            return joinPoint.proceed(joinPoint.getArgs());
-        } catch (Throwable e) {
-            Map<String, Object> args = Arrays.stream(joinPoint.getArgs())
-                    .collect(Collectors.toMap(
-                            o -> o.getClass().getSimpleName(),
-                            o -> String.valueOf(o).replaceAll("[\n\t ]", "")));
-            log.debug("{} thrown from class {{}} on method {{} {}} with params {}",
-                    e.getClass().getSimpleName(),
-                    joinPoint.getSignature().getDeclaringType().getName(),
-                    Modifier.toString(joinPoint.getSignature().getModifiers()),
-                    joinPoint.getSignature().getName(),
-                    args);
-            throw e;
-        }
+  @Around("services()")
+  public Object handleError(ProceedingJoinPoint joinPoint) throws Throwable {
+    try {
+      return joinPoint.proceed(joinPoint.getArgs());
+    } catch (Throwable e) {
+      Map<String, Object> args =
+          Arrays.stream(joinPoint.getArgs())
+              .collect(
+                  Collectors.toMap(
+                      o -> o.getClass().getSimpleName(),
+                      o -> String.valueOf(o).replaceAll("[\n\t ]", "")));
+      log.debug(
+          "{} thrown from class {{}} on method {{} {}} with params {}",
+          e.getClass().getSimpleName(),
+          joinPoint.getSignature().getDeclaringType().getName(),
+          Modifier.toString(joinPoint.getSignature().getModifiers()),
+          joinPoint.getSignature().getName(),
+          args);
+      throw e;
     }
-
+  }
 }
-

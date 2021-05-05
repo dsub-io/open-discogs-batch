@@ -12,17 +12,20 @@ import javax.persistence.*;
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = false)
 public class Track extends BaseEntity {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    @Column(columnDefinition = "TEXT")
-    private String name;
-    @Column(columnDefinition = "TEXT")
-    private String title;
-    @Column(length = 1000)
-    private String duration;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
-    @ManyToOne
-    @JoinColumn(name = "release_item_id")
-    private ReleaseItem releaseItem;
+  @Column(columnDefinition = "TEXT")
+  private String name;
+
+  @Column(columnDefinition = "TEXT")
+  private String title;
+
+  @Column(length = 1000)
+  private String duration;
+
+  @ManyToOne
+  @JoinColumn(name = "release_item_id")
+  private ReleaseItem releaseItem;
 }

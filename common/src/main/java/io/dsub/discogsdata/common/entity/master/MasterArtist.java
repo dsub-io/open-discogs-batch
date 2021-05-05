@@ -12,17 +12,19 @@ import javax.persistence.*;
 @EqualsAndHashCode(callSuper = false)
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "master_artist", uniqueConstraints = @UniqueConstraint(columnNames = {"master_id", "artist_id"}))
+@Table(
+    name = "master_artist",
+    uniqueConstraints = @UniqueConstraint(columnNames = {"master_id", "artist_id"}))
 public class MasterArtist extends BaseEntity {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
-    @JoinColumn(name = "master_id", unique = false)
-    @ManyToOne
-    private Master master;
+  @JoinColumn(name = "master_id", unique = false)
+  @ManyToOne
+  private Master master;
 
-    @JoinColumn(name = "artist_id", unique = false)
-    @ManyToOne
-    private Artist artist;
+  @JoinColumn(name = "artist_id", unique = false)
+  @ManyToOne
+  private Artist artist;
 }

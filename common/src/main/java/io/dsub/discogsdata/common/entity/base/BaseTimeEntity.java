@@ -12,6 +12,5 @@ import java.time.LocalDateTime;
 @MappedSuperclass
 @EntityListeners(AuditingEntityListener.class)
 public abstract class BaseTimeEntity extends BaseEntity {
-    @LastModifiedDate
-    private LocalDateTime lastModifiedAt;
+  @LastModifiedDate private LocalDateTime lastModifiedAt;
 }

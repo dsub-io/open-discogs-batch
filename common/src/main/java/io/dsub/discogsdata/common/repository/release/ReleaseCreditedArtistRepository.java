@@ -7,10 +7,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 
-public interface ReleaseCreditedArtistRepository extends JpaRepository<ReleaseItemCreditedArtist, Long> {
-    boolean existsByArtistAndReleaseItem(Artist artist, ReleaseItem releaseItem);
+public interface ReleaseCreditedArtistRepository
+    extends JpaRepository<ReleaseItemCreditedArtist, Long> {
+  boolean existsByArtistAndReleaseItem(Artist artist, ReleaseItem releaseItem);
 
-    boolean existsByArtistIdAndReleaseItemId(Long artistId, Long releaseItemId);
+  boolean existsByArtistIdAndReleaseItemId(Long artistId, Long releaseItemId);
 
-    List<ReleaseItemCreditedArtist> findAllByReleaseItemId(Long releaseItemId);
+  List<ReleaseItemCreditedArtist> findAllByReleaseItemId(Long releaseItemId);
 }

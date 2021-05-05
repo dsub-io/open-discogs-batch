@@ -14,15 +14,15 @@ import javax.persistence.*;
 @AllArgsConstructor
 @Table(uniqueConstraints = @UniqueConstraint(columnNames = {"release_item_id", "style"}))
 public class ReleaseItemStyle extends BaseEntity {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
-    @JoinColumn(name = "release_item_id")
-    @ManyToOne
-    private ReleaseItem releaseItem;
+  @JoinColumn(name = "release_item_id")
+  @ManyToOne
+  private ReleaseItem releaseItem;
 
-    @JoinColumn(name = "style")
-    @ManyToOne
-    private Style style;
+  @JoinColumn(name = "style")
+  @ManyToOne
+  private Style style;
 }

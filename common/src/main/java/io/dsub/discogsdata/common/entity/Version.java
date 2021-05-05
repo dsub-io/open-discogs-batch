@@ -13,11 +13,12 @@ import javax.persistence.Id;
 @Entity
 @EqualsAndHashCode(callSuper = true)
 public class Version extends BaseTimeEntity {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id;
-    private String artistETag;
-    private String releaseETag;
-    private String masterETag;
-    private String labelETag;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private long id;
+
+  private String artistETag;
+  private String releaseETag;
+  private String masterETag;
+  private String labelETag;
 }

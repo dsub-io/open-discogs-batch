@@ -5,5 +5,6 @@ import io.dsub.discogsdata.common.entity.master.MasterVideo;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface MasterVideoRepository extends JpaRepository<MasterVideo, Long> {
-    boolean existsByDescriptionAndUrlAndTitleAndMaster(String description, String url, String title, Master master);
+  boolean existsByDescriptionAndUrlAndTitleAndMaster(
+      String description, String url, String title, Master master);
 }

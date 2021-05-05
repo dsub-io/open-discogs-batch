@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface ArtistAliasRepository extends JpaRepository<ArtistAlias, Long> {
-    boolean existsByArtistAndAlias(Artist artist, Artist alias);
+  boolean existsByArtistAndAlias(Artist artist, Artist alias);
 
-    List<ArtistAlias> findAllByArtistId(Long artistId);
+  List<ArtistAlias> findAllByArtistId(Long artistId);
 }

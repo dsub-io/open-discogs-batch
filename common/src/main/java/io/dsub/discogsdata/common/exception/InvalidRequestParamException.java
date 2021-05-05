@@ -5,7 +5,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 
 @ResponseStatus(value = HttpStatus.BAD_REQUEST)
 public class InvalidRequestParamException extends BaseException {
-    public InvalidRequestParamException(String reason) {
-        super(HttpStatus.BAD_REQUEST, reason);
-    }
+  public InvalidRequestParamException(String reason) {
+    super(HttpStatus.BAD_REQUEST, reason);
+  }
 }
