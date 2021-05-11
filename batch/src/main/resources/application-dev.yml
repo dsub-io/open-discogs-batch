@@ -15,20 +15,12 @@ spring:
     throw-exception-if-no-handler-found: true
   jpa:
     generate-ddl: true
-    hibernate:
-      ddl-auto: update
-    properties:
-      hibernate:
-        jdbc:
-          time_zone: UTC
 logging:
   level:
-    io.dsub: DEBUG
     org:
-      reflections: OFF
+      reflections: ERROR
       springframework: ERROR
       hibernate: ERROR
-    com.zaxxer.hikari: ERROR
 server:
   error:
     include-stacktrace: never

@@ -20,10 +20,10 @@ public class ReleaseItemVideo extends BaseEntity {
   @Column(length = 1000)
   private String title;
 
-  @Column(columnDefinition = "TEXT")
+  @Column(length = 5000)
   private String description;
 
-  @Column(columnDefinition = "TEXT")
+  @Column(length = 5000)
   private String url;
 
   @ManyToOne

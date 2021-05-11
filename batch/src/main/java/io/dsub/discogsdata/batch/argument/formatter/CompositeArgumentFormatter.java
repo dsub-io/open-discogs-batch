@@ -12,8 +12,9 @@ public class CompositeArgumentFormatter implements ArgumentFormatter {
     this.delegates = new ArrayList<>();
   }
 
-  public void addFormatter(ArgumentFormatter additionalFormatter) {
+  public CompositeArgumentFormatter addFormatter(ArgumentFormatter additionalFormatter) {
     this.delegates.add(additionalFormatter);
+    return this;
   }
 
   @Override

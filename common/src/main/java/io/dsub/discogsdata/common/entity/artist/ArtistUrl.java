@@ -21,6 +21,6 @@ public class ArtistUrl extends BaseEntity {
   @JoinColumn(name = "artist_id")
   private Artist artist;
 
-  @Column(columnDefinition = "TEXT", name = "url")
+  @Column(length = 5000, name = "url")
   private String url;
 }

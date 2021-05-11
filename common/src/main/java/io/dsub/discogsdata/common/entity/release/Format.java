@@ -23,7 +23,7 @@ public class Format extends BaseEntity {
   private String name;
   private Integer qty;
 
-  @Column(columnDefinition = "TEXT")
+  @Column(length = 5000)
   private String text;
 
   @ElementCollection @Builder.Default private Set<String> description = new HashSet<>();

@@ -21,6 +21,6 @@ public class LabelUrl extends BaseEntity {
   @JoinColumn(name = "label_id")
   private Label label;
 
-  @Column(columnDefinition = "TEXT", name = "url")
+  @Column(length = 5000, name = "url")
   private String url;
 }

@@ -21,7 +21,6 @@ import java.util.stream.Collectors;
 @Primary
 @Component
 public class DefaultArgumentHandler implements ArgumentHandler {
-
   private final ArgumentFormatter argumentFormatter;
   private final ArgumentValidator argumentValidator;
   /**
@@ -42,13 +41,17 @@ public class DefaultArgumentHandler implements ArgumentHandler {
 
   /** Default no-arg constructor. */
   public DefaultArgumentHandler() {
-    CompositeArgumentValidator validator = new CompositeArgumentValidator();
-    validator.addValidator(new DataSourceArgumentValidator());
-    validator.addValidator(new KnownArgumentValidator());
-    validator.addValidator(new MappedValueValidator());
-    CompositeArgumentFormatter formatter = new CompositeArgumentFormatter();
-    formatter.addFormatter(new ArgumentNameFormatter());
-    formatter.addFormatter(new JdbcUrlFormatter());
+    CompositeArgumentValidator validator =
+        new CompositeArgumentValidator()
+            .addValidator(new DataSourceArgumentValidator())
+            .addValidator(new KnownArgumentValidator())
+            .addValidator(new MappedValueValidator())
+            .addValidator(new TypeArgumentValidator())
+            .addValidator(new YearMonthValidator());
+    CompositeArgumentFormatter formatter =
+        new CompositeArgumentFormatter()
+            .addFormatter(new ArgumentNameFormatter())
+            .addFormatter(new JdbcUrlFormatter());
     argumentValidator = validator;
     argumentFormatter = formatter;
   }

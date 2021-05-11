@@ -2,6 +2,7 @@ dependencies {
     implementation(
             project(":common"),
             'org.springframework.boot:spring-boot-starter-batch',
+            'org.springframework.boot:spring-boot-starter-validation',
             'org.springframework.batch:spring-batch-integration:4.3.0',
             'org.springframework.boot:spring-boot-starter-aop',
             'org.springframework:spring-oxm:5.3.1',

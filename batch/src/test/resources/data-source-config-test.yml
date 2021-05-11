@@ -1,9 +1,0 @@
-batch:
-  username: user
-  password: pass
-  url: jdbc:mysql://myurl:3306/myschema
-logging:
-  level:
-    root: OFF
-    org:
-      springframework: OFF

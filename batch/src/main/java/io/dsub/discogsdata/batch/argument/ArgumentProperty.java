@@ -31,7 +31,9 @@ public class ArgumentProperty {
 
   public boolean contains(String argName) {
     String target = argName.replaceAll("[_-]", "");
-    return this.getSynonyms().stream().map(String::toLowerCase).anyMatch(s -> s.equals(target));
+    return this.getSynonyms().stream()
+        .map(String::toLowerCase)
+        .anyMatch(s -> s.equalsIgnoreCase(target));
   }
 
   public static class ArgumentPropertyBuilder {
