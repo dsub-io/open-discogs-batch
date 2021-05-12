@@ -16,7 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 
-import java.util.Date;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
@@ -30,9 +30,11 @@ public class DefaultDiscogsDumpServiceIntegrationTest {
 
   List<DiscogsDump> sampleDumpList =
       new DefaultDumpSupplier()
-          .get().stream().sorted(DiscogsDump::compareTo).skip(100).collect(Collectors.toList());
-
-  Random random = new Random();
+          .get().stream()
+              .sorted(DiscogsDump::compareTo)
+              .skip(200)
+              .limit(10)
+              .collect(Collectors.toList());
 
   @Autowired TestEntityManager em;
   @Autowired DiscogsDumpRepository repository;
@@ -129,7 +131,7 @@ public class DefaultDiscogsDumpServiceIntegrationTest {
     }
 
     @Test
-    void when__Then() {
+    void whenDumpByTypeInRangeCalled__ThenShouldContainCorrectItems() {
       for (DiscogsDump expectedDump : sampleDumpList) {
         DumpType type = expectedDump.getType();
         int year = expectedDump.getCreatedAt().getYear();

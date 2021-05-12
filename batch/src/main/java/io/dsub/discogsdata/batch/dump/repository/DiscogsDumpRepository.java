@@ -8,7 +8,6 @@ import java.time.LocalDate;
 import java.util.List;
 
 public interface DiscogsDumpRepository extends JpaRepository<DiscogsDump, String> {
-
   boolean existsByeTag(String eTag);
 
   DiscogsDump findByeTag(String eTag);
@@ -19,5 +18,9 @@ public interface DiscogsDumpRepository extends JpaRepository<DiscogsDump, String
 
   List<DiscogsDump> findByTypeAndCreatedAtBetween(DumpType type, LocalDate start, LocalDate end);
 
+  DiscogsDump findTopByTypeAndCreatedAtBetween(DumpType type, LocalDate start, LocalDate end);
+
   int countAllByCreatedAtIsBetween(LocalDate start, LocalDate end);
+
+  int countAllByCreatedAtIsGreaterThanEqual(LocalDate startDate);
 }

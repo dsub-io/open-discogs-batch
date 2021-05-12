@@ -40,7 +40,7 @@ public enum ArgType {
           .supportedType(Long.class)
           .build()),
   YEAR_MONTH(ArgumentProperty.builder().globalName("yearMonth").synonyms("ym").build()),
-  E_TAG(ArgumentProperty.builder().globalName("eTag").synonyms("e").maxValuesCount(4).build());
+  ETAG(ArgumentProperty.builder().globalName("eTag").synonyms("e").maxValuesCount(4).build());
 
   // properties mapped to each enum instance.
   private final ArgumentProperty props;

@@ -116,6 +116,9 @@ class ArgTypeUnitTest {
   @ParameterizedTest
   @EnumSource(ArgType.class)
   void testValueOfReturnsProperMatch(ArgType argType) {
+    if (argType.equals(ArgType.ETAG)) {
+      return;
+    }
     String name =
         IntStream.range(0, argType.getGlobalName().length())
             .map(i -> argType.getGlobalName().charAt(i))

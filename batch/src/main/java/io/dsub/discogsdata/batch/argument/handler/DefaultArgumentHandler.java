@@ -39,6 +39,8 @@ public class DefaultArgumentHandler implements ArgumentHandler {
         return List.of(arg);
       };
 
+
+  // TODO: think about using reflection to implement auto registration (but without redundant logs)
   /** Default no-arg constructor. */
   public DefaultArgumentHandler() {
     CompositeArgumentValidator validator =
@@ -52,8 +54,8 @@ public class DefaultArgumentHandler implements ArgumentHandler {
         new CompositeArgumentFormatter()
             .addFormatter(new ArgumentNameFormatter())
             .addFormatter(new JdbcUrlFormatter());
-    argumentValidator = validator;
-    argumentFormatter = formatter;
+    this.argumentValidator = validator;
+    this.argumentFormatter = formatter;
   }
 
   /**

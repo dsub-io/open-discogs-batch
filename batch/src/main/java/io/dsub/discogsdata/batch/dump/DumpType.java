@@ -2,6 +2,7 @@ package io.dsub.discogsdata.batch.dump;
 
 import io.dsub.discogsdata.common.exception.InvalidArgumentException;
 
+import java.util.List;
 import java.util.Locale;
 
 public enum DumpType {
@@ -13,6 +14,16 @@ public enum DumpType {
   @Override
   public String toString() {
     return this.name().toLowerCase(Locale.US);
+  }
+
+  public List<DumpType> getDependencies() {
+    if (this.equals(RELEASE)) {
+      return List.of(values());
+    }
+    if (this.equals(MASTER)) {
+      return List.of(ARTIST, LABEL, MASTER);
+    }
+    return List.of(this);
   }
 
   public static DumpType of(String name) {

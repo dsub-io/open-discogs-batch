@@ -12,18 +12,18 @@ import net.bytebuddy.utility.RandomString;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.*;
 
 import java.time.Clock;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Random;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.catchThrowable;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
@@ -40,6 +40,22 @@ class DefaultDiscogsDumpServiceUnitTest {
   @BeforeEach
   void setUp() {
     MockitoAnnotations.openMocks(this);
+  }
+
+  @Test
+  void whenUpdateDB__IfMonthlyDumpCountIs4__ThenShouldNotProceedUpdate() {
+    when(repository.countAllByCreatedAtIsGreaterThanEqual(LocalDate.now().withDayOfMonth(1)))
+        .thenReturn(4);
+
+    // when
+    dumpService.updateDB();
+
+    // then
+    assertThat(logSpy.getEvents().get(0).getMessage())
+        .isEqualTo("repository is up to date. skipping the update...");
+    verify(dumpSupplier, never()).get();
+    verify(repository, times(1))
+        .countAllByCreatedAtIsGreaterThanEqual(LocalDate.now().withDayOfMonth(1));
   }
 
   @Test
@@ -191,6 +207,16 @@ class DefaultDiscogsDumpServiceUnitTest {
   }
 
   @Test
+  void whenAfterPropertiesSet__ThenShouldCallUpdatedDBMethod() {
+    when(repository.countAllByCreatedAtIsGreaterThanEqual(any()))
+            .thenReturn(4);
+
+    // when
+    assertDoesNotThrow(() -> dumpService.afterPropertiesSet());
+    verify(repository, times(1)).countAllByCreatedAtIsGreaterThanEqual(any());
+  }
+
+  @Test
   void whenGetLatestCompleteDumpSet__ThenShouldThrowDumpNotFoundException() {
     for (int i = 0; i < 4; i++) {
       when(repository.countAllByCreatedAtIsBetween(any(), any())).thenReturn(i);
@@ -206,6 +232,95 @@ class DefaultDiscogsDumpServiceUnitTest {
     // when
     assertThat(dumpService.getAll()).isEqualTo(fakeList);
     verify(repository, atMostOnce()).findAll();
+  }
+
+  @ParameterizedTest
+  @EnumSource(DumpType.class)
+  void whenGetMostRecentDiscogsDumpByTypeYearMonth__ThenShouldCallRepositoryWithExpectedValue(
+      DumpType type) {
+    ArgumentCaptor<LocalDate> startDateCaptor = ArgumentCaptor.forClass(LocalDate.class);
+    ArgumentCaptor<LocalDate> endDateCaptor = ArgumentCaptor.forClass(LocalDate.class);
+    ArgumentCaptor<DumpType> dumpTypeArgumentCaptor = ArgumentCaptor.forClass(DumpType.class);
+    DiscogsDump expectedDump = getRandomDump();
+
+    LocalDate startDate = LocalDate.now().minusDays(1000 + random.nextInt(1000)).withDayOfMonth(1);
+    LocalDate endDate = startDate.plusMonths(1).minusDays(1);
+
+    when(repository.findTopByTypeAndCreatedAtBetween(
+            dumpTypeArgumentCaptor.capture(), startDateCaptor.capture(), endDateCaptor.capture()))
+        .thenReturn(expectedDump);
+
+    // when
+    DiscogsDump resultDump =
+        dumpService.getMostRecentDiscogsDumpByTypeYearMonth(
+            type, startDate.getYear(), startDate.getMonthValue());
+    // then
+    assertThat(resultDump).isEqualTo(expectedDump);
+    assertThat(dumpTypeArgumentCaptor.getValue()).isEqualTo(type);
+    assertThat(startDateCaptor.getValue()).isEqualTo(startDate);
+    assertThat(endDateCaptor.getValue()).isEqualTo(endDate);
+  }
+
+  @Test
+  void whenRepositoryNotSet__ThenShouldThrow() {
+    dumpService = new DefaultDiscogsDumpService(null, dumpSupplier);
+
+    // when
+    Throwable t = catchThrowable(() -> dumpService.afterPropertiesSet());
+
+    // then
+    assertThat(t)
+        .isInstanceOf(InitializationFailureException.class)
+        .hasMessage("repository cannot be null");
+  }
+
+  @Test
+  void whenDumpSupplierNotSet__ThenShouldThrow() {
+    dumpService = new DefaultDiscogsDumpService(repository, null);
+
+    // when
+    Throwable t = catchThrowable(() -> dumpService.afterPropertiesSet());
+
+    // then
+    assertThat(t)
+        .isInstanceOf(InitializationFailureException.class)
+        .hasMessage("dumpSupplier cannot be null");
+  }
+
+  @Test
+  void whenGetAllByTypeYearMonth__WithDuplicatedType__ShouldNotThrow() {
+    DumpType type = DumpType.values()[random.nextInt(4)];
+    when(repository.findTopByTypeAndCreatedAtBetween(any(), any(), any()))
+        .thenReturn(getRandomDumpWithType(type));
+
+    // when
+    assertDoesNotThrow(() -> dumpService.getAllByTypeYearMonth(List.of(type, type), 1, 1));
+  }
+
+  @Test
+  void whenGetAllByTypeYearMonth__ShouldThrowIfRepositoryReturnsNull() {
+    when(repository.findTopByTypeAndCreatedAtBetween(any(), any(), any())).thenReturn(null);
+    DumpType type = DumpType.values()[random.nextInt(4)];
+    Throwable t = catchThrowable(() -> dumpService.getAllByTypeYearMonth(List.of(type), 1, 1));
+    assertThat(t)
+        .isInstanceOf(DumpNotFoundException.class)
+        .hasMessage("dump of type " + type + " from 1-1 not found");
+  }
+
+  @ParameterizedTest
+  @EnumSource(DumpType.class)
+  void whenGetAllByTypeYearMonth__ShouldReturnProperValue(DumpType type) {
+    Collection<DiscogsDump> expected = List.of(getRandomDumpWithType(type));
+    when(repository.findTopByTypeAndCreatedAtBetween(any(), any(), any()))
+        .thenReturn(expected.iterator().next());
+
+    // when
+    Collection<DiscogsDump> result = dumpService.getAllByTypeYearMonth(List.of(type), 1, 1);
+
+    // then
+    assertThat(result.size()).isEqualTo(expected.size());
+    assertThat(result.iterator().next()).isEqualTo(expected.iterator().next());
+    verify(repository, times(1)).findTopByTypeAndCreatedAtBetween(any(), any(), any());
   }
 
   @Test

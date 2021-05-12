@@ -242,6 +242,7 @@ class DiscogsDumpTest {
         .type(DumpType.values()[new Random().nextInt(4)])
         .size(10L)
         .createdAt(createdAt)
+        .registeredAt(LocalDate.now().minusDays(new Random().nextInt(1000)))
         .build();
   }
 

@@ -14,8 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Clock;
 import java.time.LocalDate;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -37,11 +36,25 @@ public class DefaultDiscogsDumpService implements DiscogsDumpService, Initializi
    */
   @Override
   public void updateDB() {
+    int monthlyDumpCount =
+        repository.countAllByCreatedAtIsGreaterThanEqual(LocalDate.now().withDayOfMonth(1));
+
+    if (monthlyDumpCount == 4) {
+      log.info("repository is up to date. skipping the update...");
+      return;
+    }
+
     List<DiscogsDump> dumpList = dumpSupplier.get();
     if (dumpList == null || dumpList.isEmpty()) {
       log.error("failed to fetch items via DumpSupplier. cancelling the update...");
       return;
     }
+
+    long persistedSize = repository.count();
+    if (dumpList.size() == persistedSize) { // if already up-to-date.
+      return;
+    }
+
     repository.saveAll(dumpList.stream().filter(Objects::nonNull).collect(Collectors.toList()));
   }
 
@@ -66,6 +79,49 @@ public class DefaultDiscogsDumpService implements DiscogsDumpService, Initializi
   @Override
   public DiscogsDump getMostRecentDiscogsDumpByType(DumpType type) {
     return repository.findTopByTypeOrderByCreatedAtDesc(type);
+  }
+
+  /**
+   * Fetch most recent dump by {@link DumpType}, year and month.
+   * @param type A type to find.
+   * @return Most recent dump from given type, year and month or null if there is no dump of given type exists.
+   */
+  @Override
+  public DiscogsDump getMostRecentDiscogsDumpByTypeYearMonth(DumpType type, int year, int month) {
+    LocalDate start = LocalDate.of(year, month, 1);
+    return repository.findTopByTypeAndCreatedAtBetween(type, start, start.plusMonths(1).minusDays(1));
+  }
+
+  /**
+   * Fetches collection of {@link DiscogsDump} from given type, year and month. The types must be
+   * unique and each types of given year and month must be present in db (otherwise throws)
+   *
+   * <p>It is important to note that if there is more than one match for given type, year and month,
+   * it will only return the most recent one among them.
+   *
+   * @param types target {@link DumpType}(s). throws {@link InvalidArgumentException} if null or
+   *     blank.
+   * @param year year to search for.
+   * @param month month to search for.
+   * @return Collection of {@link DiscogsDump} found from criteria.
+   * @throws InvalidArgumentException thrown if argument contains duplicated entry.
+   * @throws DumpNotFoundException thrown if given type, year and month cannot be found.
+   */
+  @Override
+  public Collection<DiscogsDump> getAllByTypeYearMonth(List<DumpType> types, int year, int month) {
+    List<DiscogsDump> dumpList = new ArrayList<>();
+    for (DumpType type : types.stream().distinct().collect(Collectors.toList())) {
+      LocalDate targetDate = LocalDate.of(year, month, 1);
+      DiscogsDump dump =
+          repository.findTopByTypeAndCreatedAtBetween(
+              type, targetDate, targetDate.plusMonths(1).minusDays(1));
+      if (dump == null) {
+        throw new DumpNotFoundException(
+            "dump of type " + type + " from " + year + "-" + month + " not found");
+      }
+      dumpList.add(dump);
+    }
+    return dumpList;
   }
 
   /**
@@ -143,5 +199,6 @@ public class DefaultDiscogsDumpService implements DiscogsDumpService, Initializi
     if (this.dumpSupplier == null) {
       throw new InitializationFailureException("dumpSupplier cannot be null");
     }
+    updateDB();
   }
 }
