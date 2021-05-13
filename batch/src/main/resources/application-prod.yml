@@ -25,7 +25,7 @@ logging:
   level:
     io.dsub: DEBUG
     org:
-      reflections: OFF
+      reflections: ERROR
       springframework: ERROR
       hibernate: ERROR
     com.zaxxer.hikari: ERROR

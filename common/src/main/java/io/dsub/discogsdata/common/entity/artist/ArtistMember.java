@@ -2,6 +2,7 @@ package io.dsub.discogsdata.common.entity.artist;
 
 import io.dsub.discogsdata.common.entity.base.BaseEntity;
 import lombok.*;
+import org.hibernate.annotations.GenericGenerator;
 
 import javax.persistence.*;
 
@@ -15,7 +16,9 @@ import javax.persistence.*;
 public class ArtistMember extends BaseEntity {
 
   @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  @GeneratedValue(strategy = GenerationType.AUTO, generator = "native")
+  @GenericGenerator(name = "native", strategy = "native")
+  @Column(name = "id", updatable = false, nullable = false)
   private Long id;
 
   @ManyToOne
