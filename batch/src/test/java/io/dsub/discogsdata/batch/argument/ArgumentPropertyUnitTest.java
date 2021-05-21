@@ -1,16 +1,15 @@
 package io.dsub.discogsdata.batch.argument;
 
-import io.dsub.discogsdata.common.exception.InvalidArgumentException;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
-
-import java.util.List;
-import java.util.stream.Collectors;
-
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import io.dsub.discogsdata.common.exception.InvalidArgumentException;
+import java.util.List;
+import java.util.stream.Collectors;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class ArgumentPropertyUnitTest {
 
@@ -95,7 +94,8 @@ class ArgumentPropertyUnitTest {
   }
 
   @Test
-  void isRequired() {}
+  void isRequired() {
+  }
 
   @ParameterizedTest
   @ValueSource(ints = {1, 53, 673, 12, 55, 3})

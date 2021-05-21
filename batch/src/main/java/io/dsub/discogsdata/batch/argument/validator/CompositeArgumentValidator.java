@@ -1,11 +1,10 @@
 package io.dsub.discogsdata.batch.argument.validator;
 
 import io.dsub.discogsdata.common.exception.MissingRequiredParamsException;
-import org.springframework.beans.factory.InitializingBean;
-import org.springframework.boot.ApplicationArguments;
-
 import java.util.ArrayList;
 import java.util.List;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.boot.ApplicationArguments;
 
 /**
  * Composite argument validator that delegates its validation to list of other validators. Can be
@@ -13,7 +12,10 @@ import java.util.List;
  * be accumulated accordingly.
  */
 public class CompositeArgumentValidator implements ArgumentValidator, InitializingBean {
-  /** A list of delegates that will actually perform. */
+
+  /**
+   * A list of delegates that will actually perform.
+   */
   private final List<ArgumentValidator> delegates = new ArrayList<>();
 
   /**

@@ -5,15 +5,18 @@ import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
-import org.springframework.stereotype.Component;
+import org.aspectj.lang.annotation.Pointcut;
 
 @Slf4j
 @Aspect
-@Component
-public class ServiceValidationAspect extends AbstractServiceAspect {
+public class ServiceValidationAspect {
 
   private static final String BLANK_STRING_MESSAGE = "found blank string argument";
   private static final String NULL_STRING_MESSAGE = "found null argument";
+
+  @Pointcut("@target(org.springframework.stereotype.Service)")
+  public void services() {
+  }
 
   @Around("services()")
   public Object throwOnNullOrBlankStringArgument(ProceedingJoinPoint pjp) throws Throwable {

@@ -1,17 +1,6 @@
 package io.dsub.discogsdata.batch.dump;
 
 import io.dsub.discogsdata.common.exception.InvalidArgumentException;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
-import org.w3c.dom.Document;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-import org.xml.sax.SAXException;
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
@@ -36,10 +25,21 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
+import org.w3c.dom.Document;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
 
 @Slf4j
 @Component
 public class DefaultDumpSupplier implements DumpSupplier {
+
   private static final Pattern XML_GZ_PATTERN =
       Pattern.compile("^[\\w/_-]+.xml.gz", Pattern.CASE_INSENSITIVE);
   private static final Pattern ARTIST = Pattern.compile(".*artists.*", Pattern.CASE_INSENSITIVE);
@@ -310,7 +310,8 @@ public class DefaultDumpSupplier implements DumpSupplier {
    *
    * @param node target node.
    * @return parsed {@link DumpType} value.
-   * @throws InvalidArgumentException thrown if we failed to recognize the type that node indicates.
+   * @throws InvalidArgumentException thrown if we failed to recognize the type that node
+   *                                  indicates.
    */
   protected DumpType getType(Node node) throws InvalidArgumentException {
     String content = node.getTextContent();

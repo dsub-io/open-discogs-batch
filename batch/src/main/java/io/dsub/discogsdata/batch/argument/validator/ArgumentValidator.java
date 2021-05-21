@@ -7,6 +7,7 @@ import org.springframework.boot.ApplicationArguments;
  * are dependent on its implementation.
  */
 public interface ArgumentValidator {
+
   /**
    * method to validate {@link ApplicationArguments}.
    *

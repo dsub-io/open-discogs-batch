@@ -1,23 +1,23 @@
 package io.dsub.discogsdata.batch.dump;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+
+import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.Random;
+import java.util.stream.Collectors;
 import net.bytebuddy.utility.RandomString;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import java.time.LocalDate;
-import java.util.Arrays;
-import java.util.Random;
-import java.util.stream.Collectors;
-
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-
 class DiscogsDumpTest {
 
   @BeforeEach
-  void setUp() {}
+  void setUp() {
+  }
 
   @Test
   void whenCompared__ShouldDelegateComparison__ToLocalDate() {

@@ -6,24 +6,28 @@ import io.dsub.discogsdata.batch.dump.DumpType;
 import io.dsub.discogsdata.batch.dump.service.DiscogsDumpService;
 import io.dsub.discogsdata.common.exception.DumpNotFoundException;
 import io.dsub.discogsdata.common.exception.InvalidArgumentException;
+import java.time.Clock;
+import java.time.LocalDate;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.stereotype.Component;
-
-import java.time.Clock;
-import java.time.LocalDate;
-import java.util.*;
-import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
 public class DefaultDumpDependencyResolver implements DumpDependencyResolver {
 
-  private final DiscogsDumpService dumpService;
   private static final String ETAG = ArgType.ETAG.getGlobalName();
   private static final String TYPE = ArgType.TYPE.getGlobalName();
   private static final String YEAR = ArgType.YEAR.getGlobalName();
   private static final String YEAR_MONTH = ArgType.YEAR_MONTH.getGlobalName();
+  private final DiscogsDumpService dumpService;
 
   /**
    * Resolves {@link ApplicationArguments} to obtain list of {@link DiscogsDump} items to be
@@ -49,8 +53,9 @@ public class DefaultDumpDependencyResolver implements DumpDependencyResolver {
    *
    * @param eTags to be examined. it is safe to contain duplicated eTags.
    * @return dump list containing required items to be processed.
-   * @throws InvalidArgumentException thrown if given list is null or empty, or eTag is not present.
-   * @throws DumpNotFoundException if dump cannot be found under specific type, year and month.
+   * @throws InvalidArgumentException thrown if given list is null or empty, or eTag is not
+   *                                  present.
+   * @throws DumpNotFoundException    if dump cannot be found under specific type, year and month.
    */
   protected Collection<DiscogsDump> resolveByETagEntries(List<String> eTags) {
     if (eTags == null || eTags.isEmpty()) {

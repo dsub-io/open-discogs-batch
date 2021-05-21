@@ -1,10 +1,21 @@
 package io.dsub.discogsdata.common.entity.release;
 
-import io.dsub.discogsdata.common.entity.base.BaseEntity;
+import io.dsub.discogsdata.common.entity.base.BaseTimeEntity;
 import io.dsub.discogsdata.common.entity.label.Label;
-import lombok.*;
-
-import javax.persistence.*;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+import javax.persistence.UniqueConstraint;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 
 @Data
 @Entity
@@ -12,20 +23,31 @@ import javax.persistence.*;
 @EqualsAndHashCode(callSuper = false)
 @NoArgsConstructor
 @AllArgsConstructor
-public class ReleaseItemWork extends BaseEntity {
+@Table(name = "release_item_work", uniqueConstraints = {
+    @UniqueConstraint(name = "unique_release_item_work", columnNames = {
+        "release_item_id", "label_id", "name", "job"
+    })
+})
+public class ReleaseItemWork extends BaseTimeEntity {
+
+  private static final Long SerialVersionUID = 1L;
 
   @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  @Column(name = "id")
+  @GeneratedValue(strategy = GenerationType.SEQUENCE)
   private Long id;
 
   @ManyToOne
-  @JoinColumn(name = "release_item_id")
+  @JoinColumn(name = "release_item_id", referencedColumnName = "id")
   private ReleaseItem releaseItem;
 
   @ManyToOne
-  @JoinColumn(name = "label_id")
+  @JoinColumn(name = "label_id", referencedColumnName = "id")
   private Label label;
 
+  @Column(name = "name")
   private String name;
+
+  @Column(name = "job")
   private String job;
 }

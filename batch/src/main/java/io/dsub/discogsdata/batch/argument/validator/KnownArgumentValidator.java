@@ -1,21 +1,23 @@
 package io.dsub.discogsdata.batch.argument.validator;
 
 import io.dsub.discogsdata.batch.argument.ArgType;
+import java.util.List;
+import java.util.stream.Collectors;
 import lombok.NoArgsConstructor;
 import org.springframework.boot.ApplicationArguments;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
-/** An argument validator implementation to check if we got unknown argument. */
+/**
+ * An argument validator implementation to check if we got unknown argument.
+ */
 @NoArgsConstructor
 public class KnownArgumentValidator implements ArgumentValidator {
+
   /**
    * Validation to check if all arguments are something we already know of.
    *
    * @param applicationArguments to be validated.
    * @return empty validation result if all arguments are known. Otherwise, returns a validation
-   *     result with reports of unknown arguments.
+   * result with reports of unknown arguments.
    */
   @Override
   public ValidationResult validate(ApplicationArguments applicationArguments) {

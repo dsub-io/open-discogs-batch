@@ -1,26 +1,24 @@
 package io.dsub.discogsdata.batch.init.job;
 
+import static io.dsub.discogsdata.batch.config.BatchConfig.DEFAULT_CHUNK_SIZE;
+import static io.dsub.discogsdata.batch.config.BatchConfig.DEFAULT_THROTTLE_LIMIT;
+
 import io.dsub.discogsdata.batch.argument.ArgType;
 import io.dsub.discogsdata.common.exception.InvalidArgumentException;
+import java.util.Properties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.stereotype.Component;
-
-import java.util.Properties;
-
-import static io.dsub.discogsdata.batch.config.BatchConfig.DEFAULT_CHUNK_SIZE;
-import static io.dsub.discogsdata.batch.config.BatchConfig.DEFAULT_THROTTLE_LIMIT;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class DefaultJobParameterResolver implements JobParameterResolver {
 
-  private final DumpDependencyResolver dumpDependencyResolver;
-
   private static final String CHUNK_SIZE = ArgType.CHUNK_SIZE.getGlobalName();
   private static final String THROTTLE_LIMIT = ArgType.THROTTLE_LIMIT.getGlobalName();
+  private final DumpDependencyResolver dumpDependencyResolver;
 
   @Override
   public Properties resolve(ApplicationArguments args) {

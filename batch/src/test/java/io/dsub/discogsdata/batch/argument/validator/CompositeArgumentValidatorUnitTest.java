@@ -1,15 +1,14 @@
 package io.dsub.discogsdata.batch.argument.validator;
 
-import io.dsub.discogsdata.common.exception.MissingRequiredParamsException;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.boot.DefaultApplicationArguments;
-
-import java.util.List;
-
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import io.dsub.discogsdata.common.exception.MissingRequiredParamsException;
+import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.DefaultApplicationArguments;
 
 class CompositeArgumentValidatorUnitTest {
 
@@ -38,7 +37,7 @@ class CompositeArgumentValidatorUnitTest {
     assertThat(this.compositeArgumentValidator.addValidators(helloValidator, worldValidator))
         .isEqualTo(this.compositeArgumentValidator);
     assertThat(
-            this.compositeArgumentValidator.addValidators(List.of(helloValidator, worldValidator)))
+        this.compositeArgumentValidator.addValidators(List.of(helloValidator, worldValidator)))
         .isEqualTo(this.compositeArgumentValidator);
     List<ArgumentValidator> argumentValidators = null;
     assertThat(this.compositeArgumentValidator.addValidators(argumentValidators))

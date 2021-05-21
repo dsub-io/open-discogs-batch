@@ -9,4 +9,6 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 @EnableJpaAuditing
 @EntityScan(basePackages = {"io.dsub.discogsdata.common", "io.dsub.discogsdata.batch"})
 @EnableJpaRepositories(basePackages = {"io.dsub.discogsdata.common", "io.dsub.discogsdata.batch"})
-public class JpaConfig {}
+public class JpaConfig {
+
+}

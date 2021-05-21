@@ -1,12 +1,15 @@
 package io.dsub.discogsdata.batch.argument.validator;
 
 import io.dsub.discogsdata.batch.argument.ArgType;
-import org.springframework.boot.ApplicationArguments;
-
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import org.springframework.boot.ApplicationArguments;
 
 /**
  * Validate if argument is required to be mapped or not. If one is not supposed to have a value

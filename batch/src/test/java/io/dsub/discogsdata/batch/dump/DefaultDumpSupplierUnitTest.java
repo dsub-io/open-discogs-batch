@@ -1,20 +1,12 @@
 package io.dsub.discogsdata.batch.dump;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import io.dsub.discogsdata.batch.condition.RequiresDiscogsDataConnection;
 import io.dsub.discogsdata.batch.testutil.LogSpy;
 import io.dsub.discogsdata.common.exception.InvalidArgumentException;
-import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.extension.RegisterExtension;
-import org.w3c.dom.Document;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-import org.xml.sax.SAXException;
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -25,10 +17,17 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
-
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.w3c.dom.Document;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
 
 @Slf4j
 @ExtendWith(RequiresDiscogsDataConnection.class)
@@ -38,7 +37,8 @@ class DefaultDumpSupplierUnitTest {
 
   final DefaultDumpSupplier dumpSupplier = new DefaultDumpSupplier();
 
-  @RegisterExtension public LogSpy logSpy = new LogSpy();
+  @RegisterExtension
+  public LogSpy logSpy = new LogSpy();
 
   @Test
   void whenGet__ThenReturnsNotEmptyListOfValidDiscogsDumps() {
@@ -145,26 +145,26 @@ class DefaultDumpSupplierUnitTest {
             NodeList sizes = document.getElementsByTagName("Size");
             String msg =
                 assertThrows(
-                        InvalidArgumentException.class, () -> dumpSupplier.getSize(sizes.item(0)))
+                    InvalidArgumentException.class, () -> dumpSupplier.getSize(sizes.item(0)))
                     .getMessage();
             assertThat(msg).isEqualTo("failed to parse [] into long value");
 
             msg =
                 assertThrows(
-                        InvalidArgumentException.class, () -> dumpSupplier.getSize(sizes.item(1)))
+                    InvalidArgumentException.class, () -> dumpSupplier.getSize(sizes.item(1)))
                     .getMessage();
             assertThat(msg).isEqualTo("failed to parse [d] into long value");
 
             msg =
                 assertThrows(
-                        InvalidArgumentException.class, () -> dumpSupplier.getSize(sizes.item(2)))
+                    InvalidArgumentException.class, () -> dumpSupplier.getSize(sizes.item(2)))
                     .getMessage();
 
             assertThat(msg).isEqualTo("failed to parse [3323d] into long value");
 
             msg =
                 assertThrows(
-                        InvalidArgumentException.class, () -> dumpSupplier.getSize(sizes.item(3)))
+                    InvalidArgumentException.class, () -> dumpSupplier.getSize(sizes.item(3)))
                     .getMessage();
             assertThat(msg).isEqualTo("failed to parse [33211d22!!#] into long value");
           }
@@ -233,7 +233,7 @@ class DefaultDumpSupplierUnitTest {
             // then
             String msg =
                 assertThrows(
-                        InvalidArgumentException.class, () -> dumpSupplier.getUTCLastModified(node))
+                    InvalidArgumentException.class, () -> dumpSupplier.getUTCLastModified(node))
                     .getMessage();
 
             if (node.getTextContent() == null || node.getTextContent().isBlank()) {

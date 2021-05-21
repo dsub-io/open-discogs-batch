@@ -1,8 +1,19 @@
 package io.dsub.discogsdata.batch.job.tasklet;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.catchThrowable;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import io.dsub.discogsdata.batch.dump.DiscogsDump;
 import io.dsub.discogsdata.batch.exception.FileFetchException;
 import io.dsub.discogsdata.batch.testutil.LogSpy;
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import lombok.extern.slf4j.Slf4j;
 import net.bytebuddy.utility.RandomString;
 import org.junit.jupiter.api.AfterEach;
@@ -18,36 +29,25 @@ import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.scope.context.StepContext;
 import org.springframework.batch.repeat.RepeatStatus;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.spi.FileSystemProvider;
-
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.catchThrowable;
-import static org.junit.jupiter.api.Assertions.fail;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
 @Slf4j
 class FileFetchTaskletTest {
 
+  final StepExecution stepExecution = new StepExecution("step", new JobExecution(1L));
+  final ChunkContext chunkContext = new ChunkContext(new StepContext(stepExecution));
+  final StepContribution stepContribution = new StepContribution(stepExecution);
   Path filePath;
   Path targetPath;
   DiscogsDump fakeDump;
   FileFetchTasklet fileFetchTasklet;
-  final StepExecution stepExecution = new StepExecution("step", new JobExecution(1L));
-  final ChunkContext chunkContext = new ChunkContext(new StepContext(stepExecution));
-  final StepContribution stepContribution = new StepContribution(stepExecution);
-  @RegisterExtension LogSpy logSpy = new LogSpy();
+  @RegisterExtension
+  LogSpy logSpy = new LogSpy();
 
   @BeforeEach
-  void setUp() {
+  void setUp() throws MalformedURLException {
     filePath = Path.of(RandomString.make());
     targetPath = Path.of(RandomString.make());
     fakeDump = DiscogsDump.builder().size(1000L).uriString("t/t/" + targetPath).build();
-    fileFetchTasklet = new FileFetchTasklet(fakeDump, filePath);
+    fileFetchTasklet = new FileFetchTasklet(fakeDump, filePath.toUri().toURL());
     try {
       Files.createFile(filePath);
       Files.write(filePath, RandomString.make(1000).getBytes());
@@ -149,9 +149,9 @@ class FileFetchTaskletTest {
       Throwable t = catchThrowable(() -> fileFetchTasklet.checkFileSize(1000, filePath));
       // then
       assertThat(t)
-              .isInstanceOf(FileFetchException.class)
-              .hasMessageContaining("failed to check file size:")
-              .hasMessageContaining(". reason:");
+          .isInstanceOf(FileFetchException.class)
+          .hasMessageContaining("failed to check file size:")
+          .hasMessageContaining(". reason:");
     } catch (IOException e) {
       fail("failed due to IOException: " + e.getMessage());
     }
@@ -182,8 +182,8 @@ class FileFetchTaskletTest {
 
     Throwable t = catchThrowable(() -> fileFetchTasklet.checkFileSize(1000, mockPath));
     assertThat(t.getMessage())
-            .contains("failed to check file size:")
-            .contains(". reason: test");
+        .contains("failed to check file size:")
+        .contains(". reason: test");
   }
 
   @Test

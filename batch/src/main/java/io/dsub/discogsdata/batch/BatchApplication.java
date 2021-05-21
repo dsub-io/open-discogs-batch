@@ -13,19 +13,14 @@ import org.springframework.context.annotation.EnableAspectJAutoProxy;
 @SpringBootApplication(
     scanBasePackages = {"io.dsub.discogsdata.common", "io.dsub.discogsdata.batch"})
 public class BatchApplication {
-
-  private static final String JDBC_DRIVER_CLASS_NAME = "com.mysql.cj.jdbc.Driver";
-
   public static void main(String[] args) {
-
     try {
       args = new DefaultArgumentHandler().resolve(args);
-      new JdbcConnectionTester().testConnection(args, JDBC_DRIVER_CLASS_NAME);
+      new JdbcConnectionTester().testConnection(args);
     } catch (InvalidArgumentException e) {
       System.out.println(e.getMessage());
       System.exit(1);
     }
-
     SpringApplication.run(BatchApplication.class, args);
   }
 }

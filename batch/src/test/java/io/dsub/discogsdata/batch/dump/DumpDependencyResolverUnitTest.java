@@ -1,33 +1,47 @@
-package io.dsub.discogsdata.batch.init.job;
+package io.dsub.discogsdata.batch.dump;
+
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.assertj.core.api.AssertionsForClassTypes.catchThrowable;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import io.dsub.discogsdata.batch.argument.ArgType;
-import io.dsub.discogsdata.batch.dump.DiscogsDump;
-import io.dsub.discogsdata.batch.dump.DumpType;
 import io.dsub.discogsdata.batch.dump.service.DiscogsDumpService;
 import io.dsub.discogsdata.common.exception.DumpNotFoundException;
 import io.dsub.discogsdata.common.exception.InvalidArgumentException;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Random;
+import java.util.Set;
 import net.bytebuddy.utility.RandomString;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.mockito.*;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.DefaultApplicationArguments;
-
-import java.time.LocalDate;
-import java.util.*;
-
-import static org.assertj.core.api.AssertionsForClassTypes.*;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
 
 class DumpDependencyResolverUnitTest {
 
   final Random rand = new Random();
-  @Mock DiscogsDumpService dumpService;
+  @Mock
+  DiscogsDumpService dumpService;
   @InjectMocks
   DefaultDumpDependencyResolver resolver;
   @Captor
@@ -143,16 +157,16 @@ class DumpDependencyResolverUnitTest {
   @ParameterizedTest
   @ValueSource(
       strings = {
-        "artist,artist",
-        "release,release",
-        "master,master",
-        "label,label,master",
-        "artist,master,master",
-        "artist,label,artist",
-        "label,master,label",
-        "master,release,master",
-        "artist,master,release,master",
-        "label,release,release,release"
+          "artist,artist",
+          "release,release",
+          "master,master",
+          "label,label,master",
+          "artist,master,master",
+          "artist,label,artist",
+          "label,master,label",
+          "master,release,master",
+          "artist,master,release,master",
+          "label,release,release,release"
       })
   void whenDuplicatedTypesFound__ShouldParseCorrectly(String type) {
     ApplicationArguments args =
@@ -181,16 +195,16 @@ class DumpDependencyResolverUnitTest {
   @ParameterizedTest
   @ValueSource(
       strings = {
-        "artist",
-        "release",
-        "master",
-        "label",
-        "artist,master",
-        "artist,label",
-        "label,master",
-        "master,release",
-        "artist,master,release",
-        "label,release"
+          "artist",
+          "release",
+          "master",
+          "label",
+          "artist,master",
+          "artist,label",
+          "label,master",
+          "master,release",
+          "artist,master,release",
+          "label,release"
       })
   void whenTypeArgPresent__ThenShouldProvideAllDependencies(String type) {
     ApplicationArguments args =
@@ -291,7 +305,7 @@ class DumpDependencyResolverUnitTest {
         .forEach(
             dump ->
                 when(dumpService.getMostRecentDiscogsDumpByTypeYearMonth(
-                        dump.getType(), year, month))
+                    dump.getType(), year, month))
                     .thenReturn(dump));
 
     when(dumpService.getDiscogsDump("test")).thenReturn(fakeDump);
@@ -319,12 +333,14 @@ class DumpDependencyResolverUnitTest {
     DumpType targetType = DumpType.values()[rand.nextInt(4)];
     Collection<DiscogsDump> expected = List.of(getFakeDump());
 
-    String typeArg= "--type=" + targetType;
+    String typeArg = "--type=" + targetType;
     String yearMonthArg = "--yearMonth=" + targetDate.getYear() + "-" + targetDate.getMonthValue();
-    when(dumpService.getAllByTypeYearMonth(dumpTypeCaptor.capture(), yearCaptor.capture(), monthCaptor.capture()))
-            .thenReturn(expected);
+    when(dumpService.getAllByTypeYearMonth(dumpTypeCaptor.capture(), yearCaptor.capture(),
+        monthCaptor.capture()))
+        .thenReturn(expected);
     // when
-    Collection<DiscogsDump> result = resolver.resolve(new DefaultApplicationArguments(typeArg, yearMonthArg));
+    Collection<DiscogsDump> result = resolver
+        .resolve(new DefaultApplicationArguments(typeArg, yearMonthArg));
 
     // then
     assertThat(yearCaptor.getValue()).isEqualTo(targetDate.getYear());

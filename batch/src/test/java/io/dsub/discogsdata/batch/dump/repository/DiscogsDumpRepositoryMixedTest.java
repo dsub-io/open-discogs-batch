@@ -1,7 +1,15 @@
 package io.dsub.discogsdata.batch.dump.repository;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+
 import io.dsub.discogsdata.batch.dump.DiscogsDump;
 import io.dsub.discogsdata.batch.dump.DumpType;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+import java.util.Random;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import net.bytebuddy.utility.RandomString;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -10,21 +18,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 
-import java.time.LocalDate;
-import java.util.List;
-import java.util.Optional;
-import java.util.Random;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-
 @DataJpaTest
 class DiscogsDumpRepositoryMixedTest {
 
   final Random random = new Random();
-  @Autowired TestEntityManager em;
-  @Autowired DiscogsDumpRepository repository;
+  @Autowired
+  TestEntityManager em;
+  @Autowired
+  DiscogsDumpRepository repository;
   private List<DiscogsDump> persistedDiscogsDumpList;
 
   private DiscogsDump getRandomDump() {
@@ -47,6 +48,7 @@ class DiscogsDumpRepositoryMixedTest {
 
   @Nested
   class StandaloneTests {
+
     @Test
     void whenDuplicatedButMoreRecentDumpExists__ShouldReturnMoreRecent() {
       // preps

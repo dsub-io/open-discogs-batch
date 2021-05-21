@@ -1,5 +1,16 @@
 package io.dsub.discogsdata.batch.dump.service;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.catchThrowable;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.atMostOnce;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import io.dsub.discogsdata.batch.dump.DiscogsDump;
 import io.dsub.discogsdata.batch.dump.DumpSupplier;
@@ -8,34 +19,40 @@ import io.dsub.discogsdata.batch.dump.repository.DiscogsDumpRepository;
 import io.dsub.discogsdata.batch.testutil.LogSpy;
 import io.dsub.discogsdata.common.exception.DumpNotFoundException;
 import io.dsub.discogsdata.common.exception.InitializationFailureException;
+import java.time.Clock;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Objects;
+import java.util.Random;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import net.bytebuddy.utility.RandomString;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-import org.mockito.*;
-
-import java.time.Clock;
-import java.time.LocalDate;
-import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.catchThrowable;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.*;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
 class DefaultDiscogsDumpServiceUnitTest {
 
   final Random random = new Random();
-  @RegisterExtension public LogSpy logSpy = new LogSpy();
-  @Mock DiscogsDumpRepository repository;
-  @Mock DumpSupplier dumpSupplier;
-  @InjectMocks DefaultDiscogsDumpService dumpService;
-  @Captor private ArgumentCaptor<List<DiscogsDump>> dumpListCaptor;
+  @RegisterExtension
+  public LogSpy logSpy = new LogSpy();
+  @Mock
+  DiscogsDumpRepository repository;
+  @Mock
+  DumpSupplier dumpSupplier;
+  @InjectMocks
+  DefaultDiscogsDumpService dumpService;
+  @Captor
+  private ArgumentCaptor<List<DiscogsDump>> dumpListCaptor;
 
   @BeforeEach
   void setUp() {
@@ -133,7 +150,7 @@ class DefaultDiscogsDumpServiceUnitTest {
 
   @Test
   void
-      whenGetMostRecentDiscogsDumpByTypeCalled__ThenShouldCallRepositoryOnce__AndShouldHaveProperResult() {
+  whenGetMostRecentDiscogsDumpByTypeCalled__ThenShouldCallRepositoryOnce__AndShouldHaveProperResult() {
     DiscogsDump fakeDump = getRandomDump();
     DumpType type = fakeDump.getType();
     ArgumentCaptor<DumpType> dumpTypeCaptor = ArgumentCaptor.forClass(DumpType.class);
@@ -157,7 +174,7 @@ class DefaultDiscogsDumpServiceUnitTest {
     ArgumentCaptor<DumpType> typeCaptor = ArgumentCaptor.forClass(DumpType.class);
     ArgumentCaptor<LocalDate> localDateCaptor = ArgumentCaptor.forClass(LocalDate.class);
     when(repository.findByTypeAndCreatedAtBetween(
-            typeCaptor.capture(), localDateCaptor.capture(), localDateCaptor.capture()))
+        typeCaptor.capture(), localDateCaptor.capture(), localDateCaptor.capture()))
         .thenReturn(List.of(fakeDump));
 
     LocalDate startDate = fakeDump.getCreatedAt().withDayOfMonth(1);
@@ -209,7 +226,7 @@ class DefaultDiscogsDumpServiceUnitTest {
   @Test
   void whenAfterPropertiesSet__ThenShouldCallUpdatedDBMethod() {
     when(repository.countAllByCreatedAtIsGreaterThanEqual(any()))
-            .thenReturn(4);
+        .thenReturn(4);
 
     // when
     assertDoesNotThrow(() -> dumpService.afterPropertiesSet());
@@ -247,7 +264,7 @@ class DefaultDiscogsDumpServiceUnitTest {
     LocalDate endDate = startDate.plusMonths(1).minusDays(1);
 
     when(repository.findTopByTypeAndCreatedAtBetween(
-            dumpTypeArgumentCaptor.capture(), startDateCaptor.capture(), endDateCaptor.capture()))
+        dumpTypeArgumentCaptor.capture(), startDateCaptor.capture(), endDateCaptor.capture()))
         .thenReturn(expectedDump);
 
     // when

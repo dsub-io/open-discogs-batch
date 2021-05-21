@@ -1,10 +1,11 @@
 package io.dsub.discogsdata.batch.argument;
 
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 
-import java.util.List;
-
-/** Enum to represent current supported argument types. */
+/**
+ * Enum to represent current supported argument types.
+ */
 @RequiredArgsConstructor
 public enum ArgType {
   URL(ArgumentProperty.builder().globalName("url").required(true).build()),

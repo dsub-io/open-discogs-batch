@@ -1,11 +1,10 @@
 package io.dsub.discogsdata.api.artist;
 
 import io.dsub.discogsdata.common.entity.artist.Artist;
-import lombok.Builder;
-import lombok.Data;
-
 import java.util.ArrayList;
 import java.util.List;
+import lombok.Builder;
+import lombok.Data;
 
 @Data
 @Builder
@@ -17,11 +16,16 @@ public class ArtistDto {
   private String realName;
   private String dataQuality;
   private String profile;
-  @Builder.Default private List<String> urls = new ArrayList<>();
-  @Builder.Default private List<String> nameVariations = new ArrayList<>();
-  @Builder.Default private List<Long> members = new ArrayList<>();
-  @Builder.Default private List<Long> groups = new ArrayList<>();
-  @Builder.Default private List<Long> aliases = new ArrayList<>();
+  @Builder.Default
+  private List<String> urls = new ArrayList<>();
+  @Builder.Default
+  private List<String> nameVariations = new ArrayList<>();
+  @Builder.Default
+  private List<Long> members = new ArrayList<>();
+  @Builder.Default
+  private List<Long> groups = new ArrayList<>();
+  @Builder.Default
+  private List<Long> aliases = new ArrayList<>();
 
   public static ArtistDto fromArtist(
       Artist artist,

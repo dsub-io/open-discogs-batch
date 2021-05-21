@@ -32,8 +32,10 @@ subprojects {
         implementation(
                 'org.springframework.boot:spring-boot-starter-data-jpa',
                 'org.springframework.boot:spring-boot-starter-web',
+                'org.springframework.boot:spring-boot-starter-aop',
+                'net.ttddyy:datasource-proxy:1.7',
                 'org.projectlombok:lombok',
-                'org.reflections:reflections:0.9.12'
+                'org.reflections:reflections:0.9.12',
         )
         testImplementation(
                 'org.springframework.boot:spring-boot-starter-test',

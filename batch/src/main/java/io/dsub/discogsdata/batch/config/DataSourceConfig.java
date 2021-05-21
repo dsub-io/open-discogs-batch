@@ -1,17 +1,16 @@
 package io.dsub.discogsdata.batch.config;
 
 import io.dsub.discogsdata.common.exception.MissingRequiredArgumentException;
+import java.util.Map;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import javax.sql.DataSource;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
-import javax.sql.DataSource;
-import java.util.Map;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 @Getter
 @Configuration
@@ -43,7 +42,8 @@ public class DataSourceConfig {
             .collect(Collectors.toMap(parts -> parts[0], parts -> parts[1]));
 
     if (!arguments.containsKey("url")) {
-      throw new MissingRequiredArgumentException("application argument must contain url in the non-option argument.");
+      throw new MissingRequiredArgumentException(
+          "application argument must contain url in the non-option argument.");
     }
 
     String optAppliedUrlString = appendOptions(arguments.get("url"));
@@ -58,8 +58,9 @@ public class DataSourceConfig {
 
   /**
    * Appends required arguments for batch processing.
-   *
-   * The options include timezone, cache statements, server statements and rewrite batch statements.
+   * <p>
+   * The options include timezone, cache statements, server statements and rewrite batch
+   * statements.
    *
    * @param originalUrl given url that may or may not contain any of those options.
    * @return url that has all required options.

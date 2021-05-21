@@ -1,13 +1,13 @@
 package io.dsub.discogsdata.batch.argument.validator;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+
 import io.dsub.discogsdata.batch.argument.ArgType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.DefaultApplicationArguments;
-
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 class MappedValueValidatorUnitTest {
 

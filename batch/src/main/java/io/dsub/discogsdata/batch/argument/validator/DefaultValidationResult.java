@@ -1,6 +1,10 @@
 package io.dsub.discogsdata.batch.argument.validator;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -9,10 +13,14 @@ import java.util.stream.Collectors;
  */
 public class DefaultValidationResult implements ValidationResult {
 
-  /** Accumulated issues. Should always be maintained immutable from external access. */
+  /**
+   * Accumulated issues. Should always be maintained immutable from external access.
+   */
   private final Collection<String> issues;
 
-  /** Default no argument constructor. */
+  /**
+   * Default no argument constructor.
+   */
   public DefaultValidationResult() {
     this.issues = new ArrayList<>();
   }

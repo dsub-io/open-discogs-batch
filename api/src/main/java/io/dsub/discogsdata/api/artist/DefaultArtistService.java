@@ -6,13 +6,12 @@ import io.dsub.discogsdata.common.repository.artist.ArtistAliasRepository;
 import io.dsub.discogsdata.common.repository.artist.ArtistGroupRepository;
 import io.dsub.discogsdata.common.repository.artist.ArtistMemberRepository;
 import io.dsub.discogsdata.common.repository.artist.ArtistRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.stereotype.Service;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor

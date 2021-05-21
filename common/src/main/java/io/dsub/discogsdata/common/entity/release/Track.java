@@ -1,9 +1,20 @@
 package io.dsub.discogsdata.common.entity.release;
 
 import io.dsub.discogsdata.common.entity.base.BaseEntity;
-import lombok.*;
-
-import javax.persistence.*;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+import javax.persistence.UniqueConstraint;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 
 @Data
 @Entity
@@ -11,21 +22,28 @@ import javax.persistence.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = false)
+@Table(name = "track", uniqueConstraints = {
+    @UniqueConstraint(name = "unique_track", columnNames = {
+        "name", "title", "duration", "release_item_id"
+    })
+})
 public class Track extends BaseEntity {
+
   @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  @Column(name = "id")
+  @GeneratedValue(strategy = GenerationType.SEQUENCE)
   private Long id;
 
-  @Column(columnDefinition = "TEXT")
+  @Column(name = "name", length = 2000)
   private String name;
 
-  @Column(columnDefinition = "TEXT")
+  @Column(name = "title", length = 2000)
   private String title;
 
-  @Column(length = 1000)
+  @Column(name = "duration", length = 1000)
   private String duration;
 
   @ManyToOne
-  @JoinColumn(name = "release_item_id")
+  @JoinColumn(name = "release_item_id", referencedColumnName = "id")
   private ReleaseItem releaseItem;
 }

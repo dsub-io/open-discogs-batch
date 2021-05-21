@@ -2,12 +2,12 @@ package io.dsub.discogsdata.batch.dump.repository;
 
 import io.dsub.discogsdata.batch.dump.DiscogsDump;
 import io.dsub.discogsdata.batch.dump.DumpType;
-import org.springframework.data.jpa.repository.JpaRepository;
-
 import java.time.LocalDate;
 import java.util.List;
+import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface DiscogsDumpRepository extends JpaRepository<DiscogsDump, String> {
+
   boolean existsByeTag(String eTag);
 
   DiscogsDump findByeTag(String eTag);

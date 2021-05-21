@@ -1,20 +1,19 @@
 package io.dsub.discogsdata.batch.util;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import io.dsub.discogsdata.common.exception.InvalidArgumentException;
+import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.DefaultApplicationArguments;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
-
-import java.util.Map;
-import java.util.Set;
-
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @ActiveProfiles("test")
 @RunWith(SpringRunner.class)
@@ -27,14 +26,14 @@ class JdbcConnectionTesterUnitTest {
     assertDoesNotThrow(
         () ->
             tester.testConnection(
-                new String[] {"url=jdbc:h2:~/test", "password", "username=sa"}, "org.h2.Driver"));
+                new String[]{"url=jdbc:h2:~/test", "password", "username=sa"}, "org.h2.Driver"));
   }
 
   @Test
   void shouldThrowIfInvalidDataSourceValuePassed() {
     assertThatThrownBy(
-            () -> tester.testConnection(new String[] {"url=hello", "username=un", "password=pw"}))
-        .hasMessage("failed to retrieve connection! check your url, username, password again");
+        () -> tester.testConnection(new String[]{"url=hello", "username=un", "password=pw"}))
+        .hasMessage("failed to test connection! no suitable driver found for hello");
   }
 
   @Test

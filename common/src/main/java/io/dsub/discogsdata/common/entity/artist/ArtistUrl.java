@@ -1,40 +1,41 @@
 package io.dsub.discogsdata.common.entity.artist;
 
-import io.dsub.discogsdata.common.entity.base.BaseEntity;
-import lombok.*;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
-import org.hibernate.cfg.AvailableSettings;
-import org.hibernate.id.enhanced.SequenceStyleGenerator;
-
-import javax.persistence.*;
+import io.dsub.discogsdata.common.entity.base.BaseTimeEntity;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+import javax.persistence.UniqueConstraint;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+import lombok.With;
 
 
 @Data
 @Entity
-@Builder
+@With
 @EqualsAndHashCode(callSuper = false)
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(uniqueConstraints = @UniqueConstraint(columnNames = {"artist_id", "url"}))
-public class ArtistUrl extends BaseEntity {
+@Table(name = "artist_url", uniqueConstraints = @UniqueConstraint(name = "unique_artist_url", columnNames = {
+    "artist_id", "url"}))
+public class ArtistUrl extends BaseTimeEntity {
+
+  private static final Long SerialVersionUID = 1L;
 
   @Id
-  @GeneratedValue(strategy = GenerationType.AUTO, generator = "artist_url_generator")
-  @GenericGenerator(
-          name = "artist_url_generator",
-          strategy = "sequence",
-          parameters = {
-                  @Parameter(name = SequenceStyleGenerator.SEQUENCE_PARAM, value = SequenceStyleGenerator.DEF_SEQUENCE_NAME),
-                  @Parameter(name = SequenceStyleGenerator.INITIAL_PARAM, value = "1"),
-                  @Parameter(name = SequenceStyleGenerator.INCREMENT_PARAM, value = "1000"),
-                  @Parameter(name = AvailableSettings.PREFERRED_POOLED_OPTIMIZER, value = "pooled-lo")
-          }
-  )
+  @GeneratedValue(strategy = GenerationType.SEQUENCE)
+  @Column(name = "id")
   private Long id;
 
   @ManyToOne(optional = false)
-  @JoinColumn(name = "artist_id")
+  @JoinColumn(name = "artist_id", referencedColumnName = "id")
   private Artist artist;
 
   @Column(length = 5000, name = "url")

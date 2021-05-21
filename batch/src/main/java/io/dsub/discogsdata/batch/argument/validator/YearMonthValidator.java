@@ -1,16 +1,17 @@
 package io.dsub.discogsdata.batch.argument.validator;
 
 import io.dsub.discogsdata.batch.argument.ArgType;
-import org.springframework.boot.ApplicationArguments;
-
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import org.springframework.boot.ApplicationArguments;
 
-/** {@link ArgumentValidator} implementation to validate year-month formatting */
+/**
+ * {@link ArgumentValidator} implementation to validate year-month formatting
+ */
 public class YearMonthValidator implements ArgumentValidator {
 
   private static final Pattern YEAR_MONTH_PATTERN = Pattern.compile("^[\\d]{4}-[\\d]{1,2}$");

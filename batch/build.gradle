@@ -4,13 +4,13 @@ dependencies {
             'org.springframework.boot:spring-boot-starter-batch',
             'org.springframework.boot:spring-boot-starter-validation',
             'org.springframework.batch:spring-batch-integration:4.3.0',
-            'org.springframework.boot:spring-boot-starter-aop',
             'org.springframework:spring-oxm:5.3.1',
             'javax.validation:validation-api',
             'javax.xml.bind:jaxb-api:2.3.1',
             'com.sun.xml.bind:jaxb-impl:2.3.1',
             'com.sun.istack:istack-commons-runtime:4.0.0',
             'mysql:mysql-connector-java',
+            'org.postgresql:postgresql',
             'me.tongfei:progressbar:0.9.0'
     )
 

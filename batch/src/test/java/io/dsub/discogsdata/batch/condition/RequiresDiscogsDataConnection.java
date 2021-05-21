@@ -1,15 +1,14 @@
 package io.dsub.discogsdata.batch.condition;
 
-import lombok.extern.slf4j.Slf4j;
-import org.junit.jupiter.api.extension.ConditionEvaluationResult;
-import org.junit.jupiter.api.extension.ExecutionCondition;
-import org.junit.jupiter.api.extension.ExtensionContext;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
+import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.extension.ConditionEvaluationResult;
+import org.junit.jupiter.api.extension.ExecutionCondition;
+import org.junit.jupiter.api.extension.ExtensionContext;
 
 @Slf4j
 public class RequiresDiscogsDataConnection implements ExecutionCondition {

@@ -3,6 +3,11 @@ package io.dsub.discogsdata.batch.job.tasklet;
 import io.dsub.discogsdata.batch.dump.DiscogsDump;
 import io.dsub.discogsdata.batch.exception.FileFetchException;
 import io.dsub.discogsdata.batch.util.ProgressBarUtil;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import me.tongfei.progressbar.ProgressBar;
@@ -12,11 +17,6 @@ import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.repeat.RepeatStatus;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 /**
  * A basic implementation of {@link Tasklet} to perform file fetch. If file exists, it will first
@@ -29,11 +29,11 @@ import java.nio.file.Path;
 public class FileFetchTasklet implements Tasklet {
 
   private final DiscogsDump targetDump;
-  private final Path sourcePath;
+  private final URL url;
 
   /**
-   * Core implementation of {@link Tasklet#execute(StepContribution, ChunkContext)}.
-   * Will either fetch and mark as success, or the opposite.
+   * Core implementation of {@link Tasklet#execute(StepContribution, ChunkContext)}. Will either
+   * fetch and mark as success, or the opposite.
    *
    * @param contribution stepContribution to be noticed for current status.
    * @param chunkContext chunk context to clarify if repeat is necessary.
@@ -66,13 +66,14 @@ public class FileFetchTasklet implements Tasklet {
 
     try {
       log.info("fetching " + targetPath + "...");
-      InputStream in = Files.newInputStream(sourcePath);
+      InputStream in = url.openStream();
       String taskName = "fetching " + targetDump.getFileName() + "...";
       ProgressBar pb = ProgressBarUtil.get(taskName, targetDump.getSize());
       ProgressBarWrappedInputStream wrappedIn = new ProgressBarWrappedInputStream(in, pb);
       Files.copy(wrappedIn, targetPath);
     } catch (IOException e) {
-      throw new FileFetchException("failed on copying " + targetDump.getETag());
+      throw new FileFetchException(
+          "failed on copying " + targetDump.getETag() + ". reason: " + e.getMessage());
     }
     chunkContext.setComplete();
     contribution.setExitStatus(ExitStatus.COMPLETED);
@@ -84,14 +85,15 @@ public class FileFetchTasklet implements Tasklet {
    * should return negative.
    *
    * @param expectedSize expected file size
-   * @param path path where file is expected to be exists
+   * @param path         path where file is expected to be exists
    * @return whether the file size is same as expected, or false if the file not exists.
    */
   public boolean checkFileSize(long expectedSize, Path path) {
     try {
       return Files.size(path) == expectedSize;
     } catch (Exception e) {
-      throw new FileFetchException("failed to check file size: " + path + ". reason: " + e.getMessage());
+      throw new FileFetchException(
+          "failed to check file size: " + path + ". reason: " + e.getMessage());
     }
   }
 

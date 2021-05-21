@@ -1,7 +1,12 @@
 package io.dsub.discogsdata.batch.aspect.entity;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+
 import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.spi.ILoggingEvent;
 import io.dsub.discogsdata.batch.testutil.LogSpy;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -9,14 +14,13 @@ import org.springframework.aop.aspectj.annotation.AspectJProxyFactory;
 import org.springframework.aop.framework.AopProxy;
 import org.springframework.aop.framework.DefaultAopProxyFactory;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-
 class EntityValidationAspectTest {
 
   final EntityValidationAspect aspect = new EntityValidationAspect();
   TestEntity testEntity;
 
-  @RegisterExtension LogSpy logSpy = new LogSpy();
+  @RegisterExtension
+  LogSpy logSpy = new LogSpy();
 
   @BeforeEach
   void setUp() {
@@ -36,9 +40,9 @@ class EntityValidationAspectTest {
     // then
     assertThat(testEntity.getName()).isEqualTo("Jimmy Jones");
     assertThat(
-            logSpy.getEvents().stream()
-                .filter(logEvent -> logEvent.getLevel().equals(Level.ERROR))
-                .count())
+        logSpy.getEvents().stream()
+            .filter(logEvent -> logEvent.getLevel().equals(Level.ERROR))
+            .count())
         .isEqualTo(0);
   }
 
@@ -48,9 +52,26 @@ class EntityValidationAspectTest {
     testEntity.setName("");
     // then
     assertThat(testEntity.getName()).isEqualTo(null);
+  }
 
-    // TODO: this sometimes fails as the size not being reported. we should resolve this issue asap.
-    //    assertThat(logSpy.getEvents().size()).isEqualTo(2); // aspectj debug counts as 1.. hence
-    // 2.
+  @Test
+  void whenBlankStringPassedToWitherMethod__ThenShouldPassNullValue() {
+    // when
+    testEntity = testEntity.withName("");
+    List<ILoggingEvent> logs =
+        logSpy.getEvents().stream()
+            .filter(log -> log.getLoggerName().equals(EntityValidationAspect.class.getName()))
+            .collect(Collectors.toList());
+
+    // then
+    assertThat(testEntity.getName()).isEqualTo(null);
+    logs.forEach(
+        log ->
+            assertThat(log)
+                .satisfies(theLog -> assertThat(theLog.getLevel()).isEqualTo(Level.DEBUG))
+                .satisfies(
+                    theLog ->
+                        assertThat(theLog.getFormattedMessage())
+                            .isEqualTo("found empty string setter param found. setting to null.")));
   }
 }

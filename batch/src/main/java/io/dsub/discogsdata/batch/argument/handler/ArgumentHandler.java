@@ -7,6 +7,7 @@ import io.dsub.discogsdata.common.exception.InvalidArgumentException;
  * password existence, formatting, etc.
  */
 public interface ArgumentHandler {
+
   /**
    * single method to resolve if argument requirements are met.
    *

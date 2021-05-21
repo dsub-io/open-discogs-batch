@@ -6,5 +6,6 @@ import io.dsub.discogsdata.common.entity.release.ReleaseItemWork;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ReleaseWorkRepository extends JpaRepository<ReleaseItemWork, Long> {
+
   boolean existsByLabelAndReleaseItem(Label label, ReleaseItem releaseItem);
 }

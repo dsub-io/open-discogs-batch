@@ -1,32 +1,44 @@
 package io.dsub.discogsdata.batch.dump;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
+import java.time.LocalDate;
+import java.util.Objects;
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.Id;
-import java.time.LocalDate;
-import java.util.Objects;
+import javax.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @Entity
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Table(name = "discogs_dump")
 public class DiscogsDump implements Comparable<DiscogsDump>, Cloneable {
 
-  @Id private String eTag;
+  @Id
+  @Column(name = "etag")
+  private String eTag;
 
+  @Column(name = "type")
   @Enumerated(EnumType.STRING)
   private DumpType type;
 
+  @Column(name = "uri_string")
   private String uriString;
+
+  @Column(name = "size")
   private Long size;
+
+  @Column(name = "registered_at")
   private LocalDate registeredAt;
+
+  @Column(name = "created_at")
   private LocalDate createdAt;
 
   // parse file name from the uriString formatted as data/{year}/{file_name};
@@ -44,15 +56,20 @@ public class DiscogsDump implements Comparable<DiscogsDump>, Cloneable {
   }
 
   /**
-   * Compare only equals with ETag value as it is the single most definite identification of a dump.
+   * Compare only equals with ETag value as it is the single most definite identification of a
+   * dump.
    *
    * @param o any object, or another instance of dump to be evaluated being equal.
    * @return the result of the equals method.
    */
   @Override
   public boolean equals(Object o) {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
     DiscogsDump that = (DiscogsDump) o;
     return eTag.equals(that.eTag);
   }

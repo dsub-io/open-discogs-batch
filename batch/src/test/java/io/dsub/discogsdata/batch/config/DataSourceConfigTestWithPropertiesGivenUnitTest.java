@@ -1,5 +1,15 @@
 package io.dsub.discogsdata.batch.config;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
+import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -9,17 +19,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.ApplicationArguments;
 
-import javax.sql.DataSource;
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.Collectors;
-
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
-import static org.mockito.Mockito.*;
-
 @ExtendWith(MockitoExtension.class)
 class DataSourceConfigTestWithPropertiesGivenUnitTest {
+
   private static final String MISSING_REQUIRED_ARG_MESSAGE =
       "application argument must contain url in the non-option argument.";
 
@@ -39,9 +41,11 @@ class DataSourceConfigTestWithPropertiesGivenUnitTest {
       "jdbc:mysql://hello.world.com:3306/somewhere";
   private static final String PLAIN_TEST_JDBC_URL_ARGUMENT = "url=" + PLAIN_TEST_JDBC_URL_VALUE;
 
-  @Mock ApplicationArguments applicationArguments;
+  @Mock
+  ApplicationArguments applicationArguments;
 
-  @InjectMocks private DataSourceConfig dataSourceConfig;
+  @InjectMocks
+  private DataSourceConfig dataSourceConfig;
 
   @Test
   void whenBatchDataSourceCalled__ShouldCallApplicationArguments__GetNonOptionArg() {
@@ -90,10 +94,10 @@ class DataSourceConfigTestWithPropertiesGivenUnitTest {
   @ParameterizedTest
   @ValueSource(
       strings = {
-        TIME_ZONE_UTC_OPT,
-        REWRITE_BATCHED_STMTS_OPT,
-        USE_SERVER_PREP_STMTS_OPT,
-        CACHE_PREP_STMT_OPT
+          TIME_ZONE_UTC_OPT,
+          REWRITE_BATCHED_STMTS_OPT,
+          USE_SERVER_PREP_STMTS_OPT,
+          CACHE_PREP_STMT_OPT
       })
   void whenMissingSingleOption__ThenShouldIncludeThatMissingArgument(String opt) {
     String options =

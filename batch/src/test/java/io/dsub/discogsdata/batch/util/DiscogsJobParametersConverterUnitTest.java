@@ -1,6 +1,13 @@
-package io.dsub.discogsdata.batch.init.converter;
+package io.dsub.discogsdata.batch.util;
 
-import io.dsub.discogsdata.batch.init.converter.DiscogsJobParametersConverter;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
+import java.util.Properties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -10,15 +17,6 @@ import org.springframework.batch.core.converter.JobParametersConverter;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.DefaultApplicationArguments;
 import org.springframework.integration.support.PropertiesBuilder;
-
-import java.util.Arrays;
-import java.util.List;
-import java.util.Locale;
-import java.util.Properties;
-
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 class DiscogsJobParametersConverterUnitTest {
 

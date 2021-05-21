@@ -1,7 +1,10 @@
 package io.dsub.discogsdata.batch.argument.formatter;
 
-/** Argument formatter interface to present formatter of specific argument value. */
+/**
+ * Argument formatter interface to present formatter of specific argument value.
+ */
 public interface ArgumentFormatter {
+
   /**
    * Single method that performs formatting.
    *

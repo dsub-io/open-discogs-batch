@@ -1,29 +1,44 @@
 package io.dsub.discogsdata.common.entity.master;
 
-import io.dsub.discogsdata.common.entity.base.BaseEntity;
+import io.dsub.discogsdata.common.entity.base.BaseTimeEntity;
 import io.dsub.discogsdata.common.entity.release.ReleaseItem;
-import lombok.*;
-
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
 import javax.persistence.OneToOne;
+import javax.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+import lombok.With;
 
 @Data
 @Entity
-@Builder
+@With
 @EqualsAndHashCode(callSuper = false)
 @NoArgsConstructor
 @AllArgsConstructor
-public class Master extends BaseEntity {
-  @Id private Long id;
+@Table(name = "master")
+public class Master extends BaseTimeEntity {
 
+  private static final Long SerialVersionUID = 1L;
+
+  @Column(name = "id")
+  @Id
+  private Long id;
+
+  @Column(name = "year")
   private short year;
 
-  @Column(length = 2000)
+  @Column(name = "title", length = 2000)
   private String title;
 
+  @Column(name = "data_quality")
   private String dataQuality;
 
-  @OneToOne private ReleaseItem mainReleaseItem;
+  @OneToOne
+  @JoinColumn(name = "master_main_release_item", unique = true, nullable = false)
+  private ReleaseItem mainReleaseItem;
 }

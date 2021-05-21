@@ -3,6 +3,7 @@ package io.dsub.discogsdata.common.exception;
 import org.springframework.http.HttpStatus;
 
 public class ArgumentException extends BaseException {
+
   public ArgumentException(String reason) {
     this(HttpStatus.BAD_REQUEST, reason);
   }

@@ -1,14 +1,13 @@
 package io.dsub.discogsdata.batch.argument.validator;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+
+import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.DefaultApplicationArguments;
-
-import java.time.LocalDate;
-
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 class YearMonthValidatorUnitTest {
 
@@ -17,14 +16,14 @@ class YearMonthValidatorUnitTest {
   @ParameterizedTest
   @ValueSource(
       strings = {
-        "year=3333",
-        "year=hell",
-        "yearmonth=2009-13",
-        "yearmonth=2009",
-        "year=2001",
-        "year=2010-03",
-        "yearmonth=2013-00",
-        "yearmonth=1991-03"
+          "year=3333",
+          "year=hell",
+          "yearmonth=2009-13",
+          "yearmonth=2009",
+          "year=2001",
+          "year=2010-03",
+          "yearmonth=2013-00",
+          "yearmonth=1991-03"
       })
   void shouldReportInvalidFormats(String arg) {
     ApplicationArguments args = new DefaultApplicationArguments("--" + arg);

@@ -1,10 +1,16 @@
 package io.dsub.discogsdata.batch.dump.service;
 
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.mockito.Mockito.when;
+
 import io.dsub.discogsdata.batch.dump.DefaultDumpSupplier;
 import io.dsub.discogsdata.batch.dump.DiscogsDump;
 import io.dsub.discogsdata.batch.dump.DumpSupplier;
 import io.dsub.discogsdata.batch.dump.DumpType;
 import io.dsub.discogsdata.batch.dump.repository.DiscogsDumpRepository;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -16,29 +22,23 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
-import java.util.Random;
-import java.util.stream.Collectors;
-
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.mockito.Mockito.when;
-
 @DataJpaTest
 public class DefaultDiscogsDumpServiceIntegrationTest {
 
   List<DiscogsDump> sampleDumpList =
       new DefaultDumpSupplier()
           .get().stream()
-              .sorted(DiscogsDump::compareTo)
-              .skip(200)
-              .limit(10)
-              .collect(Collectors.toList());
+          .sorted(DiscogsDump::compareTo)
+          .skip(200)
+          .limit(10)
+          .collect(Collectors.toList());
 
-  @Autowired TestEntityManager em;
-  @Autowired DiscogsDumpRepository repository;
-  @Mock DumpSupplier dumpSupplier;
+  @Autowired
+  TestEntityManager em;
+  @Autowired
+  DiscogsDumpRepository repository;
+  @Mock
+  DumpSupplier dumpSupplier;
   DiscogsDumpService dumpService;
 
   @BeforeEach
