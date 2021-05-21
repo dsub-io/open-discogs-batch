@@ -3,7 +3,9 @@ package io.dsub.discogsdata.batch.argument.formatter;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Collection of argument formatter that delegates the format() method to its delegates. */
+/**
+ * Collection of argument formatter that delegates the format() method to its delegates.
+ */
 public class CompositeArgumentFormatter implements ArgumentFormatter {
 
   private final List<ArgumentFormatter> delegates;

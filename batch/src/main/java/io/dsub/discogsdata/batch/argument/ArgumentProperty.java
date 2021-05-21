@@ -1,16 +1,17 @@
 package io.dsub.discogsdata.batch.argument;
 
 import io.dsub.discogsdata.common.exception.InvalidArgumentException;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 
-/** Argument property to be mapped to each {@link ArgType} instance. */
+/**
+ * Argument property to be mapped to each {@link ArgType} instance.
+ */
 @Getter
 @AllArgsConstructor
 public class ArgumentProperty {
@@ -37,6 +38,7 @@ public class ArgumentProperty {
   }
 
   public static class ArgumentPropertyBuilder {
+
     private String globalName;
     private List<String> synonyms;
     private Boolean required;
@@ -44,7 +46,8 @@ public class ArgumentProperty {
     private Integer maxValuesCount;
     private Class<?> supportedType;
 
-    ArgumentPropertyBuilder() {}
+    ArgumentPropertyBuilder() {
+    }
 
     public ArgumentPropertyBuilder globalName(String globalName) {
       this.globalName = globalName;

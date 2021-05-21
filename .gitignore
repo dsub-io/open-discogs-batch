@@ -119,7 +119,6 @@ fabric.properties
 .mtj.tmp/
 
 # Sample Files #
-*.xml
 *.json
 *.gz
 

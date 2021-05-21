@@ -4,23 +4,32 @@ import io.dsub.discogsdata.batch.argument.formatter.ArgumentFormatter;
 import io.dsub.discogsdata.batch.argument.formatter.ArgumentNameFormatter;
 import io.dsub.discogsdata.batch.argument.formatter.CompositeArgumentFormatter;
 import io.dsub.discogsdata.batch.argument.formatter.JdbcUrlFormatter;
-import io.dsub.discogsdata.batch.argument.validator.*;
+import io.dsub.discogsdata.batch.argument.validator.ArgumentValidator;
+import io.dsub.discogsdata.batch.argument.validator.CompositeArgumentValidator;
+import io.dsub.discogsdata.batch.argument.validator.DataSourceArgumentValidator;
+import io.dsub.discogsdata.batch.argument.validator.KnownArgumentValidator;
+import io.dsub.discogsdata.batch.argument.validator.MappedValueValidator;
+import io.dsub.discogsdata.batch.argument.validator.TypeArgumentValidator;
+import io.dsub.discogsdata.batch.argument.validator.ValidationResult;
+import io.dsub.discogsdata.batch.argument.validator.YearMonthValidator;
 import io.dsub.discogsdata.common.exception.InvalidArgumentException;
-import org.springframework.boot.ApplicationArguments;
-import org.springframework.boot.DefaultApplicationArguments;
-import org.springframework.context.annotation.Primary;
-import org.springframework.stereotype.Component;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.DefaultApplicationArguments;
+import org.springframework.context.annotation.Primary;
+import org.springframework.stereotype.Component;
 
-/** A default implementation of {@link ArgumentHandler}. */
+/**
+ * A default implementation of {@link ArgumentHandler}.
+ */
 @Primary
 @Component
 public class DefaultArgumentHandler implements ArgumentHandler {
+
   private final ArgumentFormatter argumentFormatter;
   private final ArgumentValidator argumentValidator;
   /**
@@ -39,9 +48,11 @@ public class DefaultArgumentHandler implements ArgumentHandler {
         return List.of(arg);
       };
 
-
   // TODO: think about using reflection to implement auto registration (but without redundant logs)
-  /** Default no-arg constructor. */
+
+  /**
+   * Default no-arg constructor.
+   */
   public DefaultArgumentHandler() {
     CompositeArgumentValidator validator =
         new CompositeArgumentValidator()

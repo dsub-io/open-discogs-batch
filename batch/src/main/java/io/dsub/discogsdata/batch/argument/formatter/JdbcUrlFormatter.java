@@ -1,6 +1,9 @@
 package io.dsub.discogsdata.batch.argument.formatter;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * Implementation of {@link ArgumentFormatter} that formats url entry into Jdbc connection string.
@@ -10,10 +13,11 @@ public class JdbcUrlFormatter implements ArgumentFormatter {
   /*
    * Static patterns to be used!
    */
+  private static final String DB_NAMES = "(" + String.join("|", DB.getNames()) + ")";
   private static final Pattern URL_ENTRY = Pattern.compile("^[-]{0,3}url=.*");
-  private static final Pattern STARTS_WITH_MYSQL = Pattern.compile("^mysql://.*");
+  private static final Pattern STARTS_WITH_DB = Pattern.compile("^" + DB_NAMES + "://.*");
   private static final Pattern STARTS_WITH_JDBC = Pattern.compile("^jdbc:.*");
-  private static final Pattern STARTS_WITH_JDBC_MYSQL = Pattern.compile("^jdbc:mysql://.*");
+  private static final Pattern STARTS_WITH_JDBC_DB = Pattern.compile("^jdbc:" + DB_NAMES + "://.*");
   private static final Pattern PORT_PATTERN = Pattern.compile(".*:[1-9][0-9]{0,4}.*");
   private static final Pattern SCHEMA_PATTERN = Pattern.compile(".*[^/]/[\\w!@#$%^&*-]+.*");
 
@@ -22,7 +26,7 @@ public class JdbcUrlFormatter implements ArgumentFormatter {
    *
    * @param arg argument to be evaluated.
    * @return as a jdbc connection string if arg is marked as a url entry. If not, it will simply
-   *     return the input argument as-is.
+   * return the input argument as-is.
    */
   @Override
   public String format(String arg) {
@@ -37,9 +41,9 @@ public class JdbcUrlFormatter implements ArgumentFormatter {
 
     String urlValue = arg.substring(arg.indexOf('=') + 1);
 
-    boolean startsWithMysql = STARTS_WITH_MYSQL.matcher(urlValue).matches();
+    boolean startsWithMysql = STARTS_WITH_DB.matcher(urlValue).matches();
     boolean startsWithJdbc = STARTS_WITH_JDBC.matcher(urlValue).matches();
-    boolean startsProperly = STARTS_WITH_JDBC_MYSQL.matcher(urlValue).matches();
+    boolean startsProperly = STARTS_WITH_JDBC_DB.matcher(urlValue).matches();
 
     if (startsWithMysql) {
       urlValue = "jdbc:" + urlValue;
@@ -67,5 +71,16 @@ public class JdbcUrlFormatter implements ArgumentFormatter {
 
     // missing schema, so we add the default value.
     return parts[0] + "=" + urlValue + "/discogs_data";
+  }
+
+  private enum DB {
+    MYSQL,
+    POSTGRESQL;
+
+    private static List<String> getNames() {
+      return Arrays.stream(DB.values())
+          .map(db -> db.name().toLowerCase())
+          .collect(Collectors.toList());
+    }
   }
 }

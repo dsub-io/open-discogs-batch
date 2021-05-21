@@ -2,8 +2,11 @@ package io.dsub.discogsdata.batch.argument.formatter;
 
 import io.dsub.discogsdata.batch.argument.ArgType;
 
-/** ArgumentFormatter that formats argument's name */
+/**
+ * ArgumentFormatter that formats argument's name
+ */
 public class ArgumentNameFormatter implements ArgumentFormatter {
+
   /**
    * Formats argument name so that it does not contains any plurals. Also, it will check the
    * argument name and assign proper name from {@link ArgType}.

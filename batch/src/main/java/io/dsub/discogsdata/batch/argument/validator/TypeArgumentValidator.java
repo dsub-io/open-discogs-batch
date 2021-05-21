@@ -1,11 +1,10 @@
 package io.dsub.discogsdata.batch.argument.validator;
 
-import org.apache.logging.log4j.util.Strings;
-import org.springframework.boot.ApplicationArguments;
-
 import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import org.apache.logging.log4j.util.Strings;
+import org.springframework.boot.ApplicationArguments;
 
 public class TypeArgumentValidator implements ArgumentValidator {
 
