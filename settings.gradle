@@ -1,4 +1,4 @@
-rootProject.name = 'discogs-data'
+rootProject.name = 'discogstools'
 include 'common'
 include 'api'
 include 'batch'

@@ -8,10 +8,10 @@
         <processorPath useClasspath="false">
           <entry name="$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.projectlombok/lombok/1.18.16/6dc192c7f93ec1853f70d59d8a6dcf94eb42866/lombok-1.18.16.jar" />
         </processorPath>
-        <module name="discogs-data.batch.test" />
-        <module name="discogs-data.api.test" />
-        <module name="discogs-data.common.test" />
-        <module name="discogs-data.common.main" />
+        <module name="discogstools.api.test" />
+        <module name="discogstools.common.main" />
+        <module name="discogstools.common.test" />
+        <module name="discogstools.batch.test" />
       </profile>
       <profile name="Gradle Imported" enabled="true">
         <outputRelativeToContentRoot value="true" />
@@ -19,13 +19,11 @@
           <entry name="$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.projectlombok/lombok/1.18.16/6dc192c7f93ec1853f70d59d8a6dcf94eb42866/lombok-1.18.16.jar" />
           <entry name="$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.springframework.boot/spring-boot-configuration-processor/2.4.0/b905dd39e8378dba388bc0c91dc0d59b78101bbb/spring-boot-configuration-processor-2.4.0.jar" />
         </processorPath>
-        <module name="discogs-data.api.main" />
-        <module name="discogs-data.batch.main" />
+        <module name="discogstools.api.main" />
+        <module name="discogstools.batch.main" />
       </profile>
     </annotationProcessing>
-    <bytecodeTargetLevel target="11">
-      <module name="discogstools" target="11" />
-    </bytecodeTargetLevel>
+    <bytecodeTargetLevel target="11" />
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
