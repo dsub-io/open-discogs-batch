@@ -11,16 +11,7 @@ import org.springframework.stereotype.Component;
 @Aspect
 @Component
 public class EntityValidationAspect {
-
-  @Pointcut("@within(javax.persistence.Entity) && execution(* *..set*(String, ..))")
-  public void entityStringSetterMethods() {
-  }
-
-  @Pointcut("@within(javax.persistence.Entity) && execution(* *..with*(String, ..))")
-  public void entityWitherMethods() {
-  }
-
-  @Around("entityWitherMethods() || entityStringSetterMethods()")
+  @Around("@within(javax.persistence.Entity) && execution(* *..with*(String, ..)) || @within(javax.persistence.Entity) && execution(* *..set*(String, ..))")
   public Object replaceBlankStringToNullValue(ProceedingJoinPoint pjp) throws Throwable {
     Object[] normalizedArgs = pjp.getArgs();
     for (int i = 0; i < pjp.getArgs().length; i++) {
