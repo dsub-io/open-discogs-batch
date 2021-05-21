@@ -14,11 +14,7 @@ public class ServiceValidationAspect {
   private static final String BLANK_STRING_MESSAGE = "found blank string argument";
   private static final String NULL_STRING_MESSAGE = "found null argument";
 
-  @Pointcut("@target(org.springframework.stereotype.Service)")
-  public void services() {
-  }
-
-  @Around("services()")
+  @Around("@target(org.springframework.stereotype.Service)")
   public Object throwOnNullOrBlankStringArgument(ProceedingJoinPoint pjp) throws Throwable {
     Object[] args = pjp.getArgs();
     for (Object arg : args) {
