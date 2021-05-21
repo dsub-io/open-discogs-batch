@@ -1,5 +1,6 @@
 package io.dsub.discogsdata.batch.aspect.query;
 
+import io.dsub.discogsdata.batch.aspect.BatchAspect;
 import io.dsub.discogsdata.common.exception.InvalidArgumentException;
 import io.dsub.discogsdata.common.exception.MissingAnnotationException;
 import java.lang.reflect.Field;
@@ -16,7 +17,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Aspect
 @Component
-public class JpaEntityBuilderArgumentValidationAspect {
+public class JpaEntityBuilderArgumentValidationAspect extends BatchAspect {
 
   public static final String MISSING_COLUMN_ANNOTATION_MSG =
       "expected either @Column or @JoinColumn on field ";
@@ -36,7 +37,7 @@ public class JpaEntityBuilderArgumentValidationAspect {
   public static final String CANNOT_ACCEPT_NULL_ARG =
       "cannot accept null argument: ";
 
-  @Around("execution(* io.dsub.discogsdata.batch.query..*(.., java.lang.reflect.Field, ..))")
+  @Around("jpaEntityQueryBuilder() && methodsTakeOneOrMoreField()")
   public Object jpaEntityFieldValidationAdvice(ProceedingJoinPoint joinPoint) throws Throwable {
     checkNullArg(joinPoint.getArgs());
     for (Object arg : joinPoint.getArgs()) {
@@ -48,7 +49,7 @@ public class JpaEntityBuilderArgumentValidationAspect {
     return joinPoint.proceed(joinPoint.getArgs());
   }
 
-  @Around("execution(* io.dsub.discogsdata.batch.query..*(.., java.lang.Class, ..))")
+  @Around("jpaEntityQueryBuilder() && methodsTakeOneOrMoreClass()")
   public Object jpaEntityValidationAdvice(ProceedingJoinPoint joinPoint) throws Throwable {
     checkNullArg(joinPoint.getArgs());
     for (Object arg : joinPoint.getArgs()) {

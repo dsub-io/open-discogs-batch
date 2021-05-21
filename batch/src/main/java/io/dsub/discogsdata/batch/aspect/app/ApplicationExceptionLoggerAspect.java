@@ -1,5 +1,6 @@
 package io.dsub.discogsdata.batch.aspect.app;
 
+import io.dsub.discogsdata.batch.aspect.BatchAspect;
 import java.lang.reflect.Modifier;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -10,9 +11,9 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Aspect
 @Component
-public class ApplicationExceptionLoggerAspect {
+public class ApplicationExceptionLoggerAspect extends BatchAspect {
 
-  @Around("execution(* io.dsub.discogsdata..*.*(..))")
+  @Around("anyMethod()")
   public Object handleError(ProceedingJoinPoint joinPoint) throws Throwable {
     try {
       return joinPoint.proceed(joinPoint.getArgs());

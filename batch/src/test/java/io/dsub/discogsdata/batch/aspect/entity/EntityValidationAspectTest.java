@@ -58,6 +58,7 @@ class EntityValidationAspectTest {
   void whenBlankStringPassedToWitherMethod__ThenShouldPassNullValue() {
     // when
     testEntity = testEntity.withName("");
+
     List<ILoggingEvent> logs =
         logSpy.getEvents().stream()
             .filter(log -> log.getLoggerName().equals(EntityValidationAspect.class.getName()))
