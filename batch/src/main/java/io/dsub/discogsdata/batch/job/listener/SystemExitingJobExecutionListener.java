@@ -15,8 +15,12 @@ public class SystemExitingJobExecutionListener implements JobExecutionListener {
   @Override
   public void afterJob(JobExecution jobExecution) {
     jobExecution.upgradeStatus(BatchStatus.COMPLETED);
-    System.exit(
+    this.exit(
         new SimpleJvmExitCodeMapper()
             .intValue(jobExecution.getExitStatus().getExitCode()));
+  }
+
+  public void exit(int exitCode) {
+    System.exit(exitCode);
   }
 }
