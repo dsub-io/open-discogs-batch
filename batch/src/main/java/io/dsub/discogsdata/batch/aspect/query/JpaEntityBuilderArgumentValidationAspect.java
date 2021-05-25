@@ -4,6 +4,7 @@ import io.dsub.discogsdata.batch.aspect.BatchAspect;
 import io.dsub.discogsdata.common.exception.InvalidArgumentException;
 import io.dsub.discogsdata.common.exception.MissingAnnotationException;
 import java.lang.reflect.Field;
+import java.util.Arrays;
 import javax.persistence.Column;
 import javax.persistence.JoinColumn;
 import javax.persistence.Table;
@@ -11,7 +12,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
-import org.aspectj.lang.annotation.Pointcut;
 import org.springframework.stereotype.Component;
 
 @Slf4j
@@ -37,18 +37,6 @@ public class JpaEntityBuilderArgumentValidationAspect extends BatchAspect {
   public static final String CANNOT_ACCEPT_NULL_ARG =
       "cannot accept null argument: ";
 
-  @Around("jpaEntityQueryBuilder() && methodsTakeOneOrMoreField()")
-  public Object jpaEntityFieldValidationAdvice(ProceedingJoinPoint joinPoint) throws Throwable {
-    checkNullArg(joinPoint.getArgs());
-    for (Object arg : joinPoint.getArgs()) {
-      if (arg instanceof Field) {
-        Field field = (Field) arg;
-        checkIfColumnAnnotationExists(field);
-      }
-    }
-    return joinPoint.proceed(joinPoint.getArgs());
-  }
-
   @Around("jpaEntityQueryBuilder() && methodsTakeOneOrMoreClass()")
   public Object jpaEntityValidationAdvice(ProceedingJoinPoint joinPoint) throws Throwable {
     checkNullArg(joinPoint.getArgs());
@@ -56,19 +44,20 @@ public class JpaEntityBuilderArgumentValidationAspect extends BatchAspect {
       if (arg instanceof Class) {
         Class<?> clazz = (Class<?>) arg;
         checkIfTableAnnotationExists(clazz);
+        Arrays.stream(clazz.getDeclaredFields()).forEach(this::checkIfColumnAnnotationExists);
       }
     }
 
     return joinPoint.proceed(joinPoint.getArgs());
   }
 
-  public void checkIfTableAnnotationExists(Class<?> clazz) {
+  private void checkIfTableAnnotationExists(Class<?> clazz) {
     if (!clazz.isAnnotationPresent(Table.class)) {
       throw new MissingAnnotationException(clazz, Table.class);
     }
   }
 
-  public void checkNullArg(Object[] args) {
+  private void checkNullArg(Object[] args) {
     if (args != null) {
       for (Object arg : args) {
         if (arg == null) {
@@ -80,7 +69,7 @@ public class JpaEntityBuilderArgumentValidationAspect extends BatchAspect {
     }
   }
 
-  public void checkIfColumnAnnotationExists(Field field) {
+  private void checkIfColumnAnnotationExists(Field field) {
     if (!field.isAnnotationPresent(Column.class) && !field.isAnnotationPresent(JoinColumn.class)) {
       throw new MissingAnnotationException(MISSING_COLUMN_ANNOTATION_MSG + field);
     }

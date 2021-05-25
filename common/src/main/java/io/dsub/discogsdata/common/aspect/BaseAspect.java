@@ -26,10 +26,6 @@ public abstract class BaseAspect {
   public void anyMethodWithinPackage() {
   }
 
-  @Pointcut("execution(* *(.., java.lang.reflect.Field, ..)) && !constructor()")
-  public void methodsTakeOneOrMoreField() {
-  }
-
   @Pointcut("execution(* *(.., java.lang.Class, ..)) && !constructor()")
   public void methodsTakeOneOrMoreClass() {
   }

@@ -18,8 +18,7 @@ public interface QueryBuilder<T> {
   String LAST_MODIFIED_FIELD = "lastModifiedAt";
   String LAST_MODIFIED_COLUMN = "last_modified_at";
 
-
   String getInsertQuery(Class<? extends T> targetClass);
 
-  String getUpsertQuery(Class<? extends T> targetClass, boolean withId);
+  String getUpsertQuery(Class<? extends T> targetClass);
 }

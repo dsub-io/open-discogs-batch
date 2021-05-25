@@ -1,14 +1,15 @@
 package io.dsub.discogsdata.batch.job.reader;
 
 import io.dsub.discogsdata.batch.util.ProgressBarUtil;
+import io.dsub.discogsdata.batch.util.ToggleProgressBarConsumer;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
+import java.util.Arrays;
 import java.util.zip.GZIPInputStream;
 import lombok.Getter;
-import lombok.Setter;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import me.tongfei.progressbar.ProgressBar;
 import me.tongfei.progressbar.wrapped.ProgressBarWrappedInputStream;
@@ -21,32 +22,52 @@ import org.springframework.beans.factory.InitializingBean;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.oxm.Unmarshaller;
 import org.springframework.oxm.jaxb.Jaxb2Marshaller;
+import org.springframework.util.Assert;
 
+/**
+ * Decorated ItemReader to show progress bar.
+ *
+ * @param <T> type to be read.
+ */
 @Slf4j
+@RequiredArgsConstructor
 public class ProgressBarStaxEventItemReader<T> implements ItemStreamReader<T>, InitializingBean {
+
+  private static final String TASK_NAME_PREPEND = "READ ";
 
   private final String taskName;
   private final Class<T> clazz;
   private final Path filePath;
-  private final StaxEventItemReader<T> nestedReader;
-  @Getter
-  @Setter
-  private String taskNamePrepend = "READ ";
+  private final ToggleProgressBarConsumer pbConsumer = new ToggleProgressBarConsumer(System.err);
+  private String[] fragmentRootElements;
+  private StaxEventItemReader<T> nestedReader;
 
   public ProgressBarStaxEventItemReader(
-      Class<T> clazz, Path filePath, List<String> fragmentRootElements) throws Exception {
+      Class<T> clazz, Path filePath, String... fragmentRootElements) throws Exception {
     this.clazz = clazz;
     this.filePath = filePath;
-    this.taskName = "READ " + clazz.getSimpleName();
-    this.nestedReader =
-        new StaxEventItemReaderBuilder<T>()
-            .resource(getInputStreamResource())
-            .name(taskName)
-            .addFragmentRootElements(fragmentRootElements)
-            .unmarshaller(getUnmarshaller(clazz))
-            .saveState(false)
-            .build();
-    this.afterPropertiesSet();
+    this.taskName = TASK_NAME_PREPEND + clazz.getSimpleName();
+    this.pbConsumer.off();
+    this.fragmentRootElements = Arrays.stream(fragmentRootElements)
+        .filter(string -> !string.isBlank()).toArray(String[]::new);
+    this.init();
+  }
+
+  private void init() throws Exception {
+    Assert.notNull(this.clazz, "clazz cannot be null");
+    Assert.notNull(this.filePath, "filePath cannot be null");
+    Assert.notEmpty(this.fragmentRootElements, "at least 1 fragmentRootElement is required");
+    initDelegate();
+  }
+
+  private void initDelegate() throws Exception {
+    this.nestedReader = new StaxEventItemReaderBuilder<T>()
+        .resource(getInputStreamResource())
+        .name(taskName)
+        .addFragmentRootElements(fragmentRootElements)
+        .unmarshaller(getUnmarshaller(clazz))
+        .saveState(false)
+        .build();
   }
 
   private Unmarshaller getUnmarshaller(Class<T> clazz) throws Exception {
@@ -58,7 +79,7 @@ public class ProgressBarStaxEventItemReader<T> implements ItemStreamReader<T>, I
 
   private InputStreamResource getInputStreamResource() throws IOException {
     InputStream in = Files.newInputStream(filePath);
-    ProgressBar pb = ProgressBarUtil.get(taskName, Files.size(filePath));
+    ProgressBar pb = ProgressBarUtil.get(taskName, Files.size(filePath), pbConsumer);
     return new InputStreamResource(new ProgressBarWrappedInputStream(new GZIPInputStream(in), pb));
   }
 
@@ -69,14 +90,12 @@ public class ProgressBarStaxEventItemReader<T> implements ItemStreamReader<T>, I
 
   @Override
   public void afterPropertiesSet() throws Exception {
-    assert (clazz != null);
-    assert (filePath != null);
-    assert (nestedReader != null);
     nestedReader.afterPropertiesSet();
   }
 
   @Override
   public synchronized void open(ExecutionContext executionContext) throws ItemStreamException {
+    this.pbConsumer.on();
     nestedReader.open(executionContext);
   }
 
@@ -87,6 +106,7 @@ public class ProgressBarStaxEventItemReader<T> implements ItemStreamReader<T>, I
 
   @Override
   public void close() {
-    nestedReader.close();
+    this.pbConsumer.close();
+    this.nestedReader.close();
   }
 }

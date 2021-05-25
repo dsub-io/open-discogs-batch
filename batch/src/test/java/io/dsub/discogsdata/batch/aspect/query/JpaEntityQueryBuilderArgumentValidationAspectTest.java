@@ -1,7 +1,6 @@
 package io.dsub.discogsdata.batch.aspect.query;
 
 import static io.dsub.discogsdata.batch.aspect.query.JpaEntityBuilderArgumentValidationAspect.CANNOT_ACCEPT_NULL_ARG;
-import static io.dsub.discogsdata.batch.aspect.query.JpaEntityBuilderArgumentValidationAspect.MISSING_COLUMN_ANNOTATION_MSG;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -23,7 +22,6 @@ import io.dsub.discogsdata.batch.testutil.LogSpy;
 import io.dsub.discogsdata.common.entity.base.BaseEntity;
 import io.dsub.discogsdata.common.exception.InvalidArgumentException;
 import io.dsub.discogsdata.common.exception.MissingAnnotationException;
-import java.lang.reflect.Field;
 import java.util.stream.IntStream;
 import javax.persistence.Column;
 import javax.persistence.Id;
@@ -33,22 +31,22 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
 import org.springframework.aop.aspectj.annotation.AspectJProxyFactory;
 import org.springframework.aop.framework.AopProxy;
 import org.springframework.aop.framework.DefaultAopProxyFactory;
 
-class JpaEntityBuilderArgumentValidationAspectTest {
+class JpaEntityQueryBuilderArgumentValidationAspectTest {
 
   // class to be tested
   protected static class MalformedClass {
+
     private String invalidField;
     @Column
     private String validField;
   }
 
-  private static class TestEntityFieldClass {
+  @Table(name = "test_entity_two")
+  private static class TestEntityTwo {
     @Id
     @Column
     private Long id;
@@ -57,7 +55,7 @@ class JpaEntityBuilderArgumentValidationAspectTest {
     private String hello;
 
     @JoinColumn(name = "where", referencedColumnName = "id")
-    private TestEntityFieldClass otherReference;
+    private TestEntityTwo otherReference;
   }
 
   final JpaEntityBuilderArgumentValidationAspect validator = new JpaEntityBuilderArgumentValidationAspect();
@@ -66,9 +64,6 @@ class JpaEntityBuilderArgumentValidationAspectTest {
 
   @RegisterExtension
   LogSpy logSpy = new LogSpy();
-
-  @Captor
-  ArgumentCaptor<Object> objArrArgCaptor;
 
   @BeforeEach
   @SuppressWarnings("unchecked")
@@ -84,14 +79,16 @@ class JpaEntityBuilderArgumentValidationAspectTest {
 
   @Test
   void whenNullPassed__ShouldNotInvokeTargetMethod() {
-    assertThrows(InvalidArgumentException.class, () -> queryBuilder.isIdentifier(null));
-    assertThrows(InvalidArgumentException.class, () -> queryBuilder.getFieldStream(null));
+    assertThrows(InvalidArgumentException.class,
+        () -> queryBuilder.getTableName(null));
+    assertThrows(InvalidArgumentException.class,
+        () -> queryBuilder.getUniqueConstraintColumns(null));
     verifyNoInteractions(queryBuilder);
   }
 
   @Test
   void whenJpaEntityFieldValidationAdvice__ShouldCheckNullArg() {
-    Throwable t = catchThrowable(() -> queryBuilder.isIdentifier(null));
+    Throwable t = catchThrowable(() -> queryBuilder.getMappings(null, true));
     assertThat(t).isInstanceOf(InvalidArgumentException.class)
         .hasMessageContaining(CANNOT_ACCEPT_NULL_ARG);
     assertThat(logSpy.countExact(Level.ERROR)).isOne();
@@ -99,7 +96,8 @@ class JpaEntityBuilderArgumentValidationAspectTest {
 
   @Test
   void whenJpaEntityValidationAdvice__ShouldCheckNullArg() {
-    Throwable t = catchThrowable(() -> queryBuilder.getUniqueConstraintsColumns(null));
+    Throwable t = catchThrowable(
+        () -> queryBuilder.getMappingsOutsideUniqueConstraints(null, false));
     assertThat(t).isInstanceOf(InvalidArgumentException.class)
         .hasMessageContaining(CANNOT_ACCEPT_NULL_ARG);
     assertThat(logSpy.countExact(Level.ERROR)).isOne();
@@ -116,8 +114,6 @@ class JpaEntityBuilderArgumentValidationAspectTest {
 
     assertDoesNotThrow(() -> validator.jpaEntityValidationAdvice(pjp));
     verify(pjp, times(3)).getArgs();
-    assertDoesNotThrow(() -> validator.jpaEntityFieldValidationAdvice(pjp));
-    verify(pjp, times(6)).getArgs();
   }
 
   @Test
@@ -130,44 +126,30 @@ class JpaEntityBuilderArgumentValidationAspectTest {
     given(pjp.getArgs()).willReturn(args);
 
     Throwable t1 = catchThrowable(() -> validator.jpaEntityValidationAdvice(pjp));
-    Throwable t2 = catchThrowable(() -> validator.jpaEntityFieldValidationAdvice(pjp));
 
     assertThat(t1).hasMessage(CANNOT_ACCEPT_NULL_ARG);
-    assertThat(t2).hasMessage(CANNOT_ACCEPT_NULL_ARG);
 
-    verify(pjp, times(2)).getArgs();
+    verify(pjp, times(1)).getArgs();
   }
 
   @Test
   void whenAdvicesAcceptJoinPoint__ShouldReturnDelegatedResult() throws Throwable {
-    Object[] args = new Object[]{TestEntity.class};
+    Object[] args = new Object[]{TestEntityTwo.class};
     ProceedingJoinPoint pjp = mock(ProceedingJoinPoint.class);
     given(pjp.getArgs()).willReturn(args);
     given(pjp.proceed(args)).willReturn("hi");
-    assertThat(validator.jpaEntityFieldValidationAdvice(pjp)).isEqualTo("hi");
+    assertThat(validator.jpaEntityValidationAdvice(pjp)).isEqualTo("hi");
     verify(pjp, times(1)).proceed(args);
     verify(pjp, times(3)).getArgs();
-    assertThat(validator.jpaEntityValidationAdvice(pjp)).isEqualTo("hi");
-    verify(pjp, times(2)).proceed(args);
-    verify(pjp, times(6)).getArgs();
-  }
-
-  @Test
-  void whenArgumentIsField__ShouldCheckAccordingly() throws Throwable {
-    Object[] args = TestEntityFieldClass.class.getDeclaredFields();
-    ProceedingJoinPoint pjp = mock(ProceedingJoinPoint.class);
-    given(pjp.getArgs()).willReturn(args);
-    given(pjp.proceed(args)).willReturn("potato_man");
-    assertThat(validator.jpaEntityFieldValidationAdvice(pjp)).isEqualTo("potato_man");
   }
 
   @Test
   void whenArgumentIsClass__ShouldCheckAccordingly() throws Throwable {
-    Object[] args = new Object[]{TestEntity.class};
+    Object[] args = new Object[]{TestEntityTwo.class};
     ProceedingJoinPoint pjp = mock(ProceedingJoinPoint.class);
     given(pjp.getArgs()).willReturn(args);
     given(pjp.proceed(args)).willReturn("potato_man");
-    assertThat(validator.jpaEntityFieldValidationAdvice(pjp)).isEqualTo("potato_man");
+    assertThat(validator.jpaEntityValidationAdvice(pjp)).isEqualTo("potato_man");
   }
 
   @Test
@@ -183,15 +165,9 @@ class JpaEntityBuilderArgumentValidationAspectTest {
   }
 
   @Test
-  void whenValidClassGetsValidated__ShouldNotThrow() {
-    assertDoesNotThrow(() -> validator.checkIfTableAnnotationExists(TestEntity.class));
-  }
-
-
-  @Test
   void whenAdviceGetsClass__ShouldNotTouchArgument() {
     try {
-      Object[] args = new Object[]{TestEntity.class};
+      Object[] args = new Object[]{TestEntityTwo.class};
       ProceedingJoinPoint pjp = mock(ProceedingJoinPoint.class);
       given(pjp.getArgs()).willReturn(args);
       when(pjp.proceed(args)).thenReturn("hi");
@@ -217,117 +193,11 @@ class JpaEntityBuilderArgumentValidationAspectTest {
   }
 
   @Test
-  void whenNullFieldArg__ShouldCheckNullArguments() {
-    try {
-      Object[] args = IntStream.of(0, 5)
-          .mapToObj(i -> i % 2 == 0 ? mock(Object.class) : null)
-          .toArray();
-      ProceedingJoinPoint pjp = mock(ProceedingJoinPoint.class);
-      when(pjp.getArgs()).thenReturn(args);
-
-      Throwable t = catchThrowable(() -> validator.jpaEntityFieldValidationAdvice(pjp));
-      assertThat(t)
-          .isInstanceOf(InvalidArgumentException.class)
-          .hasMessage(CANNOT_ACCEPT_NULL_ARG);
-      verify(pjp, times(1)).getArgs();
-    } catch (Throwable t) {
-      fail(t);
-    }
-  }
-
-  @Test
-  void whenArgIsInvalidField__ShouldThrow() {
-    try {
-      Object[] args = MalformedClass.class.getDeclaredFields();
-      ProceedingJoinPoint pjp = mock(ProceedingJoinPoint.class);
-      when(pjp.getArgs()).thenReturn(args);
-      Throwable t = catchThrowable(() -> validator.jpaEntityFieldValidationAdvice(pjp));
-      assertThat(t)
-          .isInstanceOf(MissingAnnotationException.class)
-          .hasMessageContaining("@Column", "@JoinColumn");
-    } catch (Throwable t) {
-      fail(t);
-    }
-  }
-
-  @Test
-  void whenValidField__ShouldPassSameArg() {
-    try {
-      Object[] args = TestEntityFieldClass.class.getDeclaredFields();
-      ProceedingJoinPoint pjp = mock(ProceedingJoinPoint.class);
-      when(pjp.getArgs()).thenReturn(args);
-      when(pjp.proceed(args)).thenReturn("red_evil");
-      Object result = validator.jpaEntityFieldValidationAdvice(pjp);
-      assertThat(result).isEqualTo("red_evil");
-      verify(pjp, times(1)).proceed(args);
-    } catch (Throwable t) {
-      fail(t);
-    }
-  }
-
-  @Test
-  void whenCheckNullArg__ShouldThrowIfNullPassed() {
-    Throwable t1 = catchThrowable(() -> validator.checkNullArg(null));
-    assertThat(t1)
-        .isInstanceOf(InvalidArgumentException.class)
-        .hasMessage(CANNOT_ACCEPT_NULL_ARG);
-    Throwable t2 = catchThrowable(() -> validator.checkNullArg(new Object[]{null}));
-    assertThat(t2)
-        .isInstanceOf(InvalidArgumentException.class)
-        .hasMessage(CANNOT_ACCEPT_NULL_ARG);
-  }
-
-  @Test
-  void whenCheckNullArg__ShouldNotThrowIfNotNullPassed() {
-    Object[] args = new Object[]{new Object()};
-    assertDoesNotThrow(() -> validator.checkNullArg(args));
-  }
-
-  @Test
-  void whenCheckFieldWithoutColumn__ShouldThrow() {
-    try {
-      Field field = MalformedClass.class.getDeclaredField("invalidField");
-      Throwable t = catchThrowable(() -> validator.checkIfColumnAnnotationExists(field));
-      assertThat(t)
-          .isInstanceOf(MissingAnnotationException.class)
-          .hasMessage(MISSING_COLUMN_ANNOTATION_MSG + field);
-    } catch (Throwable t) {
-      fail(t);
-    }
-  }
-
-  @Test
-  void whenCheckFieldWithColumn__ShouldNotThrow() {
-    try {
-      Field joinColumnField = TestEntityFieldClass.class.getDeclaredField("otherReference");
-      Field columnField = TestEntityFieldClass.class.getDeclaredField("hello");
-      assertDoesNotThrow(() -> validator.checkIfColumnAnnotationExists(joinColumnField));
-      assertDoesNotThrow(() -> validator.checkIfColumnAnnotationExists(columnField));
-    } catch (Throwable t) {
-      fail(t);
-    }
-  }
-
-  @Test
-  void whenJpaEntityQueryBuilderTakesField__ShouldRecognize() {
-    try {
-      Field field = MalformedClass.class.getDeclaredField("invalidField");
-      Throwable t = catchThrowable(() -> queryBuilder.isIdentifier(field));
-      assertThat(t)
-          .isInstanceOf(MissingAnnotationException.class)
-          .hasMessage(MISSING_COLUMN_ANNOTATION_MSG + field);
-      verifyNoInteractions(queryBuilder);
-    } catch (Throwable t) {
-      fail(t);
-    }
-  }
-
-  @Test
   void whenJpaEntityQueryBuilderTakesClass__ShouldRecognize() {
-    Throwable t = catchThrowable(() -> queryBuilder.getTableName(MalformedClass.class));
+    Throwable t = catchThrowable(() -> queryBuilder.getTableName(null));
     assertThat(t)
-        .isInstanceOf(MissingAnnotationException.class)
-        .hasMessage(new MissingAnnotationException(MalformedClass.class, Table.class).getMessage());
+        .isInstanceOf(InvalidArgumentException.class)
+        .hasMessage(CANNOT_ACCEPT_NULL_ARG);
     verifyNoInteractions(queryBuilder);
   }
 

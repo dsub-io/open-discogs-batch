@@ -3,6 +3,7 @@ package io.dsub.discogsdata.batch.dump.service;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.mockito.Mockito.when;
 
+import io.dsub.discogsdata.batch.condition.RequiresDiscogsDataConnection;
 import io.dsub.discogsdata.batch.dump.DefaultDumpSupplier;
 import io.dsub.discogsdata.batch.dump.DiscogsDump;
 import io.dsub.discogsdata.batch.dump.DumpSupplier;
@@ -14,6 +15,7 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
@@ -23,6 +25,7 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 
 @DataJpaTest
+@ExtendWith(RequiresDiscogsDataConnection.class)
 public class DefaultDiscogsDumpServiceIntegrationTest {
 
   List<DiscogsDump> sampleDumpList =
