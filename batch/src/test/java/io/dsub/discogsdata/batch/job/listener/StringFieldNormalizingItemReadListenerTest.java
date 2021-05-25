@@ -2,20 +2,19 @@ package io.dsub.discogsdata.batch.job.listener;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-class DefaultDiscogsStepExecutionListenerTest {
+class StringFieldNormalizingItemReadListenerTest {
 
-  @BeforeEach
-  void setUp() {
+  @Test
+  void beforeRead() {
   }
 
   @Test
-  void beforeStep() {
+  void afterRead() {
   }
 
   @Test
-  void afterStep() {
+  void onReadError() {
   }
 }

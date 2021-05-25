@@ -2,7 +2,7 @@ package io.dsub.discogsdata.batch.job.step;
 
 import io.dsub.discogsdata.batch.artist.ArtistXML;
 import io.dsub.discogsdata.batch.dump.service.DiscogsDumpService;
-import io.dsub.discogsdata.batch.job.listener.DefaultDiscogsStepExecutionListener;
+import io.dsub.discogsdata.batch.job.listener.StopWatchStepExecutionListener;
 import io.dsub.discogsdata.batch.job.listener.StringFieldNormalizingItemReadListener;
 import io.dsub.discogsdata.batch.job.processor.ArtistSubItemsProcessor;
 import io.dsub.discogsdata.batch.job.reader.DumpItemReaderBuilder;
@@ -86,7 +86,7 @@ public class ArtistStepConfig {
         .retryLimit(10)
         .retry(DeadlockLoserDataAccessException.class)
         .listener(new StringFieldNormalizingItemReadListener<>())
-        .listener(new DefaultDiscogsStepExecutionListener())
+        .listener(new StopWatchStepExecutionListener())
         .throttleLimit(throttleLimit)
         .taskExecutor(taskExecutor)
         .transactionManager(tm)
@@ -106,7 +106,7 @@ public class ArtistStepConfig {
         .retryLimit(10)
         .retry(DeadlockLoserDataAccessException.class)
         .listener(new StringFieldNormalizingItemReadListener<>())
-        .listener(new DefaultDiscogsStepExecutionListener())
+        .listener(new StopWatchStepExecutionListener())
         .throttleLimit(throttleLimit)
         .build();
   }

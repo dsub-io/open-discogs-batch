@@ -9,9 +9,18 @@ import org.springframework.util.NumberUtils;
 import org.springframework.util.StopWatch;
 
 @Slf4j
-public class DefaultDiscogsStepExecutionListener implements StepExecutionListener {
+public class StopWatchStepExecutionListener implements StepExecutionListener {
 
-  StopWatch stopWatch = new StopWatch();
+  private StopWatch stopWatch;
+
+  public StopWatchStepExecutionListener() {
+    this.init();
+  }
+
+  private void init() {
+    this.stopWatch = new StopWatch();
+    this.stopWatch.setKeepTaskList(false);
+  }
 
   @Override
   public void beforeStep(StepExecution stepExecution) {
@@ -23,6 +32,7 @@ public class DefaultDiscogsStepExecutionListener implements StepExecutionListene
   public ExitStatus afterStep(StepExecution stepExecution) {
     printStepDetails(stepExecution.getWriteCount());
     stepExecution.setStatus(BatchStatus.COMPLETED);
+    this.init();
     return ExitStatus.COMPLETED;
   }
 
@@ -38,12 +48,23 @@ public class DefaultDiscogsStepExecutionListener implements StepExecutionListene
 
     int seconds =
         NumberUtils.convertNumberToTargetClass(stopWatch.getTotalTimeSeconds(), Integer.class);
+
+    if (seconds == 0) { // nothing to report...
+      return;
+    }
+
     int itemsPerSecond = writeCount / seconds;
-    String timeTook = stopWatch.prettyPrint();
+
+    String timeTookSeconds = String.valueOf(stopWatch.getTotalTimeSeconds());
+
     String itemsWritten =
         "write count: " + writeCount; // this may depends on how item writer reports.
-    String itemsProcPerSec = "(" + itemsPerSecond + "/sec)";
+    String itemsProcPerSec = "(" + itemsPerSecond + "/s)";
 
-    log.info(String.join(" ", timeTook, itemsWritten, itemsProcPerSec));
+    log.info("task {} took {} seconds and written {} items. processed items per second: {}",
+        stopWatch.getLastTaskName(),
+        timeTookSeconds,
+        itemsWritten,
+        itemsProcPerSec);
   }
 }
