@@ -66,7 +66,6 @@ class DefaultJobParameterResolverTest {
     assertThat(result).isEqualTo(DEFAULT_THROTTLE_LIMIT);
 
     // optional if log actually got spied...  in some cases, this may be an issue for failure.
-    // TODO: ISSUE
     if (!logSpy.getEvents().isEmpty()) {
       assertThat(logSpy.getEvents().get(0).getMessage())
           .isEqualTo(
@@ -108,7 +107,6 @@ class DefaultJobParameterResolverTest {
     assertThat(result).isEqualTo(DEFAULT_CHUNK_SIZE);
 
     // optional if log actually got spied...  in some cases, this may be an issue for failure.
-    // TODO: ISSUE
     if (!logSpy.getEvents().isEmpty()) {
       assertThat(logSpy.getEvents().get(0).getMessage())
           .isEqualTo("chunkSize not specified. returning default value: " + DEFAULT_CHUNK_SIZE);

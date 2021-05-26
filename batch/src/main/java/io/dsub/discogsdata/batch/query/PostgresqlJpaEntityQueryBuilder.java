@@ -9,9 +9,10 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.springframework.stereotype.Component;
 
-// todo: impl aop applied test
-// todo: unit test
+// todo: consider conditional bean on vendor specific needs
+@Component
 public class PostgresqlJpaEntityQueryBuilder implements JpaEntityQueryBuilder<BaseEntity> {
 
   public static final String INSERT_QUERY_FORMAT =

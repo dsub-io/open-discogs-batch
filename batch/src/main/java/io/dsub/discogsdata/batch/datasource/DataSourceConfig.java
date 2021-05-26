@@ -1,4 +1,4 @@
-package io.dsub.discogsdata.batch.config;
+package io.dsub.discogsdata.batch.datasource;
 
 import io.dsub.discogsdata.common.exception.MissingRequiredArgumentException;
 import java.util.Map;
@@ -17,8 +17,9 @@ import org.springframework.context.annotation.Configuration;
 @RequiredArgsConstructor
 public class DataSourceConfig {
 
+  private static final String DB_VENDOR = "(" + String.join("|",DBType.getNames()) + ")";
   private static final String PLAIN_JDBC_URL_PATTERN_STRING =
-      "^jdbc:mysql://[\\w._-]+:[1-9][0-9]{0,4}/[\\w_-]+$";
+      "^jdbc:" + DB_VENDOR + "://[\\w._-]+:[1-9][0-9]{0,4}/[\\w_-]+$";
 
   private static final String TIME_ZONE_UTC_OPT = "serverTimeZone=UTC";
   private static final String CACHE_PREP_STMT_OPT = "cachePrepStmts=true";
@@ -52,7 +53,7 @@ public class DataSourceConfig {
         .url(optAppliedUrlString)
         .username(arguments.get("username"))
         .password(arguments.get("password"))
-        .driverClassName("com.mysql.cj.jdbc.Driver")
+        .driverClassName(DBType.getDriverClassName(optAppliedUrlString))
         .build();
   }
 
@@ -71,8 +72,7 @@ public class DataSourceConfig {
       // append entire options
       return originalUrl
           .concat("?")
-          .concat(
-              String.join(
+          .concat(String.join(
                   "&",
                   TIME_ZONE_UTC_OPT,
                   CACHE_PREP_STMT_OPT,

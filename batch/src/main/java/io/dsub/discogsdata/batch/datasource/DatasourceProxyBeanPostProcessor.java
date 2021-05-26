@@ -1,4 +1,4 @@
-package io.dsub.discogsdata.batch.config;
+package io.dsub.discogsdata.batch.datasource;
 
 import java.lang.reflect.Method;
 import javax.sql.DataSource;

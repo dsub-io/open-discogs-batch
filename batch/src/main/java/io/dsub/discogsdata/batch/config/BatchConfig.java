@@ -13,7 +13,6 @@ public class BatchConfig {
   public static final int DEFAULT_CHUNK_SIZE = 1000;
   public static final int DEFAULT_THROTTLE_LIMIT = CORE_SIZE > 2 ? (int) (CORE_SIZE * 0.8) : 1;
 
-
   /**
    * Primary bean for batch processing. The core and max pool size is fit into same value, just as
    * the same as the core size of host processor count.

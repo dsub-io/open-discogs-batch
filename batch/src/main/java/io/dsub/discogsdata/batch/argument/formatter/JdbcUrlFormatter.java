@@ -1,9 +1,7 @@
 package io.dsub.discogsdata.batch.argument.formatter;
 
-import java.util.Arrays;
-import java.util.List;
+import io.dsub.discogsdata.batch.datasource.DBType;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 /**
  * Implementation of {@link ArgumentFormatter} that formats url entry into Jdbc connection string.
@@ -13,7 +11,7 @@ public class JdbcUrlFormatter implements ArgumentFormatter {
   /*
    * Static patterns to be used!
    */
-  private static final String DB_NAMES = "(" + String.join("|", DB.getNames()) + ")";
+  private static final String DB_NAMES = "(" + String.join("|", DBType.getNames()) + ")";
   private static final Pattern URL_ENTRY = Pattern.compile("^[-]{0,3}url=.*");
   private static final Pattern STARTS_WITH_DB = Pattern.compile("^" + DB_NAMES + "://.*");
   private static final Pattern STARTS_WITH_JDBC = Pattern.compile("^jdbc:.*");
@@ -71,16 +69,5 @@ public class JdbcUrlFormatter implements ArgumentFormatter {
 
     // missing schema, so we add the default value.
     return parts[0] + "=" + urlValue + "/discogs_data";
-  }
-
-  private enum DB {
-    MYSQL,
-    POSTGRESQL;
-
-    private static List<String> getNames() {
-      return Arrays.stream(DB.values())
-          .map(db -> db.name().toLowerCase())
-          .collect(Collectors.toList());
-    }
   }
 }

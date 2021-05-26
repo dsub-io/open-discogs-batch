@@ -10,7 +10,7 @@ public abstract class BaseAspect {
   // EXECUTIONS
   ///////////////////////////////////////////////////////////////////////////
 
-  @Pointcut("execution(*.new(..))")
+  @Pointcut("execution(io.dsub.discogsdata..*.new(..))")
   public void constructor() {
   }
 
@@ -18,7 +18,7 @@ public abstract class BaseAspect {
   public void testMethod() {
   }
 
-  @Pointcut("execution(* *..*(..)) && !constructor()")
+  @Pointcut("execution(* io.dsub.discogsdata..*(..)) && !constructor()")
   public void anyMethod() {
   }
 

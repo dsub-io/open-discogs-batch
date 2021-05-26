@@ -34,7 +34,6 @@ public class DefaultJobParameterResolver implements JobParameterResolver {
     return props;
   }
 
-  // TODO: test core size comparing logic.
   protected int parseThrottleLimit(ApplicationArguments args) {
     int throttleLimit = parseIntegerArg(args, ArgType.THROTTLE_LIMIT, DEFAULT_THROTTLE_LIMIT);
     if (throttleLimit > DEFAULT_THROTTLE_LIMIT) {

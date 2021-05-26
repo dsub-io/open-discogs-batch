@@ -8,10 +8,18 @@ spring:
         rewriteBatchedStatements: true
       maximum-pool-size: 20
   batch:
+    initialize-schema: ALWAYS
     job:
       enabled: false
   jpa:
+    generate-ddl: true
+    hibernate:
+      ddl-auto: update
     properties:
       hibernate:
+        format_sql: true
+        order_inserts: true
+        order_updates: true
         jdbc:
+          batch_size: 2000
           time_zone: UTC

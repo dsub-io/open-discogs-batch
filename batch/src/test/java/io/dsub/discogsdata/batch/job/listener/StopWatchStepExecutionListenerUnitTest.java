@@ -19,7 +19,6 @@ import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.StepExecution;
 import org.springframework.util.StopWatch;
 
-// todo: validate each DI as-if required per each UT.
 class StopWatchStepExecutionListenerUnitTest {
 
   StopWatchStepExecutionListener listener;
