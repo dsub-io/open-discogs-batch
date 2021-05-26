@@ -1,6 +1,6 @@
 package io.dsub.discogsdata.batch.aspect.query;
 
-import static io.dsub.discogsdata.batch.aspect.query.JpaEntityBuilderArgumentValidationAspect.CANNOT_ACCEPT_NULL_ARG;
+import static io.dsub.discogsdata.batch.aspect.query.JpaEntityQueryBuilderArgumentValidationAspect.CANNOT_ACCEPT_NULL_ARG;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -58,7 +58,7 @@ class JpaEntityQueryBuilderArgumentValidationAspectTest {
     private TestEntityTwo otherReference;
   }
 
-  final JpaEntityBuilderArgumentValidationAspect validator = new JpaEntityBuilderArgumentValidationAspect();
+  final JpaEntityQueryBuilderArgumentValidationAspect validator = new JpaEntityQueryBuilderArgumentValidationAspect();
   final ApplicationExceptionLoggerAspect loggerAspect = new ApplicationExceptionLoggerAspect();
   JpaEntityQueryBuilder<BaseEntity> queryBuilder;
 

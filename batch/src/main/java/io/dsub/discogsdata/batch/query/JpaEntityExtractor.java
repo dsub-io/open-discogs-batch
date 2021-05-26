@@ -1,5 +1,7 @@
 package io.dsub.discogsdata.batch.query;
 
+import static io.dsub.discogsdata.batch.query.QueryBuilder.PERIOD;
+
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;

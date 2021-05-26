@@ -4,6 +4,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Random;
 import java.util.stream.Collectors;
@@ -242,7 +243,7 @@ class DiscogsDumpTest {
         .type(DumpType.values()[new Random().nextInt(4)])
         .size(10L)
         .createdAt(createdAt)
-        .registeredAt(LocalDate.now().minusDays(new Random().nextInt(1000)))
+        .registeredAt(LocalDateTime.now().minusDays(new Random().nextInt(1000)))
         .build();
   }
 

@@ -22,8 +22,8 @@ public class Artist extends BaseTimeEntity {
 
   private static final Long SerialVersionUID = 1L;
 
-  @Column(name = "id")
   @Id
+  @Column(name = "id")
   private Long id;
 
   @Column(name = "name", length = 1000)

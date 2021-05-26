@@ -120,7 +120,7 @@ fabric.properties
 
 # Sample Files #
 *.json
-./*.gz
+*.gz
 
 # Package Files #
 *.jar

@@ -12,6 +12,7 @@ import io.dsub.discogsdata.batch.exception.FileFetchException;
 import io.dsub.discogsdata.batch.testutil.LogSpy;
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import lombok.extern.slf4j.Slf4j;
@@ -46,8 +47,11 @@ class FileFetchTaskletTest {
   void setUp() throws MalformedURLException {
     filePath = Path.of(RandomString.make());
     targetPath = Path.of(RandomString.make());
-    fakeDump = DiscogsDump.builder().size(1000L).uriString("t/t/" + targetPath).build();
-    fileFetchTasklet = new FileFetchTasklet(fakeDump, filePath.toUri().toURL());
+    fakeDump = DiscogsDump.builder()
+        .size(1000L)
+        .url(filePath.toUri().toURL())
+        .uriString("t/t/" + targetPath).build();
+    fileFetchTasklet = new FileFetchTasklet(fakeDump);
     try {
       Files.createFile(filePath);
       Files.write(filePath, RandomString.make(1000).getBytes());

@@ -24,8 +24,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(
-    name = "unique_master_genre",
-    uniqueConstraints = @UniqueConstraint(name = "master_genre_id", columnNames = {"master_id",
+    name = "master_genre",
+    uniqueConstraints = @UniqueConstraint(name = "unique_master_genre", columnNames = {"master_id",
         "genre"}))
 public class MasterGenre extends BaseTimeEntity {
 

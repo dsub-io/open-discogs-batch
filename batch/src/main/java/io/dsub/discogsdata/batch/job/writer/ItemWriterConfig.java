@@ -10,6 +10,7 @@ import javax.sql.DataSource;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.ItemWriter;
+import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.database.JpaItemWriter;
 import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder;
 import org.springframework.context.annotation.Bean;
@@ -19,14 +20,13 @@ import org.springframework.context.annotation.Configuration;
 @RequiredArgsConstructor
 public class ItemWriterConfig {
 
-  private final EntityManagerFactory emf;
   private final JpaEntityQueryBuilder<BaseEntity> queryBuilder;
   private final DataSource dataSource;
 
   @Bean
   @StepScope
   public ItemWriter<Artist> artistItemWriter() {
-    return getItemWriter();
+    return buildItemWriter(Artist.class);
   }
 
   @Bean
@@ -39,19 +39,18 @@ public class ItemWriterConfig {
     return writer;
   }
 
-  @Bean
-  @StepScope
-  public <T> JpaItemWriter<T> getItemWriter() {
-    JpaItemWriter<T> writer = new JpaItemWriter<>();
-    writer.setEntityManagerFactory(emf);
-    return writer;
+  private <T extends BaseEntity> ItemWriter<T> buildItemWriter(Class<T> entityClass) {
+    return new JdbcBatchItemWriterBuilder<T>()
+        .sql(queryBuilder.getUpsertQuery(entityClass))
+        .dataSource(dataSource)
+        .beanMapped()
+        .build();
   }
 
   private <T extends BatchCommand> ItemWriter<T> buildItemWriter(T command) {
     return new JdbcBatchItemWriterBuilder<T>()
         .sql(queryBuilder.getUpsertQuery(command.getEntityClass()))
         .dataSource(dataSource)
-        .assertUpdates(false)
         .beanMapped()
         .build();
   }

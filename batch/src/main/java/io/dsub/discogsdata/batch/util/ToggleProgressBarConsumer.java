@@ -8,7 +8,7 @@ public class ToggleProgressBarConsumer extends ConsoleProgressBarConsumer {
   private boolean print = false;
 
   public ToggleProgressBarConsumer(PrintStream out) {
-    super(out);
+    super(out, 150);
   }
 
   @Override

@@ -2,7 +2,6 @@ package io.dsub.discogsdata.batch.job.step;
 
 import io.dsub.discogsdata.batch.BatchCommand;
 import io.dsub.discogsdata.batch.domain.artist.ArtistXML;
-import io.dsub.discogsdata.batch.dump.DiscogsDump;
 import io.dsub.discogsdata.batch.dump.service.DiscogsDumpService;
 import io.dsub.discogsdata.batch.job.listener.StopWatchStepExecutionListener;
 import io.dsub.discogsdata.batch.job.listener.StringFieldNormalizingItemReadListener;
@@ -10,10 +9,9 @@ import io.dsub.discogsdata.batch.job.processor.ArtistSubItemsProcessor;
 import io.dsub.discogsdata.batch.job.reader.DumpItemReaderBuilder;
 import io.dsub.discogsdata.batch.job.tasklet.FileFetchTasklet;
 import io.dsub.discogsdata.common.entity.artist.Artist;
-import io.dsub.discogsdata.common.entity.base.BaseEntity;
 import io.dsub.discogsdata.common.exception.InitializationFailureException;
-import java.net.URL;
 import java.util.Collection;
+import java.util.concurrent.Future;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.JobScope;
@@ -28,14 +26,12 @@ import org.springframework.batch.integration.async.AsyncItemProcessor;
 import org.springframework.batch.integration.async.AsyncItemWriter;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemWriter;
-import org.springframework.batch.item.database.JpaItemWriter;
 import org.springframework.batch.item.support.SynchronizedItemStreamReader;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.dao.DeadlockLoserDataAccessException;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
-import org.springframework.transaction.PlatformTransactionManager;
 
 @Configuration
 @RequiredArgsConstructor
@@ -48,26 +44,29 @@ public class ArtistStepConfig {
   private static final String ARTIST_FLOW_STEP = "artist flow step";
   private static final String ARTIST_CORE_STEP = "artist core step";
   private static final String ARTIST_SUB_ITEMS_STEP = "artist sub items step";
+  private static final String ARTIST_FILE_FETCH_STEP = "artist file fetch step";
   private static final String ANY = "*";
   private static final String FAILED = "FAILED";
 
   private final StepBuilderFactory sbf;
   private final DiscogsDumpService dumpService;
-  private final JpaItemWriter<Artist> artistItemWriter;
+  private final ItemWriter<Artist> artistItemWriter;
   private final ThreadPoolTaskExecutor taskExecutor;
   private final ArtistSubItemsProcessor artistSubItemsProcessor;
   private final ItemWriter<Collection<BatchCommand>> artistSubItemWriter;
   private final JobRepository jobRepository;
-  private final PlatformTransactionManager tm;
 
   @Bean
   @JobScope
   // TODO: add file fetch and clear step
-  public Step artistStep(@Value(CHUNK) Integer chunkSize, @Value(THROTTLE) Integer throttleLimit, @Value(ETAG) String artistETag) {
+  public Step artistStep() throws Exception {
     Flow artistStepFlow =
         new FlowBuilder<SimpleFlow>(ARTIST_STEP_FLOW)
-            .next(artistCoreStep(chunkSize, throttleLimit))
-            .next(artistSubItemsStep(chunkSize, throttleLimit))
+            .from(fileFetchStep(null)).on(FAILED).end()
+            .from(fileFetchStep(null)).on(ANY).to(artistCoreStep(null, null))
+            .from(artistCoreStep(null,null)).on(FAILED).end()
+            .from(artistCoreStep(null,null)).on(ANY).to(artistSubItemsStep(null,null))
+            .from(artistSubItemsStep(null,null)).on(ANY).end()
             .build();
     FlowStep artistFlowStep = new FlowStep();
     artistFlowStep.setJobRepository(jobRepository);
@@ -85,34 +84,41 @@ public class ArtistStepConfig {
     return sbf.get(ARTIST_CORE_STEP)
         .<ArtistXML, Artist>chunk(chunkSize)
         .reader(artistDTOItemReader)
-        .processor(artistDtoArtistProcessor())
+        .processor(artistProcessor())
         .writer(artistItemWriter)
         .faultTolerant()
         .retryLimit(10)
         .retry(DeadlockLoserDataAccessException.class)
         .listener(new StringFieldNormalizingItemReadListener<>())
         .listener(new StopWatchStepExecutionListener())
-        .throttleLimit(throttleLimit)
         .taskExecutor(taskExecutor)
-        .transactionManager(tm)
+        .throttleLimit(throttleLimit)
         .build();
   }
 
   @Bean
   @JobScope
   public Step artistSubItemsStep(
-      @Value(CHUNK) Integer chunkSize, @Value(THROTTLE) Integer throttleLimit) {
+      @Value(CHUNK) Integer chunkSize, @Value(THROTTLE) Integer throttleLimit) throws Exception {
     return sbf.get(ARTIST_SUB_ITEMS_STEP)
-        .<ArtistXML, Collection<BatchCommand>>chunk(chunkSize)
+        .<ArtistXML, Future<Collection<BatchCommand>>>chunk(chunkSize)
         .reader(artistStreamReader(null))
-        .processor(artistSubItemsProcessor)
-        .writer(artistSubItemWriter)
+        .processor(asyncArtistSubItemsProcessor())
+        .writer(asyncArtistSubItemsWriter())
         .faultTolerant()
         .retryLimit(10)
         .retry(DeadlockLoserDataAccessException.class)
         .listener(new StringFieldNormalizingItemReadListener<>())
         .listener(new StopWatchStepExecutionListener())
         .throttleLimit(throttleLimit)
+        .build();
+  }
+
+  @Bean
+  @JobScope
+  public Step fileFetchStep(@Value(ETAG) String artistETag) {
+    return sbf.get(ARTIST_FILE_FETCH_STEP)
+        .tasklet(new FileFetchTasklet(dumpService.getDiscogsDump(artistETag)))
         .build();
   }
 
@@ -132,7 +138,7 @@ public class ArtistStepConfig {
   public AsyncItemProcessor<ArtistXML, Artist> asyncArtistProcessor() {
     AsyncItemProcessor<ArtistXML, Artist> processor = new AsyncItemProcessor<>();
     processor.setTaskExecutor(taskExecutor);
-    processor.setDelegate(artistDtoArtistProcessor());
+    processor.setDelegate(artistProcessor());
     return processor;
   }
 
@@ -165,7 +171,13 @@ public class ArtistStepConfig {
 
   @Bean
   @StepScope
-  public ItemProcessor<ArtistXML, Artist> artistDtoArtistProcessor() {
-    return dto -> null;
+  public ItemProcessor<ArtistXML, Artist> artistProcessor() {
+    return xml -> Artist.builder()
+        .id(xml.getId())
+        .name(xml.getName())
+        .realName(xml.getRealName())
+        .dataQuality(xml.getDataQuality())
+        .profile(xml.getProfile())
+        .build();
   }
 }

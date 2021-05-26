@@ -3,7 +3,8 @@ package io.dsub.discogsdata.batch.query;
 public interface QueryBuilder<T> {
 
   String SPACE = " ";
-  String DOT = ".";
+  String PERIOD = ".";
+  String COMMA = ",";
   String AND = "AND";
   String COLON = ":";
   String SEMICOLON = ";";

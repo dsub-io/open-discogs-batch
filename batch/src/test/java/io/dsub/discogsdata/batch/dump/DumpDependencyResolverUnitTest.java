@@ -15,6 +15,7 @@ import io.dsub.discogsdata.batch.dump.service.DiscogsDumpService;
 import io.dsub.discogsdata.common.exception.DumpNotFoundException;
 import io.dsub.discogsdata.common.exception.InvalidArgumentException;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -280,7 +281,7 @@ class DumpDependencyResolverUnitTest {
   DiscogsDump getFakeDumpByType(DumpType type) {
     return DiscogsDump.builder()
         .createdAt(LocalDate.now())
-        .registeredAt(LocalDate.now())
+        .registeredAt(LocalDateTime.now())
         .type(type)
         .eTag(RandomString.make())
         .uriString(RandomString.make())

@@ -17,7 +17,8 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Aspect
 @Component
-public class JpaEntityBuilderArgumentValidationAspect extends BatchAspect {
+public class JpaEntityQueryBuilderArgumentValidationAspect extends BatchAspect {
+  public static final String SERIAL_VERSION_UID = "SerialVersionUID";
 
   public static final String MISSING_COLUMN_ANNOTATION_MSG =
       "expected either @Column or @JoinColumn on field ";
@@ -70,6 +71,9 @@ public class JpaEntityBuilderArgumentValidationAspect extends BatchAspect {
   }
 
   private void checkIfColumnAnnotationExists(Field field) {
+    if (field.getName().equals(SERIAL_VERSION_UID)) {
+      return;
+    }
     if (!field.isAnnotationPresent(Column.class) && !field.isAnnotationPresent(JoinColumn.class)) {
       throw new MissingAnnotationException(MISSING_COLUMN_ANNOTATION_MSG + field);
     }

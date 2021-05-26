@@ -13,14 +13,14 @@ public class ProgressBarUtil {
   }
 
   public static ProgressBar get(String taskName, long initialMax) {
-    return get(taskName, initialMax, new ConsoleProgressBarConsumer(System.err));
+    return get(taskName, initialMax, new ConsoleProgressBarConsumer(System.err, 150));
   }
 
   public static ProgressBar get(String taskName, long initialMax, ProgressBarConsumer consumer) {
     return new ProgressBarBuilder()
-        .setStyle(ProgressBarStyle.ASCII)
-        .setUnit("KB", 1024)
-        .setSpeedUnit(ChronoUnit.HOURS)
+        .setStyle(ProgressBarStyle.COLORFUL_UNICODE_BLOCK)
+        .setUnit("MB", 1048576)
+        .setSpeedUnit(ChronoUnit.SECONDS)
         .setUpdateIntervalMillis(100)
         .setTaskName(taskName)
         .setInitialMax(initialMax)

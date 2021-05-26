@@ -12,6 +12,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import me.tongfei.progressbar.ProgressBar;
+import me.tongfei.progressbar.ProgressBarBuilder;
 import me.tongfei.progressbar.wrapped.ProgressBarWrappedInputStream;
 import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
@@ -80,7 +81,7 @@ public class ProgressBarStaxEventItemReader<T> implements ItemStreamReader<T>, I
   private InputStreamResource getInputStreamResource() throws IOException {
     InputStream in = Files.newInputStream(filePath);
     ProgressBar pb = ProgressBarUtil.get(taskName, Files.size(filePath), pbConsumer);
-    return new InputStreamResource(new ProgressBarWrappedInputStream(new GZIPInputStream(in), pb));
+    return new InputStreamResource(new GZIPInputStream(new ProgressBarWrappedInputStream(in, pb)));
   }
 
   @Override

@@ -29,7 +29,6 @@ import org.springframework.batch.repeat.RepeatStatus;
 public class FileFetchTasklet implements Tasklet {
 
   private final DiscogsDump targetDump;
-  private final URL url;
 
   /**
    * Core implementation of {@link Tasklet#execute(StepContribution, ChunkContext)}. Will either
@@ -66,7 +65,7 @@ public class FileFetchTasklet implements Tasklet {
 
     try {
       log.info("fetching " + targetPath + "...");
-      InputStream in = url.openStream();
+      InputStream in = targetDump.getUrl().openStream();
       String taskName = "fetching " + targetDump.getFileName() + "...";
       ProgressBar pb = ProgressBarUtil.get(taskName, targetDump.getSize());
       ProgressBarWrappedInputStream wrappedIn = new ProgressBarWrappedInputStream(in, pb);
