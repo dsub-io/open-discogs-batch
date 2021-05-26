@@ -1,5 +1,6 @@
-package io.dsub.discogsdata.batch.dto;
+package io.dsub.discogsdata.batch.domain.artist;
 
+import io.dsub.discogsdata.batch.aspect.annotation.XmlMapped;
 import java.util.List;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -8,18 +9,13 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlElementWrapper;
 import javax.xml.bind.annotation.XmlRootElement;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 
 @Data
 @XmlMapped
-@EqualsAndHashCode(callSuper = false)
 @XmlRootElement(name = "artist")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class ArtistDTO {
+public class ArtistXML {
 
-  ///////////////////////////////////////////////////////////////////////////
-  // FIELDS
-  ///////////////////////////////////////////////////////////////////////////
   @XmlElement(name = "id")
   private Long id;
   @XmlElement(name = "name")
@@ -46,9 +42,6 @@ public class ArtistDTO {
   @XmlElement(name = "url")
   private List<String> urls;
 
-  ///////////////////////////////////////////////////////////////////////////
-  // INNER CLASSES
-  //////////////////////////////////////////////////////////////////////////
   @Data
   @XmlAccessorType(XmlAccessType.FIELD)
   public static class Alias {

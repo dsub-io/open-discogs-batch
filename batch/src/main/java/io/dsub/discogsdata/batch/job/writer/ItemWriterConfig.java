@@ -1,5 +1,6 @@
 package io.dsub.discogsdata.batch.job.writer;
 
+import io.dsub.discogsdata.batch.BatchCommand;
 import io.dsub.discogsdata.batch.query.JpaEntityQueryBuilder;
 import io.dsub.discogsdata.common.entity.artist.Artist;
 import io.dsub.discogsdata.common.entity.base.BaseEntity;
@@ -30,10 +31,10 @@ public class ItemWriterConfig {
 
   @Bean
   @StepScope
-  public ItemWriter<Collection<BaseEntity>> artistSubItemsWriter() throws Exception {
-    ClassifierCompositeCollectionItemWriter<BaseEntity> writer =
+  public ItemWriter<Collection<BatchCommand>> artistSubItemsWriter() throws Exception {
+    ClassifierCompositeCollectionItemWriter<BatchCommand> writer =
         new ClassifierCompositeCollectionItemWriter<>();
-    writer.setClassifier(classifiable -> buildItemWriter(classifiable.getClass()));
+    writer.setClassifier(this::buildItemWriter);
     writer.afterPropertiesSet();
     return writer;
   }
@@ -46,10 +47,9 @@ public class ItemWriterConfig {
     return writer;
   }
 
-  private <T extends BaseEntity> ItemWriter<T> buildItemWriter(
-      Class<? extends BaseEntity> entityClass) {
+  private <T extends BatchCommand> ItemWriter<T> buildItemWriter(T command) {
     return new JdbcBatchItemWriterBuilder<T>()
-        .sql(queryBuilder.getUpsertQuery(entityClass))
+        .sql(queryBuilder.getUpsertQuery(command.getEntityClass()))
         .dataSource(dataSource)
         .assertUpdates(false)
         .beanMapped()

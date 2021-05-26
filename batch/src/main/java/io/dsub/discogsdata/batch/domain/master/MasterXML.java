@@ -1,4 +1,4 @@
-package io.dsub.discogsdata.batch.dto.master;
+package io.dsub.discogsdata.batch.domain.master;
 
 import io.dsub.discogsdata.batch.aspect.annotation.XmlMapped;
 import java.util.ArrayList;

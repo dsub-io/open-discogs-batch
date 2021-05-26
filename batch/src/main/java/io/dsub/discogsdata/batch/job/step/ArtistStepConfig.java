@@ -1,14 +1,18 @@
 package io.dsub.discogsdata.batch.job.step;
 
-import io.dsub.discogsdata.batch.artist.ArtistXML;
+import io.dsub.discogsdata.batch.BatchCommand;
+import io.dsub.discogsdata.batch.domain.artist.ArtistXML;
+import io.dsub.discogsdata.batch.dump.DiscogsDump;
 import io.dsub.discogsdata.batch.dump.service.DiscogsDumpService;
 import io.dsub.discogsdata.batch.job.listener.StopWatchStepExecutionListener;
 import io.dsub.discogsdata.batch.job.listener.StringFieldNormalizingItemReadListener;
 import io.dsub.discogsdata.batch.job.processor.ArtistSubItemsProcessor;
 import io.dsub.discogsdata.batch.job.reader.DumpItemReaderBuilder;
+import io.dsub.discogsdata.batch.job.tasklet.FileFetchTasklet;
 import io.dsub.discogsdata.common.entity.artist.Artist;
 import io.dsub.discogsdata.common.entity.base.BaseEntity;
 import io.dsub.discogsdata.common.exception.InitializationFailureException;
+import java.net.URL;
 import java.util.Collection;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.Step;
@@ -52,13 +56,14 @@ public class ArtistStepConfig {
   private final JpaItemWriter<Artist> artistItemWriter;
   private final ThreadPoolTaskExecutor taskExecutor;
   private final ArtistSubItemsProcessor artistSubItemsProcessor;
-  private final ItemWriter<Collection<BaseEntity>> artistSubItemWriter;
+  private final ItemWriter<Collection<BatchCommand>> artistSubItemWriter;
   private final JobRepository jobRepository;
   private final PlatformTransactionManager tm;
 
   @Bean
   @JobScope
-  public Step artistStep(@Value(CHUNK) Integer chunkSize, @Value(THROTTLE) Integer throttleLimit) {
+  // TODO: add file fetch and clear step
+  public Step artistStep(@Value(CHUNK) Integer chunkSize, @Value(THROTTLE) Integer throttleLimit, @Value(ETAG) String artistETag) {
     Flow artistStepFlow =
         new FlowBuilder<SimpleFlow>(ARTIST_STEP_FLOW)
             .next(artistCoreStep(chunkSize, throttleLimit))
@@ -98,7 +103,7 @@ public class ArtistStepConfig {
   public Step artistSubItemsStep(
       @Value(CHUNK) Integer chunkSize, @Value(THROTTLE) Integer throttleLimit) {
     return sbf.get(ARTIST_SUB_ITEMS_STEP)
-        .<ArtistXML, Collection<BaseEntity>>chunk(chunkSize)
+        .<ArtistXML, Collection<BatchCommand>>chunk(chunkSize)
         .reader(artistStreamReader(null))
         .processor(artistSubItemsProcessor)
         .writer(artistSubItemWriter)
@@ -113,9 +118,9 @@ public class ArtistStepConfig {
 
   @Bean
   @StepScope
-  public AsyncItemProcessor<ArtistXML, Collection<BaseEntity>> asyncArtistSubItemsProcessor()
+  public AsyncItemProcessor<ArtistXML, Collection<BatchCommand>> asyncArtistSubItemsProcessor()
       throws Exception {
-    AsyncItemProcessor<ArtistXML, Collection<BaseEntity>> processor = new AsyncItemProcessor<>();
+    AsyncItemProcessor<ArtistXML, Collection<BatchCommand>> processor = new AsyncItemProcessor<>();
     processor.setDelegate(artistSubItemsProcessor);
     processor.setTaskExecutor(taskExecutor);
     processor.afterPropertiesSet();
@@ -141,8 +146,8 @@ public class ArtistStepConfig {
 
   @Bean
   @StepScope
-  public AsyncItemWriter<Collection<BaseEntity>> asyncArtistSubItemsWriter() {
-    AsyncItemWriter<Collection<BaseEntity>> writer = new AsyncItemWriter<>();
+  public AsyncItemWriter<Collection<BatchCommand>> asyncArtistSubItemsWriter() {
+    AsyncItemWriter<Collection<BatchCommand>> writer = new AsyncItemWriter<>();
     writer.setDelegate(artistSubItemWriter);
     return writer;
   }

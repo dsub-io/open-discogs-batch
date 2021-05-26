@@ -23,11 +23,11 @@ spring:
         jdbc:
           batch_size: 20000
           time_zone: UTC
-logging:
-  level:
-    io.dsub: DEBUG
-    org:
-      reflections: ERROR
-      springframework: ERROR
-      hibernate: ERROR
-    com.zaxxer.hikari: ERROR
+#logging:
+#  level:
+#    io.dsub: DEBUG
+#    org:
+#      reflections: ERROR
+#      springframework: ERROR
+#      hibernate: ERROR
+#    com.zaxxer.hikari: ERROR

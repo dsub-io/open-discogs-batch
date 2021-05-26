@@ -1,4 +1,4 @@
-package io.dsub.discogsdata.batch.artist;
+package io.dsub.discogsdata.batch.domain.artist;
 
 import io.dsub.discogsdata.batch.BatchCommand;
 import io.dsub.discogsdata.common.entity.artist.Artist;
@@ -8,7 +8,6 @@ import io.dsub.discogsdata.common.entity.artist.ArtistMember;
 import io.dsub.discogsdata.common.entity.artist.ArtistNameVariation;
 import io.dsub.discogsdata.common.entity.artist.ArtistUrl;
 import io.dsub.discogsdata.common.entity.base.BaseEntity;
-import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -39,7 +38,6 @@ public abstract class ArtistBatchCommand {
     private String realName;
     private String profile;
     private String dataQuality;
-    private LocalDateTime lastModifiedAt;
 
     @Override
     public Class<? extends BaseEntity> getEntityClass() {
@@ -56,7 +54,6 @@ public abstract class ArtistBatchCommand {
 
     private Long artist;
     private Long member;
-    private LocalDateTime lastModifiedAt;
 
     @Override
     public Class<? extends BaseEntity> getEntityClass() {
@@ -73,7 +70,6 @@ public abstract class ArtistBatchCommand {
 
     private Long artist;
     private Long group;
-    private LocalDateTime lastModifiedAt;
 
     @Override
     public Class<? extends BaseEntity> getEntityClass() {
@@ -90,7 +86,6 @@ public abstract class ArtistBatchCommand {
 
     private Long artist;
     private Long alias;
-    private LocalDateTime lastModifiedAt;
 
     @Override
     public Class<? extends BaseEntity> getEntityClass() {
@@ -107,7 +102,6 @@ public abstract class ArtistBatchCommand {
 
     private Long artist;
     private String url;
-    private LocalDateTime lastModifiedAt;
 
     @Override
     public Class<? extends BaseEntity> getEntityClass() {
@@ -124,7 +118,6 @@ public abstract class ArtistBatchCommand {
 
     private Long artist;
     private String name;
-    private LocalDateTime lastModifiedAt;
 
     @Override
     public Class<? extends BaseEntity> getEntityClass() {

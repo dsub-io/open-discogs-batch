@@ -1,50 +1,59 @@
-package io.dsub.discogsdata.batch.dto.release;
+package io.dsub.discogsdata.batch.domain.label;
 
 import io.dsub.discogsdata.batch.aspect.annotation.XmlMapped;
+import java.util.List;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlElementWrapper;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlValue;
 import lombok.Data;
 
 @Data
 @XmlMapped
-@XmlRootElement(name = "release")
+@XmlRootElement(name = "label")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class ReleaseXML {
+public class LabelXML {
 
   ///////////////////////////////////////////////////////////////////////////
   // FIELDS
   //////////////////////////////////////////////////////////////////////////
-  @XmlAttribute(name = "id")
-  private Long releaseId;
-  @XmlAttribute(name = "status")
-  private String status;
-  @XmlElement(name = "title")
-  private String title;
-  @XmlElement(name = "country")
-  private String country;
-  @XmlElement(name = "notes")
-  private String notes;
+  @XmlElement(name = "id")
+  private Long id;
+
+  @XmlElement(name = "name")
+  private String name;
+
+  @XmlElement(name = "contactinfo")
+  private String contactInfo;
+
+  @XmlElement(name = "profile")
+  private String profile;
+
   @XmlElement(name = "data_quality")
   private String dataQuality;
-  @XmlElement(name = "master_id")
-  private Master master;
-  @XmlElement(name = "released")
-  private String releaseDate;
+
+  @XmlElementWrapper(name = "sublabels")
+  @XmlElement(name = "label")
+  private List<SubLabel> SubLabels;
+
+  @XmlElementWrapper(name = "urls")
+  @XmlElement(name = "url")
+  private List<String> urls;
 
   ///////////////////////////////////////////////////////////////////////////
   // INNER CLASSES
   //////////////////////////////////////////////////////////////////////////
   @Data
   @XmlAccessorType(XmlAccessType.FIELD)
-  public static class Master {
+  public static class SubLabel {
 
     @XmlValue
-    private Long masterId;
-    @XmlAttribute(name = "is_main_release")
-    private boolean isMaster;
+    private String name;
+
+    @XmlAttribute(name = "id")
+    private Long id;
   }
 }

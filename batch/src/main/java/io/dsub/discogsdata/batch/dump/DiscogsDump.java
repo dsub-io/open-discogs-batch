@@ -1,6 +1,7 @@
 package io.dsub.discogsdata.batch.dump;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Objects;
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -36,10 +37,10 @@ public class DiscogsDump implements Comparable<DiscogsDump>, Cloneable {
   private Long size;
 
   @Column(name = "registered_at")
-  private LocalDate registeredAt;
+  private LocalDateTime registeredAt;
 
   @Column(name = "created_at")
-  private LocalDate createdAt;
+  private LocalDateTime createdAt;
 
   // parse file name from the uriString formatted as data/{year}/{file_name};
   public String getFileName() {

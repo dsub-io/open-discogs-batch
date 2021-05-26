@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import io.dsub.discogsdata.batch.dto.ArtistDTO;
+import io.dsub.discogsdata.batch.domain.artist.ArtistXML;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.lang.reflect.Field;
@@ -38,11 +38,11 @@ class ProgressBarStaxEventItemReaderTest {
 
   @Test
   void whenRead__ShouldReturnValidItem() throws Exception {
-    ProgressBarStaxEventItemReader<ArtistDTO> reader = null;
+    ProgressBarStaxEventItemReader<ArtistXML> reader = null;
     try {
-      reader = new ProgressBarStaxEventItemReader<>(ArtistDTO.class, artistPath, "artist");
+      reader = new ProgressBarStaxEventItemReader<>(ArtistXML.class, artistPath, "artist");
       reader.open(new ExecutionContext());
-      ArtistDTO item = reader.read();
+      ArtistXML item = reader.read();
       while (item != null) {
         assertThat(item).isNotNull();
         assertThat(item.getId()).isNotNull();
@@ -57,11 +57,11 @@ class ProgressBarStaxEventItemReaderTest {
 
   @Test
   void whenRead__ShouldPrintUpdateToSysErr() {
-    ProgressBarStaxEventItemReader<ArtistDTO> reader = null;
+    ProgressBarStaxEventItemReader<ArtistXML> reader = null;
     try {
-      reader = new ProgressBarStaxEventItemReader<>(ArtistDTO.class, artistPath, "artist");
+      reader = new ProgressBarStaxEventItemReader<>(ArtistXML.class, artistPath, "artist");
       reader.open(new ExecutionContext());
-      ArtistDTO item = reader.read();
+      ArtistXML item = reader.read();
       while (item != null) {
         item = reader.read();
       }
@@ -71,7 +71,7 @@ class ProgressBarStaxEventItemReaderTest {
       if (reader != null) {
         reader.close();
       }
-      assertThat(outCaptor.toString()).contains("READ ArtistDTO 100%");
+      assertThat(outCaptor.toString()).contains("READ ArtistXML 100%");
     }
   }
 
@@ -79,7 +79,7 @@ class ProgressBarStaxEventItemReaderTest {
   void whenFilePathIsNull__ShouldThrow() {
     // when
     Throwable t = catchThrowable(
-        () -> new ProgressBarStaxEventItemReader<>(ArtistDTO.class, null, ""));
+        () -> new ProgressBarStaxEventItemReader<>(ArtistXML.class, null, ""));
 
     // then
     assertThat(t).isInstanceOf(IllegalArgumentException.class)
@@ -90,7 +90,7 @@ class ProgressBarStaxEventItemReaderTest {
   void whenFragmentRootElementsIsNull__ShouldThrow() {
     // when
     Throwable t = catchThrowable(() ->
-        new ProgressBarStaxEventItemReader<>(ArtistDTO.class, artistPath, ""));
+        new ProgressBarStaxEventItemReader<>(ArtistXML.class, artistPath, ""));
 
     // then
     assertThat(t).isInstanceOf(IllegalArgumentException.class)
@@ -100,16 +100,16 @@ class ProgressBarStaxEventItemReaderTest {
   @Test
   @SuppressWarnings("unchecked")
   void whenCallUpdate__ShouldDelegate() throws Exception {
-    ProgressBarStaxEventItemReader<ArtistDTO> reader =
-        new ProgressBarStaxEventItemReader<>(ArtistDTO.class, artistPath, "artist");
+    ProgressBarStaxEventItemReader<ArtistXML> reader =
+        new ProgressBarStaxEventItemReader<>(ArtistXML.class, artistPath, "artist");
 
     ExecutionContext ctx = new ExecutionContext();
 
     Field delegateField = reader.getClass().getDeclaredField("nestedReader");
     delegateField.setAccessible(true);
 
-    StaxEventItemReader<ArtistDTO> delegate =
-        (StaxEventItemReader<ArtistDTO>) delegateField.get(reader);
+    StaxEventItemReader<ArtistXML> delegate =
+        (StaxEventItemReader<ArtistXML>) delegateField.get(reader);
 
     delegate = Mockito.spy(delegate);
     delegateField.set(reader, delegate);
@@ -128,15 +128,15 @@ class ProgressBarStaxEventItemReaderTest {
   @Test
   @SuppressWarnings("unchecked")
   void whenAfterPropertiesSet__ShouldCallDelegate() throws Exception {
-    ProgressBarStaxEventItemReader<ArtistDTO> reader = null;
+    ProgressBarStaxEventItemReader<ArtistXML> reader = null;
     try {
-      reader = new ProgressBarStaxEventItemReader<>(ArtistDTO.class, artistPath, "artist");
+      reader = new ProgressBarStaxEventItemReader<>(ArtistXML.class, artistPath, "artist");
 
       Field delegateField = reader.getClass().getDeclaredField("nestedReader");
       delegateField.setAccessible(true);
 
-      StaxEventItemReader<ArtistDTO> delegate =
-          (StaxEventItemReader<ArtistDTO>) delegateField.get(reader);
+      StaxEventItemReader<ArtistXML> delegate =
+          (StaxEventItemReader<ArtistXML>) delegateField.get(reader);
 
       delegate = Mockito.spy(delegate);
       delegateField.set(reader, delegate);

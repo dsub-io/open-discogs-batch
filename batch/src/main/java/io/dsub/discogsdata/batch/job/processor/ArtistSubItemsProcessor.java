@@ -1,15 +1,14 @@
 package io.dsub.discogsdata.batch.job.processor;
 
-import io.dsub.discogsdata.batch.artist.ArtistXML;
-import io.dsub.discogsdata.common.entity.artist.Artist;
-import io.dsub.discogsdata.common.entity.artist.ArtistAlias;
-import io.dsub.discogsdata.common.entity.artist.ArtistGroup;
-import io.dsub.discogsdata.common.entity.artist.ArtistMember;
-import io.dsub.discogsdata.common.entity.artist.ArtistNameVariation;
-import io.dsub.discogsdata.common.entity.artist.ArtistUrl;
-import io.dsub.discogsdata.common.entity.base.BaseEntity;
-import java.util.ArrayList;
+import io.dsub.discogsdata.batch.BatchCommand;
+import io.dsub.discogsdata.batch.domain.artist.ArtistBatchCommand.ArtistAliasCommand;
+import io.dsub.discogsdata.batch.domain.artist.ArtistBatchCommand.ArtistGroupCommand;
+import io.dsub.discogsdata.batch.domain.artist.ArtistBatchCommand.ArtistMemberCommand;
+import io.dsub.discogsdata.batch.domain.artist.ArtistBatchCommand.ArtistNameVariationCommand;
+import io.dsub.discogsdata.batch.domain.artist.ArtistBatchCommand.ArtistUrlCommand;
+import io.dsub.discogsdata.batch.domain.artist.ArtistXML;
 import java.util.Collection;
+import java.util.LinkedList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.configuration.annotation.StepScope;
@@ -19,68 +18,58 @@ import org.springframework.stereotype.Component;
 @Component
 @StepScope
 @RequiredArgsConstructor
-public class ArtistSubItemsProcessor implements ItemProcessor<ArtistXML, Collection<BaseEntity>> {
+public class ArtistSubItemsProcessor implements ItemProcessor<ArtistXML, Collection<BatchCommand>> {
 
   @Override
-  public Collection<BaseEntity> process(ArtistXML item) {
-    List<BaseEntity> entityList = new ArrayList<>();
+  public Collection<BatchCommand> process(ArtistXML item) {
+    long artistId = item.getId();
 
-    Artist artistRef = getArtistById(item.getId());
+    List<BatchCommand> batchCommands = new LinkedList<>();
 
-    if (isPresent(item.getUrls())) {
-      item.getUrls().stream()
-          .map(url -> new ArtistUrl().withArtist(artistRef).withUrl(url))
-          .forEach(entityList::add);
-    }
-
-    if (isPresent(item.getNameVariations())) {
-      item.getNameVariations().stream()
-          .map(
-              nameVar -> new ArtistNameVariation()
-                  .withArtist(artistRef)
-                  .withName(nameVar))
-          .forEach(entityList::add);
-    }
-
-    if (isPresent(item.getAliases())) {
+    if (item.getAliases() != null) {
       item.getAliases().stream()
-          .map(alias -> getArtistById(alias.getId()))
-          .map(
-              alias -> new ArtistAlias()
-                  .withArtist(artistRef)
-                  .withAlias(alias))
-          .forEach(entityList::add);
+          .map(alias -> ArtistAliasCommand.builder()
+              .alias(alias.getId())
+              .artist(artistId)
+              .build())
+          .forEach(batchCommands::add);
     }
 
-    if (isPresent(item.getGroups())) {
+    if (item.getGroups() != null) {
       item.getGroups().stream()
-          .map(group -> getArtistById(group.getId()))
-          .map(
-              group -> new ArtistGroup()
-                  .withArtist(artistRef)
-                  .withGroup(group))
-          .forEach(entityList::add);
+          .map(group -> ArtistGroupCommand.builder()
+              .artist(artistId)
+              .group(group.getId())
+              .build())
+          .forEach(batchCommands::add);
     }
 
-    if (isPresent(item.getMembers())) {
+    if (item.getMembers() != null) {
       item.getMembers().stream()
-          .map(member -> getArtistById(member.getId()))
-          .map(
-              member -> new ArtistMember()
-                  .withArtist(artistRef)
-                  .withMember(member))
-          .forEach(entityList::add);
+          .map(member -> ArtistMemberCommand.builder()
+              .artist(artistId)
+              .member(member.getId())
+              .build())
+          .forEach(batchCommands::add);
     }
 
-    return entityList;
-  }
+    if (item.getUrls() != null) {
+      item.getUrls().stream()
+          .map(url -> ArtistUrlCommand.builder()
+              .artist(artistId)
+              .url(url)
+              .build())
+          .forEach(batchCommands::add);
+    }
 
-  // TODO: implement
-  private Artist getArtistById(long id) {
-    return null;
-  }
-
-  private boolean isPresent(Collection<?> items) {
-    return (items != null && !items.isEmpty());
+    if (item.getNameVariations() != null) {
+      item.getNameVariations().stream()
+          .map(name -> ArtistNameVariationCommand.builder()
+              .artist(artistId)
+              .name(name)
+              .build())
+          .forEach(batchCommands::add);
+    }
+    return batchCommands;
   }
 }
