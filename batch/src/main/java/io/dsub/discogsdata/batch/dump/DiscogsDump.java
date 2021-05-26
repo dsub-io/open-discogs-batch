@@ -1,5 +1,6 @@
 package io.dsub.discogsdata.batch.dump;
 
+import java.net.URL;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Objects;
@@ -40,7 +41,10 @@ public class DiscogsDump implements Comparable<DiscogsDump>, Cloneable {
   private LocalDateTime registeredAt;
 
   @Column(name = "created_at")
-  private LocalDateTime createdAt;
+  private LocalDate createdAt;
+
+  @Column(name = "url")
+  private URL url;
 
   // parse file name from the uriString formatted as data/{year}/{file_name};
   public String getFileName() {

@@ -59,8 +59,7 @@ public class DefaultDumpSupplier implements DumpSupplier {
   private static final List<String> KNOWN_NODE_TYPES = List.of(KEY, LAST_MODIFIED, ETAG, SIZE);
 
   private static final String DISCOGS_DATA_URL = "http://data.discogs.com/";
-  private static final String LAST_KNOWN_BUCKET_URL =
-      "https://discogs-data.s3-us-west-2.amazonaws.com";
+  private String lastKnownBucketUrl = "https://discogs-data.s3-us-west-2.amazonaws.com";
 
   /**
    * Implementation for {@link Supplier} that supplies parsed dump list. If something goes wrong it
@@ -71,15 +70,15 @@ public class DefaultDumpSupplier implements DumpSupplier {
   @Override
   public List<DiscogsDump> get() {
 
-    List<DiscogsDump> parsedList = parseDumpList(LAST_KNOWN_BUCKET_URL); // initial parse
+    List<DiscogsDump> parsedList = parseDumpList(lastKnownBucketUrl); // initial parse
     if (parsedList == null || parsedList.isEmpty()) { // if failed...
 
-      String bucketURL = getBucketURL(); // fetch new bucket url from the official page
-      if (bucketURL == null || bucketURL.isBlank()) { // failed again....
+      String frechBucketUrl = getBucketURL(); // fetch new bucket url from the official page
+      if (frechBucketUrl == null || frechBucketUrl.isBlank()) { // failed again....
         return null; // failed, hence return null.
       }
-
-      parsedList = parseDumpList(getBucketURL()); // second time parse...
+      lastKnownBucketUrl = frechBucketUrl;
+      parsedList = parseDumpList(lastKnownBucketUrl); // second time parse...
     }
 
     return parsedList.stream()
@@ -207,6 +206,7 @@ public class DefaultDumpSupplier implements DumpSupplier {
     String etag = null;
     Long size = null;
     LocalDate createdAt = null;
+    URL url = null;
 
     try {
       // loop through the target nodes.
@@ -218,6 +218,7 @@ public class DefaultDumpSupplier implements DumpSupplier {
         switch (node.getNodeName()) {
           case KEY:
             uri = content; // formatted as 'data/{year}/{file_name}'
+            url = new URL(lastKnownBucketUrl + "/" + uri);
             type = getType(node); // parse the last part of the uri.
             createdAt = parseCreatedAt(content);
             break;
@@ -232,7 +233,7 @@ public class DefaultDumpSupplier implements DumpSupplier {
             break;
         }
       }
-    } catch (InvalidArgumentException e) { // anything goes wrong...
+    } catch (InvalidArgumentException | MalformedURLException e) { // anything goes wrong...
       log.error("failed to parse DiscogsDump. reason: " + e.getMessage());
     }
 
@@ -243,8 +244,9 @@ public class DefaultDumpSupplier implements DumpSupplier {
 
     return DiscogsDump.builder()
         .uriString(uri)
+        .url(url)
         .size(size)
-        .registeredAt(lastModified.toLocalDate())
+        .registeredAt(lastModified)
         .eTag(etag)
         .type(type)
         .createdAt(createdAt)
