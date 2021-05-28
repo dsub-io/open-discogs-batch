@@ -22,15 +22,21 @@ public class DefaultJobCreator implements JobCreator {
 
   private final JobBuilderFactory jobBuilderFactory;
   private final Step artistStep;
+  private final Step labelStep;
+  private final Step masterStep;
+  private final Step releaseStep;
 
   @Override
   public Job createJob(JobParameters jobParameters) {
     LocalDateTime ldt = LocalDateTime.now(Clock.systemUTC());
     return jobBuilderFactory
         .get("discogs-batch-job " + ldt)
-        .start(artistStep)
-        .on(ANY)
-        .end()
+//        .start(artistStep).on(FAILED).end()
+//        .from(artistStep).on(ANY).to(labelStep)
+//        .start(labelStep).on(FAILED).end()
+//        .from(labelStep).on(ANY).to(masterStep)
+//        .from(masterStep).on(ANY).end()
+        .start(releaseStep).on(ANY).end()
         .build()
         .listener(new SystemExitingJobExecutionListener())
         .build();

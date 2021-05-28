@@ -7,6 +7,7 @@ public interface QueryBuilder<T> {
   String COMMA = ",";
   String AND = "AND";
   String COLON = ":";
+  String PLUS = "+";
   String SEMICOLON = ";";
   String OPEN_BRACE = "(";
   String CLOSE_BRACE = ")";
@@ -22,4 +23,6 @@ public interface QueryBuilder<T> {
   String getInsertQuery(Class<? extends T> targetClass);
 
   String getUpsertQuery(Class<? extends T> targetClass);
+
+  String getIdOnlyInsertQuery(Class<? extends T> targetClass);
 }

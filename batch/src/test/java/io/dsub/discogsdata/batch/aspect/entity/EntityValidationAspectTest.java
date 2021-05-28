@@ -4,6 +4,8 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
+import io.dsub.discogsdata.batch.domain.release.ReleaseXML;
+import io.dsub.discogsdata.batch.domain.release.ReleaseXML.CreditedArtist;
 import io.dsub.discogsdata.batch.testutil.LogSpy;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -17,20 +19,23 @@ import org.springframework.aop.framework.DefaultAopProxyFactory;
 class EntityValidationAspectTest {
 
   final EntityValidationAspect aspect = new EntityValidationAspect();
+
   TestEntity testEntity;
+  CreditedArtist creditedArtist;
+  ReleaseXML releaseXML;
 
   @RegisterExtension
   LogSpy logSpy = new LogSpy();
 
   @BeforeEach
   void setUp() {
-    AspectJProxyFactory aspectJProxyFactory = new AspectJProxyFactory(new TestEntity());
-    aspectJProxyFactory.addAspect(aspect);
+    AspectJProxyFactory testEntityAspectJProxyFactory = new AspectJProxyFactory(new TestEntity());
+    testEntityAspectJProxyFactory.addAspect(aspect);
 
     DefaultAopProxyFactory proxyFactory = new DefaultAopProxyFactory();
-    AopProxy aopProxy = proxyFactory.createAopProxy(aspectJProxyFactory);
+    AopProxy testEntityAopProxy = proxyFactory.createAopProxy(testEntityAspectJProxyFactory);
 
-    testEntity = (TestEntity) aopProxy.getProxy();
+    testEntity = (TestEntity) testEntityAopProxy.getProxy();
   }
 
   @Test

@@ -5,7 +5,6 @@ import io.dsub.discogsdata.common.exception.InvalidArgumentException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -151,7 +150,7 @@ public class JdbcConnectionTester {
    * @return driver class name. default is com.mysql.cj.jdbc.Driver.
    */
   public String autoResolveJdbcDriver(String[] args) {
-    Map<String,String> jdbcArgs = parseJdbcArgs(new DefaultApplicationArguments(args));
+    Map<String, String> jdbcArgs = parseJdbcArgs(new DefaultApplicationArguments(args));
     String url = jdbcArgs.get(URL);
     if (url.matches(".*postgresql.*")) {
       return POSTGRESQL_JDBC_DRIVER;

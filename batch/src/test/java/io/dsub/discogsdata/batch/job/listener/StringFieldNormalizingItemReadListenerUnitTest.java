@@ -16,14 +16,6 @@ class StringFieldNormalizingItemReadListenerUnitTest {
 
   StringFieldNormalizingItemReadListener<Artist> listener =
       new StringFieldNormalizingItemReadListener<>();
-
-
-  @RequiredArgsConstructor
-  static class TestSubject {
-
-    private final String testField;
-  }
-
   @RegisterExtension
   LogSpy logSpy = new LogSpy();
 
@@ -86,5 +78,11 @@ class StringFieldNormalizingItemReadListenerUnitTest {
     assertThat(logSpy.countExact(Level.ERROR)).isOne();
     assertThat(logSpy.getLogsByLevelAsString(Level.ERROR, true).get(0))
         .contains(e.getMessage());
+  }
+
+  @RequiredArgsConstructor
+  static class TestSubject {
+
+    private final String testField;
   }
 }

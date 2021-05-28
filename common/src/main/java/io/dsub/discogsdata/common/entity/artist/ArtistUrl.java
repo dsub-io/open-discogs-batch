@@ -31,7 +31,7 @@ public class ArtistUrl extends BaseTimeEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.SEQUENCE)
-  @Column(name = "id")
+  @Column(name = "id", columnDefinition = "serial")
   private Long id;
 
   @ManyToOne(optional = false)

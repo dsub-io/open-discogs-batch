@@ -24,7 +24,7 @@ public class ReleaseItem extends BaseTimeEntity {
 
   private static final Long SerialVersionUID = 1L;
 
-  @Column(name = "id")
+  @Column(name = "id", columnDefinition = "serial")
   @Id
   private Long id;
 
@@ -40,7 +40,7 @@ public class ReleaseItem extends BaseTimeEntity {
   @Column(name = "country")
   private String country;
 
-  @Column(name = "notes", length = 40000)
+  @Column(name = "notes", columnDefinition = "TEXT")
   private String notes;
 
   @Column(name = "data_quality")

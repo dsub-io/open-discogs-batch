@@ -34,7 +34,7 @@ public class LabelRelease extends BaseTimeEntity {
   private static final Long SerialVersionUID = 1L;
 
   @Id
-  @Column(name = "id")
+  @Column(name = "id", columnDefinition = "serial")
   @GeneratedValue(strategy = GenerationType.SEQUENCE)
   private Long id;
 
@@ -46,5 +46,6 @@ public class LabelRelease extends BaseTimeEntity {
   @JoinColumn(name = "label_id")
   private Label label;
 
-  private String categoryNumber;
+  @Column(name = "category_notation")
+  private String categoryNotation;
 }

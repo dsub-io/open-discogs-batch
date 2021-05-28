@@ -1,7 +1,5 @@
 package io.dsub.discogsdata.batch.query;
 
-import static io.dsub.discogsdata.batch.query.QueryBuilder.PERIOD;
-
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -39,7 +37,8 @@ public interface JpaEntityExtractor<T> {
   default Field getLastModifiedField(Class<? extends T> targetClass) {
     return getFields(targetClass).stream()
         .filter(field ->
-            field.isAnnotationPresent(LastModifiedDate.class) || field.getName().contains("lastModified"))
+            field.isAnnotationPresent(LastModifiedDate.class) || field.getName()
+                .contains("lastModified"))
         .findFirst()
         .orElse(null);
   }
@@ -54,6 +53,11 @@ public interface JpaEntityExtractor<T> {
 
   default boolean hasUniqueConstraints(Class<? extends T> targetClass) {
     return targetClass.getAnnotation(Table.class).uniqueConstraints().length > 0;
+  }
+
+  default boolean hasJoinColumns(Class<? extends T> targetClass) {
+    return getFields(targetClass).stream()
+        .anyMatch(field -> field.isAnnotationPresent(JoinColumn.class));
   }
 
   default List<Field> getFields(Class<? extends T> targetClass) {

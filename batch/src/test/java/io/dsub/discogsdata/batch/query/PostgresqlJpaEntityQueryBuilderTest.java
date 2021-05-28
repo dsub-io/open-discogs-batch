@@ -25,64 +25,6 @@ class PostgresqlJpaEntityQueryBuilderTest {
   PostgresqlJpaEntityQueryBuilder builder =
       new PostgresqlJpaEntityQueryBuilder();
 
-  @Data
-  @Table(name = "query_entity", uniqueConstraints = {})
-  @EqualsAndHashCode(callSuper = true)
-  private static final class JpaQueryTestEntity extends BaseTimeEntity {
-    @Id
-    @Column(name = "")
-    private Long id;
-
-    @Column(name = "name")
-    private String name;
-
-    @Column(name = "other_name")
-    private String otherName;
-  }
-
-  @Table(name = "jpa_query_test_entity_one", uniqueConstraints = {
-      @UniqueConstraint(name = "entity_one_unique", columnNames = {"profile", "last_name"})
-  })
-  private static final class JpaQueryTestEntityOne extends BaseEntity {
-    @Id
-    @GeneratedValue
-    @Column(name = "id")
-    private Long id;
-    @Column(name = "profile")
-    String profile;
-    @Column(name = "last_name")
-    String lastName;
-    @Column(name = "hello")
-    String hello;
-  }
-
-  @Table(name = "jpa_query_test_entity_two", uniqueConstraints = {
-      @UniqueConstraint(name = "entity_two_unique_one", columnNames = {"profile", "last_name"}),
-      @UniqueConstraint(name = "entity_two_unique_two", columnNames = {"last_name", "hello"})
-  })
-  private static final class JpaQueryTestEntityTwo extends BaseEntity {
-    @Id
-    @Column(name = "id")
-    private Long id;
-    @Column(name = "profile")
-    String profile;
-    @Column(name = "last_name")
-    String lastName;
-    @Column(name = "hello")
-    String hello;
-  }
-
-  @Table(name = "jpa_query_test_entity_three")
-  private static final class JpaQueryTestEntityThree extends BaseEntity {
-    @Id
-    @GeneratedValue
-    @Column(name = "id")
-    private Long id;
-
-    @JoinColumn(name = "test_entity_id")
-    private TestEntity testEntity;
-  }
-
   @Test
   void ifUniqueConstraintExistsTwice__AndAutoId__ShouldContainNonDuplicatedColumnsOnWhereClause() {
     // when
@@ -97,8 +39,8 @@ class PostgresqlJpaEntityQueryBuilderTest {
         Arrays.stream(
             query.substring(
                 query.indexOf("WHERE ") + 6).split(" AND "))
-        .map(s -> s.split("=")[0])
-        .toArray(String[]::new);
+            .map(s -> s.split("=")[0])
+            .toArray(String[]::new);
 
     // then
     assertThat(whereParts).contains(parts).hasSize(parts.length);
@@ -124,7 +66,8 @@ class PostgresqlJpaEntityQueryBuilderTest {
 
   @Test
   void whenIdAutoAndHasNoUniqueColumns__ShouldContainIdsInWhereClause() {
-    Map<String, String> idMappings = Arrays.stream(JpaQueryTestEntityThree.class.getDeclaredFields())
+    Map<String, String> idMappings = Arrays
+        .stream(JpaQueryTestEntityThree.class.getDeclaredFields())
         .filter(field -> field.isAnnotationPresent(Id.class))
         .collect(Collectors.toMap(
             field -> field.getAnnotation(Column.class).name(),
@@ -167,5 +110,67 @@ class PostgresqlJpaEntityQueryBuilderTest {
 
     // then
     assertThat(query).contains("created_at");
+  }
+
+  @Data
+  @Table(name = "query_entity", uniqueConstraints = {})
+  @EqualsAndHashCode(callSuper = true)
+  private static final class JpaQueryTestEntity extends BaseTimeEntity {
+
+    @Id
+    @Column(name = "")
+    private Long id;
+
+    @Column(name = "name")
+    private String name;
+
+    @Column(name = "other_name")
+    private String otherName;
+  }
+
+  @Table(name = "jpa_query_test_entity_one", uniqueConstraints = {
+      @UniqueConstraint(name = "entity_one_unique", columnNames = {"profile", "last_name"})
+  })
+  private static final class JpaQueryTestEntityOne extends BaseEntity {
+
+    @Column(name = "profile")
+    String profile;
+    @Column(name = "last_name")
+    String lastName;
+    @Column(name = "hello")
+    String hello;
+    @Id
+    @GeneratedValue
+    @Column(name = "id")
+    private Long id;
+  }
+
+  @Table(name = "jpa_query_test_entity_two", uniqueConstraints = {
+      @UniqueConstraint(name = "entity_two_unique_one", columnNames = {"profile", "last_name"}),
+      @UniqueConstraint(name = "entity_two_unique_two", columnNames = {"last_name", "hello"})
+  })
+  private static final class JpaQueryTestEntityTwo extends BaseEntity {
+
+    @Column(name = "profile")
+    String profile;
+    @Column(name = "last_name")
+    String lastName;
+    @Column(name = "hello")
+    String hello;
+    @Id
+    @Column(name = "id")
+    private Long id;
+  }
+
+  @Table(name = "jpa_query_test_entity_three")
+  private static final class JpaQueryTestEntityThree extends BaseEntity {
+
+    @Id
+    @GeneratedValue
+    @Column(name = "id")
+    private Long id;
+
+    @JoinColumn(name = "test_entity_id")
+    private TestEntity testEntity;
   }
 }

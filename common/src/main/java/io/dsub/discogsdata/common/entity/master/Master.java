@@ -1,12 +1,9 @@
 package io.dsub.discogsdata.common.entity.master;
 
 import io.dsub.discogsdata.common.entity.base.BaseTimeEntity;
-import io.dsub.discogsdata.common.entity.release.ReleaseItem;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.OneToOne;
 import javax.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -25,7 +22,7 @@ public class Master extends BaseTimeEntity {
 
   private static final Long SerialVersionUID = 1L;
 
-  @Column(name = "id")
+  @Column(name = "id", columnDefinition = "serial")
   @Id
   private Long id;
 
@@ -37,8 +34,4 @@ public class Master extends BaseTimeEntity {
 
   @Column(name = "data_quality")
   private String dataQuality;
-
-  @OneToOne
-  @JoinColumn(name = "master_main_release_item", unique = true, nullable = false)
-  private ReleaseItem mainReleaseItem;
 }

@@ -8,8 +8,10 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @Slf4j
-@SpringBootApplication(scanBasePackages = {"io.dsub.discogsdata.common", "io.dsub.discogsdata.batch"})
+@SpringBootApplication(scanBasePackages = {"io.dsub.discogsdata.common",
+    "io.dsub.discogsdata.batch"})
 public class BatchApplication {
+
   public static void main(String[] args) {
     try {
       args = new DefaultArgumentHandler().resolve(args);

@@ -12,7 +12,6 @@ import io.dsub.discogsdata.batch.exception.FileFetchException;
 import io.dsub.discogsdata.batch.testutil.LogSpy;
 import java.io.IOException;
 import java.net.MalformedURLException;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import lombok.extern.slf4j.Slf4j;

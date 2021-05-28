@@ -1,6 +1,6 @@
 package io.dsub.discogsdata.common.entity.release;
 
-import io.dsub.discogsdata.common.entity.base.BaseEntity;
+import io.dsub.discogsdata.common.entity.base.BaseTimeEntity;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
@@ -22,26 +22,26 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = false)
-@Table(name = "track", uniqueConstraints = {
-    @UniqueConstraint(name = "unique_track", columnNames = {
-        "name", "title", "duration", "release_item_id"
-    })
-})
-public class Track extends BaseEntity {
+@Table(name = "release_item_format",
+    uniqueConstraints = @UniqueConstraint(name = "unique_format", columnNames = {"name", "quantity",
+        "text", "release_item_id"}))
+public class ReleaseItemFormat extends BaseTimeEntity {
+
+  private static final Long SerialVersionUID = 1L;
 
   @Id
-  @Column(name = "id")
+  @Column(name = "id", columnDefinition = "serial")
   @GeneratedValue(strategy = GenerationType.SEQUENCE)
   private Long id;
 
-  @Column(name = "name", length = 2000)
+  @Column(name = "name")
   private String name;
 
-  @Column(name = "title", length = 2000)
-  private String title;
+  @Column(name = "quantity")
+  private Integer quantity;
 
-  @Column(name = "duration", length = 1000)
-  private String duration;
+  @Column(name = "text", length = 5000)
+  private String text;
 
   @ManyToOne
   @JoinColumn(name = "release_item_id", referencedColumnName = "id")

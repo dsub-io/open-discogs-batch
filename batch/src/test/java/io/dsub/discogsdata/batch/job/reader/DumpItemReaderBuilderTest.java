@@ -2,7 +2,7 @@ package io.dsub.discogsdata.batch.job.reader;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.Mockito.when;
 
 import io.dsub.discogsdata.batch.domain.artist.ArtistXML;

@@ -22,7 +22,7 @@ public class Label extends BaseTimeEntity {
 
   private static final Long SerialVersionUID = 1L;
 
-  @Column(name = "id")
+  @Column(name = "id", columnDefinition = "serial")
   @Id
   private Long id;
 

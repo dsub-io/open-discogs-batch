@@ -1,5 +1,6 @@
 package io.dsub.discogsdata.common.entity.release;
 
+
 import io.dsub.discogsdata.common.entity.base.BaseTimeEntity;
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -22,27 +23,22 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = false)
-@Table(name = "format",
-    uniqueConstraints = @UniqueConstraint(name = "unique_format", columnNames = {"name", "qty",
-        "text", "release_item_id"}))
-public class Format extends BaseTimeEntity {
+@Table(name = "release_item_format_description",
+    uniqueConstraints = @UniqueConstraint(name = "unique_format_description", columnNames = {
+        "format_id", "description"}))
+public class ReleaseItemFormatDescription extends BaseTimeEntity {
 
   private static final Long SerialVersionUID = 1L;
 
   @Id
-  @Column(name = "id")
+  @Column(name = "id", columnDefinition = "serial")
   @GeneratedValue(strategy = GenerationType.SEQUENCE)
   private Long id;
 
-  @Column(name = "name")
-  private String name;
-  @Column(name = "qty")
-  private Integer qty;
-
-  @Column(name = "text", length = 5000)
-  private String text;
-
   @ManyToOne
-  @JoinColumn(name = "release_item_id", referencedColumnName = "id")
-  private ReleaseItem releaseItem;
+  @JoinColumn(name = "format_id", referencedColumnName = "id")
+  private ReleaseItemFormat format;
+
+  @Column(name = "description", length = 5000)
+  private String description;
 }

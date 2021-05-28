@@ -37,31 +37,9 @@ import org.springframework.aop.framework.DefaultAopProxyFactory;
 
 class JpaEntityQueryBuilderArgumentValidationAspectTest {
 
-  // class to be tested
-  protected static class MalformedClass {
-
-    private String invalidField;
-    @Column
-    private String validField;
-  }
-
-  @Table(name = "test_entity_two")
-  private static class TestEntityTwo {
-    @Id
-    @Column
-    private Long id;
-
-    @Column(name = "hello")
-    private String hello;
-
-    @JoinColumn(name = "where", referencedColumnName = "id")
-    private TestEntityTwo otherReference;
-  }
-
   final JpaEntityQueryBuilderArgumentValidationAspect validator = new JpaEntityQueryBuilderArgumentValidationAspect();
   final ApplicationExceptionLoggerAspect loggerAspect = new ApplicationExceptionLoggerAspect();
   JpaEntityQueryBuilder<BaseEntity> queryBuilder;
-
   @RegisterExtension
   LogSpy logSpy = new LogSpy();
 
@@ -206,5 +184,27 @@ class JpaEntityQueryBuilderArgumentValidationAspectTest {
     TestService testService = new TestService();
     assertDoesNotThrow(() -> testService.methodTakeClass(null));
     assertDoesNotThrow(() -> testService.methodTakeField(null));
+  }
+
+  // class to be tested
+  protected static class MalformedClass {
+
+    private String invalidField;
+    @Column
+    private String validField;
+  }
+
+  @Table(name = "test_entity_two")
+  private static class TestEntityTwo {
+
+    @Id
+    @Column
+    private Long id;
+
+    @Column(name = "hello")
+    private String hello;
+
+    @JoinColumn(name = "where", referencedColumnName = "id")
+    private TestEntityTwo otherReference;
   }
 }

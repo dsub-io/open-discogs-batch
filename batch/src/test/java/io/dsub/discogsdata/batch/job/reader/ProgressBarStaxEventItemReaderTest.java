@@ -22,13 +22,12 @@ import org.springframework.batch.item.xml.StaxEventItemReader;
 class ProgressBarStaxEventItemReaderTest {
 
   private final PrintStream stdout = System.out;
-  private ByteArrayOutputStream outCaptor;
   private final String basePathStr = "src/test/resources/test/reader";
-
   private final Path artistPath = Path.of(basePathStr, "artist.xml.gz");
   private final Path labelPath = Path.of(basePathStr, "label.xml.gz");
   private final Path masterPath = Path.of(basePathStr, "master.xml.gz");
   private final Path releasePath = Path.of(basePathStr, "release.xml.gz");
+  private ByteArrayOutputStream outCaptor;
 
   @BeforeEach
   void setUp() {

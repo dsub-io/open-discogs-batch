@@ -14,7 +14,7 @@ public abstract class BaseAspect {
   public void constructor() {
   }
 
-  @Pointcut("execution(* *..*Test(..))")
+  @Pointcut("execution(* io.dsub.discogsdata..*Test(..))")
   public void testMethod() {
   }
 
@@ -22,23 +22,19 @@ public abstract class BaseAspect {
   public void anyMethod() {
   }
 
-  @Pointcut("execution(* io.dsub.discogsdata..*(..)) && !constructor()")
-  public void anyMethodWithinPackage() {
-  }
-
-  @Pointcut("execution(* *(.., java.lang.Class, ..)) && !constructor()")
+  @Pointcut("execution(* io.dsub.discogsdata..*(.., java.lang.Class, ..)) && !constructor()")
   public void methodsTakeOneOrMoreClass() {
   }
 
-  @Pointcut("execution(* set*(..))")
+  @Pointcut("execution(* io.dsub.discogsdata..set*(..))")
   public void setter() {
   }
 
-  @Pointcut("execution(* get*(..))")
+  @Pointcut("execution(* io.dsub.discogsdata..get*(..))")
   public void getter() {
   }
 
-  @Pointcut("execution(* with*(..))")
+  @Pointcut("execution(* io.dsub.discogsdata..with*(..))")
   public void wither() {
   }
 

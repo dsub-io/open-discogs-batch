@@ -30,7 +30,7 @@ public class ArtistAlias extends BaseTimeEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.SEQUENCE)
-  @Column(name = "id", updatable = false, nullable = false)
+  @Column(name = "id", columnDefinition = "serial", updatable = false, nullable = false)
   private Long id;
 
   @ManyToOne

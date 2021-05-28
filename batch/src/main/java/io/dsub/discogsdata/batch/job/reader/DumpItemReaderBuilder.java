@@ -2,7 +2,6 @@ package io.dsub.discogsdata.batch.job.reader;
 
 import io.dsub.discogsdata.batch.dump.DiscogsDump;
 import java.nio.file.Path;
-import java.util.List;
 import org.springframework.batch.item.support.SynchronizedItemStreamReader;
 import org.springframework.util.Assert;
 
@@ -22,7 +21,8 @@ public final class DumpItemReaderBuilder {
     Path filePath = Path.of(dump.getFileName());
 
     ProgressBarStaxEventItemReader<T> delegate;
-    delegate = new ProgressBarStaxEventItemReader<>(mappedClass, filePath, dump.getType().toString());
+    delegate = new ProgressBarStaxEventItemReader<>(mappedClass, filePath,
+        dump.getType().toString());
     delegate.afterPropertiesSet();
 
     SynchronizedItemStreamReader<T> reader = new SynchronizedItemStreamReader<>();

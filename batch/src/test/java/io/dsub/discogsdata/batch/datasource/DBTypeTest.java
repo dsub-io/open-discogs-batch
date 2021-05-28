@@ -2,7 +2,6 @@ package io.dsub.discogsdata.batch.datasource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;

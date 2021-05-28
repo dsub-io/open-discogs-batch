@@ -34,7 +34,7 @@ public class MasterArtist extends BaseTimeEntity {
   private static final Long SerialVersionUID = 1L;
 
   @Id
-  @Column(name = "id")
+  @Column(name = "id", columnDefinition = "serial")
   @GeneratedValue(strategy = GenerationType.SEQUENCE)
   private Long id;
 

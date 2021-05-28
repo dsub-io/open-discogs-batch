@@ -13,7 +13,9 @@ public class TestService {
     throw new RuntimeException("exception message");
   }
 
-  public void methodTakeField(Field field) {}
+  public void methodTakeField(Field field) {
+  }
 
-  public void methodTakeClass(Class<?> clazz){}
+  public void methodTakeClass(Class<?> clazz) {
+  }
 }

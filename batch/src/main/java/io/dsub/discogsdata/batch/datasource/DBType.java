@@ -15,22 +15,25 @@ public enum DBType {
     this.driverClassName = driverClassName;
   }
 
-  public String getDriverClassName() {
-    return driverClassName;
+  public static String getDriverClassName(String connectionUrl) {
+    return getDBType(connectionUrl).getDriverClassName();
   }
 
-  public static String getDriverClassName(String connectionUrl) {
+  public static DBType getDBType(String connectionUrl) {
     return Arrays.stream(values())
         .filter(type -> connectionUrl.matches("^jdbc:" + type.name().toLowerCase() + ".*"))
         .findFirst()
         .orElseThrow(() -> new InvalidArgumentException(
-            "failed to recognize DB type from " + connectionUrl))
-        .getDriverClassName();
+            "failed to recognize DB type from " + connectionUrl));
   }
 
   public static List<String> getNames() {
     return Arrays.stream(DBType.values())
         .map(db -> db.name().toLowerCase())
         .collect(Collectors.toList());
+  }
+
+  public String getDriverClassName() {
+    return driverClassName;
   }
 }

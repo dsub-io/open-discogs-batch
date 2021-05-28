@@ -57,14 +57,12 @@ public class StopWatchStepExecutionListener implements StepExecutionListener {
 
     String timeTookSeconds = String.valueOf(stopWatch.getTotalTimeSeconds());
 
-    String itemsWritten =
-        "write count: " + writeCount; // this may depends on how item writer reports.
-    String itemsProcPerSec = "(" + itemsPerSecond + "/s)";
+    String itemsProcPerSec = itemsPerSecond + "/s";
 
     log.info("task {} took {} seconds and written {} items. processed items per second: {}",
         stopWatch.getLastTaskName(),
         timeTookSeconds,
-        itemsWritten,
+        writeCount,
         itemsProcPerSec);
   }
 }

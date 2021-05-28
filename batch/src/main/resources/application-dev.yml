@@ -6,7 +6,6 @@ spring:
     hikari:
       data-source-properties:
         rewriteBatchedStatements: true
-      maximum-pool-size: 20
   batch:
     initialize-schema: ALWAYS
     job:
@@ -31,7 +30,9 @@ logging:
       springframework:
         batch:
           core:
+            listener: ERROR
             step:
+              builder: ERROR
               item: ERROR
       hibernate: ERROR
     com.zaxxer.hikari: ERROR

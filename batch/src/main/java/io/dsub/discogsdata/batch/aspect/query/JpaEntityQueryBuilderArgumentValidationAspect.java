@@ -18,6 +18,7 @@ import org.springframework.stereotype.Component;
 @Aspect
 @Component
 public class JpaEntityQueryBuilderArgumentValidationAspect extends BatchAspect {
+
   public static final String SERIAL_VERSION_UID = "SerialVersionUID";
 
   public static final String MISSING_COLUMN_ANNOTATION_MSG =

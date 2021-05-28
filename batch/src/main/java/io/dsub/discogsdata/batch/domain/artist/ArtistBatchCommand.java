@@ -124,6 +124,4 @@ public abstract class ArtistBatchCommand {
       return ArtistNameVariation.class;
     }
   }
-
-  ;
 }
