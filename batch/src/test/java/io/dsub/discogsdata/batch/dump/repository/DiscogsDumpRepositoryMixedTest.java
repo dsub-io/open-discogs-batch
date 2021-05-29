@@ -168,9 +168,7 @@ class DiscogsDumpRepositoryMixedTest {
           repository.findByTypeAndCreatedAtBetween(type, createdAt, createdAt.plusMonths(1));
 
       // then
-      assertThat(found.get(0))
-          .isNotNull() // should exists
-          .isEqualTo(mid); // should equals to the mid item we found...
+      assertThat(found.stream().anyMatch(dump -> dump.equals(mid))).isTrue();
     }
 
     @Test

@@ -15,9 +15,7 @@ import org.springframework.beans.factory.InitializingBean;
 import org.springframework.classify.Classifier;
 
 @Slf4j
-@Builder
 @NoArgsConstructor
-@AllArgsConstructor
 public class ClassifierCompositeCollectionItemWriter<T>
     implements ItemWriter<Collection<T>>, InitializingBean {
 

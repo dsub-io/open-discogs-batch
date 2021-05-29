@@ -78,4 +78,8 @@ public class LogSpy implements BeforeEachCallback, AfterEachCallback {
   public int countExact(Level level) {
     return getLogsByLevelExact(level).size();
   }
+
+  public void clear() {
+    appender.list.clear();
+  }
 }

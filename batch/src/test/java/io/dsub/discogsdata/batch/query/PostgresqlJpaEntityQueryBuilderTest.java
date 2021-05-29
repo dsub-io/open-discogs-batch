@@ -43,7 +43,10 @@ class PostgresqlJpaEntityQueryBuilderTest {
             .toArray(String[]::new);
 
     // then
-    assertThat(whereParts).contains(parts).hasSize(parts.length);
+    for (int i = 0; i < whereParts.length; i++) {
+      assertThat(whereParts[i]).contains(parts[i]);
+    }
+    assertThat(whereParts.length).isEqualTo(parts.length);
   }
 
   @Test
