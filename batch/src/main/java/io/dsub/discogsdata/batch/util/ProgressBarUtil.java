@@ -7,8 +7,12 @@ import me.tongfei.progressbar.ProgressBarBuilder;
 import me.tongfei.progressbar.ProgressBarConsumer;
 import me.tongfei.progressbar.ProgressBarStyle;
 
+/** A convenient class to create {@link ProgressBar}.
+ *  In needs of further customization, use {@link ProgressBarBuilder}.
+ **/
 public class ProgressBarUtil {
 
+  // prevent
   private ProgressBarUtil() {
   }
 
