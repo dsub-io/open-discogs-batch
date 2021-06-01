@@ -24,8 +24,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "release_item_work", uniqueConstraints = {
-    @UniqueConstraint(name = "unique_release_item_work", columnNames = {
-        "release_item_id", "label_id", "name", "job"
+    @UniqueConstraint(name = "uq_release_item_work_release_item_id_label_id_work", columnNames = {
+        "release_item_id", "label_id", "work"
     })
 })
 public class ReleaseItemWork extends BaseTimeEntity {
@@ -45,9 +45,6 @@ public class ReleaseItemWork extends BaseTimeEntity {
   @JoinColumn(name = "label_id", referencedColumnName = "id")
   private Label label;
 
-  @Column(name = "name")
-  private String name;
-
-  @Column(name = "job")
-  private String job;
+  @Column(name = "work")
+  private String work;
 }

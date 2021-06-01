@@ -10,7 +10,7 @@ import io.dsub.discogsdata.batch.domain.master.MasterXML;
 import io.dsub.discogsdata.batch.dump.service.DiscogsDumpService;
 import io.dsub.discogsdata.batch.job.listener.StopWatchStepExecutionListener;
 import io.dsub.discogsdata.batch.job.listener.StringFieldNormalizingItemReadListener;
-import io.dsub.discogsdata.batch.job.reader.DumpItemReaderBuilder;
+import io.dsub.discogsdata.batch.job.reader.DiscogsDumpItemReaderBuilder;
 import io.dsub.discogsdata.batch.job.tasklet.FileFetchTasklet;
 import io.dsub.discogsdata.batch.job.writer.ClassifierCompositeCollectionItemWriter;
 import io.dsub.discogsdata.batch.query.JpaEntityQueryBuilder;
@@ -189,7 +189,7 @@ public class MasterStepConfig extends AbstractStepConfig {
   @StepScope
   public SynchronizedItemStreamReader<MasterXML> masterStreamReader(@Value(ETAG) String eTag) {
     try {
-      return DumpItemReaderBuilder.build(MasterXML.class, dumpService.getDiscogsDump(eTag));
+      return DiscogsDumpItemReaderBuilder.build(MasterXML.class, dumpService.getDiscogsDump(eTag));
     } catch (Exception e) {
       throw new InitializationFailureException(
           "failed to initialize master stream reader: " + e.getMessage());

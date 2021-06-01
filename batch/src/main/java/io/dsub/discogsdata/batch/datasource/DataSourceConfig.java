@@ -1,18 +1,35 @@
 package io.dsub.discogsdata.batch.datasource;
 
 import com.zaxxer.hikari.HikariDataSource;
+import io.dsub.discogsdata.common.exception.InitializationFailureException;
 import io.dsub.discogsdata.common.exception.MissingRequiredArgumentException;
+import io.dsub.discogsdata.common.exception.UnsupportedOperationException;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import javax.sql.DataSource;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
+import org.springframework.core.io.Resource;
 
+@Slf4j
 @Getter
+@Order(0)
 @Configuration
 @RequiredArgsConstructor
 public class DataSourceConfig {
@@ -30,11 +47,19 @@ public class DataSourceConfig {
       Pattern.compile(PLAIN_JDBC_URL_PATTERN_STRING, Pattern.CASE_INSENSITIVE);
 
   private static final Pattern CONTAINS_OPTION_QUESTION_MARK_PATTERN = Pattern.compile(".*?.*");
+
+  @Getter
   private static DBType DB_TYPE = null;
 
+  @Value("classpath:schema/mysql-schema.sql")
+  private Resource mysqlSchema;
+
+  @Value("classpath:schema/postgresql-schema.sql")
+  private Resource postgresSchema;
 
   private final ApplicationArguments applicationArguments;
 
+  @Order(0)
   @Bean(name = "batchDataSource")
   public HikariDataSource batchDataSource() {
 
@@ -63,7 +88,61 @@ public class DataSourceConfig {
     hikariDataSource.setDataSourceProperties(properties);
     hikariDataSource.setDriverClassName(DB_TYPE.getDriverClassName());
 
+    initializeSchema(hikariDataSource);
     return hikariDataSource;
+  }
+
+  /**
+   * Initializes given {@link DataSource} on conditionally. If currently set DB_TYPE is either null
+   * or unsupported, it will throw {@link UnsupportedOperationException}.
+   *
+   * @param dataSource to be initialized.
+   */
+  protected void initializeSchema(DataSource dataSource) {
+
+    if (DB_TYPE == null) {
+      throw new InitializationFailureException("static variable DB_TYPE cannot be null");
+    }
+
+    try (Connection conn = dataSource.getConnection()) {
+      Resource schema;
+      schema = getSchemaResource();
+      BufferedReader reader = new BufferedReader(new InputStreamReader(schema.getInputStream()));
+      String sql = reader.lines().collect(Collectors.joining("\n"));
+      List<String> queries = Arrays.stream(sql.split(";"))
+          .map(String::trim)
+          .collect(Collectors.toList());
+      conn.setAutoCommit(false);
+      for (String query : queries) {
+        try (PreparedStatement stmt = conn.prepareStatement(query)) {
+          stmt.closeOnCompletion();
+          stmt.execute();
+          try {
+            conn.commit();
+          } catch (SQLException e) {
+            log.error("failed execute sql: " + query, e);
+            conn.rollback();
+            throw e;
+          }
+        }
+      }
+    } catch (SQLException | IOException | NullPointerException e) {
+      log.error("failed to initialize schema: " + e.getMessage());
+      throw new InitializationFailureException(e.getMessage());
+    }
+  }
+
+  protected Resource getSchemaResource() {
+    if (DB_TYPE == null) {
+      throw new InitializationFailureException("static variable DB_TYPE cannot be null");
+    }
+    Resource schema;
+    if (DB_TYPE.equals(DBType.POSTGRESQL)) {
+      schema = postgresSchema;
+    } else {
+      schema = mysqlSchema;
+    }
+    return schema;
   }
 
   /**

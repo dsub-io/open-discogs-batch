@@ -23,7 +23,7 @@ import lombok.NoArgsConstructor;
 @EqualsAndHashCode(callSuper = false)
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "release_item_genre", uniqueConstraints = @UniqueConstraint(name = "unique_release_item_genre", columnNames = {
+@Table(name = "release_item_genre", uniqueConstraints = @UniqueConstraint(name = "uq_release_item_genre_release_item_id_genre", columnNames = {
     "release_item_id", "genre"}))
 public class ReleaseItemGenre extends BaseTimeEntity {
 

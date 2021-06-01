@@ -1,8 +1,8 @@
 package io.dsub.discogsdata.batch.job;
 
-import static io.dsub.discogsdata.batch.config.BatchConfig.CORE_SIZE;
 import static io.dsub.discogsdata.batch.config.BatchConfig.DEFAULT_CHUNK_SIZE;
-import static io.dsub.discogsdata.batch.config.BatchConfig.DEFAULT_THROTTLE_LIMIT;
+import static io.dsub.discogsdata.batch.config.TaskExecutorConfig.CORE_SIZE;
+import static io.dsub.discogsdata.batch.config.TaskExecutorConfig.DEFAULT_THROTTLE_LIMIT;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.catchThrowable;
 import static org.mockito.Mockito.any;

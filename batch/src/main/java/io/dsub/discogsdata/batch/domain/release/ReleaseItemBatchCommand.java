@@ -151,7 +151,7 @@ public abstract class ReleaseItemBatchCommand {
 
     Long releaseItem;
     Long label;
-    String job;
+    String work;
 
     @Override
     public Class<? extends BaseEntity> getEntityClass() {

@@ -3,6 +3,7 @@ package io.dsub.discogsdata.common.entity.artist;
 import io.dsub.discogsdata.common.entity.base.BaseTimeEntity;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.ForeignKey;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
@@ -22,7 +23,7 @@ import lombok.With;
 @EqualsAndHashCode(callSuper = false)
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "artist_group", uniqueConstraints = @UniqueConstraint(name = "unique_group_id", columnNames = {
+@Table(name = "artist_group", uniqueConstraints = @UniqueConstraint(name = "uq_artist_group_artist_id_group_id", columnNames = {
     "artist_id", "group_id"}))
 public class ArtistGroup extends BaseTimeEntity {
 

@@ -16,7 +16,7 @@ import io.dsub.discogsdata.batch.domain.release.ReleaseXML;
 import io.dsub.discogsdata.batch.dump.service.DiscogsDumpService;
 import io.dsub.discogsdata.batch.job.listener.StopWatchStepExecutionListener;
 import io.dsub.discogsdata.batch.job.listener.StringFieldNormalizingItemReadListener;
-import io.dsub.discogsdata.batch.job.reader.DumpItemReaderBuilder;
+import io.dsub.discogsdata.batch.job.reader.DiscogsDumpItemReaderBuilder;
 import io.dsub.discogsdata.batch.job.tasklet.FileFetchTasklet;
 import io.dsub.discogsdata.batch.job.writer.ClassifierCompositeCollectionItemWriter;
 import io.dsub.discogsdata.batch.query.JpaEntityQueryBuilder;
@@ -160,7 +160,7 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
   @StepScope
   public SynchronizedItemStreamReader<ReleaseXML> releaseStreamReader(@Value(ETAG) String eTag) {
     try {
-      return DumpItemReaderBuilder.build(ReleaseXML.class, dumpService.getDiscogsDump(eTag));
+      return DiscogsDumpItemReaderBuilder.build(ReleaseXML.class, dumpService.getDiscogsDump(eTag));
     } catch (Exception e) {
       throw new InitializationFailureException(
           "failed to initialize release stream reader: " + e.getMessage());
@@ -205,7 +205,7 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
             .map(company -> ReleaseItemWorkCommand.builder()
                 .label(company.getId())
                 .releaseItem(xml.getReleaseId())
-                .job(normalizeString(company.getJob()))
+                .work(normalizeString(company.getWork()))
                 .build())
             .forEach(commands::add);
       }
@@ -322,6 +322,9 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
           }
           if (classifiable instanceof ReleaseItemFormatCommand) {
             return releaseItemFormatWriter();
+          }
+          if (classifiable instanceof ReleaseItemIdentifierCommand) {
+            return releaseItemIdentifierWriter();
           }
           if (classifiable instanceof LabelReleaseCommand) {
             return labelReleaseItemWriter();

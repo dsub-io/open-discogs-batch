@@ -61,17 +61,27 @@ public class FileFetchTasklet implements Tasklet {
         return RepeatStatus.FINISHED;
       }
     }
-
+    ProgressBarWrappedInputStream wrappedInputStream = null;
     try {
       log.info("fetching " + targetPath + "...");
       InputStream in = targetDump.getUrl().openStream();
       String taskName = "fetching " + targetDump.getFileName() + "...";
       ProgressBar pb = ProgressBarUtil.get(taskName, targetDump.getSize());
-      ProgressBarWrappedInputStream wrappedIn = new ProgressBarWrappedInputStream(in, pb);
-      Files.copy(wrappedIn, targetPath);
+      wrappedInputStream = new ProgressBarWrappedInputStream(in, pb);
+      Files.copy(wrappedInputStream, targetPath);
     } catch (IOException e) {
       throw new FileFetchException(
           "failed on copying " + targetDump.getETag() + ". reason: " + e.getMessage());
+    } finally {
+      if (wrappedInputStream != null) {
+        try {
+          wrappedInputStream.close();
+        } catch (IOException e) {
+          log.warn("failed to close wrapped input stream, but assume will not defect the process.");
+        } finally {
+          wrappedInputStream = null; // dereference in case of hold...
+        }
+      }
     }
     chunkContext.setComplete();
     contribution.setExitStatus(ExitStatus.COMPLETED);

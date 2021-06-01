@@ -1,9 +1,11 @@
 package io.dsub.discogsdata.batch.query;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.junit.jupiter.api.Assertions.assertAll;
 
 import io.dsub.discogsdata.batch.query.JpaEntityExtractorTest.TestEntity;
 import io.dsub.discogsdata.common.entity.artist.Artist;
+import io.dsub.discogsdata.common.entity.artist.ArtistMember;
 import io.dsub.discogsdata.common.entity.base.BaseEntity;
 import io.dsub.discogsdata.common.entity.base.BaseTimeEntity;
 import java.lang.reflect.Field;
@@ -113,6 +115,31 @@ class PostgresqlJpaEntityQueryBuilderTest {
 
     // then
     assertThat(query).contains("created_at");
+  }
+
+  @Test
+  void whenGetUpsertQuery__WithEntityWithJoinColumns__ShouldIncludeWhereClause() {
+    // when
+    String query = builder.getUpsertQuery(ArtistMember.class);
+
+    // then
+    assertAll(
+        () -> assertThat(query).contains("SELECT 1 FROM artist WHERE id = :artist"),
+        () -> assertThat(query).contains("SELECT 1 FROM artist WHERE id = :member")
+    );
+  }
+
+  @Test
+  void whenGetIdOnlyInsertQuery__ShouldOnlyIncludeIdFields() {
+    // when
+    String query = builder.getIdOnlyInsertQuery(ArtistMember.class);
+
+    // then
+    assertAll(
+        () -> assertThat(query).doesNotContain(":artist"),
+        () -> assertThat(query).doesNotContain(":member"),
+        () -> assertThat(query).contains("ON CONFLICT DO NOTHING")
+    );
   }
 
   @Data

@@ -1,0 +1,12 @@
+spring:
+  batch:
+    job:
+      enabled: false
+  data:
+    jpa:
+      repositories:
+        # this is mandate as of initialization of JPA repositories
+        # may live under the process EVEN AFTER the batch job is finished.
+        # this is also can be a potential reason of spring batch not being exited
+        # immediately after the job is done.
+        bootstrap-mode: default

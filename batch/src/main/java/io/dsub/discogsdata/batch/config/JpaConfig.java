@@ -47,6 +47,7 @@ public class JpaConfig {
     properties.setProperty("hibernate.jdbc.batch_size", "20000");
     properties.setProperty("hibernate.jdbc.time_zone", "UTC");
     emf.setJpaProperties(properties);
+    emf.afterPropertiesSet();
     return emf;
   }
 

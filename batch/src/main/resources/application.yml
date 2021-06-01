@@ -12,9 +12,6 @@ spring:
     job:
       enabled: false
   jpa:
-    generate-ddl: true
-    hibernate:
-      ddl-auto: update
     properties:
       hibernate:
         format_sql: true
@@ -23,3 +20,11 @@ spring:
         jdbc:
           batch_size: 20000
           time_zone: UTC
+  data:
+    jpa:
+      repositories:
+        # this is mandate as of initialization of JPA repositories
+        # may live under the process EVEN AFTER the batch job is finished.
+        # this is also can be a potential reason of spring batch not being exited
+        # immediately after the job is done.
+        bootstrap-mode: default

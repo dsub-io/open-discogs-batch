@@ -11,7 +11,7 @@ import io.dsub.discogsdata.batch.domain.artist.ArtistXML;
 import io.dsub.discogsdata.batch.dump.service.DiscogsDumpService;
 import io.dsub.discogsdata.batch.job.listener.StopWatchStepExecutionListener;
 import io.dsub.discogsdata.batch.job.listener.StringFieldNormalizingItemReadListener;
-import io.dsub.discogsdata.batch.job.reader.DumpItemReaderBuilder;
+import io.dsub.discogsdata.batch.job.reader.DiscogsDumpItemReaderBuilder;
 import io.dsub.discogsdata.batch.job.tasklet.FileFetchTasklet;
 import io.dsub.discogsdata.batch.job.writer.ClassifierCompositeCollectionItemWriter;
 import io.dsub.discogsdata.batch.query.JpaEntityQueryBuilder;
@@ -147,7 +147,7 @@ public class ArtistStepConfig extends AbstractStepConfig {
   @StepScope
   public SynchronizedItemStreamReader<ArtistXML> artistStreamReader(@Value(ETAG) String eTag) {
     try {
-      return DumpItemReaderBuilder.build(ArtistXML.class, dumpService.getDiscogsDump(eTag));
+      return DiscogsDumpItemReaderBuilder.build(ArtistXML.class, dumpService.getDiscogsDump(eTag));
     } catch (Exception e) {
       throw new InitializationFailureException(
           "failed to initialize artist stream reader: " + e.getMessage());

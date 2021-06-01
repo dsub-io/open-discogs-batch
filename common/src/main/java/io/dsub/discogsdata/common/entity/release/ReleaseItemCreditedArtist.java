@@ -24,7 +24,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "release_item_credited_artist", uniqueConstraints = {
-    @UniqueConstraint(name = "unique_release_item_credited_artist", columnNames =
+    @UniqueConstraint(name = "uq_release_item_credited_artist_release_item_id_artist_id_role", columnNames =
         {"release_item_id", "artist_id", "role"})})
 public class ReleaseItemCreditedArtist extends BaseTimeEntity {
 

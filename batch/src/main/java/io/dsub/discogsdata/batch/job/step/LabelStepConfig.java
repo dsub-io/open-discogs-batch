@@ -8,7 +8,7 @@ import io.dsub.discogsdata.batch.domain.label.LabelXML;
 import io.dsub.discogsdata.batch.dump.service.DiscogsDumpService;
 import io.dsub.discogsdata.batch.job.listener.StopWatchStepExecutionListener;
 import io.dsub.discogsdata.batch.job.listener.StringFieldNormalizingItemReadListener;
-import io.dsub.discogsdata.batch.job.reader.DumpItemReaderBuilder;
+import io.dsub.discogsdata.batch.job.reader.DiscogsDumpItemReaderBuilder;
 import io.dsub.discogsdata.batch.job.tasklet.FileFetchTasklet;
 import io.dsub.discogsdata.batch.job.writer.ClassifierCompositeCollectionItemWriter;
 import io.dsub.discogsdata.batch.query.JpaEntityQueryBuilder;
@@ -133,7 +133,7 @@ public class LabelStepConfig extends AbstractStepConfig {
   @StepScope
   public SynchronizedItemStreamReader<LabelXML> labelStreamReader(@Value(ETAG) String eTag) {
     try {
-      return DumpItemReaderBuilder.build(LabelXML.class, dumpService.getDiscogsDump(eTag));
+      return DiscogsDumpItemReaderBuilder.build(LabelXML.class, dumpService.getDiscogsDump(eTag));
     } catch (Exception e) {
       throw new InitializationFailureException(
           "failed to initialize label stream reader: " + e.getMessage());

@@ -24,7 +24,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Table(
     name = "label_sub_label",
-    uniqueConstraints = @UniqueConstraint(name = "unique_label_sub_label", columnNames = {
+    uniqueConstraints = @UniqueConstraint(name = "uq_label_sub_label_parent_id_sub_label_id", columnNames = {
         "parent_label_id", "sub_label_id"}))
 public class LabelSubLabel extends BaseTimeEntity {
 

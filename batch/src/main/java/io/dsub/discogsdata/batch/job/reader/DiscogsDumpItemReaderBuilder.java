@@ -1,6 +1,8 @@
 package io.dsub.discogsdata.batch.job.reader;
 
 import io.dsub.discogsdata.batch.dump.DiscogsDump;
+import io.dsub.discogsdata.common.exception.InvalidArgumentException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import org.springframework.batch.item.support.SynchronizedItemStreamReader;
 import org.springframework.util.Assert;
@@ -8,9 +10,9 @@ import org.springframework.util.Assert;
 /**
  * Utility class that provides single static method {@link #build(Class, DiscogsDump)}.
  */
-public final class DumpItemReaderBuilder {
+public final class DiscogsDumpItemReaderBuilder {
 
-  private DumpItemReaderBuilder() {
+  private DiscogsDumpItemReaderBuilder() {
   }
 
   public static <T> SynchronizedItemStreamReader<T> build(Class<T> mappedClass, DiscogsDump dump)

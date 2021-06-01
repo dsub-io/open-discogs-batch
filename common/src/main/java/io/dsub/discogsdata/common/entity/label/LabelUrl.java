@@ -22,7 +22,7 @@ import lombok.NoArgsConstructor;
 @EqualsAndHashCode(callSuper = false)
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "label_url", uniqueConstraints = @UniqueConstraint(name = "unique_label_url", columnNames = {
+@Table(name = "label_url", uniqueConstraints = @UniqueConstraint(name = "uq_label_url_label_id_url", columnNames = {
     "label_id", "url"}))
 public class LabelUrl extends BaseTimeEntity {
 

@@ -25,7 +25,7 @@ class DumpItemReaderBuilderTest {
   void whenBuild__ShouldNotThrow() {
     when(dump.getFileName()).thenReturn("src/test/resources/test/reader/artist.xml.gz");
     when(dump.getType()).thenReturn(DumpType.ARTIST);
-    assertDoesNotThrow(() -> DumpItemReaderBuilder.build(ArtistXML.class, dump));
+    assertDoesNotThrow(() -> DiscogsDumpItemReaderBuilder.build(ArtistXML.class, dump));
   }
 
   @Test
@@ -33,7 +33,7 @@ class DumpItemReaderBuilderTest {
     when(dump.getType()).thenReturn(null);
     when(dump.getFileName()).thenReturn("src/test/resources/test/reader/artist.xml.gz");
     Throwable t =
-        catchThrowable(() -> DumpItemReaderBuilder.build(ArtistXML.class, dump));
+        catchThrowable(() -> DiscogsDumpItemReaderBuilder.build(ArtistXML.class, dump));
     assertThat(t)
         .hasMessageContaining("type of DiscogsDump cannot be null");
   }
@@ -42,7 +42,7 @@ class DumpItemReaderBuilderTest {
   void whenURINotSet__ShouldThrow() {
     when(dump.getFileName()).thenReturn(null);
     Throwable t =
-        catchThrowable(() -> DumpItemReaderBuilder.build(ArtistXML.class, dump));
+        catchThrowable(() -> DiscogsDumpItemReaderBuilder.build(ArtistXML.class, dump));
     assertThat(t)
         .hasMessageContaining("fileName of DiscogsDump cannot be null");
   }

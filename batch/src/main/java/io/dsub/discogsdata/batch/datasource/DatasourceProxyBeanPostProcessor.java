@@ -1,11 +1,13 @@
 package io.dsub.discogsdata.batch.datasource;
 
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import javax.sql.DataSource;
 import net.ttddyy.dsproxy.listener.logging.SLF4JLogLevel;
 import net.ttddyy.dsproxy.support.ProxyDataSourceBuilder;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
+import org.reflections.Reflections;
 import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
@@ -49,8 +51,15 @@ public class DatasourceProxyBeanPostProcessor implements BeanPostProcessor {
 
     @Override
     public Object invoke(final MethodInvocation invocation) throws Throwable {
-      Method proxyMethod =
-          ReflectionUtils.findMethod(dataSource.getClass(), invocation.getMethod().getName());
+
+      String methodName = invocation.getMethod().getName();
+
+      Method proxyMethod = Arrays.stream(dataSource.getClass().getDeclaredMethods())
+              .filter(method -> method.getParameterCount() == 0)
+              .filter(method -> method.getName().equals(methodName))
+              .findFirst()
+              .orElse(null);
+
       if (proxyMethod != null) {
         return proxyMethod.invoke(dataSource, invocation.getArguments());
       }

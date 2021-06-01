@@ -24,7 +24,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = false)
 @Table(name = "release_item_format_description",
-    uniqueConstraints = @UniqueConstraint(name = "unique_format_description", columnNames = {
+    uniqueConstraints = @UniqueConstraint(name = "uq_format_description_format_id_description", columnNames = {
         "format_id", "description"}))
 public class ReleaseItemFormatDescription extends BaseTimeEntity {
 

@@ -41,13 +41,13 @@ public class JdbcUrlFormatter implements ArgumentFormatter {
 
     boolean startsWithMysql = STARTS_WITH_DB.matcher(urlValue).matches();
     boolean startsWithJdbc = STARTS_WITH_JDBC.matcher(urlValue).matches();
-    boolean startsProperly = STARTS_WITH_JDBC_DB.matcher(urlValue).matches();
+    boolean startsWithProtocol = STARTS_WITH_JDBC_DB.matcher(urlValue).matches();
 
     if (startsWithMysql) {
       urlValue = "jdbc:" + urlValue;
-    } else if (startsWithJdbc && !startsProperly) {
+    } else if (startsWithJdbc && !startsWithProtocol) {
       urlValue = urlValue.replaceFirst("jdbc:", "jdbc:mysql://");
-    } else if (!startsProperly) {
+    } else if (!startsWithProtocol) {
       urlValue = "jdbc:mysql://" + urlValue;
     }
 

@@ -10,6 +10,8 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 import javax.persistence.UniqueConstraint;
+
+import io.dsub.discogsdata.common.entity.base.BaseTimeEntity;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -23,19 +25,19 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = false)
 @Table(name = "release_item_track", uniqueConstraints = {
-    @UniqueConstraint(name = "unique_track", columnNames = {
-        "name", "title", "duration", "release_item_id"
+    @UniqueConstraint(name = "uq_release_item_track_position_title_duration_release_item_id", columnNames = {
+        "position", "title", "duration", "release_item_id"
     })
 })
-public class ReleaseItemTrack extends BaseEntity {
+public class ReleaseItemTrack extends BaseTimeEntity {
 
   @Id
   @Column(name = "id", columnDefinition = "serial")
   @GeneratedValue(strategy = GenerationType.SEQUENCE)
   private Long id;
 
-  @Column(name = "name", length = 2000)
-  private String name;
+  @Column(name = "position", length = 2000)
+  private String position;
 
   @Column(name = "title", length = 2000)
   private String title;
