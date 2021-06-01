@@ -7,13 +7,11 @@ import net.ttddyy.dsproxy.listener.logging.SLF4JLogLevel;
 import net.ttddyy.dsproxy.support.ProxyDataSourceBuilder;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
-import org.reflections.Reflections;
 import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
-import org.springframework.util.ReflectionUtils;
 
 @Component
 @Profile("log_query")
@@ -55,10 +53,10 @@ public class DatasourceProxyBeanPostProcessor implements BeanPostProcessor {
       String methodName = invocation.getMethod().getName();
 
       Method proxyMethod = Arrays.stream(dataSource.getClass().getDeclaredMethods())
-              .filter(method -> method.getParameterCount() == 0)
-              .filter(method -> method.getName().equals(methodName))
-              .findFirst()
-              .orElse(null);
+          .filter(method -> method.getParameterCount() == 0)
+          .filter(method -> method.getName().equals(methodName))
+          .findFirst()
+          .orElse(null);
 
       if (proxyMethod != null) {
         return proxyMethod.invoke(dataSource, invocation.getArguments());

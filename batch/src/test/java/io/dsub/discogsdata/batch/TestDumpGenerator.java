@@ -15,32 +15,6 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class TestDumpGenerator {
 
-  private final Path tempDir;
-
-  public Map<DumpType, File> createDiscogsDumpFiles() throws IOException {
-    Map<DumpType, File> dumpFiles = new HashMap<>();
-    for (DumpType value : DumpType.values()) {
-      File file = Files.createFile(tempDir.resolve("test-" + value + ".xml.gz")).toFile();
-      OutputStreamWriter writer = new OutputStreamWriter(
-          new GZIPOutputStream(new FileOutputStream(file)));
-      String content;
-      if (value.equals(DumpType.ARTIST)) {
-        content = ARTIST_XML;
-      } else if (value.equals(DumpType.RELEASE)) {
-        content = RELEASE_XML;
-      } else if (value.equals(DumpType.MASTER)) {
-        content = MASTER_XML;
-      } else {
-        content = LABEL_XML;
-      }
-      writer.write(content);
-      writer.flush();
-      writer.close();
-      dumpFiles.put(value, file);
-    }
-    return dumpFiles;
-  }
-
   private static final String ARTIST_XML = "<artists>\n"
       + "  <artist>\n"
       + "    <id>1</id>\n"
@@ -149,7 +123,6 @@ public class TestDumpGenerator {
       + "    </groups>\n"
       + "  </artist>\n"
       + "</artists>";
-
   private static final String LABEL_XML = "<labels>\n"
       + "  <label>\n"
       + "    <id>1</id>\n"
@@ -209,7 +182,6 @@ public class TestDumpGenerator {
       + "    </urls>\n"
       + "  </label>\n"
       + "</labels>";
-
   private static final String MASTER_XML = "<masters>\n"
       + "  <master id=\"1\">\n"
       + "    <main_release>1</main_release>\n"
@@ -501,7 +473,6 @@ public class TestDumpGenerator {
       + "    </videos>\n"
       + "  </master>\n"
       + "</masters>";
-
   private static final String RELEASE_XML = "<releases>\n"
       + "  <release id=\"1\" status=\"Accepted\">\n"
       + "    <artists>\n"
@@ -1125,4 +1096,29 @@ public class TestDumpGenerator {
       + "    </companies>\n"
       + "  </release>\n"
       + "</releases>";
+  private final Path tempDir;
+
+  public Map<DumpType, File> createDiscogsDumpFiles() throws IOException {
+    Map<DumpType, File> dumpFiles = new HashMap<>();
+    for (DumpType value : DumpType.values()) {
+      File file = Files.createFile(tempDir.resolve("test-" + value + ".xml.gz")).toFile();
+      OutputStreamWriter writer = new OutputStreamWriter(
+          new GZIPOutputStream(new FileOutputStream(file)));
+      String content;
+      if (value.equals(DumpType.ARTIST)) {
+        content = ARTIST_XML;
+      } else if (value.equals(DumpType.RELEASE)) {
+        content = RELEASE_XML;
+      } else if (value.equals(DumpType.MASTER)) {
+        content = MASTER_XML;
+      } else {
+        content = LABEL_XML;
+      }
+      writer.write(content);
+      writer.flush();
+      writer.close();
+      dumpFiles.put(value, file);
+    }
+    return dumpFiles;
+  }
 }

@@ -18,10 +18,10 @@ CREATE TABLE IF NOT EXISTS artist_alias
     last_modified_at TIMESTAMP NOT NULL,
     alias_id         SERIAL    NOT NULL
         CONSTRAINT fk_artist_alias_alias_id_artist
-            REFERENCES artist,
+        REFERENCES artist,
     artist_id        SERIAL    NOT NULL
         CONSTRAINT fk_artist_alias_artist_id_artist
-            REFERENCES artist,
+        REFERENCES artist,
     CONSTRAINT uq_artist_alias_artist_id_alias_id
         UNIQUE (artist_id, alias_id)
 );
@@ -34,10 +34,10 @@ CREATE TABLE IF NOT EXISTS artist_group
     last_modified_at TIMESTAMP NOT NULL,
     artist_id        SERIAL    NOT NULL
         CONSTRAINT fk_artist_group_artist_id_artist
-            REFERENCES artist,
+        REFERENCES artist,
     group_id         SERIAL    NOT NULL
         CONSTRAINT fk_artist_group_group_id_artist
-            REFERENCES artist,
+        REFERENCES artist,
     CONSTRAINT uq_artist_group_artist_id_group_id
         UNIQUE (artist_id, group_id)
 );
@@ -50,10 +50,10 @@ CREATE TABLE IF NOT EXISTS artist_member
     last_modified_at TIMESTAMP NOT NULL,
     artist_id        SERIAL    NOT NULL
         CONSTRAINT fk_artist_member_artist_id_artist
-            REFERENCES artist,
+        REFERENCES artist,
     member_id        SERIAL    NOT NULL
         CONSTRAINT fk_artist_member_member_id_artist
-            REFERENCES artist,
+        REFERENCES artist,
     CONSTRAINT uq_artist_member_artist_id_member_id
         UNIQUE (artist_id, member_id)
 );
@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS artist_name_variation
     name_variation   VARCHAR(2000),
     artist_id        SERIAL    NOT NULL
         CONSTRAINT fk_artist_name_variation_artist_id_artist
-            REFERENCES artist,
+        REFERENCES artist,
     CONSTRAINT uq_artist_name_variation_artist_id_name_variation
         UNIQUE (artist_id, name_variation)
 );
@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS artist_url
     url              VARCHAR(5000),
     artist_id        SERIAL    NOT NULL
         CONSTRAINT fk_artist_url_artist_id_artist
-            REFERENCES artist,
+        REFERENCES artist,
     CONSTRAINT uq_artist_url_artist_id_url
         UNIQUE (artist_id, url)
 );
@@ -124,10 +124,10 @@ CREATE TABLE IF NOT EXISTS label_sub_label
     last_modified_at TIMESTAMP NOT NULL,
     parent_label_id  SERIAL    NOT NULL
         CONSTRAINT fk_label_sub_label_parent_label_id_label
-            REFERENCES label,
+        REFERENCES label,
     sub_label_id     SERIAL    NOT NULL
         CONSTRAINT fk_label_sub_label_sub_label_id_label
-            REFERENCES label,
+        REFERENCES label,
     CONSTRAINT uq_label_sub_label_parent_label_id_sub_label_id
         UNIQUE (parent_label_id, sub_label_id)
 );
@@ -141,7 +141,7 @@ CREATE TABLE IF NOT EXISTS label_url
     url              VARCHAR(5000),
     label_id         SERIAL    NOT NULL
         CONSTRAINT fk_label_url_label_id_label
-            REFERENCES label,
+        REFERENCES label,
     CONSTRAINT uq_label_url_label_id_url
         UNIQUE (label_id, url)
 );
@@ -165,10 +165,10 @@ CREATE TABLE IF NOT EXISTS master_artist
     last_modified_at TIMESTAMP NOT NULL,
     artist_id        SERIAL    NOT NULL
         CONSTRAINT fk_master_artist_artist_id_artist
-            REFERENCES artist,
+        REFERENCES artist,
     master_id        SERIAL    NOT NULL
         CONSTRAINT fk_master_artist_master_id_master
-            REFERENCES master,
+        REFERENCES master,
     CONSTRAINT uq_master_artist_master_id_artist_id
         UNIQUE (master_id, artist_id)
 );
@@ -181,10 +181,10 @@ CREATE TABLE IF NOT EXISTS master_genre
     last_modified_at TIMESTAMP NOT NULL,
     genre            VARCHAR(255)
         CONSTRAINT fk_master_genre_genre_genre
-            REFERENCES genre,
+        REFERENCES genre,
     master_id        SERIAL    NOT NULL
         CONSTRAINT fk_master_genre_master_id_master
-            REFERENCES master,
+        REFERENCES master,
     CONSTRAINT uq_master_genre_master_id_genre
         UNIQUE (master_id, genre)
 );
@@ -200,7 +200,7 @@ CREATE TABLE IF NOT EXISTS master_video
     url              VARCHAR(5000),
     master_id        SERIAL    NOT NULL
         CONSTRAINT fk_master_video_master_id_master
-            REFERENCES master,
+        REFERENCES master,
     CONSTRAINT uq_master_video_master_id_url
         UNIQUE (master_id, url)
 );
@@ -224,7 +224,7 @@ CREATE TABLE IF NOT EXISTS release_item
     title               VARCHAR(10000),
     master_id           SERIAL    NOT NULL
         CONSTRAINT fk_release_item_master_id_master
-            REFERENCES master
+        REFERENCES master
 );
 
 CREATE TABLE IF NOT EXISTS label_release
@@ -235,10 +235,10 @@ CREATE TABLE IF NOT EXISTS label_release
     last_modified_at  TIMESTAMP NOT NULL,
     label_id          SERIAL    NOT NULL
         CONSTRAINT fk_label_release_label_id_label
-            REFERENCES label,
+        REFERENCES label,
     release_id        SERIAL    NOT NULL
         CONSTRAINT fk_label_release_release_id_release_item
-            REFERENCES release_item,
+        REFERENCES release_item,
     category_notation VARCHAR(255),
     CONSTRAINT uq_label_release_release_id_label_id
         UNIQUE (release_id, label_id)
@@ -252,10 +252,10 @@ CREATE TABLE IF NOT EXISTS release_item_artist
     last_modified_at TIMESTAMP NOT NULL,
     artist_id        SERIAL    NOT NULL
         CONSTRAINT fk_release_item_artist_artist_id_artist
-            REFERENCES artist,
+        REFERENCES artist,
     release_item_id  SERIAL    NOT NULL
         CONSTRAINT fk_release_item_artist_release_item_id_release_item
-            REFERENCES release_item,
+        REFERENCES release_item,
     CONSTRAINT uq_release_item_artist_release_item_id_artist_id
         UNIQUE (release_item_id, artist_id)
 );
@@ -269,10 +269,10 @@ CREATE TABLE IF NOT EXISTS release_item_credited_artist
     role             VARCHAR(2000),
     artist_id        SERIAL    NOT NULL
         CONSTRAINT fk_release_item_credited_artist_artist_id_artist
-            REFERENCES artist,
+        REFERENCES artist,
     release_item_id  SERIAL    NOT NULL
         CONSTRAINT fk_release_item_credited_artist_release_item_id_release_item
-            REFERENCES release_item,
+        REFERENCES release_item,
     CONSTRAINT uq_release_item_credited_artist_release_item_id_artist_id_role
         UNIQUE (release_item_id, artist_id, role)
 );
@@ -285,10 +285,10 @@ CREATE TABLE IF NOT EXISTS release_item_genre
     last_modified_at TIMESTAMP NOT NULL,
     genre            VARCHAR(255)
         CONSTRAINT fk_release_item_genre_genre_genre
-            REFERENCES genre,
+        REFERENCES genre,
     release_item_id  SERIAL    NOT NULL
         CONSTRAINT fk_release_item_genre_release_item_id_release_item
-            REFERENCES release_item,
+        REFERENCES release_item,
     CONSTRAINT uq_release_item_genre_release_item_id_genre
         UNIQUE (release_item_id, genre)
 );
@@ -304,7 +304,7 @@ CREATE TABLE IF NOT EXISTS release_item_video
     url              VARCHAR(10000),
     release_item_id  SERIAL    NOT NULL
         CONSTRAINT fk_release_item_video_release_item_id_release_item
-            REFERENCES release_item,
+        REFERENCES release_item,
     CONSTRAINT uq_release_item_video_release_item_id_url
         UNIQUE (release_item_id, url)
 );
@@ -318,10 +318,10 @@ CREATE TABLE IF NOT EXISTS release_item_work
     work             VARCHAR(255),
     label_id         SERIAL    NOT NULL
         CONSTRAINT fk_release_item_work_label_id_label
-            REFERENCES label,
+        REFERENCES label,
     release_item_id  SERIAL    NOT NULL
         CONSTRAINT fk_release_item_work_release_item_id_release_item
-            REFERENCES release_item,
+        REFERENCES release_item,
     CONSTRAINT uq_release_item_work_release_item_id_label_id_work
         UNIQUE (release_item_id, label_id, work)
 );
@@ -340,10 +340,10 @@ CREATE TABLE IF NOT EXISTS master_style
     last_modified_at TIMESTAMP NOT NULL,
     master_id        SERIAL    NOT NULL
         CONSTRAINT fk_master_style_master_id_master
-            REFERENCES master,
+        REFERENCES master,
     style            VARCHAR(255)
         CONSTRAINT fk_master_style_style_style
-            REFERENCES style,
+        REFERENCES style,
     CONSTRAINT UNIQUE_master_style
         UNIQUE (master_id, style)
 );
@@ -356,26 +356,26 @@ CREATE TABLE IF NOT EXISTS release_item_style
     last_modified_at TIMESTAMP NOT NULL,
     release_item_id  SERIAL    NOT NULL
         CONSTRAINT fk_release_item_style_release_item_id_release_item
-            REFERENCES release_item,
+        REFERENCES release_item,
     style            VARCHAR(255)
         CONSTRAINT fk_release_item_style_style_style
-            REFERENCES style,
+        REFERENCES style,
     CONSTRAINT uq_release_item_style_release_item_id_style
         UNIQUE (release_item_id, style)
 );
 
 CREATE TABLE IF NOT EXISTS release_item_track
 (
-    id              SERIAL NOT NULL
+    id               SERIAL    NOT NULL
         CONSTRAINT pk_release_item_track_id PRIMARY KEY,
     created_at       TIMESTAMP NOT NULL,
     last_modified_at TIMESTAMP NOT NULL,
-    position        VARCHAR(255),
-    duration        VARCHAR(1000),
-    title           VARCHAR(2000),
-    release_item_id SERIAL NOT NULL
+    position         VARCHAR(255),
+    duration         VARCHAR(1000),
+    title            VARCHAR(2000),
+    release_item_id  SERIAL    NOT NULL
         CONSTRAINT fk_release_item_track_release_item_id_release_item
-            REFERENCES release_item,
+        REFERENCES release_item,
     CONSTRAINT uq_release_item_track_position_title_duration_release_item_id
         UNIQUE (position, title, duration, release_item_id)
 );
@@ -391,7 +391,7 @@ CREATE TABLE IF NOT EXISTS release_item_format
     text             VARCHAR(5000),
     release_item_id  SERIAL    NOT NULL
         CONSTRAINT fk_release_item_format_release_item_id_release_item
-            REFERENCES release_item
+        REFERENCES release_item
 );
 
 CREATE TABLE IF NOT EXISTS release_item_format_description
@@ -403,7 +403,7 @@ CREATE TABLE IF NOT EXISTS release_item_format_description
     description      VARCHAR(5000),
     format_id        SERIAL    NOT NULL
         CONSTRAINT fk_release_item_format_description_format_id_release_item_fmt
-            REFERENCES release_item_format
+        REFERENCES release_item_format
 );
 
 CREATE TABLE IF NOT EXISTS release_item_identifier
@@ -417,5 +417,5 @@ CREATE TABLE IF NOT EXISTS release_item_identifier
     value            VARCHAR(255),
     release_item_id  SERIAL    NOT NULL
         CONSTRAINT fk_release_item_identifier_release_item_id_release_item
-            REFERENCES release_item
+        REFERENCES release_item
 );

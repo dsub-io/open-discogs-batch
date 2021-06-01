@@ -156,6 +156,7 @@ public class ReleaseXML {
   @Data
   @XmlAccessorType(XmlAccessType.FIELD)
   public static class Company {
+
     @XmlElement(name = "id")
     Long id;
     @XmlElement(name = "entity_type_name")
@@ -165,6 +166,7 @@ public class ReleaseXML {
   @Data
   @XmlAccessorType(XmlAccessType.FIELD)
   public static class Video {
+
     @XmlElement(name = "title")
     String title;
     @XmlElement(name = "description")

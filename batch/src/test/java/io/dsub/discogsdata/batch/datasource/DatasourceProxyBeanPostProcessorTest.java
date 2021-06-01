@@ -1,19 +1,15 @@
 package io.dsub.discogsdata.batch.datasource;
 
-import org.hamcrest.Matchers;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verifyNoInteractions;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-import org.springframework.aop.framework.AopProxy;
-
-import javax.sql.DataSource;
-
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.is;
-import static org.mockito.Mockito.*;
 
 class DatasourceProxyBeanPostProcessorTest {
+
   DatasourceProxyBeanPostProcessor proxyBeanPostProcessor;
 
   @BeforeEach

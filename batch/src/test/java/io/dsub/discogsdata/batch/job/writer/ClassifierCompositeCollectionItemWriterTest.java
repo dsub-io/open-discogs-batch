@@ -48,20 +48,6 @@ class ClassifierCompositeCollectionItemWriterTest {
     assertDoesNotThrow(() -> writer.afterPropertiesSet());
   }
 
-  static class TestItemWriter implements ItemWriter<String> {
-
-    PrintStream printStream;
-
-    public TestItemWriter(PrintStream printStream) {
-      this.printStream = printStream;
-    }
-
-    @Override
-    public void write(List<? extends String> items) {
-      printStream.println(String.join("", items));
-    }
-  }
-
   @Test
   void whenWrite__ShouldCallCorrespondingWriters() {
     List<Collection<String>> sample = new ArrayList<>();
@@ -81,5 +67,19 @@ class ClassifierCompositeCollectionItemWriterTest {
     writerMap.values()
         .forEach(writer -> assertDoesNotThrow(
             () -> verify(writer, times(1)).write(any())));
+  }
+
+  static class TestItemWriter implements ItemWriter<String> {
+
+    PrintStream printStream;
+
+    public TestItemWriter(PrintStream printStream) {
+      this.printStream = printStream;
+    }
+
+    @Override
+    public void write(List<? extends String> items) {
+      printStream.println(String.join("", items));
+    }
   }
 }

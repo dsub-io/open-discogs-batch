@@ -1,6 +1,5 @@
 package io.dsub.discogsdata.batch.query;
 
-import io.dsub.discogsdata.common.entity.base.BaseEntity;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
@@ -38,7 +37,8 @@ public abstract class SqlJpaEntityQueryBuilder<T> implements JpaEntityQueryBuild
         mappedValues);
   }
 
-  protected String getFormattedValueFields(Field createdAt, Field lastModifiedAt, List<String> values) {
+  protected String getFormattedValueFields(Field createdAt, Field lastModifiedAt,
+      List<String> values) {
     String[] parts = new String[values.size()];
     for (int i = 0; i < values.size(); i++) {
       String origin = values.get(i);

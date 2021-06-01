@@ -10,10 +10,6 @@ import javax.persistence.Column;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.Table;
-
-import io.dsub.discogsdata.common.entity.label.LabelRelease;
-import io.dsub.discogsdata.common.entity.release.ReleaseItemIdentifier;
-import io.dsub.discogsdata.common.entity.release.ReleaseItemTrack;
 import org.junit.jupiter.api.Test;
 
 class MySQLJpaEntityQueryBuilderTest {

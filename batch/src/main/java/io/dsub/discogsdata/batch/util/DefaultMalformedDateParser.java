@@ -88,7 +88,7 @@ public class DefaultMalformedDateParser implements MalformedDateParser {
       if (date.indexOf('-') > 0) {
         day = Integer.parseInt(date.split("-")[2].replaceAll("[^\\d]", "0"));
       } else {
-        day = Integer.parseInt(date, 6, date.length()-1, 10);
+        day = Integer.parseInt(date, 6, date.length() - 1, 10);
       }
       int maxDay = parsedDate.lengthOfMonth();
       if (day > 0 && day <= maxDay) {

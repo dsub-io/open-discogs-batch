@@ -1,6 +1,5 @@
 package io.dsub.discogsdata.batch.config;
 
-import io.dsub.discogsdata.batch.job.listener.SystemExitingJobExecutionListener;
 import java.time.LocalDateTime;
 import javax.sql.DataSource;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +19,6 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.autoconfigure.batch.JobLauncherApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.PropertySource;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -28,7 +26,6 @@ import org.springframework.transaction.PlatformTransactionManager;
 @EnableAsync
 @Configuration
 @EnableBatchProcessing
-//@Import({DataSourceConfig.class, JpaConfig.class}) // is it necessary?
 @RequiredArgsConstructor
 public class BatchConfig implements BatchConfigurer {
 
@@ -95,11 +92,15 @@ public class BatchConfig implements BatchConfigurer {
 
   @Bean
   public JobLauncherApplicationRunner blankJobApplicationRunner() throws Exception {
-    return new JobLauncherApplicationRunner(getJobLauncher(), getJobExplorer(), getJobRepository()) {
+    return new JobLauncherApplicationRunner(getJobLauncher(), getJobExplorer(),
+        getJobRepository()) {
       @Override
-      public void run(ApplicationArguments args) throws Exception {}
+      public void run(ApplicationArguments args) throws Exception {
+      }
+
       @Override
-      public void run(String... args) throws JobExecutionException {}
+      public void run(String... args) throws JobExecutionException {
+      }
     };
   }
 }

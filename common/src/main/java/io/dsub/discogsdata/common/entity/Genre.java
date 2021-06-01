@@ -19,6 +19,7 @@ import lombok.NoArgsConstructor;
 @EqualsAndHashCode(callSuper = false)
 @Table(name = "genre")
 public class Genre extends BaseEntity {
+
   @Id
   @Column(name = "name")
   private String name;

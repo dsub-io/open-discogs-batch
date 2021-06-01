@@ -1,7 +1,7 @@
 package io.dsub.discogsdata.batch.query;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertAll;
 
 import io.dsub.discogsdata.common.entity.artist.Artist;
 import io.dsub.discogsdata.common.entity.artist.ArtistGroup;
@@ -31,7 +31,8 @@ class SqlJpaEntityQueryBuilderTest {
 
     // then
     assertThat(query)
-        .contains("id", "created_at", "last_modified_at", "profile", "data_quality", "name", "real_name")
+        .contains("id", "created_at", "last_modified_at", "profile", "data_quality", "name",
+            "real_name")
         .contains(":profile", ":dataQuality", ":name", ":realName")
         .doesNotContain(":createdAt", ":lastModifiedAt");
   }

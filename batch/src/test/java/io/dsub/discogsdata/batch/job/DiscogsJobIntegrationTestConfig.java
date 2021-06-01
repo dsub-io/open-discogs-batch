@@ -51,7 +51,8 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @RequiredArgsConstructor
 @EnableTransactionManagement
 @PropertySource("classpath:application-batch-test.yml")
-@EnableJpaRepositories(basePackages = {"io.dsub.discogsdata.common","io.dsub.discogsdata.batch.dump"})
+@EnableJpaRepositories(basePackages = {"io.dsub.discogsdata.common",
+    "io.dsub.discogsdata.batch.dump"})
 @EntityScan(basePackages = {"io.dsub.discogsdata.common", "io.dsub.discogsdata.batch"})
 public class DiscogsJobIntegrationTestConfig {
 

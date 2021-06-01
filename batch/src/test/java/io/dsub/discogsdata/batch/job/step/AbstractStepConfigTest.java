@@ -6,7 +6,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import ch.qos.logback.classic.Level;
-import io.dsub.discogsdata.batch.job.step.AbstractStepConfig;
 import io.dsub.discogsdata.batch.testutil.LogSpy;
 import io.dsub.discogsdata.common.exception.InvalidArgumentException;
 import java.util.HashMap;

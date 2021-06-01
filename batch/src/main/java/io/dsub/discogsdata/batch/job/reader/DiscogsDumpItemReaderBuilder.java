@@ -1,8 +1,6 @@
 package io.dsub.discogsdata.batch.job.reader;
 
 import io.dsub.discogsdata.batch.dump.DiscogsDump;
-import io.dsub.discogsdata.common.exception.InvalidArgumentException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import org.springframework.batch.item.support.SynchronizedItemStreamReader;
 import org.springframework.util.Assert;

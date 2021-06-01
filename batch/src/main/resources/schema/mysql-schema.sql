@@ -99,7 +99,7 @@ CREATE TABLE IF NOT EXISTS discogs_dump
 
 CREATE TABLE IF NOT EXISTS genre
 (
-    name             VARCHAR(255) NOT NULL,
+    name VARCHAR(255) NOT NULL,
     CONSTRAINT pk_genre_name PRIMARY KEY (name)
 );
 
@@ -265,12 +265,12 @@ CREATE TABLE IF NOT EXISTS release_item_identifier
 
 CREATE TABLE IF NOT EXISTS label_release
 (
-    id               BIGINT AUTO_INCREMENT,
-    created_at       DATETIME(6)  NOT NULL,
-    last_modified_at DATETIME(6)  NOT NULL,
-    category_notation  VARCHAR(255) NULL,
-    label_id         BIGINT       NULL,
-    release_item_id  BIGINT       NULL,
+    id                BIGINT AUTO_INCREMENT,
+    created_at        DATETIME(6)  NOT NULL,
+    last_modified_at  DATETIME(6)  NOT NULL,
+    category_notation VARCHAR(255) NULL,
+    label_id          BIGINT       NULL,
+    release_item_id   BIGINT       NULL,
     CONSTRAINT uq_label_release_release_item_id_label_id
         UNIQUE (release_item_id, label_id),
     CONSTRAINT fk_label_release_label_id_label
@@ -346,7 +346,7 @@ CREATE TABLE IF NOT EXISTS release_item_work
     id               BIGINT AUTO_INCREMENT,
     created_at       DATETIME(6)  NOT NULL,
     last_modified_at DATETIME(6)  NOT NULL,
-    work              VARCHAR(255) NULL,
+    work             VARCHAR(255) NULL,
     label_id         BIGINT       NULL,
     release_item_id  BIGINT       NULL,
     CONSTRAINT uq_release_item_work_release_item_id_label_id_work
@@ -360,7 +360,7 @@ CREATE TABLE IF NOT EXISTS release_item_work
 
 CREATE TABLE IF NOT EXISTS style
 (
-    name             VARCHAR(255) NOT NULL,
+    name VARCHAR(255) NOT NULL,
     CONSTRAINT pk_style_name PRIMARY KEY (name)
 );
 

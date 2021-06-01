@@ -3,7 +3,6 @@ package io.dsub.discogsdata.common.entity.artist;
 import io.dsub.discogsdata.common.entity.base.BaseTimeEntity;
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.ForeignKey;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;

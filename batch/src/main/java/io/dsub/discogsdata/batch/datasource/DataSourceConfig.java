@@ -50,14 +50,11 @@ public class DataSourceConfig {
 
   @Getter
   private static DBType DB_TYPE = null;
-
+  private final ApplicationArguments applicationArguments;
   @Value("classpath:schema/mysql-schema.sql")
   private Resource mysqlSchema;
-
   @Value("classpath:schema/postgresql-schema.sql")
   private Resource postgresSchema;
-
-  private final ApplicationArguments applicationArguments;
 
   @Order(0)
   @Bean(name = "batchDataSource")

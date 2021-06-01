@@ -12,6 +12,7 @@ public class ToggleProgressBarConsumer extends ConsoleProgressBarConsumer {
 
   /**
    * Constructor to be used with designated {@link PrintStream}.
+   *
    * @param out {@link PrintStream} to print progress bar.
    */
   public ToggleProgressBarConsumer(PrintStream out) {
@@ -19,16 +20,16 @@ public class ToggleProgressBarConsumer extends ConsoleProgressBarConsumer {
   }
 
   /**
-   * Default constructor to be used if needed.
-   * This constructor will define {@link PrintStream} as {@link System#out}.
+   * Default constructor to be used if needed. This constructor will define {@link PrintStream} as
+   * {@link System#out}.
    */
   public ToggleProgressBarConsumer() {
     super(System.out, 150);
   }
 
   /**
-   * Regardless of acceptance, the act of print will be judged by either
-   * {@link ToggleProgressBarConsumer#print} is on or off.
+   * Regardless of acceptance, the act of print will be judged by either {@link
+   * ToggleProgressBarConsumer#print} is on or off.
    */
   @Override
   public void accept(String str) {

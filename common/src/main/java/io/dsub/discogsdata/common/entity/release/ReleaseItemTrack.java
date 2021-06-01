@@ -1,6 +1,6 @@
 package io.dsub.discogsdata.common.entity.release;
 
-import io.dsub.discogsdata.common.entity.base.BaseEntity;
+import io.dsub.discogsdata.common.entity.base.BaseTimeEntity;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
@@ -10,8 +10,6 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 import javax.persistence.UniqueConstraint;
-
-import io.dsub.discogsdata.common.entity.base.BaseTimeEntity;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
