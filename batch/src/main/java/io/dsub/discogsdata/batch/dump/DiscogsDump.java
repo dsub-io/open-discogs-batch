@@ -51,8 +51,11 @@ public class DiscogsDump implements Comparable<DiscogsDump>, Cloneable {
     if (this.uriString == null || this.uriString.isBlank()) {
       return null;
     }
-    String[] parts = this.uriString.split("/");
-    return parts[parts.length - 1]; // last part is the actual file name.
+    int idx = this.uriString.lastIndexOf('/');
+    if (idx < 0) {
+      return this.uriString;
+    }
+    return this.uriString.substring(idx + 1);
   }
 
   @Override

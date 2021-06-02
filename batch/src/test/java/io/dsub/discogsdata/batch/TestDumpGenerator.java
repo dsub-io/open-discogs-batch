@@ -119,7 +119,7 @@ public class TestDumpGenerator {
       + "      <name>Winxs</name>\n"
       + "    </namevariations>\n"
       + "    <groups>\n"
-      + "      <name id=\"4\">E-Culture</name>\n"
+      + "      <name id=\"1\">E-Culture</name>\n"
       + "    </groups>\n"
       + "  </artist>\n"
       + "</artists>";

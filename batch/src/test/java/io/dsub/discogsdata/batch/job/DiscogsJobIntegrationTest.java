@@ -1,6 +1,7 @@
 package io.dsub.discogsdata.batch.job;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -11,11 +12,15 @@ import io.dsub.discogsdata.batch.job.step.LabelStepConfig;
 import io.dsub.discogsdata.batch.job.step.MasterStepConfig;
 import io.dsub.discogsdata.batch.job.step.ReleaseItemStepConfig;
 import io.dsub.discogsdata.batch.testutil.LogSpy;
+import io.dsub.discogsdata.common.entity.base.BaseEntity;
 import io.dsub.discogsdata.common.repository.artist.ArtistRepository;
 import io.dsub.discogsdata.common.repository.label.LabelRepository;
 import io.dsub.discogsdata.common.repository.master.MasterRepository;
 import io.dsub.discogsdata.common.repository.release.ReleaseRepository;
+import java.lang.reflect.Modifier;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.stream.Collectors;
 import javax.sql.DataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterEach;
@@ -24,6 +29,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
+import org.reflections.Reflections;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobParameters;
@@ -37,6 +43,9 @@ import org.springframework.batch.test.JobRepositoryTestUtils;
 import org.springframework.batch.test.context.SpringBatchTest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.ApplicationContext;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.repository.support.Repositories;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.transaction.PlatformTransactionManager;
 
@@ -76,6 +85,8 @@ public class DiscogsJobIntegrationTest {
   private DataSource dataSource;
   @Autowired
   private PlatformTransactionManager transactionManager;
+  @Autowired
+  private ApplicationContext context;
 
   @BeforeEach
   void setUp() throws Exception {
@@ -118,10 +129,25 @@ public class DiscogsJobIntegrationTest {
     JobExecution jobExecution = jobLauncherTestUtils.launchJob(uniqueJobParams);
     ExitStatus exitStatus = jobExecution.getExitStatus();
 
+    Reflections reflections = new Reflections("io.dsub.discogsdata.common");
+    List<Class<? extends BaseEntity>> entityClasses = reflections.getSubTypesOf(BaseEntity.class)
+        .stream()
+        .filter(clazz -> !Modifier.isAbstract(clazz.getModifiers()) && !Modifier
+            .isInterface(clazz.getModifiers()))
+        .collect(Collectors.toList());
+
+    Repositories repositories = new Repositories(context);
+
     assertThat(exitStatus.getExitCode(), is("COMPLETED"));
     assertThat(releaseRepository.count(), is(3L));
     assertThat(masterRepository.count(), is(3L));
     assertThat(labelRepository.count(), is(2L));
     assertThat(artistRepository.count(), is(3L));
+
+    // check every single entities have at least one entry.
+    entityClasses.forEach(entityClass -> repositories.getRepositoryFor(entityClass)
+        .map(repo -> (JpaRepository<?,?>) repo)
+        .ifPresent(
+            repo -> assertThat((repo).count(), is(greaterThan(0L)))));
   }
 }

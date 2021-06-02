@@ -1,12 +1,15 @@
 package io.dsub.discogsdata.batch.util;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.LocalDate;
 import java.time.Month;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class DefaultMalformedDateParserTest {
 
@@ -114,7 +117,7 @@ class DefaultMalformedDateParserTest {
     // then
     assertThat(parsedDate).isNotNull();
     assertThat(parsedDate.getMonth()).isEqualTo(Month.OCTOBER);
-    assertThat(parsedDate.getDayOfMonth()).isEqualTo(1);
+    assertThat(parsedDate.getDayOfMonth()).isEqualTo(10);
   }
 
   @Test
@@ -126,5 +129,35 @@ class DefaultMalformedDateParserTest {
     assertThat(parsedDate.getYear()).isEqualTo(1988);
     assertThat(parsedDate.getMonth()).isEqualTo(Month.MARCH);
     assertThat(parsedDate.getDayOfMonth()).isEqualTo(18);
+  }
+
+  @Test
+  void givenDateHasNoDash__ShouldParse() {
+    // when
+    LocalDate parsedDate = parser.parse("19920405");
+
+    // then
+    assertThat(parsedDate.getYear()).isEqualTo(1992);
+    assertThat(parsedDate.getMonthValue()).isEqualTo(4);
+    assertThat(parsedDate.getDayOfMonth()).isEqualTo(5);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"1992x3x2", "1992xxxx", "33xxx212x", "xxxxxxxxx", "dfakfmlk"})
+  void givenDateHasMalformed__ShouldParse(String malformedDate) {
+    // given
+    assertDoesNotThrow(() -> parser.parse(malformedDate));
+    LocalDate parsedDate = parser.parse(malformedDate);
+
+    // when
+    if (parser.isYearValid(malformedDate)) {
+
+      // then
+      assertThat(parsedDate).isNotNull();
+    } else if (parser.isMonthValid(malformedDate)) {
+
+      // then
+      assertThat(parsedDate).isNull();
+    }
   }
 }

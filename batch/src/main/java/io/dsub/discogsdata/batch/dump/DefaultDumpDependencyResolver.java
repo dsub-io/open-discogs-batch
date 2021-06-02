@@ -42,7 +42,22 @@ public class DefaultDumpDependencyResolver implements DumpDependencyResolver {
     List<DumpType> types = parseTypes(args);
     int year = parseYear(args);
     int month = parseMonth(args);
-    return dumpService.getAllByTypeYearMonth(types, year, month);
+
+    LocalDate targetDate = LocalDate.of(year, month, 1);
+
+    Collection<DiscogsDump> dumps = null;
+    while (dumps == null ) {
+      try {
+        dumps = dumpService.getAllByTypeYearMonth(types, targetDate.getYear(), targetDate.getMonthValue());
+      } catch (DumpNotFoundException ignored) {
+        if (targetDate.getYear() > 2010) {
+          targetDate = targetDate.minusMonths(1);
+          continue;
+        }
+        throw new DumpNotFoundException("failed to retrieve dump...");
+      }
+    }
+    return dumps;
   }
 
   /**

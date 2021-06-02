@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import me.tongfei.progressbar.ProgressBar;
 import me.tongfei.progressbar.wrapped.ProgressBarWrappedInputStream;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.scope.context.ChunkContext;
@@ -38,7 +39,7 @@ public class FileFetchTasklet implements Tasklet {
    * @return status of the task which indicates either success or fail.
    */
   @Override
-  public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) {
+  public RepeatStatus execute(@NotNull StepContribution contribution, @NotNull ChunkContext chunkContext) {
     Path targetPath = Path.of(targetDump.getFileName());
 
     if (Files.exists(targetPath)) {

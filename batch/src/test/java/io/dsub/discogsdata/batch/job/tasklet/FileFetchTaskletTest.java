@@ -15,6 +15,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import lombok.extern.slf4j.Slf4j;
 import net.bytebuddy.utility.RandomString;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -48,11 +49,11 @@ class FileFetchTaskletTest {
   @BeforeEach
   void setUp() throws IOException {
     sourcePath = tempDir.resolve(RandomString.make());
-    targetPath = tempDir.resolve(RandomString.make());
+    targetPath = Path.of(RandomString.make());
     fakeDump = DiscogsDump.builder()
         .size(1000L)
         .url(sourcePath.toUri().toURL())
-        .uriString("t/t/" + targetPath).build();
+        .uriString(targetPath.toString()).build();
     fileFetchTasklet = new FileFetchTasklet(fakeDump);
     try {
       Files.createFile(sourcePath);
@@ -61,6 +62,11 @@ class FileFetchTaskletTest {
       System.out.println(getClass().getSimpleName() + " failed due to IOException.");
       fail();
     }
+  }
+
+  @AfterEach
+  void cleanUp() throws IOException {
+    Files.deleteIfExists(targetPath);
   }
 
   @Test

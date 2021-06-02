@@ -46,47 +46,6 @@ class DefaultJobParameterResolverTest {
   }
 
   @Test
-  void whenParseThrottleLimit__ShouldReturnSameValue() {
-    ApplicationArguments args = new DefaultApplicationArguments("--throttleLimit=30");
-    // when
-    int result = jobParameterResolver.parseThrottleLimit(args);
-
-    // then
-    assertThat(result).isEqualTo((int) (30 > CORE_SIZE * 0.8 ? CORE_SIZE * 0.8 : 30));
-  }
-
-  @Test
-  void whenParseThrottleLimit__WithNoValue__ShouldReturnDefaultValue() {
-    ApplicationArguments args = new DefaultApplicationArguments();
-
-    // when
-    int result = jobParameterResolver.parseThrottleLimit(args);
-
-    // then
-    assertThat(result).isEqualTo(DEFAULT_THROTTLE_LIMIT);
-
-    // optional if log actually got spied...  in some cases, this may be an issue for failure.
-    if (!logSpy.getEvents().isEmpty()) {
-      assertThat(logSpy.getEvents().get(0).getMessage())
-          .isEqualTo(
-              "throttleLimit not specified. returning default value: " + DEFAULT_THROTTLE_LIMIT);
-    }
-  }
-
-  @Test
-  void whenParseThrottleLimit__WithMalFormedValue__ShouldThrow() {
-    ApplicationArguments args = new DefaultApplicationArguments("--throttleLimit=Mr_Krabs");
-
-    // when
-    Throwable t = catchThrowable(() -> jobParameterResolver.parseThrottleLimit(args));
-
-    // then
-    assertThat(t)
-        .isInstanceOf(InvalidArgumentException.class)
-        .hasMessage("failed to parse throttleLimit: Mr_Krabs");
-  }
-
-  @Test
   void whenParseChunkSize__ShouldReturnSameValue() {
     ApplicationArguments args = new DefaultApplicationArguments("--chunkSize=3000");
     // when
@@ -158,11 +117,9 @@ class DefaultJobParameterResolverTest {
     Properties resultProps = jobParameterResolver.resolve(new DefaultApplicationArguments());
 
     // then
-    assertThat(resultProps.size()).isEqualTo(3);
+    assertThat(resultProps.size()).isEqualTo(2);
     assertThat(resultProps.get(dump.getType().toString())).isEqualTo(dump.getETag());
     assertThat(resultProps.get(ArgType.CHUNK_SIZE.getGlobalName()))
         .isEqualTo(String.valueOf(DEFAULT_CHUNK_SIZE));
-    assertThat(resultProps.get(ArgType.THROTTLE_LIMIT.getGlobalName()))
-        .isEqualTo(String.valueOf(DEFAULT_THROTTLE_LIMIT));
   }
 }
