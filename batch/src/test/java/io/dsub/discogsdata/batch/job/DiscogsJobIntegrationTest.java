@@ -148,6 +148,8 @@ public class DiscogsJobIntegrationTest {
 
     assertThat(exitStatus.getExitCode(), is("COMPLETED"));
 
+    assertThat(dumpMap.size(), is(4));
+
     dumpMap.values().stream()
         .map(DiscogsDump::getResourcePath)
         .forEach(path -> assertThat(path.toFile().exists(), is(false)));
