@@ -8,6 +8,7 @@ import io.dsub.discogsdata.batch.domain.master.MasterBatchCommand.MasterStyleCom
 import io.dsub.discogsdata.batch.domain.master.MasterBatchCommand.MasterVideoCommand;
 import io.dsub.discogsdata.batch.domain.master.MasterXML;
 import io.dsub.discogsdata.batch.dump.DiscogsDump;
+import io.dsub.discogsdata.batch.dump.DumpType;
 import io.dsub.discogsdata.batch.dump.service.DiscogsDumpService;
 import io.dsub.discogsdata.batch.job.listener.StopWatchStepExecutionListener;
 import io.dsub.discogsdata.batch.job.listener.StringFieldNormalizingItemReadListener;
@@ -31,6 +32,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.sql.DataSource;
@@ -79,6 +81,7 @@ public class MasterStepConfig extends AbstractStepConfig {
   private final ThreadPoolTaskExecutor taskExecutor;
   private final JobRepository jobRepository;
   private final PlatformTransactionManager transactionManager;
+  private final Map<DumpType, DiscogsDump> dumpMap;
 
   @Bean
   @JobScope
@@ -106,7 +109,9 @@ public class MasterStepConfig extends AbstractStepConfig {
   @Bean
   @JobScope
   public DiscogsDump masterDump(@Value(ETAG) String eTag) {
-    return dumpService.getDiscogsDump(eTag);
+    DiscogsDump dump = dumpService.getDiscogsDump(eTag);
+    dumpMap.put(DumpType.MASTER, dump);
+    return dump;
   }
 
   @Bean

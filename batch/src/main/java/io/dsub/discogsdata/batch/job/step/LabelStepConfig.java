@@ -6,6 +6,7 @@ import io.dsub.discogsdata.batch.domain.label.LabelBatchCommand.LabelSubLabelCom
 import io.dsub.discogsdata.batch.domain.label.LabelBatchCommand.LabelUrlCommand;
 import io.dsub.discogsdata.batch.domain.label.LabelXML;
 import io.dsub.discogsdata.batch.dump.DiscogsDump;
+import io.dsub.discogsdata.batch.dump.DumpType;
 import io.dsub.discogsdata.batch.dump.service.DiscogsDumpService;
 import io.dsub.discogsdata.batch.job.listener.StopWatchStepExecutionListener;
 import io.dsub.discogsdata.batch.job.listener.StringFieldNormalizingItemReadListener;
@@ -22,6 +23,7 @@ import io.dsub.discogsdata.common.exception.InitializationFailureException;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import javax.sql.DataSource;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.Step;
@@ -63,6 +65,7 @@ public class LabelStepConfig extends AbstractStepConfig {
   private final ThreadPoolTaskExecutor taskExecutor;
   private final JobRepository jobRepository;
   private final PlatformTransactionManager transactionManager;
+  private final Map<DumpType, DiscogsDump> dumpMap;
 
   @Bean
   @JobScope
@@ -144,7 +147,9 @@ public class LabelStepConfig extends AbstractStepConfig {
   @Bean
   @JobScope
   public DiscogsDump labelDump(@Value(ETAG) String eTag) {
-    return dumpService.getDiscogsDump(eTag);
+    DiscogsDump dump = dumpService.getDiscogsDump(eTag);
+    dumpMap.put(DumpType.LABEL, dump);
+    return dump;
   }
 
   @Bean

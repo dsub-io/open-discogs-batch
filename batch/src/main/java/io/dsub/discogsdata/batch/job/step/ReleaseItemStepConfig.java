@@ -14,6 +14,7 @@ import io.dsub.discogsdata.batch.domain.release.ReleaseItemBatchCommand.ReleaseI
 import io.dsub.discogsdata.batch.domain.release.ReleaseItemBatchCommand.ReleaseItemWorkCommand;
 import io.dsub.discogsdata.batch.domain.release.ReleaseXML;
 import io.dsub.discogsdata.batch.dump.DiscogsDump;
+import io.dsub.discogsdata.batch.dump.DumpType;
 import io.dsub.discogsdata.batch.dump.service.DiscogsDumpService;
 import io.dsub.discogsdata.batch.job.listener.StopWatchStepExecutionListener;
 import io.dsub.discogsdata.batch.job.listener.StringFieldNormalizingItemReadListener;
@@ -41,6 +42,7 @@ import io.dsub.discogsdata.common.exception.InitializationFailureException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import javax.sql.DataSource;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.Step;
@@ -83,6 +85,7 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
   private final JobRepository jobRepository;
   private final PlatformTransactionManager transactionManager;
   private final MalformedDateParser dateParser = new DefaultMalformedDateParser();
+  private final Map<DumpType, DiscogsDump> dumpMap;
 
   ///////////////////////////////////////////////////////////////////////////
   // STEPS
@@ -168,7 +171,9 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
   @Bean
   @JobScope
   public DiscogsDump releaseItemDump(@Value(ETAG) String eTag) {
-    return dumpService.getDiscogsDump(eTag);
+    DiscogsDump dump = dumpService.getDiscogsDump(eTag);
+    dumpMap.put(DumpType.RELEASE, dump);
+    return dump;
   }
 
   ///////////////////////////////////////////////////////////////////////////

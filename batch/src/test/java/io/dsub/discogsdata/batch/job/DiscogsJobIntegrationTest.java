@@ -94,13 +94,7 @@ public class DiscogsJobIntegrationTest {
   @Autowired
   private ApplicationContext context;
   @Autowired
-  DiscogsDump artistDump;
-  @Autowired
-  DiscogsDump labelDump;
-  @Autowired
-  DiscogsDump masterDump;
-  @Autowired
-  DiscogsDump releaseItemDump;
+  private Map<DumpType, DiscogsDump> dumpMap;
 
   @BeforeEach
   void setUp() throws Exception {
@@ -153,6 +147,10 @@ public class DiscogsJobIntegrationTest {
     Repositories repositories = new Repositories(context);
 
     assertThat(exitStatus.getExitCode(), is("COMPLETED"));
+
+    dumpMap.values().stream()
+        .map(DiscogsDump::getResourcePath)
+        .forEach(path -> assertThat(path.toFile().exists(), is(false)));
 
     assertThat(releaseRepository.count(), is(3L));
     assertThat(masterRepository.count(), is(3L));

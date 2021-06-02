@@ -1,6 +1,10 @@
 package io.dsub.discogsdata.batch.config;
 
+import io.dsub.discogsdata.batch.dump.DiscogsDump;
+import io.dsub.discogsdata.batch.dump.DumpType;
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import javax.sql.DataSource;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.Job;
@@ -91,16 +95,21 @@ public class BatchConfig implements BatchConfigurer {
   }
 
   @Bean
-  public JobLauncherApplicationRunner blankJobApplicationRunner() throws Exception {
-    return new JobLauncherApplicationRunner(getJobLauncher(), getJobExplorer(),
-        getJobRepository()) {
-      @Override
-      public void run(ApplicationArguments args) throws Exception {
-      }
-
-      @Override
-      public void run(String... args) throws JobExecutionException {
-      }
-    };
+  public Map<DumpType, DiscogsDump> dumpMap() {
+    return new HashMap<>();
   }
+
+//  @Bean
+//  public JobLauncherApplicationRunner blankJobApplicationRunner() throws Exception {
+//    return new JobLauncherApplicationRunner(getJobLauncher(), getJobExplorer(),
+//        getJobRepository()) {
+//      @Override
+//      public void run(ApplicationArguments args) throws Exception {
+//      }
+//
+//      @Override
+//      public void run(String... args) throws JobExecutionException {
+//      }
+//    };
+//  }
 }
