@@ -22,7 +22,6 @@ import io.dsub.discogsdata.batch.job.reader.DiscogsDumpItemReaderBuilder;
 import io.dsub.discogsdata.batch.job.tasklet.FileClearTasklet;
 import io.dsub.discogsdata.batch.job.tasklet.FileFetchTasklet;
 import io.dsub.discogsdata.batch.job.writer.ClassifierCompositeCollectionItemWriter;
-import io.dsub.discogsdata.batch.query.JpaEntityQueryBuilder;
 import io.dsub.discogsdata.batch.query.QueryBuilder;
 import io.dsub.discogsdata.batch.util.DefaultMalformedDateParser;
 import io.dsub.discogsdata.batch.util.MalformedDateParser;

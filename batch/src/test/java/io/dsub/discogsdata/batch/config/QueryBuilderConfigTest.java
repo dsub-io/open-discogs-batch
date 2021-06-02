@@ -1,9 +1,7 @@
 package io.dsub.discogsdata.batch.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.catchThrowable;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import io.dsub.discogsdata.batch.datasource.DBType;
 import io.dsub.discogsdata.batch.datasource.DataSourceConfig;
@@ -16,9 +14,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-import org.junit.runners.Parameterized.Parameters;
-import org.mockito.Mockito;
-import org.mockito.junit.MockitoRule;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 @Slf4j
@@ -46,7 +41,8 @@ class QueryBuilderConfigTest {
     setDBTypeForDataSourceConfig(null);
     ctx.run(it -> {
       assertThat(it).hasFailed();
-      assertThat(it).getFailure().getRootCause().hasMessage("DB_TYPE from DataSourceConfig.class cannot be null");
+      assertThat(it).getFailure().getRootCause()
+          .hasMessage("DB_TYPE from DataSourceConfig.class cannot be null");
       assertThat(it).getFailure().getRootCause().isInstanceOf(InitializationFailureException.class);
     });
   }

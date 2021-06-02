@@ -3,7 +3,6 @@ package io.dsub.discogsdata.batch.job;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import io.dsub.discogsdata.batch.config.BatchConfig;
@@ -20,9 +19,7 @@ import io.dsub.discogsdata.common.repository.artist.ArtistRepository;
 import io.dsub.discogsdata.common.repository.label.LabelRepository;
 import io.dsub.discogsdata.common.repository.master.MasterRepository;
 import io.dsub.discogsdata.common.repository.release.ReleaseRepository;
-import java.io.File;
 import java.lang.reflect.Modifier;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -161,7 +158,7 @@ public class DiscogsJobIntegrationTest {
 
     // check every single entities have at least one entry.
     entityClasses.forEach(entityClass -> repositories.getRepositoryFor(entityClass)
-        .map(repo -> (JpaRepository<?,?>) repo)
+        .map(repo -> (JpaRepository<?, ?>) repo)
         .ifPresent(
             repo -> assertThat((repo).count(), is(greaterThan(0L)))));
   }

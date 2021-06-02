@@ -3,7 +3,6 @@ package io.dsub.discogsdata.batch.job;
 import static io.dsub.discogsdata.batch.config.BatchConfig.DEFAULT_CHUNK_SIZE;
 
 import io.dsub.discogsdata.batch.argument.ArgType;
-import io.dsub.discogsdata.batch.config.BatchConfig;
 import io.dsub.discogsdata.batch.dump.DumpDependencyResolver;
 import io.dsub.discogsdata.common.exception.InvalidArgumentException;
 import java.util.Properties;

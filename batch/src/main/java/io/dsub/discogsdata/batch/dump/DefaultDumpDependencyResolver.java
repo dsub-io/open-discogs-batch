@@ -46,9 +46,10 @@ public class DefaultDumpDependencyResolver implements DumpDependencyResolver {
     LocalDate targetDate = LocalDate.of(year, month, 1);
 
     Collection<DiscogsDump> dumps = null;
-    while (dumps == null ) {
+    while (dumps == null) {
       try {
-        dumps = dumpService.getAllByTypeYearMonth(types, targetDate.getYear(), targetDate.getMonthValue());
+        dumps = dumpService
+            .getAllByTypeYearMonth(types, targetDate.getYear(), targetDate.getMonthValue());
       } catch (DumpNotFoundException ignored) {
         if (targetDate.getYear() > 2010) {
           targetDate = targetDate.minusMonths(1);

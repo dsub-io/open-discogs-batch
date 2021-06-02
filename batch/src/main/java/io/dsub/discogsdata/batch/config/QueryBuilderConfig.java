@@ -2,7 +2,6 @@ package io.dsub.discogsdata.batch.config;
 
 import io.dsub.discogsdata.batch.datasource.DBType;
 import io.dsub.discogsdata.batch.datasource.DataSourceConfig;
-import io.dsub.discogsdata.batch.query.JpaEntityQueryBuilder;
 import io.dsub.discogsdata.batch.query.MySQLJpaEntityQueryBuilder;
 import io.dsub.discogsdata.batch.query.PostgresqlJpaEntityQueryBuilder;
 import io.dsub.discogsdata.batch.query.QueryBuilder;

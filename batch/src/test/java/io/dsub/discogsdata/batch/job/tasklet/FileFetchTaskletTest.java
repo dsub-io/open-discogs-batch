@@ -13,14 +13,12 @@ import io.dsub.discogsdata.batch.testutil.LogSpy;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import lombok.extern.slf4j.Slf4j;
 import net.bytebuddy.utility.RandomString;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mockito;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.JobExecution;
@@ -46,7 +44,7 @@ class FileFetchTaskletTest {
 
   @BeforeEach
   void setUp() throws IOException {
-    sourcePath  = Files.createTempFile(null, null);
+    sourcePath = Files.createTempFile(null, null);
     sourcePath.toFile().deleteOnExit();
     fakeDump = DiscogsDump.builder()
         .size(1000L)
