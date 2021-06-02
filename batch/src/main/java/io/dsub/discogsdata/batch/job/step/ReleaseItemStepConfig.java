@@ -23,6 +23,7 @@ import io.dsub.discogsdata.batch.job.tasklet.FileClearTasklet;
 import io.dsub.discogsdata.batch.job.tasklet.FileFetchTasklet;
 import io.dsub.discogsdata.batch.job.writer.ClassifierCompositeCollectionItemWriter;
 import io.dsub.discogsdata.batch.query.JpaEntityQueryBuilder;
+import io.dsub.discogsdata.batch.query.QueryBuilder;
 import io.dsub.discogsdata.batch.util.DefaultMalformedDateParser;
 import io.dsub.discogsdata.batch.util.MalformedDateParser;
 import io.dsub.discogsdata.common.entity.base.BaseEntity;
@@ -77,7 +78,7 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
   private static final String RELEASE_FILE_FETCH_STEP = "release file fetch step";
   private static final String RELEASE_FILE_CLEAR_STEP = "release file clear step";
 
-  private final JpaEntityQueryBuilder<BaseEntity> queryBuilder;
+  private final QueryBuilder<BaseEntity> queryBuilder;
   private final DataSource dataSource;
   private final StepBuilderFactory sbf;
   private final DiscogsDumpService dumpService;

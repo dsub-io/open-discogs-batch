@@ -98,18 +98,4 @@ public class BatchConfig implements BatchConfigurer {
   public Map<DumpType, DiscogsDump> dumpMap() {
     return new HashMap<>();
   }
-
-//  @Bean
-//  public JobLauncherApplicationRunner blankJobApplicationRunner() throws Exception {
-//    return new JobLauncherApplicationRunner(getJobLauncher(), getJobExplorer(),
-//        getJobRepository()) {
-//      @Override
-//      public void run(ApplicationArguments args) throws Exception {
-//      }
-//
-//      @Override
-//      public void run(String... args) throws JobExecutionException {
-//      }
-//    };
-//  }
 }

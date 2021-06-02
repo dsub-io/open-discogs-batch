@@ -17,6 +17,7 @@ import io.dsub.discogsdata.batch.job.tasklet.FileClearTasklet;
 import io.dsub.discogsdata.batch.job.tasklet.FileFetchTasklet;
 import io.dsub.discogsdata.batch.job.writer.ClassifierCompositeCollectionItemWriter;
 import io.dsub.discogsdata.batch.query.JpaEntityQueryBuilder;
+import io.dsub.discogsdata.batch.query.QueryBuilder;
 import io.dsub.discogsdata.common.entity.Genre;
 import io.dsub.discogsdata.common.entity.Style;
 import io.dsub.discogsdata.common.entity.base.BaseEntity;
@@ -72,7 +73,7 @@ public class MasterStepConfig extends AbstractStepConfig {
   private static final String MASTER_FILE_CLEAR_STEP = "master file clear step";
   private static final String MASTER_PRE_STEP = "master pre step";
 
-  private final JpaEntityQueryBuilder<BaseEntity> queryBuilder;
+  private final QueryBuilder<BaseEntity> queryBuilder;
   private final GenreRepository genreRepository;
   private final StyleRepository styleRepository;
   private final DataSource dataSource;

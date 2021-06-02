@@ -15,6 +15,7 @@ import io.dsub.discogsdata.batch.job.tasklet.FileClearTasklet;
 import io.dsub.discogsdata.batch.job.tasklet.FileFetchTasklet;
 import io.dsub.discogsdata.batch.job.writer.ClassifierCompositeCollectionItemWriter;
 import io.dsub.discogsdata.batch.query.JpaEntityQueryBuilder;
+import io.dsub.discogsdata.batch.query.QueryBuilder;
 import io.dsub.discogsdata.common.entity.base.BaseEntity;
 import io.dsub.discogsdata.common.entity.label.Label;
 import io.dsub.discogsdata.common.entity.label.LabelSubLabel;
@@ -58,7 +59,7 @@ public class LabelStepConfig extends AbstractStepConfig {
   private static final String LABEL_FILE_FETCH_STEP = "label file fetch step";
   private static final String LABEL_FILE_CLEAR_STEP = "label file clear step";
 
-  private final JpaEntityQueryBuilder<BaseEntity> queryBuilder;
+  private final QueryBuilder<BaseEntity> queryBuilder;
   private final DataSource dataSource;
   private final StepBuilderFactory sbf;
   private final DiscogsDumpService dumpService;

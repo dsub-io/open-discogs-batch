@@ -18,6 +18,7 @@ import io.dsub.discogsdata.batch.job.tasklet.FileClearTasklet;
 import io.dsub.discogsdata.batch.job.tasklet.FileFetchTasklet;
 import io.dsub.discogsdata.batch.job.writer.ClassifierCompositeCollectionItemWriter;
 import io.dsub.discogsdata.batch.query.JpaEntityQueryBuilder;
+import io.dsub.discogsdata.batch.query.QueryBuilder;
 import io.dsub.discogsdata.common.entity.artist.Artist;
 import io.dsub.discogsdata.common.entity.artist.ArtistAlias;
 import io.dsub.discogsdata.common.entity.artist.ArtistGroup;
@@ -67,7 +68,7 @@ public class ArtistStepConfig extends AbstractStepConfig {
   private static final String ARTIST_FILE_FETCH_STEP = "artist file fetch step";
   private static final String ARTIST_FILE_CLEAR_STEP = "artist file clear step";
 
-  private final JpaEntityQueryBuilder<BaseEntity> queryBuilder;
+  private final QueryBuilder<BaseEntity> queryBuilder;
   private final DataSource dataSource;
   private final StepBuilderFactory sbf;
   private final DiscogsDumpService dumpService;
