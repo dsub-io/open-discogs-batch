@@ -7,10 +7,12 @@ import io.dsub.discogsdata.batch.domain.master.MasterBatchCommand.MasterGenreCom
 import io.dsub.discogsdata.batch.domain.master.MasterBatchCommand.MasterStyleCommand;
 import io.dsub.discogsdata.batch.domain.master.MasterBatchCommand.MasterVideoCommand;
 import io.dsub.discogsdata.batch.domain.master.MasterXML;
+import io.dsub.discogsdata.batch.dump.DiscogsDump;
 import io.dsub.discogsdata.batch.dump.service.DiscogsDumpService;
 import io.dsub.discogsdata.batch.job.listener.StopWatchStepExecutionListener;
 import io.dsub.discogsdata.batch.job.listener.StringFieldNormalizingItemReadListener;
 import io.dsub.discogsdata.batch.job.reader.DiscogsDumpItemReaderBuilder;
+import io.dsub.discogsdata.batch.job.tasklet.FileClearTasklet;
 import io.dsub.discogsdata.batch.job.tasklet.FileFetchTasklet;
 import io.dsub.discogsdata.batch.job.writer.ClassifierCompositeCollectionItemWriter;
 import io.dsub.discogsdata.batch.query.JpaEntityQueryBuilder;
@@ -65,6 +67,7 @@ public class MasterStepConfig extends AbstractStepConfig {
   private static final String MASTER_CORE_STEP = "master core step";
   private static final String MASTER_SUB_ITEMS_STEP = "master sub items step";
   private static final String MASTER_FILE_FETCH_STEP = "master file fetch step";
+  private static final String MASTER_FILE_CLEAR_STEP = "master file clear step";
   private static final String MASTER_PRE_STEP = "master pre step";
 
   private final JpaEntityQueryBuilder<BaseEntity> queryBuilder;
@@ -83,13 +86,14 @@ public class MasterStepConfig extends AbstractStepConfig {
   public Step masterStep() {
     Flow artistStepFlow =
         new FlowBuilder<SimpleFlow>(MASTER_STEP_FLOW)
-            .from(masterFileFetchStep(null)).on(FAILED).end()
-            .from(masterFileFetchStep(null)).on(ANY).to(masterGenreStyleStep())
+            .from(masterFileFetchStep()).on(FAILED).end()
+            .from(masterFileFetchStep()).on(ANY).to(masterGenreStyleStep())
             .from(masterGenreStyleStep()).on(FAILED).end()
-            .from(masterGenreStyleStep()).on(ANY).to(masterCoreStep(null, null))
-            .from(masterCoreStep(null, null)).on(FAILED).end()
-            .from(masterCoreStep(null, null)).on(ANY).to(masterSubItemsStep(null, null))
-            .from(masterSubItemsStep(null, null)).on(ANY).end()
+            .from(masterGenreStyleStep()).on(ANY).to(masterCoreStep(null))
+            .from(masterCoreStep(null)).on(FAILED).end()
+            .from(masterCoreStep(null)).on(ANY).to(masterSubItemsStep(null))
+            .from(masterSubItemsStep(null)).on(ANY).to(masterFileClearStep())
+            .from(masterFileClearStep()).on(ANY).end()
             .build();
     FlowStep artistFlowStep = new FlowStep();
     artistFlowStep.setJobRepository(jobRepository);
@@ -99,12 +103,25 @@ public class MasterStepConfig extends AbstractStepConfig {
     return artistFlowStep;
   }
 
+  @Bean
+  @JobScope
+  public DiscogsDump masterDump(@Value(ETAG) String eTag) {
+    return dumpService.getDiscogsDump(eTag);
+  }
 
   @Bean
   @JobScope
-  public Step masterFileFetchStep(@Value(ETAG) String eTag) {
+  public Step masterFileFetchStep() {
     return sbf.get(MASTER_FILE_FETCH_STEP)
-        .tasklet(new FileFetchTasklet(dumpService.getDiscogsDump(eTag)))
+        .tasklet(new FileFetchTasklet(masterDump(null)))
+        .build();
+  }
+
+  @Bean
+  @JobScope
+  public Step masterFileClearStep() {
+    return sbf.get(MASTER_FILE_CLEAR_STEP)
+        .tasklet(new FileClearTasklet(masterDump(null)))
         .build();
   }
 
@@ -113,7 +130,7 @@ public class MasterStepConfig extends AbstractStepConfig {
   public Step masterGenreStyleStep() {
     return sbf.get(MASTER_PRE_STEP)
         .tasklet((contribution, chunkContext) -> {
-          SynchronizedItemStreamReader<MasterXML> reader = masterStreamReader(null);
+          SynchronizedItemStreamReader<MasterXML> reader = masterStreamReader();
           reader.open(chunkContext.getStepContext().getStepExecution().getExecutionContext());
 
           Set<String> genres = new HashSet<>();
@@ -147,10 +164,10 @@ public class MasterStepConfig extends AbstractStepConfig {
   @Bean
   @JobScope
   public Step masterCoreStep(
-      @Value(CHUNK) Integer chunkSize, @Value(THROTTLE) Integer throttleLimit) {
+      @Value(CHUNK) Integer chunkSize) {
     return sbf.get(MASTER_CORE_STEP)
         .<MasterXML, MasterCommand>chunk(chunkSize)
-        .reader(masterStreamReader(null))
+        .reader(masterStreamReader())
         .processor(masterProcessor())
         .writer(masterWriter())
         .faultTolerant()
@@ -167,10 +184,10 @@ public class MasterStepConfig extends AbstractStepConfig {
   @Bean
   @JobScope
   public Step masterSubItemsStep(
-      @Value(CHUNK) Integer chunkSize, @Value(THROTTLE) Integer throttleLimit) {
+      @Value(CHUNK) Integer chunkSize) {
     return sbf.get(MASTER_SUB_ITEMS_STEP)
         .<MasterXML, Collection<BatchCommand>>chunk(chunkSize)
-        .reader(masterStreamReader(null))
+        .reader(masterStreamReader())
         .processor(masterSubItemsProcessor())
         .writer(masterSubItemsWriter())
         .faultTolerant()
@@ -187,9 +204,9 @@ public class MasterStepConfig extends AbstractStepConfig {
 
   @Bean
   @StepScope
-  public SynchronizedItemStreamReader<MasterXML> masterStreamReader(@Value(ETAG) String eTag) {
+  public SynchronizedItemStreamReader<MasterXML> masterStreamReader() {
     try {
-      return DiscogsDumpItemReaderBuilder.build(MasterXML.class, dumpService.getDiscogsDump(eTag));
+      return DiscogsDumpItemReaderBuilder.build(MasterXML.class, masterDump(null));
     } catch (Exception e) {
       throw new InitializationFailureException(
           "failed to initialize master stream reader: " + e.getMessage());

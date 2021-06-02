@@ -13,10 +13,12 @@ import io.dsub.discogsdata.batch.domain.release.ReleaseItemBatchCommand.ReleaseI
 import io.dsub.discogsdata.batch.domain.release.ReleaseItemBatchCommand.ReleaseItemVideoCommand;
 import io.dsub.discogsdata.batch.domain.release.ReleaseItemBatchCommand.ReleaseItemWorkCommand;
 import io.dsub.discogsdata.batch.domain.release.ReleaseXML;
+import io.dsub.discogsdata.batch.dump.DiscogsDump;
 import io.dsub.discogsdata.batch.dump.service.DiscogsDumpService;
 import io.dsub.discogsdata.batch.job.listener.StopWatchStepExecutionListener;
 import io.dsub.discogsdata.batch.job.listener.StringFieldNormalizingItemReadListener;
 import io.dsub.discogsdata.batch.job.reader.DiscogsDumpItemReaderBuilder;
+import io.dsub.discogsdata.batch.job.tasklet.FileClearTasklet;
 import io.dsub.discogsdata.batch.job.tasklet.FileFetchTasklet;
 import io.dsub.discogsdata.batch.job.writer.ClassifierCompositeCollectionItemWriter;
 import io.dsub.discogsdata.batch.query.JpaEntityQueryBuilder;
@@ -71,6 +73,7 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
   private static final String RELEASE_CORE_STEP = "release core step";
   private static final String RELEASE_SUB_ITEMS_STEP = "release sub items step";
   private static final String RELEASE_FILE_FETCH_STEP = "release file fetch step";
+  private static final String RELEASE_FILE_CLEAR_STEP = "release file clear step";
 
   private final JpaEntityQueryBuilder<BaseEntity> queryBuilder;
   private final DataSource dataSource;
@@ -88,14 +91,15 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
   @Bean
   @JobScope
   // TODO: add clear step
-  public Step releaseStep() throws Exception {
+  public Step releaseStep() {
     Flow artistStepFlow =
         new FlowBuilder<SimpleFlow>(RELEASE_STEP_FLOW)
-            .from(releaseFileFetchStep(null)).on(FAILED).end()
-            .from(releaseFileFetchStep(null)).on(ANY).to(releaseItemCoreStep(null))
+            .from(releaseFileFetchStep()).on(FAILED).end()
+            .from(releaseFileFetchStep()).on(ANY).to(releaseItemCoreStep(null))
             .from(releaseItemCoreStep(null)).on(FAILED).end()
             .from(releaseItemCoreStep(null)).on(ANY).to(releaseItemSubItemsStep(null))
-            .from(releaseItemSubItemsStep(null)).on(ANY).end()
+            .from(releaseItemSubItemsStep(null)).on(ANY).to(releaseFileClearStep())
+            .from(releaseFileClearStep()).on(ANY).end()
             .build();
     FlowStep artistFlowStep = new FlowStep();
     artistFlowStep.setJobRepository(jobRepository);
@@ -111,7 +115,7 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
       @Value(CHUNK) Integer chunkSize) {
     return sbf.get(RELEASE_CORE_STEP)
         .<ReleaseXML, ReleaseItemCommand>chunk(chunkSize)
-        .reader(releaseStreamReader(null))
+        .reader(releaseStreamReader())
         .processor(releaseItemProcessor())
         .writer(releaseItemWriter())
         .faultTolerant()
@@ -131,7 +135,7 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
       @Value(CHUNK) Integer chunkSize) {
     return sbf.get(RELEASE_SUB_ITEMS_STEP)
         .<ReleaseXML, Collection<BatchCommand>>chunk(chunkSize)
-        .reader(releaseStreamReader(null))
+        .reader(releaseStreamReader())
         .processor(releaseItemSubItemsProcessor())
         .writer(releaseSubItemsWriter())
         .faultTolerant()
@@ -147,10 +151,24 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
 
   @Bean
   @JobScope
-  public Step releaseFileFetchStep(@Value(ETAG) String eTag) {
+  public Step releaseFileFetchStep() {
     return sbf.get(RELEASE_FILE_FETCH_STEP)
-        .tasklet(new FileFetchTasklet(dumpService.getDiscogsDump(eTag)))
+        .tasklet(new FileFetchTasklet(releaseItemDump(null)))
         .build();
+  }
+
+  @Bean
+  @JobScope
+  public Step releaseFileClearStep() {
+    return sbf.get(RELEASE_FILE_CLEAR_STEP)
+        .tasklet(new FileClearTasklet(releaseItemDump(null)))
+        .build();
+  }
+
+  @Bean
+  @JobScope
+  public DiscogsDump releaseItemDump(@Value(ETAG) String eTag) {
+    return dumpService.getDiscogsDump(eTag);
   }
 
   ///////////////////////////////////////////////////////////////////////////
@@ -158,9 +176,9 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
   ///////////////////////////////////////////////////////////////////////////
   @Bean
   @StepScope
-  public SynchronizedItemStreamReader<ReleaseXML> releaseStreamReader(@Value(ETAG) String eTag) {
+  public SynchronizedItemStreamReader<ReleaseXML> releaseStreamReader() {
     try {
-      return DiscogsDumpItemReaderBuilder.build(ReleaseXML.class, dumpService.getDiscogsDump(eTag));
+      return DiscogsDumpItemReaderBuilder.build(ReleaseXML.class, releaseItemDump(null));
     } catch (Exception e) {
       throw new InitializationFailureException(
           "failed to initialize release stream reader: " + e.getMessage());

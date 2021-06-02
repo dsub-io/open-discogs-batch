@@ -13,6 +13,7 @@ import io.dsub.discogsdata.batch.testutil.LogSpy;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import lombok.extern.slf4j.Slf4j;
 import net.bytebuddy.utility.RandomString;
 import org.junit.jupiter.api.AfterEach;
@@ -40,23 +41,21 @@ class FileFetchTaskletTest {
   DiscogsDump fakeDump;
   FileFetchTasklet fileFetchTasklet;
 
-  @TempDir
-  Path tempDir;
-
   @RegisterExtension
   LogSpy logSpy = new LogSpy();
 
   @BeforeEach
   void setUp() throws IOException {
-    sourcePath = tempDir.resolve(RandomString.make());
-    targetPath = Path.of(RandomString.make());
+    sourcePath  = Files.createTempFile(null, null);
+    sourcePath.toFile().deleteOnExit();
     fakeDump = DiscogsDump.builder()
         .size(1000L)
         .url(sourcePath.toUri().toURL())
-        .uriString(targetPath.toString()).build();
+        .uriString(RandomString.make()).build();
+    targetPath = fakeDump.getResourcePath();
+    targetPath.toFile().deleteOnExit();
     fileFetchTasklet = new FileFetchTasklet(fakeDump);
     try {
-      Files.createFile(sourcePath);
       Files.write(sourcePath, RandomString.make(1000).getBytes());
     } catch (IOException e) {
       System.out.println(getClass().getSimpleName() + " failed due to IOException.");
@@ -90,14 +89,14 @@ class FileFetchTaskletTest {
   @Test
   void whenExecuteWithIncompleteFile__ShouldProperlyCopyTheGivenItem() {
     try {
-      Files.write(targetPath, RandomString.make(100).getBytes());
+      Files.write(fakeDump.getResourcePath(), RandomString.make(100).getBytes());
       RepeatStatus repeatStatus = fileFetchTasklet.execute(stepContribution, chunkContext);
       assertThat(repeatStatus).isEqualTo(RepeatStatus.FINISHED);
       assertThat(Files.exists(targetPath)).isTrue();
-      assertThat(Files.size(targetPath)).isEqualTo(Files.size(targetPath));
+      assertThat(Files.size(fakeDump.getResourcePath())).isEqualTo(Files.size(sourcePath));
       assertThat(logSpy.getEvents().size()).isEqualTo(3);
       assertThat(logSpy.getEvents().get(0).getMessage())
-          .isEqualTo("found duplicated file: " + targetPath + ". checking size...");
+          .contains("found duplicated file: ", ". checking size...", fakeDump.getFileName());
       assertThat(logSpy.getEvents().get(1).getMessage())
           .isEqualTo("incomplete size. deleting current file...");
       assertThat(logSpy.getEvents().get(2).getMessage())
@@ -120,7 +119,7 @@ class FileFetchTaskletTest {
       assertThat(Files.size(targetPath)).isEqualTo(Files.size(targetPath));
       assertThat(logSpy.getEvents().size()).isEqualTo(2);
       assertThat(logSpy.getEvents().get(0).getMessage())
-          .isEqualTo("found duplicated file: " + targetPath + ". checking size...");
+          .contains("found duplicated file: ", ". checking size...", fakeDump.getFileName());
       assertThat(logSpy.getEvents().get(1).getMessage())
           .isEqualTo("file already exists. proceeding...");
       assertThat(stepContribution.getExitStatus()).isEqualTo(ExitStatus.COMPLETED);

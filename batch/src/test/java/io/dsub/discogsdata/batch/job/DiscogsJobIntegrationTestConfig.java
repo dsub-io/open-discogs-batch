@@ -163,10 +163,14 @@ public class DiscogsJobIntegrationTestConfig {
   }
 
   @Bean
+  public Map<DumpType, File> dumpFiles() throws IOException {
+    return new TestDumpGenerator(DiscogsJobIntegrationTest.TEMP_DIR).createDiscogsDumpFiles();
+  }
+
+  @Bean
   public DiscogsDumpService dumpService() throws IOException {
 
-    TestDumpGenerator testDumpGenerator = new TestDumpGenerator(DiscogsJobIntegrationTest.TEMP_DIR);
-    Map<DumpType, File> dumpFiles = testDumpGenerator.createDiscogsDumpFiles();
+    Map<DumpType, File> dumpFiles = dumpFiles();
 
     return new DiscogsDumpService() {
       @Override

@@ -3,10 +3,13 @@ package io.dsub.discogsdata.batch.job;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import io.dsub.discogsdata.batch.config.BatchConfig;
 import io.dsub.discogsdata.batch.domain.artist.ArtistXML;
+import io.dsub.discogsdata.batch.dump.DiscogsDump;
+import io.dsub.discogsdata.batch.dump.DumpType;
 import io.dsub.discogsdata.batch.job.step.ArtistStepConfig;
 import io.dsub.discogsdata.batch.job.step.LabelStepConfig;
 import io.dsub.discogsdata.batch.job.step.MasterStepConfig;
@@ -17,9 +20,12 @@ import io.dsub.discogsdata.common.repository.artist.ArtistRepository;
 import io.dsub.discogsdata.common.repository.label.LabelRepository;
 import io.dsub.discogsdata.common.repository.master.MasterRepository;
 import io.dsub.discogsdata.common.repository.release.ReleaseRepository;
+import java.io.File;
 import java.lang.reflect.Modifier;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import javax.sql.DataSource;
 import lombok.extern.slf4j.Slf4j;
@@ -87,6 +93,14 @@ public class DiscogsJobIntegrationTest {
   private PlatformTransactionManager transactionManager;
   @Autowired
   private ApplicationContext context;
+  @Autowired
+  DiscogsDump artistDump;
+  @Autowired
+  DiscogsDump labelDump;
+  @Autowired
+  DiscogsDump masterDump;
+  @Autowired
+  DiscogsDump releaseItemDump;
 
   @BeforeEach
   void setUp() throws Exception {
@@ -139,6 +153,7 @@ public class DiscogsJobIntegrationTest {
     Repositories repositories = new Repositories(context);
 
     assertThat(exitStatus.getExitCode(), is("COMPLETED"));
+
     assertThat(releaseRepository.count(), is(3L));
     assertThat(masterRepository.count(), is(3L));
     assertThat(labelRepository.count(), is(2L));

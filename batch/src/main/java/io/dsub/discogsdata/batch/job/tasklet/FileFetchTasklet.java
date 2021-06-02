@@ -5,8 +5,11 @@ import io.dsub.discogsdata.batch.exception.FileFetchException;
 import io.dsub.discogsdata.batch.util.ProgressBarUtil;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URISyntaxException;
+import java.nio.file.CopyOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import me.tongfei.progressbar.ProgressBar;
@@ -39,11 +42,13 @@ public class FileFetchTasklet implements Tasklet {
    * @return status of the task which indicates either success or fail.
    */
   @Override
-  public RepeatStatus execute(@NotNull StepContribution contribution, @NotNull ChunkContext chunkContext) {
-    Path targetPath = Path.of(targetDump.getFileName());
+  public RepeatStatus execute(@NotNull StepContribution contribution,
+      @NotNull ChunkContext chunkContext) throws IOException {
 
-    if (Files.exists(targetPath)) {
-      log.info("found duplicated file: " + targetPath + ". checking size...");
+    Path targetPath = targetDump.getResourcePath();
+
+    if (Files.exists(targetPath) && Files.size(targetPath) > 0) {
+      log.info("found duplicated file: " + targetPath.toFile().getName() + ". checking size...");
       boolean sizeMatched = checkFileSize(targetDump.getSize(), targetPath);
       if (!sizeMatched) { // should delete then fetch again.
         log.info("incomplete size. deleting current file...");
@@ -62,31 +67,32 @@ public class FileFetchTasklet implements Tasklet {
         return RepeatStatus.FINISHED;
       }
     }
-    ProgressBarWrappedInputStream wrappedInputStream = null;
+    InputStream inputStream = null;
     try {
       log.info("fetching " + targetPath + "...");
       InputStream in = targetDump.getUrl().openStream();
       String taskName = "fetching " + targetDump.getFileName() + "...";
       ProgressBar pb = ProgressBarUtil.get(taskName, targetDump.getSize());
-      wrappedInputStream = new ProgressBarWrappedInputStream(in, pb);
-      Files.copy(wrappedInputStream, targetPath);
+      inputStream = new ProgressBarWrappedInputStream(in, pb);
+      Files.copy(inputStream, targetPath, StandardCopyOption.REPLACE_EXISTING);
     } catch (IOException e) {
+      contribution.setExitStatus(ExitStatus.FAILED);
       throw new FileFetchException(
           "failed on copying " + targetDump.getETag() + ". reason: " + e.getMessage());
     } finally {
-      if (wrappedInputStream != null) {
+      if (inputStream != null) {
         try {
-          wrappedInputStream.close();
+          inputStream.close();
         } catch (IOException e) {
           log.warn("failed to close wrapped input stream, but assume will not defect the process.");
         } finally {
-          wrappedInputStream = null; // dereference in case of hold...
+          inputStream = null; // dereference in case of hold...
         }
       }
     }
     chunkContext.setComplete();
     contribution.setExitStatus(ExitStatus.COMPLETED);
-    return RepeatStatus.FINISHED; // or else failed...2
+    return RepeatStatus.FINISHED; // or else failed...
   }
 
   /**

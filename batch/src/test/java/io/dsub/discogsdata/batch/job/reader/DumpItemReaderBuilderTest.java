@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 import io.dsub.discogsdata.batch.domain.artist.ArtistXML;
 import io.dsub.discogsdata.batch.dump.DiscogsDump;
 import io.dsub.discogsdata.batch.dump.DumpType;
+import java.nio.file.Path;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -23,7 +24,8 @@ class DumpItemReaderBuilderTest {
 
   @Test
   void whenBuild__ShouldNotThrow() {
-    when(dump.getFileName()).thenReturn("src/test/resources/test/reader/artist.xml.gz");
+    when(dump.getResourcePath()).thenReturn(Path.of("src/test/resources/test/reader/artist.xml.gz"));
+    when(dump.getFileName()).thenReturn("artist.xml.gz");
     when(dump.getType()).thenReturn(DumpType.ARTIST);
     assertDoesNotThrow(() -> DiscogsDumpItemReaderBuilder.build(ArtistXML.class, dump));
   }
@@ -32,6 +34,7 @@ class DumpItemReaderBuilderTest {
   void whenTypeNotSet__ShouldThrow() {
     when(dump.getType()).thenReturn(null);
     when(dump.getFileName()).thenReturn("src/test/resources/test/reader/artist.xml.gz");
+    when(dump.getResourcePath()).thenReturn(Path.of("src/test/resources/test/reader/artist.xml.gz"));
     Throwable t =
         catchThrowable(() -> DiscogsDumpItemReaderBuilder.build(ArtistXML.class, dump));
     assertThat(t)

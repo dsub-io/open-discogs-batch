@@ -1102,6 +1102,7 @@ public class TestDumpGenerator {
     Map<DumpType, File> dumpFiles = new HashMap<>();
     for (DumpType value : DumpType.values()) {
       File file = Files.createFile(tempDir.resolve("test-" + value + ".xml.gz")).toFile();
+      file.deleteOnExit();
       OutputStreamWriter writer = new OutputStreamWriter(
           new GZIPOutputStream(new FileOutputStream(file)));
       String content;

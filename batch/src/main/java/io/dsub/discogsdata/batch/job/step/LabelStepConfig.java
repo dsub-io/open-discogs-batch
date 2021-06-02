@@ -5,10 +5,12 @@ import io.dsub.discogsdata.batch.domain.label.LabelBatchCommand.LabelCommand;
 import io.dsub.discogsdata.batch.domain.label.LabelBatchCommand.LabelSubLabelCommand;
 import io.dsub.discogsdata.batch.domain.label.LabelBatchCommand.LabelUrlCommand;
 import io.dsub.discogsdata.batch.domain.label.LabelXML;
+import io.dsub.discogsdata.batch.dump.DiscogsDump;
 import io.dsub.discogsdata.batch.dump.service.DiscogsDumpService;
 import io.dsub.discogsdata.batch.job.listener.StopWatchStepExecutionListener;
 import io.dsub.discogsdata.batch.job.listener.StringFieldNormalizingItemReadListener;
 import io.dsub.discogsdata.batch.job.reader.DiscogsDumpItemReaderBuilder;
+import io.dsub.discogsdata.batch.job.tasklet.FileClearTasklet;
 import io.dsub.discogsdata.batch.job.tasklet.FileFetchTasklet;
 import io.dsub.discogsdata.batch.job.writer.ClassifierCompositeCollectionItemWriter;
 import io.dsub.discogsdata.batch.query.JpaEntityQueryBuilder;
@@ -52,6 +54,7 @@ public class LabelStepConfig extends AbstractStepConfig {
   private static final String LABEL_CORE_STEP = "label core step";
   private static final String LABEL_SUB_ITEMS_STEP = "label sub items step";
   private static final String LABEL_FILE_FETCH_STEP = "label file fetch step";
+  private static final String LABEL_FILE_CLEAR_STEP = "label file clear step";
 
   private final JpaEntityQueryBuilder<BaseEntity> queryBuilder;
   private final DataSource dataSource;
@@ -67,11 +70,12 @@ public class LabelStepConfig extends AbstractStepConfig {
   public Step labelStep() {
     Flow labelStepFlow =
         new FlowBuilder<SimpleFlow>(LABEL_STEP_FLOW)
-            .from(labelFileFetchStep(null)).on(FAILED).end()
-            .from(labelFileFetchStep(null)).on(ANY).to(labelCoreStep(null))
+            .from(labelFileFetchStep()).on(FAILED).end()
+            .from(labelFileFetchStep()).on(ANY).to(labelCoreStep(null))
             .from(labelCoreStep(null)).on(FAILED).end()
             .from(labelCoreStep(null)).on(ANY).to(labelSubItemsStep(null))
-            .from(labelSubItemsStep(null)).on(ANY).end()
+            .from(labelSubItemsStep(null)).on(ANY).to(labelFileClearStep())
+            .from(labelFileClearStep()).on(ANY).end()
             .build();
     FlowStep artistFlowStep = new FlowStep();
     artistFlowStep.setJobRepository(jobRepository);
@@ -87,7 +91,7 @@ public class LabelStepConfig extends AbstractStepConfig {
       @Value(CHUNK) Integer chunkSize) {
     return sbf.get(LABEL_CORE_STEP)
         .<LabelXML, LabelCommand>chunk(chunkSize)
-        .reader(labelStreamReader(null))
+        .reader(labelStreamReader())
         .processor(labelProcessor())
         .writer(labelWriter())
         .faultTolerant()
@@ -107,7 +111,7 @@ public class LabelStepConfig extends AbstractStepConfig {
       @Value(CHUNK) Integer chunkSize) {
     return sbf.get(LABEL_SUB_ITEMS_STEP)
         .<LabelXML, Collection<BatchCommand>>chunk(chunkSize)
-        .reader(labelStreamReader(null))
+        .reader(labelStreamReader())
         .processor(labelSubItemProcessor())
         .writer(labelSubItemWriter())
         .faultTolerant()
@@ -123,17 +127,31 @@ public class LabelStepConfig extends AbstractStepConfig {
 
   @Bean
   @JobScope
-  public Step labelFileFetchStep(@Value(ETAG) String eTag) {
+  public Step labelFileFetchStep() {
     return sbf.get(LABEL_FILE_FETCH_STEP)
-        .tasklet(new FileFetchTasklet(dumpService.getDiscogsDump(eTag)))
+        .tasklet(new FileFetchTasklet(labelDump(null)))
         .build();
   }
 
   @Bean
+  @JobScope
+  public Step labelFileClearStep() {
+    return sbf.get(LABEL_FILE_CLEAR_STEP)
+        .tasklet(new FileClearTasklet(labelDump(null)))
+        .build();
+  }
+
+  @Bean
+  @JobScope
+  public DiscogsDump labelDump(@Value(ETAG) String eTag) {
+    return dumpService.getDiscogsDump(eTag);
+  }
+
+  @Bean
   @StepScope
-  public SynchronizedItemStreamReader<LabelXML> labelStreamReader(@Value(ETAG) String eTag) {
+  public SynchronizedItemStreamReader<LabelXML> labelStreamReader() {
     try {
-      return DiscogsDumpItemReaderBuilder.build(LabelXML.class, dumpService.getDiscogsDump(eTag));
+      return DiscogsDumpItemReaderBuilder.build(LabelXML.class, labelDump(null));
     } catch (Exception e) {
       throw new InitializationFailureException(
           "failed to initialize label stream reader: " + e.getMessage());

@@ -16,9 +16,10 @@ public final class DiscogsDumpItemReaderBuilder {
   public static <T> SynchronizedItemStreamReader<T> build(Class<T> mappedClass, DiscogsDump dump)
       throws Exception {
     Assert.notNull(dump.getFileName(), "fileName of DiscogsDump cannot be null");
+    Assert.notNull(dump.getResourcePath(), "resourcePath of DiscogsDump cannot be null");
     Assert.notNull(dump.getType(), "type of DiscogsDump cannot be null");
 
-    Path filePath = Path.of(dump.getFileName());
+    Path filePath = dump.getResourcePath();
 
     ProgressBarStaxEventItemReader<T> delegate;
     delegate = new ProgressBarStaxEventItemReader<>(mappedClass, filePath,

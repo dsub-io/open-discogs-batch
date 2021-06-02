@@ -1,6 +1,10 @@
 package io.dsub.discogsdata.batch.dump;
 
+import io.dsub.discogsdata.common.exception.InitializationFailureException;
+import java.io.IOException;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Objects;
@@ -10,6 +14,7 @@ import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.Id;
 import javax.persistence.Table;
+import javax.persistence.Transient;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -37,25 +42,38 @@ public class DiscogsDump implements Comparable<DiscogsDump>, Cloneable {
   @Column(name = "size")
   private Long size;
 
+  // date when registered to aws
   @Column(name = "registered_at")
   private LocalDateTime registeredAt;
 
+  // date when we persisted to db...
   @Column(name = "created_at")
   private LocalDate createdAt;
 
   @Column(name = "url")
   private URL url;
 
+  @Transient
+  private Path resourcePath;
+
   // parse file name from the uriString formatted as data/{year}/{file_name};
   public String getFileName() {
     if (this.uriString == null || this.uriString.isBlank()) {
       return null;
     }
-    int idx = this.uriString.lastIndexOf('/');
-    if (idx < 0) {
-      return this.uriString;
+    return this.uriString.substring(this.uriString.lastIndexOf('/') + 1);
+  }
+
+  public Path getResourcePath() {
+    try {
+      if (this.resourcePath == null) {
+        this.resourcePath = Files.createTempFile(null, getFileName());
+        this.resourcePath.toFile().deleteOnExit(); // as last resort to delete if ...
+      }
+      return this.resourcePath;
+    } catch (IOException e) {
+      throw new InitializationFailureException("failed to create temporary file: " + resourcePath);
     }
-    return this.uriString.substring(idx + 1);
   }
 
   @Override

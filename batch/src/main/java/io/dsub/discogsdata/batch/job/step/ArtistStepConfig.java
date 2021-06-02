@@ -8,10 +8,12 @@ import io.dsub.discogsdata.batch.domain.artist.ArtistBatchCommand.ArtistMemberCo
 import io.dsub.discogsdata.batch.domain.artist.ArtistBatchCommand.ArtistNameVariationCommand;
 import io.dsub.discogsdata.batch.domain.artist.ArtistBatchCommand.ArtistUrlCommand;
 import io.dsub.discogsdata.batch.domain.artist.ArtistXML;
+import io.dsub.discogsdata.batch.dump.DiscogsDump;
 import io.dsub.discogsdata.batch.dump.service.DiscogsDumpService;
 import io.dsub.discogsdata.batch.job.listener.StopWatchStepExecutionListener;
 import io.dsub.discogsdata.batch.job.listener.StringFieldNormalizingItemReadListener;
 import io.dsub.discogsdata.batch.job.reader.DiscogsDumpItemReaderBuilder;
+import io.dsub.discogsdata.batch.job.tasklet.FileClearTasklet;
 import io.dsub.discogsdata.batch.job.tasklet.FileFetchTasklet;
 import io.dsub.discogsdata.batch.job.writer.ClassifierCompositeCollectionItemWriter;
 import io.dsub.discogsdata.batch.query.JpaEntityQueryBuilder;
@@ -28,6 +30,7 @@ import java.util.LinkedList;
 import java.util.List;
 import javax.sql.DataSource;
 import lombok.RequiredArgsConstructor;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.JobScope;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
@@ -40,6 +43,8 @@ import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.support.SynchronizedItemStreamReader;
+import org.springframework.batch.repeat.RepeatContext;
+import org.springframework.batch.repeat.exception.ExceptionHandler;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.classify.Classifier;
 import org.springframework.context.annotation.Bean;
@@ -58,6 +63,7 @@ public class ArtistStepConfig extends AbstractStepConfig {
   private static final String ARTIST_CORE_STEP = "artist core step";
   private static final String ARTIST_SUB_ITEMS_STEP = "artist sub items step";
   private static final String ARTIST_FILE_FETCH_STEP = "artist file fetch step";
+  private static final String ARTIST_FILE_CLEAR_STEP = "artist file clear step";
 
   private final JpaEntityQueryBuilder<BaseEntity> queryBuilder;
   private final DataSource dataSource;
@@ -74,14 +80,15 @@ public class ArtistStepConfig extends AbstractStepConfig {
   @Bean
   @JobScope
   // TODO: add clear step
-  public Step artistStep() throws Exception {
+  public Step artistStep() {
     Flow artistStepFlow =
         new FlowBuilder<SimpleFlow>(ARTIST_STEP_FLOW)
-            .from(artistFileFetchStep(null)).on(FAILED).end()
-            .from(artistFileFetchStep(null)).on(ANY).to(artistCoreStep(null))
+            .from(artistFileFetchStep()).on(FAILED).end()
+            .from(artistFileFetchStep()).on(ANY).to(artistCoreStep(null))
             .from(artistCoreStep(null)).on(FAILED).end()
             .from(artistCoreStep(null)).on(ANY).to(artistSubItemsStep(null))
-            .from(artistSubItemsStep(null)).on(ANY).end()
+            .from(artistSubItemsStep(null)).on(ANY).to(artistFileClearStep())
+            .from(artistFileClearStep()).on(ANY).end()
             .build();
     FlowStep artistFlowStep = new FlowStep();
     artistFlowStep.setJobRepository(jobRepository);
@@ -97,7 +104,7 @@ public class ArtistStepConfig extends AbstractStepConfig {
       @Value(CHUNK) Integer chunkSize) {
     return sbf.get(ARTIST_CORE_STEP)
         .<ArtistXML, ArtistCommand>chunk(chunkSize)
-        .reader(artistStreamReader(null))
+        .reader(artistStreamReader())
         .processor(artistItemProcessor())
         .writer(artistItemWriter())
         .faultTolerant()
@@ -117,7 +124,7 @@ public class ArtistStepConfig extends AbstractStepConfig {
       @Value(CHUNK) Integer chunkSize) {
     return sbf.get(ARTIST_SUB_ITEMS_STEP)
         .<ArtistXML, Collection<BatchCommand>>chunk(chunkSize)
-        .reader(artistStreamReader(null))
+        .reader(artistStreamReader())
         .processor(artistSubItemProcessor())
         .writer(artistSubItemsWriter())
         .faultTolerant()
@@ -133,9 +140,23 @@ public class ArtistStepConfig extends AbstractStepConfig {
 
   @Bean
   @JobScope
-  public Step artistFileFetchStep(@Value(ETAG) String eTag) {
+  public DiscogsDump artistDump(@Value(ETAG) String eTag) {
+    return dumpService.getDiscogsDump(eTag);
+  }
+
+  @Bean
+  @JobScope
+  public Step artistFileFetchStep() {
     return sbf.get(ARTIST_FILE_FETCH_STEP)
-        .tasklet(new FileFetchTasklet(dumpService.getDiscogsDump(eTag)))
+        .tasklet(new FileFetchTasklet(artistDump(null)))
+        .build();
+  }
+
+  @Bean
+  @JobScope
+  public Step artistFileClearStep() {
+    return sbf.get(ARTIST_FILE_CLEAR_STEP)
+        .tasklet(new FileClearTasklet(artistDump(null)))
         .build();
   }
 
@@ -145,9 +166,9 @@ public class ArtistStepConfig extends AbstractStepConfig {
 
   @Bean
   @StepScope
-  public SynchronizedItemStreamReader<ArtistXML> artistStreamReader(@Value(ETAG) String eTag) {
+  public SynchronizedItemStreamReader<ArtistXML> artistStreamReader() {
     try {
-      return DiscogsDumpItemReaderBuilder.build(ArtistXML.class, dumpService.getDiscogsDump(eTag));
+      return DiscogsDumpItemReaderBuilder.build(ArtistXML.class, artistDump(null));
     } catch (Exception e) {
       throw new InitializationFailureException(
           "failed to initialize artist stream reader: " + e.getMessage());
