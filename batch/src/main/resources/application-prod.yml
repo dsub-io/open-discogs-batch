@@ -8,9 +8,10 @@ spring:
         rewriteBatchedStatements: true
       maximum-pool-size: 20
   batch:
-    initialize-schema: ALWAYS
     job:
       enabled: false
+    jdbc:
+      initialize-schema: ALWAYS
   mvc:
     throw-exception-if-no-handler-found: true
   jpa:

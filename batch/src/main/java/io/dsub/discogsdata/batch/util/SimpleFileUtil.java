@@ -133,8 +133,8 @@ public class SimpleFileUtil implements FileUtil {
       log.debug("generating new application directory in {}", appDirPath.toAbsolutePath());
       Files.createDirectory(appDirPath);
       if (isTemporary()) {
-        log.debug("marking delete on exit on application directory {}", appDirPath.toAbsolutePath());
         appDirPath.toFile().deleteOnExit();
+        log.debug("marked deletion on exit for application directory {}", appDirPath.toAbsolutePath());
       }
       dirCreated = true;
     }

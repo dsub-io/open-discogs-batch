@@ -7,9 +7,10 @@ spring:
       data-source-properties:
         rewriteBatchedStatements: true
   batch:
-    initialize-schema: ALWAYS
     job:
       enabled: false
+    jdbc:
+      initialize-schema: ALWAYS
   jpa:
     properties:
       hibernate:
