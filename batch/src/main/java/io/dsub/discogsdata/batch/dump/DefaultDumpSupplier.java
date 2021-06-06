@@ -28,6 +28,7 @@ import java.util.stream.Stream;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -37,11 +38,12 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
 @Slf4j
+@Getter
 @Component
 public class DefaultDumpSupplier implements DumpSupplier {
 
   private static final Pattern XML_GZ_PATTERN =
-      Pattern.compile("^[\\w/_-]+.xml.gz", Pattern.CASE_INSENSITIVE);
+      Pattern.compile("^[\\w/_-]+.xml.gz$", Pattern.CASE_INSENSITIVE);
   private static final Pattern ARTIST = Pattern.compile(".*artists.*", Pattern.CASE_INSENSITIVE);
   private static final Pattern RELEASE_ITEM =
       Pattern.compile(".*releases.*", Pattern.CASE_INSENSITIVE);
@@ -70,15 +72,15 @@ public class DefaultDumpSupplier implements DumpSupplier {
   @Override
   public List<DiscogsDump> get() {
 
-    List<DiscogsDump> parsedList = parseDumpList(lastKnownBucketUrl); // initial parse
+    List<DiscogsDump> parsedList = parseDumpList(getLastKnownBucketUrl()); // initial parse
     if (parsedList == null || parsedList.isEmpty()) { // if failed...
 
-      String frechBucketUrl = getBucketURL(); // fetch new bucket url from the official page
-      if (frechBucketUrl == null || frechBucketUrl.isBlank()) { // failed again....
+      String freshBucketUrl = getBucketURL(); // fetch new bucket url from the official page
+      if (freshBucketUrl == null || freshBucketUrl.isBlank()) { // failed again....
         return null; // failed, hence return null.
       }
-      lastKnownBucketUrl = frechBucketUrl;
-      parsedList = parseDumpList(lastKnownBucketUrl); // second time parse...
+      lastKnownBucketUrl = freshBucketUrl;
+      parsedList = parseDumpList(getLastKnownBucketUrl()); // second time parse...
     }
 
     return parsedList.stream()
@@ -94,23 +96,15 @@ public class DefaultDumpSupplier implements DumpSupplier {
    * @return bucket url if success, else return null.
    */
   protected String getBucketURL() {
-    HttpClient client = HttpClient.newBuilder().build();
-
-    // make GET request to
-    CompletableFuture<HttpResponse<Stream<String>>> future =
-        client.sendAsync(
-            HttpRequest.newBuilder().uri(URI.create(DISCOGS_DATA_URL)).GET().build(),
-            HttpResponse.BodyHandlers.ofLines());
-    while (!future.isDone()) {
-      Thread.onSpinWait();
-    }
-    AtomicReference<String> bucketUrlRef = new AtomicReference<>();
+    Stream<String> resultStream;
     int retryCount = 0;
-    while (retryCount < 3) { // retry future.get() method three times max.
+    String bucketURL = null;
+
+    while (retryCount < 3 && bucketURL == null) { // retry future.get() method three times max.
       try {
-        future
-            .get()
-            .body()
+        resultStream = getDiscogsDataSourceStream();
+        AtomicReference<String> bucketUrlRef = new AtomicReference<>();
+        resultStream
             .map(String::trim)
             .filter(s -> BUCKET_VAR_DECLARATION_PATTERN.matcher(s).matches())
             .findFirst()
@@ -125,15 +119,28 @@ public class DefaultDumpSupplier implements DumpSupplier {
                   }
                   bucketUrlRef.set(fin);
                 });
-        break;
+        // get referenced value.
+        bucketURL = bucketUrlRef.get();
       } catch (ExecutionException | InterruptedException e) {
         retryCount++;
       }
     }
-    // get referenced value.
-    String bucketURL = bucketUrlRef.get();
-    // if blank or null, return as null. otherwise, return the acquired value.
-    return bucketURL == null || bucketURL.isBlank() ? null : bucketURL;
+    return bucketURL;
+  }
+
+  protected Stream<String> getDiscogsDataSourceStream()
+      throws ExecutionException, InterruptedException {
+    HttpClient client = HttpClient.newBuilder().build();
+
+    // make GET request to
+    CompletableFuture<HttpResponse<Stream<String>>> future =
+        client.sendAsync(
+            HttpRequest.newBuilder().uri(URI.create(DISCOGS_DATA_URL)).GET().build(),
+            HttpResponse.BodyHandlers.ofLines());
+    while (!future.isDone()) {
+      Thread.onSpinWait();
+    }
+    return future.get().body();
   }
 
   /**
@@ -143,7 +150,7 @@ public class DefaultDumpSupplier implements DumpSupplier {
    * @return parse result, or null if anything goes wrong.
    */
   protected List<DiscogsDump> parseDumpList(String urlString) {
-    try (InputStream in = new URL(urlString).openStream()) {
+    try (InputStream in = openStream(urlString)) {
       DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newDefaultInstance();
       DocumentBuilder builder = builderFactory.newDocumentBuilder();
 
@@ -170,8 +177,11 @@ public class DefaultDumpSupplier implements DumpSupplier {
     } catch (SAXException e) {
       log.error("found SAXException for {" + e.getMessage() + "}");
     }
-
     return null;
+  }
+
+  protected InputStream openStream(String url) throws IOException {
+    return new URL(url).openStream();
   }
 
   /**
@@ -188,10 +198,8 @@ public class DefaultDumpSupplier implements DumpSupplier {
         IntStream.range(0, nodeList.getLength())
             .mapToObj(nodeList::item)
             .filter(this::isKnownNodeType) // must be known type
-            .filter(
-                item ->
-                    item.getTextContent() != null
-                        && !item.getTextContent().isBlank()) // must have content
+            .filter(item -> item.getTextContent() != null)// must have content
+//            .filter(item -> item.getTextContent())// must have content
             .collect(Collectors.toList()); // conclude
 
     // if nodes has any missing field...

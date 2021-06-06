@@ -13,6 +13,7 @@ import io.dsub.discogsdata.batch.domain.release.ReleaseItemBatchCommand.ReleaseI
 import io.dsub.discogsdata.batch.domain.release.ReleaseItemBatchCommand.ReleaseItemVideoCommand;
 import io.dsub.discogsdata.batch.domain.release.ReleaseItemBatchCommand.ReleaseItemWorkCommand;
 import io.dsub.discogsdata.batch.domain.release.ReleaseXML;
+import io.dsub.discogsdata.batch.domain.release.ReleaseXML.Format;
 import io.dsub.discogsdata.batch.dump.DiscogsDump;
 import io.dsub.discogsdata.batch.dump.DumpType;
 import io.dsub.discogsdata.batch.dump.service.DiscogsDumpService;
@@ -24,6 +25,7 @@ import io.dsub.discogsdata.batch.job.tasklet.FileFetchTasklet;
 import io.dsub.discogsdata.batch.job.writer.ClassifierCompositeCollectionItemWriter;
 import io.dsub.discogsdata.batch.query.QueryBuilder;
 import io.dsub.discogsdata.batch.util.DefaultMalformedDateParser;
+import io.dsub.discogsdata.batch.util.FileUtil;
 import io.dsub.discogsdata.batch.util.MalformedDateParser;
 import io.dsub.discogsdata.common.entity.base.BaseEntity;
 import io.dsub.discogsdata.common.entity.label.LabelRelease;
@@ -31,7 +33,6 @@ import io.dsub.discogsdata.common.entity.release.ReleaseItem;
 import io.dsub.discogsdata.common.entity.release.ReleaseItemArtist;
 import io.dsub.discogsdata.common.entity.release.ReleaseItemCreditedArtist;
 import io.dsub.discogsdata.common.entity.release.ReleaseItemFormat;
-import io.dsub.discogsdata.common.entity.release.ReleaseItemFormatDescription;
 import io.dsub.discogsdata.common.entity.release.ReleaseItemGenre;
 import io.dsub.discogsdata.common.entity.release.ReleaseItemIdentifier;
 import io.dsub.discogsdata.common.entity.release.ReleaseItemStyle;
@@ -43,6 +44,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import javax.sql.DataSource;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.Step;
@@ -85,6 +87,8 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
   private final JobRepository jobRepository;
   private final PlatformTransactionManager transactionManager;
   private final MalformedDateParser dateParser = new DefaultMalformedDateParser();
+  private final DiscogsDumpItemReaderBuilder readerBuilder;
+  private final FileUtil fileUtil;
   private final Map<DumpType, DiscogsDump> dumpMap;
 
   ///////////////////////////////////////////////////////////////////////////
@@ -93,7 +97,6 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
 
   @Bean
   @JobScope
-  // TODO: add clear step
   public Step releaseStep() {
     Flow artistStepFlow =
         new FlowBuilder<SimpleFlow>(RELEASE_STEP_FLOW)
@@ -137,7 +140,7 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
   public Step releaseItemSubItemsStep(
       @Value(CHUNK) Integer chunkSize) {
     return sbf.get(RELEASE_SUB_ITEMS_STEP)
-        .<ReleaseXML, Collection<BatchCommand>>chunk(chunkSize)
+        .<ReleaseXML, Collection<BatchCommand>>chunk(200)
         .reader(releaseStreamReader())
         .processor(releaseItemSubItemsProcessor())
         .writer(releaseSubItemsWriter())
@@ -156,7 +159,7 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
   @JobScope
   public Step releaseFileFetchStep() {
     return sbf.get(RELEASE_FILE_FETCH_STEP)
-        .tasklet(new FileFetchTasklet(releaseItemDump(null)))
+        .tasklet(new FileFetchTasklet(releaseItemDump(null), fileUtil))
         .build();
   }
 
@@ -164,7 +167,7 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
   @JobScope
   public Step releaseFileClearStep() {
     return sbf.get(RELEASE_FILE_CLEAR_STEP)
-        .tasklet(new FileClearTasklet(releaseItemDump(null)))
+        .tasklet(new FileClearTasklet(fileUtil))
         .build();
   }
 
@@ -183,7 +186,7 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
   @StepScope
   public SynchronizedItemStreamReader<ReleaseXML> releaseStreamReader() {
     try {
-      return DiscogsDumpItemReaderBuilder.build(ReleaseXML.class, releaseItemDump(null));
+      return readerBuilder.build(ReleaseXML.class, releaseItemDump(null));
     } catch (Exception e) {
       throw new InitializationFailureException(
           "failed to initialize release stream reader: " + e.getMessage());
@@ -248,6 +251,7 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
                 .quantity(format.getQty())
                 .text(normalizeString(format.getText()))
                 .name(normalizeString(format.getName()))
+                .description(normalizeString(getFormatDescription(format)))
                 .build())
             .forEach(commands::add);
       }
@@ -409,13 +413,6 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
 
   @Bean
   @StepScope
-  public ItemWriter<BatchCommand> releaseItemFormatDescriptionWriter() {
-    return buildItemWriter(queryBuilder.getUpsertQuery(ReleaseItemFormatDescription.class),
-        dataSource);
-  }
-
-  @Bean
-  @StepScope
   public ItemWriter<BatchCommand> releaseItemIdentifierWriter() {
     return buildItemWriter(queryBuilder.getUpsertQuery(ReleaseItemIdentifier.class), dataSource);
   }
@@ -437,5 +434,14 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
       return null;
     }
     return input;
+  }
+
+  private String getFormatDescription(Format format) {
+    if (format.getDescription() == null) {
+      return null;
+    }
+    return format.getDescription().stream()
+        .map(desc -> "[d:" + desc + "]")
+        .collect(Collectors.joining(","));
   }
 }

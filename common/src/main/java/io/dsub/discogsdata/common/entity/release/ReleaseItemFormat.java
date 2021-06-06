@@ -41,6 +41,9 @@ public class ReleaseItemFormat extends BaseTimeEntity {
   @Column(name = "quantity")
   private Integer quantity;
 
+  @Column(name = "description", length = 10000)
+  private Integer description;
+
   @Column(name = "text", length = 5000)
   private String text;
 

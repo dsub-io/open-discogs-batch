@@ -18,6 +18,7 @@ import io.dsub.discogsdata.batch.job.tasklet.FileClearTasklet;
 import io.dsub.discogsdata.batch.job.tasklet.FileFetchTasklet;
 import io.dsub.discogsdata.batch.job.writer.ClassifierCompositeCollectionItemWriter;
 import io.dsub.discogsdata.batch.query.QueryBuilder;
+import io.dsub.discogsdata.batch.util.FileUtil;
 import io.dsub.discogsdata.common.entity.artist.Artist;
 import io.dsub.discogsdata.common.entity.artist.ArtistAlias;
 import io.dsub.discogsdata.common.entity.artist.ArtistGroup;
@@ -71,7 +72,9 @@ public class ArtistStepConfig extends AbstractStepConfig {
   private final ThreadPoolTaskExecutor taskExecutor;
   private final JobRepository jobRepository;
   private final PlatformTransactionManager transactionManager;
+  private final DiscogsDumpItemReaderBuilder readerBuilder;
   private final Map<DumpType, DiscogsDump> dumpMap;
+  private final FileUtil fileUtil;
 
   ///////////////////////////////////////////////////////////////////////////
   // STEPS
@@ -79,7 +82,6 @@ public class ArtistStepConfig extends AbstractStepConfig {
 
   @Bean
   @JobScope
-  // TODO: add clear step
   public Step artistStep() {
     Flow artistStepFlow =
         new FlowBuilder<SimpleFlow>(ARTIST_STEP_FLOW)
@@ -150,7 +152,7 @@ public class ArtistStepConfig extends AbstractStepConfig {
   @JobScope
   public Step artistFileFetchStep() {
     return sbf.get(ARTIST_FILE_FETCH_STEP)
-        .tasklet(new FileFetchTasklet(artistDump(null)))
+        .tasklet(new FileFetchTasklet(artistDump(null), fileUtil))
         .build();
   }
 
@@ -158,7 +160,7 @@ public class ArtistStepConfig extends AbstractStepConfig {
   @JobScope
   public Step artistFileClearStep() {
     return sbf.get(ARTIST_FILE_CLEAR_STEP)
-        .tasklet(new FileClearTasklet(artistDump(null)))
+        .tasklet(new FileClearTasklet(fileUtil))
         .build();
   }
 
@@ -170,7 +172,7 @@ public class ArtistStepConfig extends AbstractStepConfig {
   @StepScope
   public SynchronizedItemStreamReader<ArtistXML> artistStreamReader() {
     try {
-      return DiscogsDumpItemReaderBuilder.build(ArtistXML.class, artistDump(null));
+      return readerBuilder.build(ArtistXML.class, artistDump(null));
     } catch (Exception e) {
       throw new InitializationFailureException(
           "failed to initialize artist stream reader: " + e.getMessage());

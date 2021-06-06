@@ -126,6 +126,14 @@ public class DefaultDiscogsDumpService implements DiscogsDumpService, Initializi
           repository.findTopByTypeAndCreatedAtBetween(
               type, targetDate, targetDate.plusMonths(1).minusDays(1));
       if (dump == null) {
+
+        LocalDate now = LocalDate.now();
+
+        if (now.getYear() == year && now.getMonthValue() == month) {
+          throw new DumpNotFoundException(
+              "dump for current month seems to be missing from distribution.");
+        }
+
         throw new DumpNotFoundException(
             "dump of type " + type + " from " + year + "-" + month + " not found");
       }

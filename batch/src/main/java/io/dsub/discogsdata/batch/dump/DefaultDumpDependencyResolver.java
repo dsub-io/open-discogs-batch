@@ -14,9 +14,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.stereotype.Component;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class DefaultDumpDependencyResolver implements DumpDependencyResolver {
@@ -42,17 +44,25 @@ public class DefaultDumpDependencyResolver implements DumpDependencyResolver {
     List<DumpType> types = parseTypes(args);
     int year = parseYear(args);
     int month = parseMonth(args);
+    boolean retry = false;
 
     LocalDate targetDate = LocalDate.of(year, month, 1);
 
     Collection<DiscogsDump> dumps = null;
     while (dumps == null) {
       try {
+        if (!retry) { // prevent redundant logging.
+          log.info("fetching dump for year:{}, month:{} of types:{}.", targetDate.getYear(),
+              targetDate.getMonthValue(), types);
+        }
         dumps = dumpService
             .getAllByTypeYearMonth(types, targetDate.getYear(), targetDate.getMonthValue());
       } catch (DumpNotFoundException ignored) {
         if (targetDate.getYear() > 2010) {
           targetDate = targetDate.minusMonths(1);
+          log.info("retrying to fetch dump for year:{} month:{} of types:{}.", targetDate.getYear(),
+              targetDate.getMonthValue(), types);
+          retry = true;
           continue;
         }
         throw new DumpNotFoundException("failed to retrieve dump...");

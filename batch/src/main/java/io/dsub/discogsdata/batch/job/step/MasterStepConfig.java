@@ -17,6 +17,7 @@ import io.dsub.discogsdata.batch.job.tasklet.FileClearTasklet;
 import io.dsub.discogsdata.batch.job.tasklet.FileFetchTasklet;
 import io.dsub.discogsdata.batch.job.writer.ClassifierCompositeCollectionItemWriter;
 import io.dsub.discogsdata.batch.query.QueryBuilder;
+import io.dsub.discogsdata.batch.util.FileUtil;
 import io.dsub.discogsdata.common.entity.Genre;
 import io.dsub.discogsdata.common.entity.Style;
 import io.dsub.discogsdata.common.entity.base.BaseEntity;
@@ -81,11 +82,12 @@ public class MasterStepConfig extends AbstractStepConfig {
   private final ThreadPoolTaskExecutor taskExecutor;
   private final JobRepository jobRepository;
   private final PlatformTransactionManager transactionManager;
+  private final DiscogsDumpItemReaderBuilder readerBuilder;
+  private final FileUtil fileUtil;
   private final Map<DumpType, DiscogsDump> dumpMap;
 
   @Bean
   @JobScope
-  // TODO: add clear step
   public Step masterStep() {
     Flow artistStepFlow =
         new FlowBuilder<SimpleFlow>(MASTER_STEP_FLOW)
@@ -118,7 +120,7 @@ public class MasterStepConfig extends AbstractStepConfig {
   @JobScope
   public Step masterFileFetchStep() {
     return sbf.get(MASTER_FILE_FETCH_STEP)
-        .tasklet(new FileFetchTasklet(masterDump(null)))
+        .tasklet(new FileFetchTasklet(masterDump(null), fileUtil))
         .build();
   }
 
@@ -126,7 +128,7 @@ public class MasterStepConfig extends AbstractStepConfig {
   @JobScope
   public Step masterFileClearStep() {
     return sbf.get(MASTER_FILE_CLEAR_STEP)
-        .tasklet(new FileClearTasklet(masterDump(null)))
+        .tasklet(new FileClearTasklet(fileUtil))
         .build();
   }
 
@@ -211,7 +213,7 @@ public class MasterStepConfig extends AbstractStepConfig {
   @StepScope
   public SynchronizedItemStreamReader<MasterXML> masterStreamReader() {
     try {
-      return DiscogsDumpItemReaderBuilder.build(MasterXML.class, masterDump(null));
+      return readerBuilder.build(MasterXML.class, masterDump(null));
     } catch (Exception e) {
       throw new InitializationFailureException(
           "failed to initialize master stream reader: " + e.getMessage());

@@ -1,10 +1,8 @@
 package io.dsub.discogsdata.batch.dump;
 
-import io.dsub.discogsdata.common.exception.InitializationFailureException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Objects;
@@ -14,7 +12,6 @@ import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.Id;
 import javax.persistence.Table;
-import javax.persistence.Transient;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -53,8 +50,12 @@ public class DiscogsDump implements Comparable<DiscogsDump>, Cloneable {
   @Column(name = "url")
   private URL url;
 
-  @Transient
-  private Path resourcePath;
+  public InputStream getInputStream() throws IOException {
+    if (this.url == null) {
+      return InputStream.nullInputStream();
+    }
+    return this.url.openStream();
+  }
 
   // parse file name from the uriString formatted as data/{year}/{file_name};
   public String getFileName() {
@@ -62,18 +63,6 @@ public class DiscogsDump implements Comparable<DiscogsDump>, Cloneable {
       return null;
     }
     return this.uriString.substring(this.uriString.lastIndexOf('/') + 1);
-  }
-
-  public Path getResourcePath() {
-    try {
-      if (this.resourcePath == null) {
-        this.resourcePath = Files.createTempFile(null, getFileName());
-        this.resourcePath.toFile().deleteOnExit(); // as last resort to delete if ...
-      }
-      return this.resourcePath;
-    } catch (IOException e) {
-      throw new InitializationFailureException("failed to create temporary file: " + resourcePath);
-    }
   }
 
   @Override

@@ -6,7 +6,6 @@ import io.dsub.discogsdata.common.entity.release.ReleaseItem;
 import io.dsub.discogsdata.common.entity.release.ReleaseItemArtist;
 import io.dsub.discogsdata.common.entity.release.ReleaseItemCreditedArtist;
 import io.dsub.discogsdata.common.entity.release.ReleaseItemFormat;
-import io.dsub.discogsdata.common.entity.release.ReleaseItemFormatDescription;
 import io.dsub.discogsdata.common.entity.release.ReleaseItemGenre;
 import io.dsub.discogsdata.common.entity.release.ReleaseItemIdentifier;
 import io.dsub.discogsdata.common.entity.release.ReleaseItemStyle;
@@ -170,26 +169,11 @@ public abstract class ReleaseItemBatchCommand {
     String name;
     Integer quantity;
     String text;
+    String description;
 
     @Override
     public Class<? extends BaseEntity> getEntityClass() {
       return ReleaseItemFormat.class;
-    }
-  }
-
-  @Data
-  @Builder
-  @NoArgsConstructor
-  @AllArgsConstructor
-  @EqualsAndHashCode(callSuper = false)
-  public static final class ReleaseItemFormatDescriptionCommand implements BatchCommand {
-
-    Long releaseItem;
-    String style;
-
-    @Override
-    public Class<? extends BaseEntity> getEntityClass() {
-      return ReleaseItemFormatDescription.class;
     }
   }
 

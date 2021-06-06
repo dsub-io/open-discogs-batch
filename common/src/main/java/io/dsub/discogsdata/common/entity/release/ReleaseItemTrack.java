@@ -34,13 +34,13 @@ public class ReleaseItemTrack extends BaseTimeEntity {
   @GeneratedValue(strategy = GenerationType.SEQUENCE)
   private Long id;
 
-  @Column(name = "position", length = 2000)
+  @Column(name = "position", length = 15000)
   private String position;
 
-  @Column(name = "title", length = 2000)
+  @Column(name = "title", length = 15000)
   private String title;
 
-  @Column(name = "duration", length = 1000)
+  @Column(name = "duration", length = 5000)
   private String duration;
 
   @ManyToOne

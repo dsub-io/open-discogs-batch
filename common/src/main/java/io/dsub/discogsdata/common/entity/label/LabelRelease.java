@@ -24,7 +24,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(
-    name = "label_release",
+    name = "label_item_release",
     uniqueConstraints =
     @UniqueConstraint(
         name = "uq_label_item_release_release_item_id_label_id",

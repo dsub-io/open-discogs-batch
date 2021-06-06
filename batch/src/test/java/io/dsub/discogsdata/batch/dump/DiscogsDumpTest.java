@@ -2,11 +2,7 @@ package io.dsub.discogsdata.batch.dump;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.fail;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -256,35 +252,5 @@ class DiscogsDumpTest {
         .filter(item -> !item.equals(that))
         .collect(Collectors.toList())
         .get(0);
-  }
-
-  @Test
-  void whenGetResourcePath__ShouldReturnValidPath() {
-    // given
-    DiscogsDump dump = getDiscogsDump();
-    // when
-    Path path = dump.getResourcePath();
-    // then
-    assertThat(path).isNotNull();
-    assertThat(path.toFile().exists()).isTrue();
-    path.toFile().deleteOnExit();
-  }
-
-  @Test
-  void givenResourceFileDeleted__WhenGetResourcePath__ShouldReturnSamePath() {
-    try {
-      // given
-      DiscogsDump dump = getDiscogsDump();
-      Path firstPath = dump.getResourcePath();
-      Files.delete(firstPath);
-
-      // when
-      Path secondPath = dump.getResourcePath();
-
-      // then
-      assertThat(secondPath).isEqualTo(firstPath);
-    } catch (IOException e) {
-      fail(e);
-    }
   }
 }

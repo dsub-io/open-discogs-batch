@@ -34,13 +34,13 @@ public class ReleaseItemIdentifier extends BaseTimeEntity {
   @GeneratedValue(strategy = GenerationType.SEQUENCE)
   private Long id;
 
-  @Column(name = "type")
+  @Column(name = "type", length = 10000)
   private String type;
 
   @Column(name = "description", length = 20000)
   private String description;
 
-  @Column(name = "value")
+  @Column(name = "value", length = 10000)
   private String value;
 
   @ManyToOne

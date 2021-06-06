@@ -14,12 +14,14 @@ import io.dsub.discogsdata.batch.job.step.LabelStepConfig;
 import io.dsub.discogsdata.batch.job.step.MasterStepConfig;
 import io.dsub.discogsdata.batch.job.step.ReleaseItemStepConfig;
 import io.dsub.discogsdata.batch.testutil.LogSpy;
+import io.dsub.discogsdata.batch.util.FileUtil;
 import io.dsub.discogsdata.common.entity.base.BaseEntity;
 import io.dsub.discogsdata.common.repository.artist.ArtistRepository;
 import io.dsub.discogsdata.common.repository.label.LabelRepository;
 import io.dsub.discogsdata.common.repository.master.MasterRepository;
 import io.dsub.discogsdata.common.repository.release.ReleaseRepository;
 import java.lang.reflect.Modifier;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -64,9 +66,6 @@ import org.springframework.transaction.PlatformTransactionManager;
         ReleaseItemStepConfig.class
     })
 public class DiscogsJobIntegrationTest {
-
-  @TempDir
-  static Path TEMP_DIR;
   @Autowired
   ItemStreamReader<ArtistXML> artistStreamReader;
   @RegisterExtension
@@ -83,6 +82,8 @@ public class DiscogsJobIntegrationTest {
   private MasterRepository masterRepository;
   @Autowired
   private ReleaseRepository releaseRepository;
+  @Autowired
+  private FileUtil fileUtil;
   @Autowired
   @Qualifier("dataSource")
   private DataSource dataSource;
@@ -147,9 +148,10 @@ public class DiscogsJobIntegrationTest {
 
     assertThat(dumpMap.size(), is(4));
 
-    dumpMap.values().stream()
-        .map(DiscogsDump::getResourcePath)
-        .forEach(path -> assertThat(path.toFile().exists(), is(false)));
+    for (DiscogsDump dump : dumpMap.values()) {
+      Path filePath = fileUtil.getFilePath(dump.getFileName(), false);
+      assertThat(Files.exists(filePath), is(true));
+    }
 
     assertThat(releaseRepository.count(), is(3L));
     assertThat(masterRepository.count(), is(3L));

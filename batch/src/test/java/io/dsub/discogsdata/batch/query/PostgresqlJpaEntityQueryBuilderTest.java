@@ -8,6 +8,8 @@ import io.dsub.discogsdata.common.entity.artist.Artist;
 import io.dsub.discogsdata.common.entity.artist.ArtistMember;
 import io.dsub.discogsdata.common.entity.base.BaseEntity;
 import io.dsub.discogsdata.common.entity.base.BaseTimeEntity;
+import io.dsub.discogsdata.common.entity.release.ReleaseItem;
+import io.dsub.discogsdata.common.entity.release.ReleaseItemTrack;
 import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.Map;
@@ -28,7 +30,7 @@ class PostgresqlJpaEntityQueryBuilderTest {
       new PostgresqlJpaEntityQueryBuilder();
 
   @Test
-  void ifUniqueConstraintExistsTwice__AndAutoId__ShouldContainNonDuplicatedColumnsOnWhereClause() {
+  void ifUniqueConstraintExistsTwice__AndAutoId__ShouldContainIdsAndUniqueConstraints() {
     // when
     String query = builder.getUpsertQuery(JpaQueryTestEntityTwo.class);
 
@@ -37,18 +39,8 @@ class PostgresqlJpaEntityQueryBuilderTest {
     int lastIdx = query.indexOf(") DO UPDATE");
     String[] parts = query.substring(startIdx + startLen, lastIdx).split(",");
 
-    String[] whereParts =
-        Arrays.stream(
-            query.substring(
-                query.indexOf("WHERE ") + 6).split(" AND "))
-            .map(s -> s.split("=")[0])
-            .toArray(String[]::new);
-
     // then
-    for (int i = 0; i < whereParts.length; i++) {
-      assertThat(whereParts[i]).contains(parts[i]);
-    }
-    assertThat(whereParts.length).isEqualTo(parts.length);
+    assertThat(parts).contains("profile", "last_name", "hello", "id");
   }
 
   @Test
@@ -140,6 +132,12 @@ class PostgresqlJpaEntityQueryBuilderTest {
         () -> assertThat(query).doesNotContain(":member"),
         () -> assertThat(query).contains("ON CONFLICT DO NOTHING")
     );
+  }
+
+  @Test
+  void test() {
+    String query = builder.getUpsertQuery(ReleaseItemTrack.class);
+    System.out.println(query);
   }
 
   @Data

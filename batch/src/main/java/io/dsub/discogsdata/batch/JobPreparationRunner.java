@@ -30,8 +30,8 @@ public class JobPreparationRunner implements ApplicationRunner {
     dataSource.setMaximumPoolSize(taskExecutor.getMaxPoolSize() + 3);
   }
 
-  @Bean
-  public JobParameters discogsJobParameters(ApplicationArguments args) {
+  @Bean(name = "discogsJobParameters")
+  public JobParameters getDiscogsJobParameters(ApplicationArguments args) {
     Properties props = jobParameterResolver.resolve(args);
     return jobParametersConverter.getJobParameters(props);
   }

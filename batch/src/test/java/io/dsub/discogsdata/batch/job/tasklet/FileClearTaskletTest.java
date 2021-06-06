@@ -1,24 +1,20 @@
 package io.dsub.discogsdata.batch.job.tasklet;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.mockito.Mockito.doCallRealMethod;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.willThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
-import io.dsub.discogsdata.batch.dump.DiscogsDump;
-import io.dsub.discogsdata.batch.exception.FileClearException;
+import io.dsub.discogsdata.batch.util.FileUtil;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import net.bytebuddy.utility.RandomString;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-import org.mockito.Mockito;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.StepExecution;
@@ -31,78 +27,76 @@ class FileClearTaskletTest {
   final ChunkContext chunkContext = new ChunkContext(new StepContext(stepExecution));
   final StepContribution stepContribution = new StepContribution(stepExecution);
 
+  @InjectMocks
   FileClearTasklet fileClearTasklet;
 
-  @TempDir
-  Path tmpDir;
-
-  Path filePath;
-
-  DiscogsDump dump;
+  @Mock
+  FileUtil fileUtil;
 
   @BeforeEach
   void setUp() {
-    filePath = tmpDir.resolve(RandomString.make());
-    dump = Mockito.mock(DiscogsDump.class);
-    when(dump.getFileName()).thenReturn(RandomString.make());
-    doCallRealMethod().when(dump).getResourcePath();
-    fileClearTasklet = new FileClearTasklet(dump);
+    MockitoAnnotations.openMocks(this);
   }
 
-  @AfterEach
-  void cleanUp() {
+  @Test
+  void givenFilesAreTemporary__WhenTaskExecutes__ShouldCallClearAll() {
     try {
-      Files.deleteIfExists(dump.getResourcePath());
+      // given
+      given(fileUtil.isTemporary()).willReturn(true);
+
+      // when
+      fileClearTasklet.execute(stepContribution, chunkContext);
+
+      // then
+      verify(fileUtil, times(1)).clearAll();
     } catch (IOException e) {
       fail(e);
     }
   }
 
   @Test
-  void whenFileExists__ShouldDelete() {
+  void givenFilesAreMounted__WhenTaskExecutes__ShouldNotCallClearAll() {
+    try {
+      // given
+      given(fileUtil.isTemporary()).willReturn(false);
+
+      // when
+      fileClearTasklet.execute(stepContribution, chunkContext);
+
+      // then
+      verify(fileUtil, never()).clearAll();
+    } catch (IOException e) {
+      fail(e);
+    }
+  }
+
+  @Test
+  void givenFilesAreMounted__WhenTaskExecutes__ShouldMarkedAsComplete() {
     // given
-    Path path = dump.getResourcePath();
+    given(fileUtil.isTemporary()).willReturn(false);
 
     // when
     fileClearTasklet.execute(stepContribution, chunkContext);
 
     // then
-    assertThat(path).doesNotExist();
     assertThat(chunkContext.isComplete()).isTrue();
     assertThat(stepContribution.getExitStatus().getExitCode()).isEqualTo("COMPLETED");
   }
 
   @Test
-  void whenFileDoesNotExists__ShouldNotThrow() {
-    // given
-    Path path = Path.of("i am blank");
-    doReturn(path).when(dump).getResourcePath();
+  void givenClearAllThrows__WhenTaskExecutes__WillMarkAsComplete() {
+    try {
+      // given
+      willThrow(new IOException("FAIL")).given(fileUtil).clearAll();
 
-    // when
-    fileClearTasklet.execute(stepContribution, chunkContext);
+      // when
+      fileClearTasklet.execute(stepContribution, chunkContext);
 
-    // then
-    assertThat(filePath).doesNotExist();
-    assertThat(chunkContext.isComplete()).isTrue();
-    assertThat(stepContribution.getExitStatus().getExitCode()).isEqualTo("COMPLETED");
-  }
-
-  @Test
-  void whenFileAccessThrows__ShouldHandleIt() {
-    // given
-    Path mockPath = mock(Path.class);
-    when(mockPath.getFileSystem()).thenThrow(new RuntimeException("reason"));
-    doReturn(mockPath).when(dump).getResourcePath();
-
-    // when
-    Throwable t = catchThrowable(() -> fileClearTasklet.execute(stepContribution, chunkContext));
-
-    // then
-    assertThat(t)
-        .isInstanceOf(FileClearException.class)
-        .hasMessageStartingWith("failed to delete file");
-
-    // extra clear
-    doReturn(filePath).when(dump).getResourcePath();
+      // then
+      assertThat(chunkContext.isComplete()).isTrue();
+      assertThat(stepContribution.getExitStatus().getExitCode()).isEqualTo("COMPLETED");
+    } catch (IOException e) {
+      fail(e);
+    }
   }
 }

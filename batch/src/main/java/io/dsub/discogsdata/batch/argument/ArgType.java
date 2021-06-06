@@ -41,7 +41,15 @@ public enum ArgType {
           .supportedType(Long.class)
           .build()),
   YEAR_MONTH(ArgumentProperty.builder().globalName("yearMonth").synonyms("ym").build()),
-  ETAG(ArgumentProperty.builder().globalName("eTag").synonyms("e").maxValuesCount(4).build());
+  ETAG(ArgumentProperty.builder().globalName("eTag").synonyms("e").maxValuesCount(4).build()),
+  MOUNT(ArgumentProperty.builder().globalName("mount").synonyms("m", "keep", "preserve")
+      .required(false)
+      .maxValuesCount(0)
+      .minValuesCount(0).build()),
+  STRICT(ArgumentProperty.builder().globalName("strict").synonyms("s")
+      .required(false)
+      .maxValuesCount(0)
+      .minValuesCount(0).build());
 
   // properties mapped to each enum instance.
   private final ArgumentProperty props;

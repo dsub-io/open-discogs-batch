@@ -1,29 +1,34 @@
 package io.dsub.discogsdata.batch.dump;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.doReturn;
 
 import io.dsub.discogsdata.batch.condition.RequiresDiscogsDataConnection;
 import io.dsub.discogsdata.batch.testutil.LogSpy;
 import io.dsub.discogsdata.common.exception.InvalidArgumentException;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
 import java.util.List;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.mockito.Mockito;
+import org.springframework.util.ResourceUtils;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -33,9 +38,12 @@ import org.xml.sax.SAXException;
 @ExtendWith(RequiresDiscogsDataConnection.class)
 class DefaultDumpSupplierUnitTest {
 
-  static final String TEST_XML_DIRECTORY = "src/test/resources/test/";
+  DefaultDumpSupplier dumpSupplier;
 
-  final DefaultDumpSupplier dumpSupplier = new DefaultDumpSupplier();
+  @BeforeEach
+  void setUp() {
+    dumpSupplier = Mockito.spy(new DefaultDumpSupplier());
+  }
 
   @RegisterExtension
   public LogSpy logSpy = new LogSpy();
@@ -69,12 +77,20 @@ class DefaultDumpSupplierUnitTest {
     assertThat(url).isNotNull().isNotBlank().matches("^https://[\\w_.-]+[\\w_-].com$");
   }
 
-  // todo: impl test
   @Test
-  void whenParseDumpList__ThenMustReturnValidList() {
-    // when
-    dumpSupplier.parseDumpList(dumpSupplier.getBucketURL());
-    // then
+  void whenParseDumpList__ThenMustReturnValidList() throws IOException {
+    try (InputStream in = new FileInputStream(getTestFile("DiscogsDataDump.xml"))) {
+      doReturn(in).when(dumpSupplier).openStream(null);
+      doReturn(null).when(dumpSupplier).getBucketURL();
+
+      // when
+      List<DiscogsDump> dumpList = dumpSupplier.parseDumpList(dumpSupplier.getBucketURL());
+
+      // then
+      assertAll(
+          () -> assertThat(dumpList).isNotEmpty()
+      );
+    }
   }
 
   @Test
@@ -97,48 +113,37 @@ class DefaultDumpSupplierUnitTest {
   }
 
   @Test
-  void whenParseDumpWithProperXml__ShouldParseTheValuesWithNoNullValues() {
-    File file = Paths.get(TEST_XML_DIRECTORY + "DiscogsDataValidExample.xml").toFile();
-
-    assertDoesNotThrow(
-        () ->
-            readDumpWithParseDumpMethod(file)
-                .forEach(
-                    discogsDump -> {
-                      assertThat(discogsDump.getCreatedAt()).isNotNull();
-                      assertThat(discogsDump.getSize()).isNotNull();
-                      assertThat(discogsDump.getETag()).isNotNull();
-                      assertThat(discogsDump.getUriString()).isNotNull();
-                      assertThat(discogsDump.getType()).isNotNull();
-                    }));
-  }
-
-  @Test
   void whenParseDumpWithBlankFields__ShouldNotReturnIncompleteDump() {
-    File file = Paths.get(TEST_XML_DIRECTORY + "DiscogsDataMissingFieldsExample.xml").toFile();
+    try (InputStream in = new FileInputStream(getTestFile("DiscogsDataMissingFieldsExample.xml"))) {
+      doReturn(in).when(dumpSupplier).openStream(null);
+      doReturn(null).when(dumpSupplier).getBucketURL();
 
-    assertDoesNotThrow(
-        () ->
-            readDumpWithParseDumpMethod(file)
-                .forEach(
-                    discogsDump -> {
-                      if (discogsDump == null) {
-                        return;
-                      }
-                      assertThat(discogsDump.getCreatedAt()).isNotNull();
-                      assertThat(discogsDump.getSize()).isNotNull();
-                      assertThat(discogsDump.getETag()).isNotNull();
-                      assertThat(discogsDump.getUriString()).isNotNull();
-                      assertThat(discogsDump.getType()).isNotNull();
-                    }));
+      // when
+      List<DiscogsDump> dumpList = dumpSupplier.parseDumpList(dumpSupplier.getBucketURL());
+
+      // then
+      assertAll(
+          () -> assertThat(dumpList).isNotEmpty(),
+          () -> assertAll(() -> {
+            for (DiscogsDump dump : dumpList) {
+              assertThat(dump.getUriString()).isNotBlank();
+              assertThat(dump.getCreatedAt()).isNotNull();
+              assertThat(dump.getSize()).isNotNull();
+              assertThat(dump.getETag()).isNotNull();
+              assertThat(dump.getType()).isNotNull();
+            }
+          })
+      );
+    } catch (IOException e) {
+      fail(e);
+    }
   }
 
   @Test
   void whenGetSizeCalledWithInvalidString__ShouldThrowInvalidArgumentException__WithValidMessage() {
-    File file = Paths.get(TEST_XML_DIRECTORY + "ParseLongValueTestMalformedExample.xml").toFile();
     assertDoesNotThrow(
         () -> {
-          try (InputStream in = new FileInputStream(file)) {
+          try (InputStream in = new FileInputStream(getTestFile("ParseLongValueTestMalformedExample.xml"))) {
             DocumentBuilder documentBuilder =
                 DocumentBuilderFactory.newInstance().newDocumentBuilder();
             Document document = documentBuilder.parse(in);
@@ -174,9 +179,7 @@ class DefaultDumpSupplierUnitTest {
   @Test
   void whenGetSizeCalledWithValidString__ShouldReturnValidValues()
       throws IOException, ParserConfigurationException, SAXException {
-    File file = Paths.get(TEST_XML_DIRECTORY + "ParseLongValueTestValidExample.xml").toFile();
-
-    try (InputStream in = new FileInputStream(file)) {
+    try (InputStream in = new FileInputStream(getTestFile("ParseLongValueTestValidExample.xml"))) {
       DocumentBuilder documentBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
       Document document = documentBuilder.parse(in);
       NodeList sizes = document.getElementsByTagName("Size");
@@ -191,9 +194,7 @@ class DefaultDumpSupplierUnitTest {
   @Test
   void whenUTCLastModifiedMethodCalledWithValidEntry__ShouldReturnNonNullValidValue()
       throws IOException, ParserConfigurationException, SAXException {
-
-    File file = Paths.get(TEST_XML_DIRECTORY + "DiscogsDataValidExample.xml").toFile();
-    try (InputStream in = new FileInputStream(file)) {
+    try (InputStream in = new FileInputStream(getTestFile("DiscogsDataDump.xml"))) {
       DocumentBuilder documentBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
       Document document = documentBuilder.parse(in);
       NodeList contents = document.getElementsByTagName("Contents");
@@ -218,10 +219,7 @@ class DefaultDumpSupplierUnitTest {
   @Test
   void whenUTCLastModifiedMethodCalledWithMalformedEntry__()
       throws IOException, ParserConfigurationException, SAXException {
-
-    File file =
-        Paths.get(TEST_XML_DIRECTORY + "UTCLastModifiedMethodTestMalformedExample.xml").toFile();
-    try (InputStream in = new FileInputStream(file)) {
+    try (InputStream in = new FileInputStream(getTestFile("UTCLastModifiedMethodTestMalformedExample.xml"))) {
       DocumentBuilder documentBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
       Document document = documentBuilder.parse(in);
       NodeList contents = document.getElementsByTagName("Contents");
@@ -252,9 +250,7 @@ class DefaultDumpSupplierUnitTest {
   @Test
   void whenGetTypeCalledWithMalformedEntry__ShouldThrowInvalidArgumentException__WithValidMessage()
       throws IOException, ParserConfigurationException, SAXException {
-    File file = Paths.get(TEST_XML_DIRECTORY + "GetTypeTestMalformedEntryExample.xml").toFile();
-
-    try (InputStream in = new FileInputStream(file)) {
+    try (InputStream in = new FileInputStream(getTestFile("GetTypeTestMalformedEntryExample.xml"))) {
       DocumentBuilder documentBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
       Document document = documentBuilder.parse(in);
       NodeList contents = document.getElementsByTagName("Contents");
@@ -278,34 +274,9 @@ class DefaultDumpSupplierUnitTest {
   }
 
   @Test
-  void whenGetTypeCalledWithValidEntry__ShouldReturnValidResult()
-      throws IOException, ParserConfigurationException, SAXException {
-    File file = Paths.get(TEST_XML_DIRECTORY + "DiscogsDataValidExample.xml").toFile();
-
-    try (InputStream in = new FileInputStream(file)) {
-      DocumentBuilder documentBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
-      Document document = documentBuilder.parse(in);
-      NodeList contents = document.getElementsByTagName("Contents");
-      for (int pIdx = 0; pIdx < contents.getLength(); pIdx++) {
-        for (int cIdx = 0; cIdx < contents.item(pIdx).getChildNodes().getLength(); cIdx++) {
-          Node node = contents.item(pIdx).getChildNodes().item(cIdx);
-
-          // when
-          if (node.getNodeName().equals("Key")) {
-
-            // then
-            assertThat(dumpSupplier.getType(node)).isIn((Object[]) DumpType.values());
-          }
-        }
-      }
-    }
-  }
-
-  @Test
   void whenIsKnownNodeTypeCalledWithValidExample__ShouldReturnProperResponse()
       throws IOException, ParserConfigurationException, SAXException {
-    File file = Paths.get(TEST_XML_DIRECTORY + "DiscogsDataValidExample.xml").toFile();
-    try (InputStream in = new FileInputStream(file)) {
+    try (InputStream in = new FileInputStream(getTestFile("DiscogsDataDump.xml"))) {
       DocumentBuilder documentBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
       Document document = documentBuilder.parse(in);
       NodeList contents = document.getElementsByTagName("Contents");
@@ -323,47 +294,7 @@ class DefaultDumpSupplierUnitTest {
     }
   }
 
-  @Test
-  void whenIsXmlGZipEntryCalledWithValidXml__ShouldReturnTrueForAllValidEntries()
-      throws IOException, ParserConfigurationException, SAXException {
-    File file = Paths.get(TEST_XML_DIRECTORY + "DiscogsDataValidExample.xml").toFile();
-    try (InputStream in = new FileInputStream(file)) {
-      DocumentBuilder documentBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
-      Document document = documentBuilder.parse(in);
-      NodeList contents = document.getElementsByTagName("Contents");
-      for (int i = 0; i < contents.getLength(); i++) {
-        assertThat(dumpSupplier.isXmlGzipEntry(contents.item(i).getChildNodes())).isTrue();
-      }
-    }
-  }
-
-  @Test
-  void whenIsXmlGZipEntryCalledWithMissingField__ShouldReturnValue()
-      throws IOException, ParserConfigurationException, SAXException {
-    File file = Paths.get(TEST_XML_DIRECTORY + "IsXmlGZipEntryInvalidExample.xml").toFile();
-    try (InputStream in = new FileInputStream(file)) {
-      DocumentBuilder documentBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
-      Document document = documentBuilder.parse(in);
-      NodeList contents = document.getElementsByTagName("Contents");
-      for (int i = 0; i < contents.getLength(); i++) {
-        assertThat(dumpSupplier.isXmlGzipEntry(contents.item(i).getChildNodes())).isFalse();
-      }
-    }
-  }
-
-  private List<DiscogsDump> readDumpWithParseDumpMethod(File file)
-      throws IOException, ParserConfigurationException, SAXException {
-    List<DiscogsDump> dumpList = new ArrayList<>();
-    try (InputStream in = new FileInputStream(file)) {
-      DocumentBuilder documentBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
-      Document document = documentBuilder.parse(in);
-      NodeList contents = document.getElementsByTagName("Contents");
-      for (int i = 0; i < contents.getLength(); i++) {
-        NodeList nodeList = contents.item(i).getChildNodes();
-        DiscogsDump discogsDump = dumpSupplier.parseDump(nodeList);
-        dumpList.add(discogsDump);
-      }
-    }
-    return dumpList;
+  private File getTestFile(String filename) throws FileNotFoundException {
+    return ResourceUtils.getFile("classpath:test/" + filename);
   }
 }

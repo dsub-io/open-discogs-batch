@@ -31,8 +31,13 @@ class MappedValueValidatorUnitTest {
     argBuilder.append(argType.getGlobalName()).append("=");
     ApplicationArguments args = new DefaultApplicationArguments(argBuilder.toString());
     ValidationResult result = validator.validate(args);
-    assertThat(result.getIssues().size()).isEqualTo(1);
-    assertThat(result.getIssues().get(0)).isEqualTo("missing value for " + argType.getGlobalName());
+
+    if (argType.getMinValuesCount() == 0) {
+      assertThat(result.getIssues().size()).isEqualTo(0);
+    } else {
+      assertThat(result.getIssues().size()).isEqualTo(1);
+      assertThat(result.getIssues().get(0)).isEqualTo("missing value for " + argType.getGlobalName());
+    }
   }
 
   @ParameterizedTest

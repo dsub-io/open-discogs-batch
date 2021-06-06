@@ -1,12 +1,9 @@
 package io.dsub.discogsdata.batch.job.tasklet;
 
-import io.dsub.discogsdata.batch.dump.DiscogsDump;
-import io.dsub.discogsdata.batch.exception.FileClearException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import io.dsub.discogsdata.batch.util.FileUtil;
+import java.io.IOException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.scope.context.ChunkContext;
@@ -21,7 +18,7 @@ import org.springframework.batch.repeat.RepeatStatus;
 @RequiredArgsConstructor
 public class FileClearTasklet implements Tasklet {
 
-  private final DiscogsDump targetDump;
+  private final FileUtil fileUtil;
 
   /**
    * Deletes given file from targetDump.
@@ -31,21 +28,13 @@ public class FileClearTasklet implements Tasklet {
    * @return {@link RepeatStatus#FINISHED} even if failed to delete the given file.
    */
   @Override
-  public RepeatStatus execute(@NotNull StepContribution contribution,
-      @NotNull ChunkContext chunkContext) {
-
-    Path targetPath = targetDump.getResourcePath();
-    try {
-      if (Files.exists(targetPath)) {
-        log.debug("found xml dump file: {}. deleting...", targetPath);
-        Files.delete(targetPath);
-        log.debug("deleted {}", targetPath);
+  public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) {
+    if (fileUtil.isTemporary()) {
+      try {
+        fileUtil.clearAll();
+      } catch (IOException e) {
+        log.error("failed to clear application directory.", e);
       }
-    } catch (Exception ex) {
-      log.error("failed to delete file: {}.", targetPath, ex);
-      contribution.setExitStatus(ExitStatus.FAILED);
-      chunkContext.setComplete();
-      throw new FileClearException("failed to delete file: " + targetPath);
     }
     contribution.setExitStatus(ExitStatus.COMPLETED);
     chunkContext.setComplete();

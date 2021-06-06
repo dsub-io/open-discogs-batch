@@ -230,9 +230,10 @@ CREATE TABLE IF NOT EXISTS release_item_format
     id               BIGINT AUTO_INCREMENT,
     created_at       DATETIME(6)   NOT NULL,
     last_modified_at DATETIME(6)   NOT NULL,
-    name             VARCHAR(255)  NULL,
+    name             VARCHAR(2000)  NULL,
     quantity         INT           NULL,
     text             VARCHAR(5000) NULL,
+    description      TEXT          NULL,
     release_item_id  BIGINT        NULL,
     CONSTRAINT fk_release_item_format_release_item_id_release_item
         FOREIGN KEY (release_item_id) REFERENCES release_item (id),
@@ -252,32 +253,32 @@ CREATE TABLE IF NOT EXISTS release_item_format_description
 CREATE TABLE IF NOT EXISTS release_item_identifier
 (
     id               BIGINT AUTO_INCREMENT,
-    created_at       DATETIME(6)  NOT NULL,
-    last_modified_at DATETIME(6)  NOT NULL,
-    description      TEXT         NULL,
-    type             VARCHAR(255) NULL,
-    value            VARCHAR(255) NULL,
-    release_item_id  BIGINT       NULL,
+    created_at       DATETIME(6)    NOT NULL,
+    last_modified_at DATETIME(6)    NOT NULL,
+    description      TEXT           NULL,
+    type             VARCHAR(10000) NULL,
+    value            VARCHAR(10000) NULL,
+    release_item_id  BIGINT         NULL,
     CONSTRAINT fk_release_item_identifier_release_item_id
         FOREIGN KEY (release_item_id) REFERENCES release_item (id),
     CONSTRAINT pk_release_item_identifier_id PRIMARY KEY (id)
 );
 
-CREATE TABLE IF NOT EXISTS label_release
+CREATE TABLE IF NOT EXISTS label_item_release
 (
     id                BIGINT AUTO_INCREMENT,
     created_at        DATETIME(6)  NOT NULL,
     last_modified_at  DATETIME(6)  NOT NULL,
-    category_notation VARCHAR(255) NULL,
+    category_notation VARCHAR(5000) NULL,
     label_id          BIGINT       NULL,
     release_item_id   BIGINT       NULL,
-    CONSTRAINT uq_label_release_release_item_id_label_id
+    CONSTRAINT uq_label_item_release_release_item_id_label_id
         UNIQUE (release_item_id, label_id),
-    CONSTRAINT fk_label_release_label_id_label
+    CONSTRAINT fk_label_item_release_label_id_label
         FOREIGN KEY (label_id) REFERENCES label (id),
-    CONSTRAINT fk_label_release_release_item_id_release_item
+    CONSTRAINT fk_label_item_release_release_item_id_release_item
         FOREIGN KEY (release_item_id) REFERENCES release_item (id),
-    CONSTRAINT pk_label_release_id PRIMARY KEY (id)
+    CONSTRAINT pk_label_item_release_id PRIMARY KEY (id)
 );
 
 CREATE TABLE IF NOT EXISTS release_item_artist
@@ -344,11 +345,11 @@ CREATE TABLE IF NOT EXISTS release_item_video
 CREATE TABLE IF NOT EXISTS release_item_work
 (
     id               BIGINT AUTO_INCREMENT,
-    created_at       DATETIME(6)  NOT NULL,
-    last_modified_at DATETIME(6)  NOT NULL,
-    work             VARCHAR(255) NULL,
-    label_id         BIGINT       NULL,
-    release_item_id  BIGINT       NULL,
+    created_at       DATETIME(6)   NOT NULL,
+    last_modified_at DATETIME(6)   NOT NULL,
+    work             VARCHAR(5000) NULL,
+    label_id         BIGINT        NULL,
+    release_item_id  BIGINT        NULL,
     CONSTRAINT uq_release_item_work_release_item_id_label_id_work
         UNIQUE (release_item_id, label_id, work),
     CONSTRAINT fk_release_item_work_label_id_label
@@ -399,12 +400,12 @@ CREATE TABLE IF NOT EXISTS release_item_style
 CREATE TABLE IF NOT EXISTS release_item_track
 (
     id               BIGINT AUTO_INCREMENT,
-    created_at       DATETIME(6)   NOT NULL,
-    last_modified_at DATETIME(6)   NOT NULL,
-    position         VARCHAR(255)  NULL,
-    duration         VARCHAR(1000) NULL,
-    title            VARCHAR(2000) NULL,
-    release_item_id  BIGINT        NULL,
+    created_at       DATETIME(6)    NOT NULL,
+    last_modified_at DATETIME(6)    NOT NULL,
+    position         VARCHAR(15000) NULL,
+    title            VARCHAR(15000) NULL,
+    duration         VARCHAR(5000)  NULL,
+    release_item_id  BIGINT         NULL,
     CONSTRAINT uq_release_item_track_position_title_duration_release_item_id
         UNIQUE (position, title, duration, release_item_id),
     CONSTRAINT fk_release_item_track_release_item_id_release_item

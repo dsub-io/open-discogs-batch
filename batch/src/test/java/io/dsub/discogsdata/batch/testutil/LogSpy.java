@@ -49,6 +49,13 @@ public class LogSpy implements BeforeEachCallback, AfterEachCallback {
         .collect(Collectors.toList());
   }
 
+  public List<ILoggingEvent> getLogsByLevelExact(Level lv, String targetPackage) {
+    return getEvents().stream()
+        .filter(log -> log.getLevel().equals(lv))
+        .filter(log -> log.getLoggerName().contains(targetPackage))
+        .collect(Collectors.toList());
+  }
+
   public List<String> getLogsAsString(boolean formatted) {
     return getEvents().stream()
         .map(log -> formatted ? log.getFormattedMessage() : log.getMessage())
@@ -63,6 +70,12 @@ public class LogSpy implements BeforeEachCallback, AfterEachCallback {
 
   public List<String> getLogsByExactLevelAsString(Level lv, boolean formatted) {
     return getLogsByLevelExact(lv).stream()
+        .map(log -> formatted ? log.getFormattedMessage() : log.getMessage())
+        .collect(Collectors.toList());
+  }
+
+  public List<String> getLogsByExactLevelAsString(Level lv, boolean formatted, String basePackage) {
+    return getLogsByLevelExact(lv, basePackage).stream()
         .map(log -> formatted ? log.getFormattedMessage() : log.getMessage())
         .collect(Collectors.toList());
   }

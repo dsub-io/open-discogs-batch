@@ -1,18 +1,14 @@
 package io.dsub.discogsdata.batch.job.tasklet;
 
 import io.dsub.discogsdata.batch.dump.DiscogsDump;
-import io.dsub.discogsdata.batch.exception.FileFetchException;
+import io.dsub.discogsdata.batch.util.FileUtil;
 import io.dsub.discogsdata.batch.util.ProgressBarUtil;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import me.tongfei.progressbar.ProgressBar;
 import me.tongfei.progressbar.wrapped.ProgressBarWrappedInputStream;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.scope.context.ChunkContext;
@@ -30,6 +26,7 @@ import org.springframework.batch.repeat.RepeatStatus;
 public class FileFetchTasklet implements Tasklet {
 
   private final DiscogsDump targetDump;
+  private final FileUtil fileUtil;
 
   /**
    * Core implementation of {@link Tasklet#execute(StepContribution, ChunkContext)}. Will either
@@ -40,87 +37,56 @@ public class FileFetchTasklet implements Tasklet {
    * @return status of the task which indicates either success or fail.
    */
   @Override
-  public RepeatStatus execute(@NotNull StepContribution contribution,
-      @NotNull ChunkContext chunkContext) throws IOException {
+  public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) {
 
-    Path targetPath = targetDump.getResourcePath();
+    contribution.setExitStatus(ExitStatus.EXECUTING);
 
-    if (Files.exists(targetPath) && Files.size(targetPath) > 0) {
-      log.info("found duplicated file: " + targetPath.toFile().getName() + ". checking size...");
-      boolean sizeMatched = checkFileSize(targetDump.getSize(), targetPath);
-      if (!sizeMatched) { // should delete then fetch again.
-        log.info("incomplete size. deleting current file...");
-        contribution.setExitStatus(ExitStatus.EXECUTING);
-        try {
-          deleteFile(targetPath);
-        } catch (FileFetchException e) {
-          chunkContext.setComplete(); // to clarify state of failure
-          contribution.setExitStatus(ExitStatus.FAILED);
-          throw e;
+    String filename = targetDump.getFileName();
+    long filesize;
+
+    try {
+      filesize = fileUtil.getSize(filename);
+      if (filesize > 0) {
+        log.info("found duplicated file: {}. checking size...", filename);
+        if (!targetDump.getSize().equals(filesize)) { // should delete then fetch again.
+          log.info("incomplete size. deleting current file...");
+          try {
+            fileUtil.deleteFile(targetDump.getFileName());
+          } catch (IOException e) {
+            log.error("failed to delete incomplete file: {}", filename, e);
+            chunkContext.setComplete();
+            contribution.setExitStatus(ExitStatus.FAILED);
+            return RepeatStatus.FINISHED;
+          }
+        } else {
+          log.info("file already exists. proceeding...");
+          chunkContext.setComplete();
+          contribution.setExitStatus(ExitStatus.COMPLETED);
+          return RepeatStatus.FINISHED;
         }
-      } else {
-        log.info("file already exists. proceeding..."); // file is already intact
-        chunkContext.setComplete();
+      }
+
+      String message = "fetching " + targetDump.getFileName() + "...";
+
+      try (InputStream inputStream = wrapInputStream(targetDump.getInputStream(), message)) {
+        log.info(message);
+        fileUtil.copy(inputStream, targetDump.getFileName());
         contribution.setExitStatus(ExitStatus.COMPLETED);
-        return RepeatStatus.FINISHED;
       }
-    }
-    InputStream inputStream = null;
-    try {
-      log.info("fetching " + targetPath + "...");
-      InputStream in = targetDump.getUrl().openStream();
-      String taskName = "fetching " + targetDump.getFileName() + "...";
-      ProgressBar pb = ProgressBarUtil.get(taskName, targetDump.getSize());
-      inputStream = new ProgressBarWrappedInputStream(in, pb);
-      Files.copy(inputStream, targetPath, StandardCopyOption.REPLACE_EXISTING);
+
+      chunkContext.setComplete();
+      return RepeatStatus.FINISHED;
+
     } catch (IOException e) {
+      log.error("failed to fetch file: {}", filename, e);
       contribution.setExitStatus(ExitStatus.FAILED);
-      throw new FileFetchException(
-          "failed on copying " + targetDump.getETag() + ". reason: " + e.getMessage());
-    } finally {
-      if (inputStream != null) {
-        try {
-          inputStream.close();
-        } catch (IOException e) {
-          log.warn("failed to close wrapped input stream, but assume will not defect the process.");
-        } finally {
-          inputStream = null; // dereference in case of hold...
-        }
-      }
-    }
-    chunkContext.setComplete();
-    contribution.setExitStatus(ExitStatus.COMPLETED);
-    return RepeatStatus.FINISHED; // or else failed...
-  }
-
-  /**
-   * Check if file of the given path matches the expected size. If file does not exists, then it
-   * should return negative.
-   *
-   * @param expectedSize expected file size
-   * @param path         path where file is expected to be exists
-   * @return whether the file size is same as expected, or false if the file not exists.
-   */
-  public boolean checkFileSize(long expectedSize, Path path) {
-    try {
-      return Files.size(path) == expectedSize;
-    } catch (Exception e) {
-      throw new FileFetchException(
-          "failed to check file size: " + path + ". reason: " + e.getMessage());
+      chunkContext.setComplete();
+      return RepeatStatus.FINISHED;
     }
   }
 
-  /**
-   * Deletes a file from given path if exists.
-   *
-   * @param filePath path of file to be deleted.
-   */
-  protected void deleteFile(Path filePath) {
-    try {
-      Files.deleteIfExists(filePath);
-    } catch (Exception e) {
-      throw new FileFetchException(
-          "failed to delete file: " + filePath + ". reason: " + e.getMessage());
-    }
+  public InputStream wrapInputStream(InputStream in, String message) {
+    ProgressBar pb = ProgressBarUtil.get(message, targetDump.getSize());
+    return new ProgressBarWrappedInputStream(in, pb);
   }
 }

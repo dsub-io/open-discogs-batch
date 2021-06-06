@@ -15,6 +15,7 @@ import io.dsub.discogsdata.batch.job.tasklet.FileClearTasklet;
 import io.dsub.discogsdata.batch.job.tasklet.FileFetchTasklet;
 import io.dsub.discogsdata.batch.job.writer.ClassifierCompositeCollectionItemWriter;
 import io.dsub.discogsdata.batch.query.QueryBuilder;
+import io.dsub.discogsdata.batch.util.FileUtil;
 import io.dsub.discogsdata.common.entity.base.BaseEntity;
 import io.dsub.discogsdata.common.entity.label.Label;
 import io.dsub.discogsdata.common.entity.label.LabelSubLabel;
@@ -65,11 +66,12 @@ public class LabelStepConfig extends AbstractStepConfig {
   private final ThreadPoolTaskExecutor taskExecutor;
   private final JobRepository jobRepository;
   private final PlatformTransactionManager transactionManager;
+  private final DiscogsDumpItemReaderBuilder readerBuilder;
+  private final FileUtil fileUtil;
   private final Map<DumpType, DiscogsDump> dumpMap;
 
   @Bean
   @JobScope
-  // TODO: add clear step
   public Step labelStep() {
     Flow labelStepFlow =
         new FlowBuilder<SimpleFlow>(LABEL_STEP_FLOW)
@@ -132,7 +134,7 @@ public class LabelStepConfig extends AbstractStepConfig {
   @JobScope
   public Step labelFileFetchStep() {
     return sbf.get(LABEL_FILE_FETCH_STEP)
-        .tasklet(new FileFetchTasklet(labelDump(null)))
+        .tasklet(new FileFetchTasklet(labelDump(null), fileUtil))
         .build();
   }
 
@@ -140,7 +142,7 @@ public class LabelStepConfig extends AbstractStepConfig {
   @JobScope
   public Step labelFileClearStep() {
     return sbf.get(LABEL_FILE_CLEAR_STEP)
-        .tasklet(new FileClearTasklet(labelDump(null)))
+        .tasklet(new FileClearTasklet(fileUtil))
         .build();
   }
 
@@ -156,7 +158,7 @@ public class LabelStepConfig extends AbstractStepConfig {
   @StepScope
   public SynchronizedItemStreamReader<LabelXML> labelStreamReader() {
     try {
-      return DiscogsDumpItemReaderBuilder.build(LabelXML.class, labelDump(null));
+      return readerBuilder.build(LabelXML.class, labelDump(null));
     } catch (Exception e) {
       throw new InitializationFailureException(
           "failed to initialize label stream reader: " + e.getMessage());

@@ -1,38 +1,37 @@
 package io.dsub.discogsdata.batch.datasource;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.catchThrowable;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
-import java.lang.reflect.Field;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.util.Collections;
+import ch.qos.logback.classic.Level;
+import io.dsub.discogsdata.batch.testutil.LogSpy;
+import io.dsub.discogsdata.common.exception.InitializationFailureException;
+import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 import javax.sql.DataSource;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.ApplicationArguments;
-import org.springframework.core.io.DefaultResourceLoader;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceLoader;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 @ExtendWith(MockitoExtension.class)
 class DataSourceConfigTestWithPropertiesGivenUnitTest {
@@ -56,56 +55,45 @@ class DataSourceConfigTestWithPropertiesGivenUnitTest {
       "jdbc:mysql://hello.world.com:3306/somewhere";
   private static final String PLAIN_TEST_JDBC_URL_ARGUMENT = "url=" + PLAIN_TEST_JDBC_URL_VALUE;
 
-  @Mock
+  @RegisterExtension
+  LogSpy logSpy = new LogSpy();
+
   ApplicationArguments applicationArguments;
 
-  @InjectMocks
   private DataSourceConfig dataSourceConfig;
 
   @BeforeEach
   void setUp() {
+    applicationArguments = mock(ApplicationArguments.class);
+    dataSourceConfig = new DataSourceConfig(applicationArguments);
     dataSourceConfig = Mockito.spy(dataSourceConfig);
   }
 
-  @AfterEach
-  void reset() throws NoSuchFieldException, IllegalAccessException {
-    Field dbTypeField = DataSourceConfig.class.getDeclaredField("DB_TYPE");
-    dbTypeField.setAccessible(true);
-    dbTypeField.set(DataSourceConfig.class, null);
-  }
-
   @Test
-  void whenBatchDataSourceCalled__ShouldCallApplicationArguments__GetNonOptionArg() {
-
-    when(applicationArguments.getNonOptionArgs()).thenReturn(List.of(PLAIN_TEST_JDBC_URL_ARGUMENT));
+  void whenBatchDataSourceCalled__ShouldCallDataSourceProperties__ThenReturnDataSource() {
+    DataSourceProperties dataSourceProperties = Mockito.mock(DataSourceProperties.class);
+    doReturn(dataSourceProperties).when(dataSourceConfig).dataSourceProperties();
+    doReturn("test").when(dataSourceProperties).getUsername();
+    doReturn("test").when(dataSourceProperties).getPassword();
+    doReturn("test").when(dataSourceProperties).getConnectionUrl();
+    doReturn(DBType.MYSQL).when(dataSourceProperties).getDbType();
     doNothing().when(dataSourceConfig).initializeSchema(any());
 
     // when
-    dataSourceConfig.batchDataSource();
-
-    // then
-    verify(applicationArguments, atLeast(1)).getNonOptionArgs();
-  }
-
-  @Test
-  void whenValidJdbcUrlPresentedInOptions__ThenShouldReturnNonNullDataSourceInstance() {
-    // when
-    when(applicationArguments.getNonOptionArgs()).thenReturn(List.of(PLAIN_TEST_JDBC_URL_ARGUMENT));
-    doNothing().when(dataSourceConfig).initializeSchema(any());
-
     DataSource dataSource = dataSourceConfig.batchDataSource();
+
     // then
+    verify(dataSourceConfig, atLeast(1)).dataSourceProperties();
     assertThat(dataSource).isNotNull();
   }
 
   @Test
   void whenInvalidJdbcUrlPresentedInOptions__THenShouldThrowMissingRequiredArgumentException() {
     // when
-    when(applicationArguments.getNonOptionArgs()).thenReturn(Collections.emptyList());
+    Throwable t = catchThrowable(() -> dataSourceConfig.batchDataSource());
 
     // then
-    assertThatThrownBy(() -> dataSourceConfig.batchDataSource())
-        .hasMessage(MISSING_REQUIRED_ARG_MESSAGE);
+    assertThat(t).hasMessage(MISSING_REQUIRED_ARG_MESSAGE);
   }
 
   @Test
@@ -140,74 +128,89 @@ class DataSourceConfigTestWithPropertiesGivenUnitTest {
   }
 
   @Test
-  void getApplicationArgumentsShouldNotReturnNull() {
-    assertThat(dataSourceConfig.getApplicationArguments()).isNotNull();
+  void givenApplicationArgs__WhenDataSourceProperties__ShouldContainAllData() {
+
+    // given
+    doReturn(List.of(PLAIN_TEST_JDBC_URL_ARGUMENT, "username=user", "password=pass"))
+        .when(applicationArguments)
+        .getNonOptionArgs();
+
+    // when
+    DataSourceProperties properties = dataSourceConfig.dataSourceProperties();
+
+    // then
+    assertAll(
+        () -> assertThat(properties.getConnectionUrl()).contains(PLAIN_TEST_JDBC_URL_VALUE),
+        () -> assertThat(properties.getDbType()).isEqualTo(DBType.MYSQL),
+        () -> assertThat(properties.getPassword()).isEqualTo("pass"),
+        () -> assertThat(properties.getUsername()).isEqualTo("user"));
   }
 
   @Test
-  void initializeSchema__ShouldThrowIfDBTypeIsNull() {
-    DataSource dataSource = Mockito.mock(DataSource.class);
-    Throwable t = catchThrowable(() -> dataSourceConfig.initializeSchema(dataSource));
-    assertThat(t).hasMessage("static variable DB_TYPE cannot be null");
-  }
-
-  @Test
-  void initializeSchema__ShouldLogWhenExceptionThrown()
-      throws NoSuchFieldException, IllegalAccessException, SQLException {
-
-    // prep
-    DataSource dataSource = Mockito.mock(DataSource.class);
-    Field dbTypeField = DataSourceConfig.class.getDeclaredField("DB_TYPE");
-    dbTypeField.setAccessible(true);
-    dbTypeField.set(DataSourceConfig.class, DBType.MYSQL);
-    Field mysqlSchemaField = DataSourceConfig.class.getDeclaredField("mysqlSchema");
-    mysqlSchemaField.setAccessible(true);
-    ResourceLoader resourceLoader = new DefaultResourceLoader();
-    mysqlSchemaField
-        .set(dataSourceConfig, resourceLoader.getResource("classpath:mysql-test-schema.sql"));
-    Connection conn = Mockito.mock(Connection.class);
-    when(dataSource.getConnection()).thenReturn(conn);
-    PreparedStatement preparedStatement = Mockito.mock(PreparedStatement.class);
-    when(conn.prepareStatement(any())).thenReturn(preparedStatement);
-    doThrow(new SQLException("test-exception")).when(conn).commit();
+  void whenInitializeSchema__ResourceThrows__ThenShouldCatchThrow() throws IOException {
+    // given
+    DataSource dataSource = mock(DataSource.class);
+    Resource resource = mock(Resource.class);
+    doReturn(resource).when(dataSourceConfig).getSchemaResource();
+    doThrow(new IOException("EXCEPTION")).when(resource).getInputStream();
 
     // when
     Throwable t = catchThrowable(() -> dataSourceConfig.initializeSchema(dataSource));
+
     // then
-    assertThat(t).hasMessage("test-exception");
+    assertAll(
+        () -> assertThat(t).hasMessage("EXCEPTION")
+            .isInstanceOf(InitializationFailureException.class),
+        () -> assertThat(logSpy.getLogsByLevelAsString(Level.ERROR, true))
+            .hasSize(1)
+            .contains("failed to initialize schema: EXCEPTION"));
+  }
+
+  @Test
+  void givenSqlStrings__WhenInitializeSchema__ShouldCallJdbcTemplates() {
+    // given
+    JdbcTemplate jdbcTemplate = Mockito.mock(JdbcTemplate.class);
+    ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+    DataSource dataSource = Mockito.mock(DataSource.class);
+
+    Resource resource = new ByteArrayResource("hello world;\nHi there!;".getBytes());
+
+    doReturn(jdbcTemplate).when(dataSourceConfig).getJdbcTemplate(any());
+    doReturn(resource).when(dataSourceConfig).getSchemaResource();
+    doNothing().when(jdbcTemplate).execute(captor.capture());
+
+    // when
+    dataSourceConfig.initializeSchema(dataSource);
+
+    // then
+    assertAll(
+        () -> verify(jdbcTemplate, atLeast(2)).execute(anyString()),
+        () -> assertThat(captor.getAllValues())
+            .hasSize(2)
+            .contains("hello world", "Hi there!"));
   }
 
   @Test
   void whenGetSchemaResource__ShouldReturnValidValue() {
-    try {
-      // prep
-      Field dbTypeField = DataSourceConfig.class.getDeclaredField("DB_TYPE");
-      dbTypeField.setAccessible(true);
-      dbTypeField.set(DataSourceConfig.class, DBType.MYSQL);
+    DataSourceProperties dataSourceProperties = Mockito.mock(DataSourceProperties.class);
+    doReturn(dataSourceProperties).when(dataSourceConfig).dataSourceProperties();
 
-      // when
-      Resource firstResult = dataSourceConfig.getSchemaResource();
+    // given
+    doReturn(DBType.MYSQL).when(dataSourceProperties).getDbType();
 
-      // then
-      assertThat(firstResult).isEqualTo(dataSourceConfig.getMysqlSchema());
+    // when
+    Resource firstResult = dataSourceConfig.getSchemaResource();
 
-      // prep
-      dbTypeField.set(DataSourceConfig.class, DBType.POSTGRESQL);
+    // then
+    assertThat(firstResult).isEqualTo(dataSourceConfig.getMysqlSchema());
 
-      // when
-      Resource secondResult = dataSourceConfig.getSchemaResource();
+    // prep
+    doReturn(DBType.POSTGRESQL).when(dataSourceProperties).getDbType();
 
-      // then
-      assertThat(secondResult).isEqualTo(dataSourceConfig.getPostgresSchema());
+    // when
+    Resource secondResult = dataSourceConfig.getSchemaResource();
 
-    } catch (NoSuchFieldException | IllegalAccessException e) {
-      fail(e.getMessage());
-    }
-  }
-
-  @Test
-  void whenGetSchemaResource__ShouldThrowIfNoDBTypeSet() {
-    Throwable t = catchThrowable(() -> dataSourceConfig.getSchemaResource());
-    assertThat(t).hasMessage("static variable DB_TYPE cannot be null");
+    // then
+    assertThat(secondResult).isEqualTo(dataSourceConfig.getPostgresSchema());
   }
 }

@@ -4,11 +4,17 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 import com.zaxxer.hikari.HikariDataSource;
 import io.dsub.discogsdata.batch.TestDumpGenerator;
+import io.dsub.discogsdata.batch.datasource.DBType;
+import io.dsub.discogsdata.batch.datasource.DataSourceProperties;
+import io.dsub.discogsdata.batch.datasource.SimpleDataSourceProperties;
 import io.dsub.discogsdata.batch.dump.DiscogsDump;
 import io.dsub.discogsdata.batch.dump.DumpType;
 import io.dsub.discogsdata.batch.dump.service.DiscogsDumpService;
+import io.dsub.discogsdata.batch.job.reader.DiscogsDumpItemReaderBuilder;
 import io.dsub.discogsdata.batch.query.JpaEntityQueryBuilder;
 import io.dsub.discogsdata.batch.query.MySQLJpaEntityQueryBuilder;
+import io.dsub.discogsdata.batch.util.FileUtil;
+import io.dsub.discogsdata.batch.util.SimpleFileUtil;
 import io.dsub.discogsdata.common.entity.base.BaseEntity;
 import io.dsub.discogsdata.common.exception.DumpNotFoundException;
 import java.io.BufferedReader;
@@ -31,6 +37,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.batch.test.JobLauncherTestUtils;
 import org.springframework.batch.test.JobRepositoryTestUtils;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.DefaultApplicationArguments;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -38,6 +45,7 @@ import org.springframework.context.annotation.PropertySource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.orm.jpa.vendor.HibernateJpaDialect;
@@ -85,7 +93,7 @@ public class DiscogsJobIntegrationTestConfig {
   }
 
   @Bean
-  public DataSource dataSource() {
+  public HikariDataSource dataSource() {
     HikariDataSource dataSource = new HikariDataSource();
     Properties properties = new Properties();
     properties.setProperty("rewriteBatchedStatements", "true");
@@ -97,6 +105,31 @@ public class DiscogsJobIntegrationTestConfig {
     dataSource.setDriverClassName("org.h2.Driver");
     initializeDb(dataSource);
     return dataSource;
+  }
+
+  @Bean
+  public DataSourceProperties dataSourceProperties() {
+    return SimpleDataSourceProperties.builder()
+        .dbType(DBType.MYSQL)
+        .build();
+  }
+
+  @Bean
+  public JdbcTemplate jdbcTemplate() {
+    return new JdbcTemplate(dataSource());
+  }
+
+  @Bean
+  public FileUtil fileUtil() {
+    return SimpleFileUtil.builder()
+        .appDirectory("discogs-data-batch-test")
+        .isTemporary(false)
+        .build();
+  }
+
+  @Bean
+  public DiscogsDumpItemReaderBuilder readerBuilder() {
+    return new DiscogsDumpItemReaderBuilder(fileUtil());
   }
 
   private void initializeDb(DataSource dataSource) {
@@ -116,8 +149,6 @@ public class DiscogsJobIntegrationTestConfig {
             conn.commit();
           } catch (SQLException e) {
             conn.rollback();
-            System.out.println("ERROR FROM " + query);
-            System.out.println("MESSAGE = " + e.getMessage());
             throw e;
           }
         }
@@ -164,7 +195,7 @@ public class DiscogsJobIntegrationTestConfig {
 
   @Bean
   public Map<DumpType, File> dumpFiles() throws IOException {
-    return new TestDumpGenerator(DiscogsJobIntegrationTest.TEMP_DIR).createDiscogsDumpFiles();
+    return new TestDumpGenerator(fileUtil().getAppDirectory(true)).createDiscogsDumpFiles();
   }
 
   @Bean
@@ -185,7 +216,6 @@ public class DiscogsJobIntegrationTestConfig {
 
       @Override
       public DiscogsDump getDiscogsDump(String eTag) {
-
         // i.e call by artist, release, ...
         DumpType type = DumpType.valueOf(eTag.toUpperCase(Locale.ROOT));
         File file = dumpFiles.get(type);

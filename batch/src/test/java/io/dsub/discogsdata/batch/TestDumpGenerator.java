@@ -1096,6 +1096,7 @@ public class TestDumpGenerator {
       + "    </companies>\n"
       + "  </release>\n"
       + "</releases>";
+
   private final Path tempDir;
 
   public Map<DumpType, File> createDiscogsDumpFiles() throws IOException {

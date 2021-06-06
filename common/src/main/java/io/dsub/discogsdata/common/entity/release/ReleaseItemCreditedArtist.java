@@ -43,6 +43,6 @@ public class ReleaseItemCreditedArtist extends BaseTimeEntity {
   @ManyToOne
   private Artist artist;
 
-  @Column(name = "role", length = 2000)
+  @Column(name = "role", length = 20000)
   private String role;
 }

@@ -1,18 +1,15 @@
 package io.dsub.discogsdata.batch.datasource;
 
+import com.zaxxer.hikari.HikariConfigMXBean;
 import com.zaxxer.hikari.HikariDataSource;
+import com.zaxxer.hikari.hibernate.HikariConfigurationUtil;
 import io.dsub.discogsdata.common.exception.InitializationFailureException;
-import io.dsub.discogsdata.common.exception.MissingRequiredArgumentException;
 import io.dsub.discogsdata.common.exception.UnsupportedOperationException;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -26,6 +23,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.io.Resource;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 @Slf4j
 @Getter
@@ -48,45 +46,34 @@ public class DataSourceConfig {
 
   private static final Pattern CONTAINS_OPTION_QUESTION_MARK_PATTERN = Pattern.compile(".*?.*");
 
-  @Getter
-  private static DBType DB_TYPE = null;
-  private final ApplicationArguments applicationArguments;
+  private final ApplicationArguments args;
+
   @Value("classpath:schema/mysql-schema.sql")
   private Resource mysqlSchema;
   @Value("classpath:schema/postgresql-schema.sql")
   private Resource postgresSchema;
 
-  @Order(0)
   @Bean(name = "batchDataSource")
   public HikariDataSource batchDataSource() {
-
-    // map nonOptional args..
-    Map<String, String> arguments =
-        applicationArguments.getNonOptionArgs().stream()
-            .map(s -> s.split("="))
-            .collect(Collectors.toMap(parts -> parts[0], parts -> parts[1]));
-
-    if (!arguments.containsKey("url")) {
-      throw new MissingRequiredArgumentException(
-          "application argument must contain url in the non-option argument.");
-    }
-
-    String optAppliedUrlString = appendOptions(arguments.get("url"));
-
-    DB_TYPE = DBType.getDBType(optAppliedUrlString);
-
+    DataSourceProperties dbProps = dataSourceProperties();
     Properties properties = new Properties();
     properties.setProperty("rewriteBatchedStatements", "true");
-
     HikariDataSource hikariDataSource = new HikariDataSource();
-    hikariDataSource.setJdbcUrl(optAppliedUrlString);
-    hikariDataSource.setUsername(arguments.get("username"));
-    hikariDataSource.setPassword(arguments.get("password"));
+    hikariDataSource.setJdbcUrl(dbProps.getConnectionUrl());
+    hikariDataSource.setUsername(dbProps.getUsername());
+    hikariDataSource.setPassword(dbProps.getPassword());
     hikariDataSource.setDataSourceProperties(properties);
-    hikariDataSource.setDriverClassName(DB_TYPE.getDriverClassName());
-
+    hikariDataSource.setDriverClassName(dbProps.getDbType().getDriverClassName());
     initializeSchema(hikariDataSource);
     return hikariDataSource;
+  }
+
+  @Bean
+  public DataSourceProperties dataSourceProperties() {
+    SimpleDataSourceProperties properties = new SimpleDataSourceProperties(args);
+    String url = appendOptions(properties.getConnectionUrl());
+    properties.setConnectionUrl(url);
+    return properties;
   }
 
   /**
@@ -97,44 +84,35 @@ public class DataSourceConfig {
    */
   protected void initializeSchema(DataSource dataSource) {
 
-    if (DB_TYPE == null) {
-      throw new InitializationFailureException("static variable DB_TYPE cannot be null");
-    }
+    JdbcTemplate jdbcTemplate = getJdbcTemplate(dataSource);
+    Resource schema = getSchemaResource();
 
-    try (Connection conn = dataSource.getConnection()) {
-      Resource schema;
-      schema = getSchemaResource();
-      BufferedReader reader = new BufferedReader(new InputStreamReader(schema.getInputStream()));
+    try (BufferedReader reader = new BufferedReader(
+        new InputStreamReader(schema.getInputStream()))) {
+
       String sql = reader.lines().collect(Collectors.joining("\n"));
       List<String> queries = Arrays.stream(sql.split(";"))
           .map(String::trim)
           .collect(Collectors.toList());
-      conn.setAutoCommit(false);
+
       for (String query : queries) {
-        try (PreparedStatement stmt = conn.prepareStatement(query)) {
-          stmt.closeOnCompletion();
-          stmt.execute();
-          try {
-            conn.commit();
-          } catch (SQLException e) {
-            log.error("failed execute sql: " + query, e);
-            conn.rollback();
-            throw e;
-          }
-        }
+        jdbcTemplate.execute(query);
       }
-    } catch (SQLException | IOException | NullPointerException e) {
+
+    } catch (IOException e) {
       log.error("failed to initialize schema: " + e.getMessage());
       throw new InitializationFailureException(e.getMessage());
     }
   }
 
+  protected JdbcTemplate getJdbcTemplate(DataSource dataSource) {
+    return new JdbcTemplate(dataSource);
+  }
+
   protected Resource getSchemaResource() {
-    if (DB_TYPE == null) {
-      throw new InitializationFailureException("static variable DB_TYPE cannot be null");
-    }
+    DBType type = dataSourceProperties().getDbType();
     Resource schema;
-    if (DB_TYPE.equals(DBType.POSTGRESQL)) {
+    if (type.equals(DBType.POSTGRESQL)) {
       schema = postgresSchema;
     } else {
       schema = mysqlSchema;

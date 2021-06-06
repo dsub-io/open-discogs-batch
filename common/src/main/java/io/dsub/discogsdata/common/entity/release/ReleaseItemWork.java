@@ -45,6 +45,6 @@ public class ReleaseItemWork extends BaseTimeEntity {
   @JoinColumn(name = "label_id", referencedColumnName = "id")
   private Label label;
 
-  @Column(name = "work")
+  @Column(name = "work", length = 5000)
   private String work;
 }
