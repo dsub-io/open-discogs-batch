@@ -29,8 +29,10 @@ spring:
         # immediately after the job is done.
         bootstrap-mode: default
 logging:
+  file:
+    path: ./log
   level:
-    io.dsub: DEBUG
+    io.dsub: INFO
     org:
       reflections: ERROR
       springframework:

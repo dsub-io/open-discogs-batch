@@ -6,6 +6,7 @@ import io.dsub.discogsdata.common.exception.InvalidArgumentException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.ApplicationContext;
 
 @Slf4j
 @SpringBootApplication(scanBasePackages = {"io.dsub.discogsdata.common",
@@ -16,10 +17,11 @@ public class BatchApplication {
     try {
       args = new DefaultArgumentHandler().resolve(args);
       new JdbcConnectionTester().testConnection(args);
-    } catch (InvalidArgumentException e) {
-      System.out.println(e.getMessage());
+      ApplicationContext context = SpringApplication.run(BatchApplication.class, args);
+      System.exit(SpringApplication.exit(context));
+    } catch (Exception e) {
+      log.error(e.getMessage(), e);
       System.exit(1);
     }
-    SpringApplication.run(BatchApplication.class, args);
   }
 }
