@@ -88,7 +88,11 @@ public class MasterStepConfig extends AbstractStepConfig {
 
   @Bean
   @JobScope
-  public Step masterStep() {
+  public Step masterStep(@Value(ETAG) String eTag) {
+    if (eTag == null || eTag.isBlank()) {
+      return buildSkipStep(DumpType.MASTER, sbf);
+    }
+
     Flow artistStepFlow =
         new FlowBuilder<SimpleFlow>(MASTER_STEP_FLOW)
             .from(masterFileFetchStep()).on(FAILED).end()

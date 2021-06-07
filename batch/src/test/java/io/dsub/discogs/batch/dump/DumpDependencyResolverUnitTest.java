@@ -349,4 +349,42 @@ class DumpDependencyResolverUnitTest {
     assertThat(dumpTypeCaptor.getValue().containsAll(targetType.getDependencies())).isTrue();
     assertThat(result.size()).isEqualTo(expected.size());
   }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+          "artist",
+          "release",
+          "master",
+          "label",
+          "artist,master",
+          "artist,label",
+          "label,master",
+          "master,release",
+          "artist,master,release",
+          "label,release"
+      })
+  void whenTypeArgPresent__AndIsSetToStrict__ThenShouldOnlyContainGivenDumps(String type) {
+    String[] types = type.split(",");
+    int typeSize = types.length;
+    List<String> argList = new ArrayList<>(List.of(makeTypeArgFromTypes(types)));
+    argList.add("--strict");
+
+    DefaultApplicationArguments args = new DefaultApplicationArguments(
+        argList.toArray(String[]::new));
+
+    // when
+    Collection<DumpType> parsed = resolver.parseTypes(args);
+
+    // then
+    assertThat(parsed.size()).isEqualTo(typeSize);
+  }
+
+  String[] makeTypeArgFromTypes(String[] types) {
+    return Arrays.stream(types)
+        .map(
+            typeString ->
+                String.format("--%s=%s", ArgType.TYPE.getGlobalName(), typeString))
+        .toArray(String[]::new);
+  }
 }

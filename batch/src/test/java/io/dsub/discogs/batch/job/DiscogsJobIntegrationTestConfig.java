@@ -97,8 +97,7 @@ public class DiscogsJobIntegrationTestConfig {
     Properties properties = new Properties();
     properties.setProperty("rewriteBatchedStatements", "true");
     dataSource.setDataSourceProperties(properties);
-    dataSource
-        .setJdbcUrl("jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1");
+    dataSource.setJdbcUrl("jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1");
     dataSource.setUsername("sa");
     dataSource.setPassword("");
     dataSource.setDriverClassName("org.h2.Driver");
@@ -163,10 +162,8 @@ public class DiscogsJobIntegrationTestConfig {
         new LocalContainerEntityManagerFactoryBean();
     entityManagerFactoryBean.setDataSource(dataSource());
     entityManagerFactoryBean.setJpaDialect(new HibernateJpaDialect());
-    entityManagerFactoryBean.setPackagesToScan("io.dsub.discogs.batch",
-        "io.dsub.discogs.common");
+    entityManagerFactoryBean.setPackagesToScan("io.dsub.discogs.batch", "io.dsub.discogs.common");
     entityManagerFactoryBean.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
-
     Properties properties = new Properties();
     properties.setProperty("hibernate.format_sql", "true");
     properties.setProperty("hibernate.order_inserts", "true");

@@ -82,7 +82,12 @@ public class ArtistStepConfig extends AbstractStepConfig {
 
   @Bean
   @JobScope
-  public Step artistStep() {
+  public Step artistStep(@Value(ETAG) String eTag) {
+
+    if (eTag == null || eTag.isBlank()) {
+      return buildSkipStep(DumpType.ARTIST, sbf);
+    }
+
     Flow artistStepFlow =
         new FlowBuilder<SimpleFlow>(ARTIST_STEP_FLOW)
             .from(artistFileFetchStep()).on(FAILED).end()

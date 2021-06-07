@@ -26,6 +26,7 @@ public class DefaultDumpDependencyResolver implements DumpDependencyResolver {
   private static final String ETAG = ArgType.ETAG.getGlobalName();
   private static final String TYPE = ArgType.TYPE.getGlobalName();
   private static final String YEAR = ArgType.YEAR.getGlobalName();
+  private static final String STRICT = ArgType.STRICT.getGlobalName();
   private static final String YEAR_MONTH = ArgType.YEAR_MONTH.getGlobalName();
   private final DiscogsDumpService dumpService;
 
@@ -39,6 +40,9 @@ public class DefaultDumpDependencyResolver implements DumpDependencyResolver {
   @Override
   public Collection<DiscogsDump> resolve(ApplicationArguments args) {
     if (args.containsOption(ETAG)) {
+      if (args.containsOption(STRICT)) {
+        return resolveByStrictETagEntries(args);
+      }
       return resolveByETagEntries(args.getOptionValues(ETAG));
     }
     List<DumpType> types = parseTypes(args);
@@ -52,7 +56,7 @@ public class DefaultDumpDependencyResolver implements DumpDependencyResolver {
     while (dumps == null) {
       try {
         if (!retry) { // prevent redundant logging.
-          log.info("fetching dump for year:{}, month:{} of types:{}.", targetDate.getYear(),
+          log.info("find dump for year:{}, month:{} of types:{}.", targetDate.getYear(),
               targetDate.getMonthValue(), types);
         }
         dumps = dumpService
@@ -60,15 +64,28 @@ public class DefaultDumpDependencyResolver implements DumpDependencyResolver {
       } catch (DumpNotFoundException ignored) {
         if (targetDate.getYear() > 2010) {
           targetDate = targetDate.minusMonths(1);
-          log.info("retrying to fetch dump for year:{} month:{} of types:{}.", targetDate.getYear(),
+          log.info("retrying to find dump for year:{} month:{} of types:{}.", targetDate.getYear(),
               targetDate.getMonthValue(), types);
           retry = true;
           continue;
         }
-        throw new DumpNotFoundException("failed to retrieve dump...");
+        throw new DumpNotFoundException("failed to find dump...");
       }
     }
     return dumps;
+  }
+
+  /**
+   * Returns ETag regardless of dependencies.
+   *
+   * @param args argument to be examined.
+   * @return list of discogs dump fetched via etag.
+   */
+  private List<DiscogsDump> resolveByStrictETagEntries(ApplicationArguments args) {
+    log.info("strict option found. skip resolve dependencies..");
+    return args.getOptionValues(ETAG).stream()
+        .map(this::getDumpByETag)
+        .collect(Collectors.toList());
   }
 
   /**
@@ -85,16 +102,16 @@ public class DefaultDumpDependencyResolver implements DumpDependencyResolver {
     if (eTags == null || eTags.isEmpty()) {
       throw new InvalidArgumentException("eTags cannot be null or empty");
     }
+
     LocalDate foundDate = null;
     Set<DumpType> requiredTypes = new HashSet<>();
     Map<DumpType, DiscogsDump> foundDumps = new HashMap<>();
 
     // validates given eTags, then save the progress to map nad set.
     for (String eTag : eTags.stream().distinct().collect(Collectors.toList())) {
-      DiscogsDump dump = dumpService.getDiscogsDump(eTag);
-      if (dump == null) {
-        throw new DumpNotFoundException("dump of eTag " + eTag + " not found");
-      }
+
+      DiscogsDump dump = getDumpByETag(eTag);
+
       LocalDate dumpYearMonth = dump.getCreatedAt().withDayOfMonth(1);
 
       if (foundDate == null) {
@@ -126,6 +143,17 @@ public class DefaultDumpDependencyResolver implements DumpDependencyResolver {
       foundDumps.put(requiredType, dump);
     }
     return foundDumps.values();
+  }
+
+  /**
+   * Calls dumpService to fetch dump via ETag entry.
+   */
+  private DiscogsDump getDumpByETag(String eTag) {
+    DiscogsDump dump = dumpService.getDiscogsDump(eTag);
+    if (dump == null) {
+      throw new DumpNotFoundException("dump of eTag " + eTag + " not found");
+    }
+    return dump;
   }
 
   /**
@@ -179,7 +207,17 @@ public class DefaultDumpDependencyResolver implements DumpDependencyResolver {
     if (!args.containsOption(TYPE)) {
       return List.of(DumpType.values());
     }
+
     Set<DumpType> requiredTypes = new HashSet<>();
+
+    if (args.containsOption(STRICT)) {
+      log.info("strict option found. skip resolve dependencies..");
+      args.getOptionValues(TYPE).stream()
+          .map(DumpType::of)
+          .forEach(requiredTypes::add);
+      return List.copyOf(requiredTypes);
+    }
+
     args.getOptionValues(TYPE).stream()
         .map(DumpType::of)
         .map(DumpType::getDependencies)

@@ -5,15 +5,15 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import io.dsub.discogs.batch.job.step.ArtistStepConfig;
-import io.dsub.discogs.batch.testutil.LogSpy;
 import io.dsub.discogs.batch.config.BatchConfig;
 import io.dsub.discogs.batch.domain.artist.ArtistXML;
 import io.dsub.discogs.batch.dump.DiscogsDump;
 import io.dsub.discogs.batch.dump.DumpType;
+import io.dsub.discogs.batch.job.step.ArtistStepConfig;
 import io.dsub.discogs.batch.job.step.LabelStepConfig;
 import io.dsub.discogs.batch.job.step.MasterStepConfig;
 import io.dsub.discogs.batch.job.step.ReleaseItemStepConfig;
+import io.dsub.discogs.batch.testutil.LogSpy;
 import io.dsub.discogs.batch.util.FileUtil;
 import io.dsub.discogs.common.entity.base.BaseEntity;
 import io.dsub.discogs.common.repository.artist.ArtistRepository;
@@ -31,7 +31,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.reflections.Reflections;
 import org.springframework.batch.core.ExitStatus;
@@ -49,7 +48,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationContext;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.support.Repositories;
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.annotation.DirtiesContext.ClassMode;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.transaction.PlatformTransactionManager;
 
@@ -93,6 +95,15 @@ public class DiscogsJobIntegrationTest {
   @Autowired
   private Map<DumpType, DiscogsDump> dumpMap;
 
+  Reflections reflections = new Reflections("io.dsub.discogs.common");
+  Repositories repositories;
+
+  List<Class<? extends BaseEntity>> entityClasses = reflections.getSubTypesOf(BaseEntity.class)
+      .stream()
+      .filter(clazz -> !Modifier.isAbstract(clazz.getModifiers()) && !Modifier
+          .isInterface(clazz.getModifiers()))
+      .collect(Collectors.toList());
+
   @BeforeEach
   void setUp() throws Exception {
     JobRepositoryFactoryBean jobRepositoryFactoryBean = new JobRepositoryFactoryBean();
@@ -110,6 +121,7 @@ public class DiscogsJobIntegrationTest {
   @AfterEach
   public void cleanUp() {
     jobRepositoryTestUtils.removeJobExecutions();
+    dumpMap.clear();
   }
 
   private JobParameters defaultJobParameters() {
@@ -123,29 +135,20 @@ public class DiscogsJobIntegrationTest {
   }
 
   @Test
-  @Timeout(10000)
-  public void whenJobExecuted__ShouldOnlyContainOneStepExecution() throws Exception {
-    JobParameters uniqueJobParams =
+  public void whenAllTypesProvided__ShouldNotSkipAnyType() throws Exception {
+    JobParameters params =
         jobLauncherTestUtils
             .getUniqueJobParametersBuilder()
             .addJobParameters(defaultJobParameters())
             .toJobParameters();
 
-    JobExecution jobExecution = jobLauncherTestUtils.launchJob(uniqueJobParams);
+    JobExecution jobExecution = jobLauncherTestUtils.launchJob(params);
     ExitStatus exitStatus = jobExecution.getExitStatus();
 
-    Reflections reflections = new Reflections("io.dsub.discogs.common");
-    List<Class<? extends BaseEntity>> entityClasses = reflections.getSubTypesOf(BaseEntity.class)
-        .stream()
-        .filter(clazz -> !Modifier.isAbstract(clazz.getModifiers()) && !Modifier
-            .isInterface(clazz.getModifiers()))
-        .collect(Collectors.toList());
-
-    Repositories repositories = new Repositories(context);
-
     assertThat(exitStatus.getExitCode(), is("COMPLETED"));
-
     assertThat(dumpMap.size(), is(4));
+
+    repositories = new Repositories(context);
 
     for (DiscogsDump dump : dumpMap.values()) {
       Path filePath = fileUtil.getFilePath(dump.getFileName(), false);
@@ -162,5 +165,25 @@ public class DiscogsJobIntegrationTest {
         .map(repo -> (JpaRepository<?, ?>) repo)
         .ifPresent(
             repo -> assertThat((repo).count(), is(greaterThan(0L)))));
+  }
+
+  @Test
+  void whenOnlyArtistLabel__ShouldSkipMasterRelease() throws Exception {
+    JobParametersBuilder builder = new JobParametersBuilder();
+    builder.addString("artist", "artist");
+    builder.addString("label", "label");
+    builder.addString("chunkSize", "1000");
+    JobParameters params = jobLauncherTestUtils
+        .getUniqueJobParametersBuilder()
+        .addJobParameters(builder.toJobParameters())
+        .toJobParameters();
+
+    JobExecution jobExecution = jobLauncherTestUtils.launchJob(params);
+    ExitStatus exitStatus = jobExecution.getExitStatus();
+
+    repositories = new Repositories(context);
+
+    assertThat(exitStatus.getExitCode(), is("COMPLETED"));
+    assertThat(dumpMap.size(), is(2));
   }
 }

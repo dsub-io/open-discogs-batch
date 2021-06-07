@@ -1,12 +1,17 @@
 package io.dsub.discogs.batch.job.step;
 
+import io.dsub.discogs.batch.dump.DumpType;
 import io.dsub.discogs.common.exception.InvalidArgumentException;
 import javax.sql.DataSource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.batch.core.ExitStatus;
+import org.springframework.batch.core.Step;
+import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.core.job.flow.FlowExecutionStatus;
 import org.springframework.batch.core.job.flow.JobExecutionDecider;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder;
+import org.springframework.batch.repeat.RepeatStatus;
 
 @Slf4j
 public abstract class AbstractStepConfig {
@@ -44,5 +49,17 @@ public abstract class AbstractStepConfig {
       log.debug(key + " eTag not found. skipping " + key + " step.");
       return new FlowExecutionStatus(SKIPPED);
     };
+  }
+
+  protected Step buildSkipStep(DumpType dumpType, StepBuilderFactory factory) {
+    return factory.get("skip-step-" + dumpType.toString())
+        .tasklet((contribution, chunkContext) -> {
+          log.info("skipping {} step", dumpType);
+          contribution.setExitStatus(ExitStatus.COMPLETED);
+          chunkContext.setComplete();
+          return RepeatStatus.FINISHED;
+        })
+        .allowStartIfComplete(true)
+        .build();
   }
 }

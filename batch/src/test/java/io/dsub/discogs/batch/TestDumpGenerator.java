@@ -49,7 +49,7 @@ public class TestDumpGenerator {
       + "      <name id=\"1\">Puente Latino</name>\n"
       + "    </aliases>\n"
       + "    <members>\n"
-      + "      <id>26</id>\n"
+      + "      <id>3</id>\n"
       + "      <name id=\"3\">Alexi Delano</name>\n"
       + "    </members>\n"
       + "  </artist>\n"

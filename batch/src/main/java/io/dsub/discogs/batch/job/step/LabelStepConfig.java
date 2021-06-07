@@ -72,7 +72,11 @@ public class LabelStepConfig extends AbstractStepConfig {
 
   @Bean
   @JobScope
-  public Step labelStep() {
+  public Step labelStep(@Value(ETAG) String eTag) {
+    if (eTag == null || eTag.isBlank()) {
+      return buildSkipStep(DumpType.LABEL, sbf);
+    }
+
     Flow labelStepFlow =
         new FlowBuilder<SimpleFlow>(LABEL_STEP_FLOW)
             .from(labelFileFetchStep()).on(FAILED).end()

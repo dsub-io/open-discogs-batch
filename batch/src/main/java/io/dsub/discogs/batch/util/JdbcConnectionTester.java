@@ -2,6 +2,8 @@ package io.dsub.discogs.batch.util;
 
 import io.dsub.discogs.batch.argument.ArgType;
 import io.dsub.discogs.common.exception.InvalidArgumentException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -54,8 +56,8 @@ public class JdbcConnectionTester {
     // InvalidArgumentException will be thrown if any among url, username or password is missing.
     Map<String, String> props = parseJdbcArgs(new DefaultApplicationArguments(args));
     String url = props.get(URL);
-    String username = props.get(USERNAME);
-    String password = props.get(PASSWORD);
+    String username = encode(props.get(USERNAME));
+    String password = encode(props.get(PASSWORD));
 
     assert (url != null && username != null && password != null);
 
@@ -156,5 +158,9 @@ public class JdbcConnectionTester {
       return POSTGRESQL_JDBC_DRIVER;
     }
     return MYSQL_CJ_JDBC_DRIVER;
+  }
+
+  private String encode(String value) {
+    return URLEncoder.encode(value, StandardCharsets.UTF_8);
   }
 }

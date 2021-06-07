@@ -97,7 +97,11 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
 
   @Bean
   @JobScope
-  public Step releaseStep() {
+  public Step releaseStep(@Value(ETAG) String eTag) {
+    if (eTag == null || eTag.isBlank()) {
+      return buildSkipStep(DumpType.RELEASE, sbf);
+    }
+
     Flow artistStepFlow =
         new FlowBuilder<SimpleFlow>(RELEASE_STEP_FLOW)
             .from(releaseFileFetchStep()).on(FAILED).end()

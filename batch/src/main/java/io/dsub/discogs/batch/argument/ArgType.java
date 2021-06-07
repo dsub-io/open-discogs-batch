@@ -12,7 +12,7 @@ public enum ArgType {
   USERNAME(
       ArgumentProperty.builder()
           .globalName("username")
-          .synonyms("user", "u")
+          .synonyms("username", "user", "u")
           .required(true)
           .build()),
   PASSWORD(
@@ -28,12 +28,6 @@ public enum ArgType {
           .supportedType(Long.class)
           .synonyms("chunk", "c")
           .build()),
-  THROTTLE_LIMIT(
-      ArgumentProperty.builder()
-          .globalName("throttleLimit")
-          .synonyms("throttle")
-          .supportedType(Long.class)
-          .build()),
   YEAR(
       ArgumentProperty.builder()
           .globalName("year")
@@ -42,7 +36,7 @@ public enum ArgType {
           .build()),
   YEAR_MONTH(ArgumentProperty.builder().globalName("yearMonth").synonyms("ym").build()),
   ETAG(ArgumentProperty.builder().globalName("eTag").synonyms("e").maxValuesCount(4).build()),
-  MOUNT(ArgumentProperty.builder().globalName("mount").synonyms("m", "keep", "preserve")
+  MOUNT(ArgumentProperty.builder().globalName("mount").synonyms("m")
       .required(false)
       .maxValuesCount(0)
       .minValuesCount(0).build()),
