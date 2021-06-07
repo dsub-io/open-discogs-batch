@@ -12,7 +12,7 @@ buildscript {
 }
 
 allprojects {
-    group 'io.dsub.discogstools'
+    group 'io.dsub.discogs'
     version '0.1-SNAPSHOT'
 }
 
