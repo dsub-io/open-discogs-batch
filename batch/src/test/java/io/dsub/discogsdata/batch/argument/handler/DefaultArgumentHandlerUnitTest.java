@@ -10,6 +10,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class DefaultArgumentHandlerUnitTest {
 
@@ -73,6 +75,14 @@ class DefaultArgumentHandlerUnitTest {
       }
       assertThat(s).contains(":3306");
     }
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"--m", "m", "--mount", "mount"})
+  void whenOptionArgGiven__ShouldAddAsOption__RegardlessOfDashPresented(String arg) {
+    String[] args = {"url=something/data", "-user=world", "pass=33201", arg};
+    args = handler.resolve(args);
+    assertThat(args).contains("--mount");
   }
 
   @Test

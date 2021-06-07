@@ -38,7 +38,9 @@ public class DefaultArgumentHandler implements ArgumentHandler {
    */
   private final Function<String, List<String>> splitMultiValues =
       arg -> {
-        if (arg.matches("^--.*") && arg.indexOf('=') < arg.length()) {
+        if (arg.matches("^--.*")
+            && arg.indexOf('=') < arg.length()
+            && arg.indexOf('=') > 0) {
           String flagHead = arg.substring(0, arg.indexOf("="));
           String valueString = arg.substring(arg.indexOf("=") + 1);
           return List.of(valueString.split(",")).stream()

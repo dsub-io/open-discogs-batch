@@ -44,6 +44,11 @@ public class ArgumentNameFormatter implements ArgumentFormatter {
       head = "--" + head;
     }
 
+    // handle no-arg option
+    if (!type.isValueRequired()) {
+      return head;
+    }
+
     return String.join("=", head, value);
   }
 }

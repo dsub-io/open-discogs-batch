@@ -6,7 +6,6 @@ spring:
     hikari:
       data-source-properties:
         rewriteBatchedStatements: true
-      maximum-pool-size: 20
   batch:
     job:
       enabled: false
@@ -29,3 +28,17 @@ spring:
         # this is also can be a potential reason of spring batch not being exited
         # immediately after the job is done.
         bootstrap-mode: default
+logging:
+  level:
+    io.dsub: DEBUG
+    org:
+      reflections: ERROR
+      springframework:
+        batch:
+          core:
+            listener: ERROR
+            step:
+              builder: ERROR
+              item: ERROR
+      hibernate: ERROR
+    com.zaxxer.hikari: ERROR

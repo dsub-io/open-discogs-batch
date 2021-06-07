@@ -143,7 +143,7 @@ public class MappedValueValidator implements ArgumentValidator {
     for (ArgType argType : argMap.keySet()) {
       String name = argType.getGlobalName();
       Class<?> type = argType.getSupportedType();
-      if (type.equals(String.class)) { // String can be assigned from anything... :)
+      if (type.equals(String.class)) { // notion of any value.
         continue;
       }
 
