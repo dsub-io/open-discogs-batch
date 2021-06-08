@@ -14,7 +14,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 class ArgTypeUnitTest {
 
   @ParameterizedTest
-  @ValueSource(strings = {"chunk", "e", "y", "c", "t", "throttle"})
+  @ValueSource(strings = {"chunk", "e", "y", "c"})
   void shouldReturnValidBooleanForContainsMethod(String value) {
     assertThat(ArgType.contains(value)).isTrue();
   }
