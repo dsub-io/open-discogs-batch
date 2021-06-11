@@ -1,4 +1,4 @@
-package io.dsub.discogs.batch.datasource;
+package io.dsub.discogs.batch;
 
 import java.lang.reflect.Method;
 import java.util.Arrays;
