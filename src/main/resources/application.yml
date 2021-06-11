@@ -28,6 +28,8 @@ spring:
         # this is also can be a potential reason of spring batch not being exited
         # immediately after the job is done.
         bootstrap-mode: default
+  jmx:
+    enabled: false
 logging:
   file:
     path: ./log
