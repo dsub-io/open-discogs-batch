@@ -1,12 +1,12 @@
 package io.dsub.discogs.batch.argument.handler;
 
 import io.dsub.discogs.batch.argument.formatter.ArgumentFormatter;
+import io.dsub.discogs.batch.argument.formatter.ArgumentNameFormatter;
 import io.dsub.discogs.batch.argument.formatter.CompositeArgumentFormatter;
 import io.dsub.discogs.batch.argument.formatter.JdbcUrlFormatter;
-import io.dsub.discogs.batch.argument.validator.DataSourceArgumentValidator;
-import io.dsub.discogs.batch.argument.formatter.ArgumentNameFormatter;
 import io.dsub.discogs.batch.argument.validator.ArgumentValidator;
 import io.dsub.discogs.batch.argument.validator.CompositeArgumentValidator;
+import io.dsub.discogs.batch.argument.validator.DataSourceArgumentValidator;
 import io.dsub.discogs.batch.argument.validator.KnownArgumentValidator;
 import io.dsub.discogs.batch.argument.validator.MappedValueValidator;
 import io.dsub.discogs.batch.argument.validator.TypeArgumentValidator;
@@ -23,9 +23,7 @@ import org.springframework.boot.DefaultApplicationArguments;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
-/**
- * A default implementation of {@link ArgumentHandler}.
- */
+/** A default implementation of {@link ArgumentHandler}. */
 @Primary
 @Component
 public class DefaultArgumentHandler implements ArgumentHandler {
@@ -38,9 +36,7 @@ public class DefaultArgumentHandler implements ArgumentHandler {
    */
   private final Function<String, List<String>> splitMultiValues =
       arg -> {
-        if (arg.matches("^--.*")
-            && arg.indexOf('=') < arg.length()
-            && arg.indexOf('=') > 0) {
+        if (arg.matches("^--.*") && arg.indexOf('=') < arg.length() && arg.indexOf('=') > 0) {
           String flagHead = arg.substring(0, arg.indexOf("="));
           String valueString = arg.substring(arg.indexOf("=") + 1);
           return List.of(valueString.split(",")).stream()
@@ -50,9 +46,7 @@ public class DefaultArgumentHandler implements ArgumentHandler {
         return List.of(arg);
       };
 
-  /**
-   * Default no-arg constructor.
-   */
+  /** Default no-arg constructor. */
   public DefaultArgumentHandler() {
     CompositeArgumentValidator validator =
         new CompositeArgumentValidator()

@@ -7,15 +7,15 @@ import io.dsub.discogs.batch.domain.label.LabelBatchCommand.LabelUrlCommand;
 import io.dsub.discogs.batch.domain.label.LabelXML;
 import io.dsub.discogs.batch.dump.DiscogsDump;
 import io.dsub.discogs.batch.dump.DumpType;
-import io.dsub.discogs.batch.job.reader.DiscogsDumpItemReaderBuilder;
-import io.dsub.discogs.batch.job.tasklet.FileClearTasklet;
-import io.dsub.discogs.batch.job.writer.ClassifierCompositeCollectionItemWriter;
-import io.dsub.discogs.batch.query.QueryBuilder;
-import io.dsub.discogs.batch.util.FileUtil;
 import io.dsub.discogs.batch.dump.service.DiscogsDumpService;
 import io.dsub.discogs.batch.job.listener.StopWatchStepExecutionListener;
 import io.dsub.discogs.batch.job.listener.StringFieldNormalizingItemReadListener;
+import io.dsub.discogs.batch.job.reader.DiscogsDumpItemReaderBuilder;
+import io.dsub.discogs.batch.job.tasklet.FileClearTasklet;
 import io.dsub.discogs.batch.job.tasklet.FileFetchTasklet;
+import io.dsub.discogs.batch.job.writer.ClassifierCompositeCollectionItemWriter;
+import io.dsub.discogs.batch.query.QueryBuilder;
+import io.dsub.discogs.batch.util.FileUtil;
 import io.dsub.discogs.common.entity.base.BaseEntity;
 import io.dsub.discogs.common.entity.label.Label;
 import io.dsub.discogs.common.entity.label.LabelSubLabel;
@@ -79,12 +79,24 @@ public class LabelStepConfig extends AbstractStepConfig {
 
     Flow labelStepFlow =
         new FlowBuilder<SimpleFlow>(LABEL_STEP_FLOW)
-            .from(labelFileFetchStep()).on(FAILED).end()
-            .from(labelFileFetchStep()).on(ANY).to(labelCoreStep(null))
-            .from(labelCoreStep(null)).on(FAILED).end()
-            .from(labelCoreStep(null)).on(ANY).to(labelSubItemsStep(null))
-            .from(labelSubItemsStep(null)).on(ANY).to(labelFileClearStep())
-            .from(labelFileClearStep()).on(ANY).end()
+            .from(labelFileFetchStep())
+            .on(FAILED)
+            .end()
+            .from(labelFileFetchStep())
+            .on(ANY)
+            .to(labelCoreStep(null))
+            .from(labelCoreStep(null))
+            .on(FAILED)
+            .end()
+            .from(labelCoreStep(null))
+            .on(ANY)
+            .to(labelSubItemsStep(null))
+            .from(labelSubItemsStep(null))
+            .on(ANY)
+            .to(labelFileClearStep())
+            .from(labelFileClearStep())
+            .on(ANY)
+            .end()
             .build();
     FlowStep artistFlowStep = new FlowStep();
     artistFlowStep.setJobRepository(jobRepository);
@@ -96,8 +108,7 @@ public class LabelStepConfig extends AbstractStepConfig {
 
   @Bean
   @JobScope
-  public Step labelCoreStep(
-      @Value(CHUNK) Integer chunkSize) {
+  public Step labelCoreStep(@Value(CHUNK) Integer chunkSize) {
     return sbf.get(LABEL_CORE_STEP)
         .<LabelXML, LabelCommand>chunk(chunkSize)
         .reader(labelStreamReader())
@@ -116,8 +127,7 @@ public class LabelStepConfig extends AbstractStepConfig {
 
   @Bean
   @JobScope
-  public Step labelSubItemsStep(
-      @Value(CHUNK) Integer chunkSize) {
+  public Step labelSubItemsStep(@Value(CHUNK) Integer chunkSize) {
     return sbf.get(LABEL_SUB_ITEMS_STEP)
         .<LabelXML, Collection<BatchCommand>>chunk(chunkSize)
         .reader(labelStreamReader())
@@ -145,9 +155,7 @@ public class LabelStepConfig extends AbstractStepConfig {
   @Bean
   @JobScope
   public Step labelFileClearStep() {
-    return sbf.get(LABEL_FILE_CLEAR_STEP)
-        .tasklet(new FileClearTasklet(fileUtil))
-        .build();
+    return sbf.get(LABEL_FILE_CLEAR_STEP).tasklet(new FileClearTasklet(fileUtil)).build();
   }
 
   @Bean
@@ -172,13 +180,14 @@ public class LabelStepConfig extends AbstractStepConfig {
   @Bean
   @StepScope
   public ItemProcessor<LabelXML, LabelCommand> labelProcessor() {
-    return xml -> LabelCommand.builder()
-        .id(xml.getId())
-        .name(xml.getName())
-        .profile(xml.getProfile())
-        .contactInfo(xml.getContactInfo())
-        .dataQuality(xml.getDataQuality())
-        .build();
+    return xml ->
+        LabelCommand.builder()
+            .id(xml.getId())
+            .name(xml.getName())
+            .profile(xml.getProfile())
+            .contactInfo(xml.getContactInfo())
+            .dataQuality(xml.getDataQuality())
+            .build();
   }
 
   @Bean
@@ -191,20 +200,18 @@ public class LabelStepConfig extends AbstractStepConfig {
 
         xml.getUrls().stream()
             .filter(url -> !url.isBlank())
-            .map(url -> LabelUrlCommand.builder()
-                .url(url)
-                .label(xml.getId())
-                .build())
+            .map(url -> LabelUrlCommand.builder().url(url).label(xml.getId()).build())
             .forEach(batchCommands::add);
       }
 
       if (xml.getSubLabels() != null) {
         xml.getSubLabels().stream()
-            .map(subLabel -> LabelSubLabelCommand.builder()
-                .parent(xml.getId())
-                .subLabel(subLabel.getId())
-                .build()
-            )
+            .map(
+                subLabel ->
+                    LabelSubLabelCommand.builder()
+                        .parent(xml.getId())
+                        .subLabel(subLabel.getId())
+                        .build())
             .forEach(batchCommands::add);
       }
       return batchCommands;
@@ -217,12 +224,13 @@ public class LabelStepConfig extends AbstractStepConfig {
     ClassifierCompositeCollectionItemWriter<BatchCommand> writer =
         new ClassifierCompositeCollectionItemWriter<>();
     writer.setClassifier(
-        (Classifier<BatchCommand, ItemWriter<? super BatchCommand>>) classifiable -> {
-          if (classifiable instanceof LabelSubLabelCommand) {
-            return labelSubLabelWriter();
-          }
-          return labelUrlWriter();
-        });
+        (Classifier<BatchCommand, ItemWriter<? super BatchCommand>>)
+            classifiable -> {
+              if (classifiable instanceof LabelSubLabelCommand) {
+                return labelSubLabelWriter();
+              }
+              return labelUrlWriter();
+            });
     return writer;
   }
 

@@ -29,20 +29,20 @@ public class PostgresLockHandlingJobExecutionListener extends LockHandlingJobExe
   private static final String FK_FORMAT = "fk_%s_%s_%s";
   private static final String ASSERTION_ERR_MSG_FMT = "query <{}> does not match to known formats.";
   private static final String DROP_CONSTRAINT_LOG_FMT = "dropping constraint <{}> from table <{}>.";
-  private static final String ADD_FK_LOG_FMT = "adding foreign key constraint <{}> to table <{}> referencing table <{}>.";
-  private static final String ADD_UQ_LOG_FMT = "adding unique constraint <{}> to table <{}> containing columns: <{}>.";
+  private static final String ADD_FK_LOG_FMT =
+      "adding foreign key constraint <{}> to table <{}> referencing table <{}>.";
+  private static final String ADD_UQ_LOG_FMT =
+      "adding unique constraint <{}> to table <{}> containing columns: <{}>.";
 
-  private static final Pattern DROP_PTN = Pattern.compile(
-      "^ALTER TABLE (\\w*) DROP CONSTRAINT IF EXISTS (\\w*)$"
-  );
+  private static final Pattern DROP_PTN =
+      Pattern.compile("^ALTER TABLE (\\w*) DROP CONSTRAINT IF EXISTS (\\w*)$");
 
-  private static final Pattern ADD_FK_PTN = Pattern.compile(
-      "^ALTER TABLE (\\w*) ADD CONSTRAINT (\\w*) FOREIGN KEY \\((\\w*)\\) REFERENCES (\\w*)$"
-  );
+  private static final Pattern ADD_FK_PTN =
+      Pattern.compile(
+          "^ALTER TABLE (\\w*) ADD CONSTRAINT (\\w*) FOREIGN KEY \\((\\w*)\\) REFERENCES (\\w*)$");
 
-  private static final Pattern ADD_UQ_PTN = Pattern.compile(
-      "^ALTER TABLE (\\w*) ADD CONSTRAINT (\\w*) UNIQUE\\(([\\w,]*)\\)$"
-  );
+  private static final Pattern ADD_UQ_PTN =
+      Pattern.compile("^ALTER TABLE (\\w*) ADD CONSTRAINT (\\w*) UNIQUE\\(([\\w,]*)\\)$");
 
   private final JdbcTemplate jdbcTemplate;
 
@@ -54,10 +54,13 @@ public class PostgresLockHandlingJobExecutionListener extends LockHandlingJobExe
     log.info("begin dropping constraints");
     classes.stream()
         .map(this::getDropConstraintQueries)
-        .forEach(queries -> queries.forEach(query -> {
-          logDropConstraint(query);
-          jdbcTemplate.execute(query);
-        }));
+        .forEach(
+            queries ->
+                queries.forEach(
+                    query -> {
+                      logDropConstraint(query);
+                      jdbcTemplate.execute(query);
+                    }));
     log.info("constraint drop complete");
   }
 
@@ -66,18 +69,24 @@ public class PostgresLockHandlingJobExecutionListener extends LockHandlingJobExe
     log.info("drop constraints to prevent duplication");
     classes.stream()
         .map(this::getDropConstraintQueries)
-        .forEach(queries -> queries.forEach(query -> {
-          logDropConstraint(query);
-          jdbcTemplate.execute(query);
-        }));
+        .forEach(
+            queries ->
+                queries.forEach(
+                    query -> {
+                      logDropConstraint(query);
+                      jdbcTemplate.execute(query);
+                    }));
     log.info("constraint drop complete");
     log.info("begin recovering constraints");
     classes.stream()
         .map(this::getAddConstraintQueries)
-        .forEach(queries -> queries.forEach(query -> {
-          logAddConstraintSql(query);
-          jdbcTemplate.execute(query);
-        }));
+        .forEach(
+            queries ->
+                queries.forEach(
+                    query -> {
+                      logAddConstraintSql(query);
+                      jdbcTemplate.execute(query);
+                    }));
     log.info("constraint recovery complete");
   }
 
@@ -125,10 +134,11 @@ public class PostgresLockHandlingJobExecutionListener extends LockHandlingJobExe
   }
 
   private List<Class<?>> getJpaClasses() {
-    return reflections.getSubTypesOf(BaseEntity.class)
-        .stream()
-        .filter(clazz -> !Modifier.isAbstract(clazz.getModifiers()) && !Modifier
-            .isInterface(clazz.getModifiers()))
+    return reflections.getSubTypesOf(BaseEntity.class).stream()
+        .filter(
+            clazz ->
+                !Modifier.isAbstract(clazz.getModifiers())
+                    && !Modifier.isInterface(clazz.getModifiers()))
         .collect(Collectors.toList());
   }
 
@@ -136,23 +146,25 @@ public class PostgresLockHandlingJobExecutionListener extends LockHandlingJobExe
     List<Field> joinColumnFields = getJoinColumnFields(entityClass);
     String tblName = entityClass.getAnnotation(Table.class).name();
 
-    List<String> queries = joinColumnFields.stream()
-        .map(field -> getAddForeignKeyFormat(field, tblName))
-        .map(addFk -> String.format(ADD_CONSTRAINT_SQL, tblName, addFk))
-        .collect(Collectors.toList());
+    List<String> queries =
+        joinColumnFields.stream()
+            .map(field -> getAddForeignKeyFormat(field, tblName))
+            .map(addFk -> String.format(ADD_CONSTRAINT_SQL, tblName, addFk))
+            .collect(Collectors.toList());
 
-//    queries.addAll(getAddUniqueQueries(entityClass));
+    //    queries.addAll(getAddUniqueQueries(entityClass));
     return queries;
   }
 
   private List<String> getDropConstraintQueries(Class<?> entityClass) {
     String tblName = entityClass.getAnnotation(Table.class).name();
 
-    List<String> constraintNames = getJoinColumnFields(entityClass).stream()
-        .map(field -> getForeignKeyConstraintName(field, tblName))
-        .collect(Collectors.toList());
+    List<String> constraintNames =
+        getJoinColumnFields(entityClass).stream()
+            .map(field -> getForeignKeyConstraintName(field, tblName))
+            .collect(Collectors.toList());
 
-//    constraintNames.addAll(getUniqueConstraintNames(entityClass));
+    //    constraintNames.addAll(getUniqueConstraintNames(entityClass));
 
     return constraintNames.stream()
         .map(name -> String.format(DROP_CONSTRAINT_SQL, tblName, name))
@@ -181,8 +193,9 @@ public class PostgresLockHandlingJobExecutionListener extends LockHandlingJobExe
   private List<String> getAddUniqueQueries(Class<?> entityClass) {
     Table table = entityClass.getAnnotation(Table.class);
     return Arrays.stream(table.uniqueConstraints())
-        .map(unique -> String
-            .format(ADD_UNIQUE, unique.name(), String.join(",", unique.columnNames())))
+        .map(
+            unique ->
+                String.format(ADD_UNIQUE, unique.name(), String.join(",", unique.columnNames())))
         .map(q -> String.format(ADD_CONSTRAINT_SQL, table.name(), q))
         .collect(Collectors.toList());
   }

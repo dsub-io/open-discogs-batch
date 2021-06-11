@@ -14,8 +14,8 @@ public class TaskExecutorConfig {
    * Primary bean for batch processing. The core and max pool size is fit into same value, just as
    * the same as the core size of host processor count.
    *
-   * <p>{@link ThreadPoolTaskExecutor#setWaitForTasksToCompleteOnShutdown(boolean)}} is set to
-   * true, in case of additional tasks required after the actual job is doe.
+   * <p>{@link ThreadPoolTaskExecutor#setWaitForTasksToCompleteOnShutdown(boolean)}} is set to true,
+   * in case of additional tasks required after the actual job is doe.
    *
    * @return instance of {@link ThreadPoolTaskExecutor}.
    */

@@ -17,8 +17,8 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * Implementation of {@link FileUtil} that utilizes NIO package. There is no guarantee that this
  * implementation will provide non-blocking features.
- * <p>
- * This implementation is NOT thread-safe.
+ *
+ * <p>This implementation is NOT thread-safe.
  */
 @Slf4j
 @Getter
@@ -26,8 +26,8 @@ public class SimpleFileUtil implements FileUtil {
 
   private final String appDirectory;
   private final boolean isTemporary;
-  private boolean dirCreated = false;
   private final Path appDirPath;
+  private boolean dirCreated = false;
 
   public SimpleFileUtil(String appDirectory, boolean isTemporary) {
     this.appDirectory = appDirectory;
@@ -55,8 +55,7 @@ public class SimpleFileUtil implements FileUtil {
     List<Path> paths = new ArrayList<>();
 
     try (Stream<Path> pathStream = Files.walk(appDir)) {
-      pathStream.sorted(Comparator.reverseOrder())
-          .forEachOrdered(paths::add);
+      pathStream.sorted(Comparator.reverseOrder()).forEachOrdered(paths::add);
     }
 
     log.debug("collected {} paths to be deleted.", paths.size());
@@ -79,7 +78,7 @@ public class SimpleFileUtil implements FileUtil {
    * @param generate whether the file has to be generated.
    * @return Generated file path.
    * @throws IOException thrown by either {{@link #getAppDirectory(boolean)}} or {@link
-   *                     Files#createFile(Path, FileAttribute[])}.
+   *     Files#createFile(Path, FileAttribute[])}.
    */
   @Override
   public Path getFilePath(String fileName, boolean generate) throws IOException {
@@ -107,7 +106,7 @@ public class SimpleFileUtil implements FileUtil {
    * @param filename required name of the file.
    * @return Generated file path.
    * @throws IOException thrown by either {{@link #getAppDirectory(boolean)}} or {@link
-   *                     Files#createFile(Path, FileAttribute[])}.
+   *     Files#createFile(Path, FileAttribute[])}.
    */
   @Override
   public Path getFilePath(String filename) throws IOException {
@@ -134,7 +133,8 @@ public class SimpleFileUtil implements FileUtil {
       Files.createDirectory(appDirPath);
       if (isTemporary()) {
         appDirPath.toFile().deleteOnExit();
-        log.debug("marked deletion on exit for application directory {}", appDirPath.toAbsolutePath());
+        log.debug(
+            "marked deletion on exit for application directory {}", appDirPath.toAbsolutePath());
       }
       dirCreated = true;
     }
@@ -184,20 +184,19 @@ public class SimpleFileUtil implements FileUtil {
    * file.
    *
    * @param inputStream to read from.
-   * @param filename    to be written.
+   * @param filename to be written.
    * @throws IOException
    */
   @Override
   public void copy(InputStream inputStream, String filename) throws IOException {
-    try (inputStream; inputStream) {
+    try (inputStream;
+        inputStream) {
       Path filepath = getFilePath(filename, true);
       Files.copy(inputStream, filepath, StandardCopyOption.REPLACE_EXISTING);
     }
   }
 
-  /**
-   * Builder pattern for instantiation.
-   */
+  /** Builder pattern for instantiation. */
   public static class AppFileUtilBuilder {
 
     private String appDirectory;
@@ -205,8 +204,7 @@ public class SimpleFileUtil implements FileUtil {
     private boolean isTemporary;
     private boolean isTemporarySet;
 
-    AppFileUtilBuilder() {
-    }
+    AppFileUtilBuilder() {}
 
     public AppFileUtilBuilder appDirectory(String appDirectory) {
       this.appDirectory = appDirectory;
@@ -227,7 +225,7 @@ public class SimpleFileUtil implements FileUtil {
       }
       boolean isTemporary = this.isTemporary;
       if (!this.isTemporarySet) {
-        isTemporary = false;
+        isTemporary = true;
       }
       return new SimpleFileUtil(appDirectory, isTemporary);
     }

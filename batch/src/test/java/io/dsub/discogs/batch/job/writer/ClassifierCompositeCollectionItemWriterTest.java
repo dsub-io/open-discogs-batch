@@ -64,9 +64,9 @@ class ClassifierCompositeCollectionItemWriterTest {
     writer.setClassifier(classifier);
 
     assertDoesNotThrow(() -> writer.write(sample));
-    writerMap.values()
-        .forEach(writer -> assertDoesNotThrow(
-            () -> verify(writer, times(1)).write(any())));
+    writerMap
+        .values()
+        .forEach(writer -> assertDoesNotThrow(() -> verify(writer, times(1)).write(any())));
   }
 
   static class TestItemWriter implements ItemWriter<String> {

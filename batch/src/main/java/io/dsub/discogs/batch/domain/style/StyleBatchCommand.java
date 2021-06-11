@@ -9,17 +9,11 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
-/**
- * Batch command for {@link Style}. This class is NOT
- * instantiatable.
- */
+/** Batch command for {@link Style}. This class is NOT instantiatable. */
 public abstract class StyleBatchCommand {
 
-  /**
-   * Private constructor to prevent instantiation.
-   */
-  private StyleBatchCommand() {
-  }
+  /** Private constructor to prevent instantiation. */
+  private StyleBatchCommand() {}
 
   @Data
   @Builder

@@ -1,7 +1,6 @@
 package io.dsub.discogs.batch.argument.handler;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.dsub.discogs.batch.argument.ArgType;
@@ -20,7 +19,7 @@ class DefaultArgumentHandlerUnitTest {
 
   @Test
   void shouldThrowIfRequiredArgumentsAreNotFulfilled() {
-    String[] args = new String[]{"hello", "world"};
+    String[] args = new String[] {"hello", "world"};
     assertThrows(InvalidArgumentException.class, () -> handler.resolve(args));
     try {
       handler.resolve(args);
@@ -37,16 +36,16 @@ class DefaultArgumentHandlerUnitTest {
 
   @Test
   void shouldThrowIfUrlValueIsEmptyOrOnlyContainingEqualsSign() {
-    String[] first = new String[]{"--url=", "user=world", "pass=333"};
+    String[] first = new String[] {"--url=", "user=world", "pass=333"};
     assertThrows(InvalidArgumentException.class, () -> handler.resolve(first));
 
-    String[] second = new String[]{"--url", "user=world", "pass=333"};
+    String[] second = new String[] {"--url", "user=world", "pass=333"};
     assertThrows(InvalidArgumentException.class, () -> handler.resolve(second));
   }
 
   @Test
   void shouldHandleMalformedUrlArgumentFlag() {
-    String[] first = new String[]{"--url=something:3306/data", "user=world", "pass=333"};
+    String[] first = new String[] {"--url=something:3306/data", "user=world", "pass=333"};
     Assertions.assertDoesNotThrow(() -> handler.resolve(first));
     String[] resolved = handler.resolve(first);
     for (String s : resolved) {
@@ -55,7 +54,7 @@ class DefaultArgumentHandlerUnitTest {
       }
     }
 
-    String[] second = new String[]{"-url=something:3306/data", "user=world", "pass=333"};
+    String[] second = new String[] {"-url=something:3306/data", "user=world", "pass=333"};
     Assertions.assertDoesNotThrow(() -> handler.resolve(second));
     resolved = handler.resolve(second);
     for (String s : resolved) {
@@ -100,7 +99,7 @@ class DefaultArgumentHandlerUnitTest {
       }
     }
 
-    args = new String[]{"--url=something/data", "-user=world", "pass=33201"};
+    args = new String[] {"--url=something/data", "-user=world", "pass=33201"};
     args = handler.resolve(args);
     for (String arg : args) {
       ArgType argType = ArgType.getTypeOf(arg.substring(arg.indexOf('.') + 1, arg.indexOf('=')));
@@ -167,14 +166,14 @@ class DefaultArgumentHandlerUnitTest {
       assertThat(arg).matches("^url=jdbc:mysql://something:3306/data$");
     }
 
-    args = new String[]{"url=mysql://something/data", "user=world", "pass=33201"};
+    args = new String[] {"url=mysql://something/data", "user=world", "pass=33201"};
     for (String arg : handler.resolve(args)) {
       if (arg.contains("url")) {
         assertThat(arg).matches("^url=jdbc:mysql://something:3306/data$");
       }
     }
 
-    args = new String[]{"url=jdbc:something/data", "user=world", "pass=33201"};
+    args = new String[] {"url=jdbc:something/data", "user=world", "pass=33201"};
     for (String arg : handler.resolve(args)) {
       if (arg.contains("url")) {
         assertThat(arg).matches("^url=jdbc:mysql://something:3306/data$");

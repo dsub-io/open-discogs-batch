@@ -9,17 +9,11 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
-/**
- * Batch command for {@link Genre}. This class is NOT
- * instantiatable.
- */
+/** Batch command for {@link Genre}. This class is NOT instantiatable. */
 public abstract class GenreBatchCommand {
 
-  /**
-   * Private constructor to prevent instantiation.
-   */
-  private GenreBatchCommand() {
-  }
+  /** Private constructor to prevent instantiation. */
+  private GenreBatchCommand() {}
 
   @Data
   @Builder

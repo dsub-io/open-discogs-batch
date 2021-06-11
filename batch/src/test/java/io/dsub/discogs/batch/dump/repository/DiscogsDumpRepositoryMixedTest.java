@@ -22,10 +22,8 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 class DiscogsDumpRepositoryMixedTest {
 
   final Random random = new Random();
-  @Autowired
-  TestEntityManager em;
-  @Autowired
-  DiscogsDumpRepository repository;
+  @Autowired TestEntityManager em;
+  @Autowired DiscogsDumpRepository repository;
   private List<DiscogsDump> persistedDiscogsDumpList;
 
   private DiscogsDump getRandomDump() {
@@ -126,9 +124,7 @@ class DiscogsDumpRepositoryMixedTest {
     @RepeatedTest(5)
     void whenFindAllByCreatedAtIsBetween__WillReturnTheProperValues() {
       long size = repository.count();
-      DiscogsDump first = repository.findAll().stream()
-          .skip(size / 2)
-          .findFirst().orElse(null);
+      DiscogsDump first = repository.findAll().stream().skip(size / 2).findFirst().orElse(null);
 
       if (first == null) {
         return; // 2 out of 100 times, it will be null.
@@ -137,13 +133,15 @@ class DiscogsDumpRepositoryMixedTest {
       LocalDate startDate = first.getCreatedAt().withDayOfMonth(1);
       LocalDate endDate = first.getCreatedAt().withDayOfMonth(1).plusMonths(1);
 
-      List<DiscogsDump> result = repository
-          .findAllByCreatedAtIsBetween(startDate, endDate);
+      List<DiscogsDump> result = repository.findAllByCreatedAtIsBetween(startDate, endDate);
 
       assertThat(result)
           .isNotEmpty()
-          .allMatch(dump -> dump.getCreatedAt().isBefore(endDate) &&
-              (dump.getCreatedAt().isEqual(startDate) || dump.getCreatedAt().isAfter(startDate)));
+          .allMatch(
+              dump ->
+                  dump.getCreatedAt().isBefore(endDate)
+                      && (dump.getCreatedAt().isEqual(startDate)
+                          || dump.getCreatedAt().isAfter(startDate)));
     }
 
     @RepeatedTest(5)

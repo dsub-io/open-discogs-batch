@@ -1,6 +1,5 @@
 package io.dsub.discogs.batch.domain.master;
 
-import io.dsub.discogs.batch.aspect.annotation.XmlMapped;
 import java.util.ArrayList;
 import java.util.List;
 import javax.xml.bind.annotation.XmlAccessType;
@@ -12,7 +11,6 @@ import javax.xml.bind.annotation.XmlRootElement;
 import lombok.Data;
 
 @Data
-@XmlMapped
 @XmlRootElement(name = "master")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class MasterXML {
@@ -68,8 +66,10 @@ public class MasterXML {
 
     @XmlElement(name = "title")
     private String title;
+
     @XmlElement(name = "description")
     private String description;
+
     @XmlAttribute(name = "src")
     private String url;
   }

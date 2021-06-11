@@ -56,16 +56,23 @@ public class DefaultDumpDependencyResolver implements DumpDependencyResolver {
     while (dumps == null) {
       try {
         if (!retry) { // prevent redundant logging.
-          log.info("find dump for year:{}, month:{} of types:{}.", targetDate.getYear(),
-              targetDate.getMonthValue(), types);
+          log.info(
+              "find dump for year:{}, month:{} of types:{}.",
+              targetDate.getYear(),
+              targetDate.getMonthValue(),
+              types);
         }
-        dumps = dumpService
-            .getAllByTypeYearMonth(types, targetDate.getYear(), targetDate.getMonthValue());
+        dumps =
+            dumpService.getAllByTypeYearMonth(
+                types, targetDate.getYear(), targetDate.getMonthValue());
       } catch (DumpNotFoundException ignored) {
         if (targetDate.getYear() > 2010) {
           targetDate = targetDate.minusMonths(1);
-          log.info("retrying to find dump for year:{} month:{} of types:{}.", targetDate.getYear(),
-              targetDate.getMonthValue(), types);
+          log.info(
+              "retrying to find dump for year:{} month:{} of types:{}.",
+              targetDate.getYear(),
+              targetDate.getMonthValue(),
+              types);
           retry = true;
           continue;
         }
@@ -94,9 +101,8 @@ public class DefaultDumpDependencyResolver implements DumpDependencyResolver {
    *
    * @param eTags to be examined. it is safe to contain duplicated eTags.
    * @return dump list containing required items to be processed.
-   * @throws InvalidArgumentException thrown if given list is null or empty, or eTag is not
-   *                                  present.
-   * @throws DumpNotFoundException    if dump cannot be found under specific type, year and month.
+   * @throws InvalidArgumentException thrown if given list is null or empty, or eTag is not present.
+   * @throws DumpNotFoundException if dump cannot be found under specific type, year and month.
    */
   protected Collection<DiscogsDump> resolveByETagEntries(List<String> eTags) {
     if (eTags == null || eTags.isEmpty()) {
@@ -145,9 +151,7 @@ public class DefaultDumpDependencyResolver implements DumpDependencyResolver {
     return foundDumps.values();
   }
 
-  /**
-   * Calls dumpService to fetch dump via ETag entry.
-   */
+  /** Calls dumpService to fetch dump via ETag entry. */
   private DiscogsDump getDumpByETag(String eTag) {
     DiscogsDump dump = dumpService.getDiscogsDump(eTag);
     if (dump == null) {
@@ -212,9 +216,7 @@ public class DefaultDumpDependencyResolver implements DumpDependencyResolver {
 
     if (args.containsOption(STRICT)) {
       log.info("strict option found. skip resolve dependencies..");
-      args.getOptionValues(TYPE).stream()
-          .map(DumpType::of)
-          .forEach(requiredTypes::add);
+      args.getOptionValues(TYPE).stream().map(DumpType::of).forEach(requiredTypes::add);
       return List.copyOf(requiredTypes);
     }
 

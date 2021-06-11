@@ -1,7 +1,5 @@
 package io.dsub.discogs.batch.argument.formatter;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import org.junit.jupiter.api.Test;
 
 class JdbcUrlFormatterTest {

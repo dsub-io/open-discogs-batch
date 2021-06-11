@@ -22,8 +22,12 @@ import lombok.With;
 @EqualsAndHashCode(callSuper = false)
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "artist_alias", uniqueConstraints = @UniqueConstraint(name = "uq_artist_alias_artist_id_alias_id", columnNames = {
-    "artist_id", "alias_id"}))
+@Table(
+    name = "artist_alias",
+    uniqueConstraints =
+        @UniqueConstraint(
+            name = "uq_artist_alias_artist_id_alias_id",
+            columnNames = {"artist_id", "alias_id"}))
 public class ArtistAlias extends BaseTimeEntity {
 
   private static final Long SerialVersionUID = 1L;

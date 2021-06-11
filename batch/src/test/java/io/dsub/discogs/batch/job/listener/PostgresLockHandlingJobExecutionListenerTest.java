@@ -35,25 +35,22 @@ import org.springframework.jdbc.core.JdbcTemplate;
 class PostgresLockHandlingJobExecutionListenerTest {
 
   private static final String BASE_PACKAGE = "io.dsub.discogs.common";
-  private static final Pattern DROP_PTN = Pattern.compile(
-      "^ALTER TABLE (\\w*) DROP CONSTRAINT IF EXISTS (\\w*)$"
-  );
+  private static final Pattern DROP_PTN =
+      Pattern.compile("^ALTER TABLE (\\w*) DROP CONSTRAINT IF EXISTS (\\w*)$");
 
-  private static final Pattern ADD_FK_PTN = Pattern.compile(
-      "^ALTER TABLE (\\w*) ADD CONSTRAINT (\\w*) FOREIGN KEY \\((\\w*)\\) REFERENCES (\\w*)$"
-  );
+  private static final Pattern ADD_FK_PTN =
+      Pattern.compile(
+          "^ALTER TABLE (\\w*) ADD CONSTRAINT (\\w*) FOREIGN KEY \\((\\w*)\\) REFERENCES (\\w*)$");
 
-  private static final Pattern ADD_UQ_PTN = Pattern.compile(
-      "^ALTER TABLE (\\w*) ADD CONSTRAINT (\\w*) UNIQUE\\(([\\w,]*)\\)$"
-  );
+  private static final Pattern ADD_UQ_PTN =
+      Pattern.compile("^ALTER TABLE (\\w*) ADD CONSTRAINT (\\w*) UNIQUE\\(([\\w,]*)\\)$");
 
   PostgresLockHandlingJobExecutionListener listener;
   JdbcTemplate jdbcTemplate;
   Reflections reflections = new Reflections(BASE_PACKAGE);
   String ddlQuery;
 
-  @RegisterExtension
-  LogSpy logSpy = new LogSpy();
+  @RegisterExtension LogSpy logSpy = new LogSpy();
 
   @BeforeEach
   void setUp() {
@@ -76,8 +73,7 @@ class PostgresLockHandlingJobExecutionListenerTest {
     listener.disableConstraints();
 
     // then
-    List<String> infoLogs = logSpy
-        .getLogsByExactLevelAsString(Level.INFO, true, "io.dsub.discogs");
+    List<String> infoLogs = logSpy.getLogsByExactLevelAsString(Level.INFO, true, "io.dsub.discogs");
 
     assertAll(
         () -> assertThat(String.join("", captor.getAllValues())).contains(getKeywords()),
@@ -85,17 +81,18 @@ class PostgresLockHandlingJobExecutionListenerTest {
         () -> assertThat(infoLogs.get(infoLogs.size() - 1)).isEqualTo("constraint drop complete"),
         () -> assertThat(infoLogs.get(0)).isEqualTo("begin dropping constraints"),
         () -> assertThat(infoLogs.size() - 2).isEqualTo(captor.getAllValues().size()),
-        () -> assertAll(() -> {
-          for (String query : captor.getAllValues()) {
-            Matcher matcher = DROP_PTN.matcher(query);
-            assertThat(matcher.matches()).isTrue();
-            String tblName = matcher.group(1);
-            String constraint = matcher.group(2);
-            assertThat(ddlQuery).contains(tblName);
-            assertThat(ddlQuery).contains(constraint);
-          }
-        })
-    );
+        () ->
+            assertAll(
+                () -> {
+                  for (String query : captor.getAllValues()) {
+                    Matcher matcher = DROP_PTN.matcher(query);
+                    assertThat(matcher.matches()).isTrue();
+                    String tblName = matcher.group(1);
+                    String constraint = matcher.group(2);
+                    assertThat(ddlQuery).contains(tblName);
+                    assertThat(ddlQuery).contains(constraint);
+                  }
+                }));
   }
 
   @Test
@@ -109,63 +106,67 @@ class PostgresLockHandlingJobExecutionListenerTest {
     listener.enableConstraints();
 
     // then
-    List<String> infoLogs = logSpy
-        .getLogsByExactLevelAsString(Level.INFO, true, "io.dsub.discogs");
+    List<String> infoLogs = logSpy.getLogsByExactLevelAsString(Level.INFO, true, "io.dsub.discogs");
     assertAll(
         () -> assertThat(String.join("", captor.getAllValues())).contains(getKeywords()),
         () -> assertThat(captor.getAllValues().size()).isEqualTo(getConstraintCount() * 2),
-        () -> assertThat(infoLogs.get(infoLogs.size() - 1))
-            .isEqualTo("constraint recovery complete"),
+        () ->
+            assertThat(infoLogs.get(infoLogs.size() - 1)).isEqualTo("constraint recovery complete"),
         () -> assertThat(infoLogs.get(0)).isEqualTo("drop constraints to prevent duplication"),
-        () -> assertThat(infoLogs.get(getConstraintCount()+1)).isEqualTo("constraint drop complete"),
-        () -> assertThat(infoLogs.get(getConstraintCount()+2)).isEqualTo("begin recovering constraints"),
+        () ->
+            assertThat(infoLogs.get(getConstraintCount() + 1))
+                .isEqualTo("constraint drop complete"),
+        () ->
+            assertThat(infoLogs.get(getConstraintCount() + 2))
+                .isEqualTo("begin recovering constraints"),
         () -> assertThat(infoLogs.size() - 4).isEqualTo(captor.getAllValues().size()),
-        () -> assertAll(() -> {
-          for (String query : captor.getAllValues()) {
-            Matcher m = ADD_FK_PTN.matcher(query);
-            if (m.matches()) {
-              String tblName = m.group(1);
-              String constraintName = m.group(2);
-              String fkColName = m.group(3);
-              String fkTblName = m.group(4);
-              assertThat(ddlQuery).contains(tblName, constraintName, fkColName, fkTblName);
-              continue;
-            }
-            m = ADD_UQ_PTN.matcher(query);
-            if (m.matches()) {
-              String tblName = m.group(1);
-              String constraintName = m.group(2);
-              String[] uqCols = m.group(3).split(",");
-              assertThat(ddlQuery).contains(tblName, constraintName);
-              assertThat(ddlQuery).contains(uqCols);
-              continue;
-            }
-            m = DROP_PTN.matcher(query);
-            if (m.matches()) {
-              assertThat(m.matches()).isTrue();
-              String tblName = m.group(1);
-              String constraint = m.group(2);
-              assertThat(ddlQuery).contains(tblName);
-              assertThat(ddlQuery).contains(constraint);
-              continue;
-            }
-            fail(query + " does not match any of known constraint drop or add query format.");
-          }
-        })
-    );
+        () ->
+            assertAll(
+                () -> {
+                  for (String query : captor.getAllValues()) {
+                    Matcher m = ADD_FK_PTN.matcher(query);
+                    if (m.matches()) {
+                      String tblName = m.group(1);
+                      String constraintName = m.group(2);
+                      String fkColName = m.group(3);
+                      String fkTblName = m.group(4);
+                      assertThat(ddlQuery).contains(tblName, constraintName, fkColName, fkTblName);
+                      continue;
+                    }
+                    m = ADD_UQ_PTN.matcher(query);
+                    if (m.matches()) {
+                      String tblName = m.group(1);
+                      String constraintName = m.group(2);
+                      String[] uqCols = m.group(3).split(",");
+                      assertThat(ddlQuery).contains(tblName, constraintName);
+                      assertThat(ddlQuery).contains(uqCols);
+                      continue;
+                    }
+                    m = DROP_PTN.matcher(query);
+                    if (m.matches()) {
+                      assertThat(m.matches()).isTrue();
+                      String tblName = m.group(1);
+                      String constraint = m.group(2);
+                      assertThat(ddlQuery).contains(tblName);
+                      assertThat(ddlQuery).contains(constraint);
+                      continue;
+                    }
+                    fail(
+                        query
+                            + " does not match any of known constraint drop or add query format.");
+                  }
+                }));
   }
 
   private String getDDLQuery() {
     ResourceLoader resourceLoader = new FileSystemResourceLoader();
-    Resource resource = resourceLoader
-        .getResource("src/main/resources/schema/postgresql-schema.sql");
+    Resource resource =
+        resourceLoader.getResource("src/main/resources/schema/postgresql-schema.sql");
     assertThat(resource).isNotNull();
     String ddlQuery = null;
-    try (BufferedReader reader = new BufferedReader(
-        new InputStreamReader(resource.getInputStream()))) {
-      ddlQuery = reader.lines()
-          .filter(line -> !line.isBlank())
-          .collect(Collectors.joining("\n"));
+    try (BufferedReader reader =
+        new BufferedReader(new InputStreamReader(resource.getInputStream()))) {
+      ddlQuery = reader.lines().filter(line -> !line.isBlank()).collect(Collectors.joining("\n"));
     } catch (IOException e) {
       fail(e);
     }

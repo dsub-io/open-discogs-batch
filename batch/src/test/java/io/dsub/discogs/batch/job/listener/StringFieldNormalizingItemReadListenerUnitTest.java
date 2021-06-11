@@ -16,18 +16,12 @@ class StringFieldNormalizingItemReadListenerUnitTest {
 
   StringFieldNormalizingItemReadListener<Artist> listener =
       new StringFieldNormalizingItemReadListener<>();
-  @RegisterExtension
-  LogSpy logSpy = new LogSpy();
+  @RegisterExtension LogSpy logSpy = new LogSpy();
 
   @Test
   void whenItemContainsBlank__ShouldSetSuchFieldToNull() {
-    Artist artist = Artist.builder()
-        .realName("")
-        .name("")
-        .dataQuality("")
-        .profile("")
-        .id(1L)
-        .build();
+    Artist artist =
+        Artist.builder().realName("").name("").dataQuality("").profile("").id(1L).build();
     listener.afterRead(artist);
     for (Field field : artist.getClass().getDeclaredFields()) {
       field.setAccessible(true);
@@ -45,15 +39,11 @@ class StringFieldNormalizingItemReadListenerUnitTest {
 
   @Test
   void whenNotBlankFieldExists__ShouldReturnAsIs() {
-    Artist artist = Artist.builder()
-        .profile("hello world")
-        .build();
+    Artist artist = Artist.builder().profile("hello world").build();
 
     listener.afterRead(artist);
 
-    assertThat(artist.getProfile())
-        .isNotNull()
-        .isEqualTo("hello world");
+    assertThat(artist.getProfile()).isNotNull().isEqualTo("hello world");
   }
 
   @Test
@@ -76,8 +66,7 @@ class StringFieldNormalizingItemReadListenerUnitTest {
 
     // then
     assertThat(logSpy.countExact(Level.ERROR)).isOne();
-    assertThat(logSpy.getLogsByLevelAsString(Level.ERROR, true).get(0))
-        .contains(e.getMessage());
+    assertThat(logSpy.getLogsByLevelAsString(Level.ERROR, true).get(0)).contains(e.getMessage());
   }
 
   @RequiredArgsConstructor

@@ -16,15 +16,18 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.With;
 
-
 @Data
 @Entity
 @With
 @EqualsAndHashCode(callSuper = false)
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "artist_url", uniqueConstraints = @UniqueConstraint(name = "uq_artist_url_artist_id_url", columnNames = {
-    "artist_id", "url"}))
+@Table(
+    name = "artist_url",
+    uniqueConstraints =
+        @UniqueConstraint(
+            name = "uq_artist_url_artist_id_url",
+            columnNames = {"artist_id", "url"}))
 public class ArtistUrl extends BaseTimeEntity {
 
   private static final Long SerialVersionUID = 1L;

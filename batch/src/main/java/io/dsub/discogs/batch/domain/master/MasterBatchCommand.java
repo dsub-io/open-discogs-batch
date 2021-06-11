@@ -19,11 +19,8 @@ import lombok.NoArgsConstructor;
  */
 public abstract class MasterBatchCommand {
 
-  /**
-   * Private constructor to prevent instantiation.
-   */
-  private MasterBatchCommand() {
-  }
+  /** Private constructor to prevent instantiation. */
+  private MasterBatchCommand() {}
 
   @Data
   @Builder

@@ -13,9 +13,7 @@ import org.springframework.boot.ApplicationArguments;
  */
 public class CompositeArgumentValidator implements ArgumentValidator, InitializingBean {
 
-  /**
-   * A list of delegates that will actually perform.
-   */
+  /** A list of delegates that will actually perform. */
   private final List<ArgumentValidator> delegates = new ArrayList<>();
 
   /**

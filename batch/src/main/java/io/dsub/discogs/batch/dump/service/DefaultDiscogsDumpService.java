@@ -93,7 +93,7 @@ public class DefaultDiscogsDumpService implements DiscogsDumpService, Initializi
    *
    * @param type A type to find.
    * @return Most recent dump from given type, year and month or null if there is no dump of given
-   * type exists.
+   *     type exists.
    */
   @Override
   public DiscogsDump getMostRecentDiscogsDumpByTypeYearMonth(DumpType type, int year, int month) {
@@ -106,16 +106,16 @@ public class DefaultDiscogsDumpService implements DiscogsDumpService, Initializi
    * Fetches collection of {@link DiscogsDump} from given type, year and month. The types must be
    * unique and each types of given year and month must be present in db (otherwise throws)
    *
-   * <p>It is important to note that if there is more than one match for given type, year and
-   * month, it will only return the most recent one among them.
+   * <p>It is important to note that if there is more than one match for given type, year and month,
+   * it will only return the most recent one among them.
    *
    * @param types target {@link DumpType}(s). throws {@link InvalidArgumentException} if null or
-   *              blank.
-   * @param year  year to search for.
+   *     blank.
+   * @param year year to search for.
    * @param month month to search for.
    * @return Collection of {@link DiscogsDump} found from criteria.
    * @throws InvalidArgumentException thrown if argument contains duplicated entry.
-   * @throws DumpNotFoundException    thrown if given type, year and month cannot be found.
+   * @throws DumpNotFoundException thrown if given type, year and month cannot be found.
    */
   @Override
   public Collection<DiscogsDump> getAllByTypeYearMonth(List<DumpType> types, int year, int month) {
@@ -145,8 +145,8 @@ public class DefaultDiscogsDumpService implements DiscogsDumpService, Initializi
   /**
    * Fetch dump that matches to given type, given year and month.
    *
-   * @param type  A type of dump to be found.
-   * @param year  A target year.
+   * @param type A type of dump to be found.
+   * @param year A target year.
    * @param month A target month.
    * @return {@link DiscogsDump} if found, otherwise null.
    */

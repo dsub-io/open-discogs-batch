@@ -55,8 +55,7 @@ class DataSourceConfigTestWithPropertiesGivenUnitTest {
       "jdbc:mysql://hello.world.com:3306/somewhere";
   private static final String PLAIN_TEST_JDBC_URL_ARGUMENT = "url=" + PLAIN_TEST_JDBC_URL_VALUE;
 
-  @RegisterExtension
-  LogSpy logSpy = new LogSpy();
+  @RegisterExtension LogSpy logSpy = new LogSpy();
 
   ApplicationArguments applicationArguments;
 
@@ -112,10 +111,10 @@ class DataSourceConfigTestWithPropertiesGivenUnitTest {
   @ParameterizedTest
   @ValueSource(
       strings = {
-          TIME_ZONE_UTC_OPT,
-          REWRITE_BATCHED_STMTS_OPT,
-          USE_SERVER_PREP_STMTS_OPT,
-          CACHE_PREP_STMT_OPT
+        TIME_ZONE_UTC_OPT,
+        REWRITE_BATCHED_STMTS_OPT,
+        USE_SERVER_PREP_STMTS_OPT,
+        CACHE_PREP_STMT_OPT
       })
   void whenMissingSingleOption__ThenShouldIncludeThatMissingArgument(String opt) {
     String options =
@@ -159,11 +158,14 @@ class DataSourceConfigTestWithPropertiesGivenUnitTest {
 
     // then
     assertAll(
-        () -> assertThat(t).hasMessage("EXCEPTION")
-            .isInstanceOf(InitializationFailureException.class),
-        () -> assertThat(logSpy.getLogsByLevelAsString(Level.ERROR, true))
-            .hasSize(1)
-            .contains("failed to initialize schema: EXCEPTION"));
+        () ->
+            assertThat(t)
+                .hasMessage("EXCEPTION")
+                .isInstanceOf(InitializationFailureException.class),
+        () ->
+            assertThat(logSpy.getLogsByLevelAsString(Level.ERROR, true))
+                .hasSize(1)
+                .contains("failed to initialize schema: EXCEPTION"));
   }
 
   @Test
@@ -185,9 +187,7 @@ class DataSourceConfigTestWithPropertiesGivenUnitTest {
     // then
     assertAll(
         () -> verify(jdbcTemplate, atLeast(2)).execute(anyString()),
-        () -> assertThat(captor.getAllValues())
-            .hasSize(2)
-            .contains("hello world", "Hi there!"));
+        () -> assertThat(captor.getAllValues()).hasSize(2).contains("hello world", "Hi there!"));
   }
 
   @Test

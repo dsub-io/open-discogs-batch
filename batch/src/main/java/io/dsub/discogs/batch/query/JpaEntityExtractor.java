@@ -36,17 +36,20 @@ public interface JpaEntityExtractor<T> {
 
   default Field getLastModifiedField(Class<? extends T> targetClass) {
     return getFields(targetClass).stream()
-        .filter(field ->
-            field.isAnnotationPresent(LastModifiedDate.class) || field.getName()
-                .contains("lastModified"))
+        .filter(
+            field ->
+                field.isAnnotationPresent(LastModifiedDate.class)
+                    || field.getName().contains("lastModified"))
         .findFirst()
         .orElse(null);
   }
 
   default Field getCreatedAtField(Class<? extends T> targetClass) {
     return getFields(targetClass).stream()
-        .filter(field ->
-            field.isAnnotationPresent(CreatedDate.class) || field.getName().contains("createdAt"))
+        .filter(
+            field ->
+                field.isAnnotationPresent(CreatedDate.class)
+                    || field.getName().contains("createdAt"))
         .findFirst()
         .orElse(null);
   }
@@ -61,8 +64,7 @@ public interface JpaEntityExtractor<T> {
   }
 
   default List<Field> getFields(Class<? extends T> targetClass) {
-    List<Field> consolidatedFields =
-        new ArrayList<>(List.of(targetClass.getDeclaredFields()));
+    List<Field> consolidatedFields = new ArrayList<>(List.of(targetClass.getDeclaredFields()));
 
     Class<?> superClass = targetClass.getSuperclass();
     while (!superClass.equals(Object.class)) {
@@ -72,21 +74,27 @@ public interface JpaEntityExtractor<T> {
 
     return consolidatedFields.stream()
         .filter(field -> !field.isAnnotationPresent(Transient.class))
-        .filter(field -> field.isAnnotationPresent(Column.class) ||
-            field.isAnnotationPresent(JoinColumn.class))
+        .filter(
+            field ->
+                field.isAnnotationPresent(Column.class)
+                    || field.isAnnotationPresent(JoinColumn.class))
         .collect(Collectors.toList());
   }
 
   default Map<String, String> getMappings(Class<? extends T> targetClass, boolean withId) {
     return getFields(targetClass).stream()
-        .filter(field -> field.isAnnotationPresent(Column.class) ||
-            field.isAnnotationPresent(JoinColumn.class))
+        .filter(
+            field ->
+                field.isAnnotationPresent(Column.class)
+                    || field.isAnnotationPresent(JoinColumn.class))
         .filter(field -> withId || !field.isAnnotationPresent(Id.class))
-        .collect(Collectors.toMap(
-            field -> field.isAnnotationPresent(Column.class) ?
-                field.getAnnotation(Column.class).name() :
-                field.getAnnotation(JoinColumn.class).name(),
-            Field::getName));
+        .collect(
+            Collectors.toMap(
+                field ->
+                    field.isAnnotationPresent(Column.class)
+                        ? field.getAnnotation(Column.class).name()
+                        : field.getAnnotation(JoinColumn.class).name(),
+                Field::getName));
   }
 
   default Map<String, String> getUniqueConstraintColumns(Class<? extends T> targetClass) {
@@ -106,14 +114,12 @@ public interface JpaEntityExtractor<T> {
     return getFields(targetClass).stream()
         .filter(field -> !field.isAnnotationPresent(Transient.class))
         .filter(field -> field.isAnnotationPresent(Id.class))
-        .collect(Collectors.toMap(
-            field -> field.getAnnotation(Column.class).name(),
-            Field::getName
-        ));
+        .collect(
+            Collectors.toMap(field -> field.getAnnotation(Column.class).name(), Field::getName));
   }
 
-  default Map<String, String> getMappingsOutsideUniqueConstraints(Class<? extends T> targetClass,
-      boolean withId) {
+  default Map<String, String> getMappingsOutsideUniqueConstraints(
+      Class<? extends T> targetClass, boolean withId) {
     Map<String, String> uniqueConstraints = getUniqueConstraintColumns(targetClass);
     return getMappings(targetClass, withId).entrySet().stream()
         .filter(entry -> !uniqueConstraints.containsKey(entry.getKey()))

@@ -16,17 +16,17 @@ import io.dsub.discogs.batch.domain.release.ReleaseXML;
 import io.dsub.discogs.batch.domain.release.ReleaseXML.Format;
 import io.dsub.discogs.batch.dump.DiscogsDump;
 import io.dsub.discogs.batch.dump.DumpType;
+import io.dsub.discogs.batch.dump.service.DiscogsDumpService;
+import io.dsub.discogs.batch.job.listener.StopWatchStepExecutionListener;
+import io.dsub.discogs.batch.job.listener.StringFieldNormalizingItemReadListener;
 import io.dsub.discogs.batch.job.reader.DiscogsDumpItemReaderBuilder;
 import io.dsub.discogs.batch.job.tasklet.FileClearTasklet;
+import io.dsub.discogs.batch.job.tasklet.FileFetchTasklet;
 import io.dsub.discogs.batch.job.writer.ClassifierCompositeCollectionItemWriter;
 import io.dsub.discogs.batch.query.QueryBuilder;
 import io.dsub.discogs.batch.util.DefaultMalformedDateParser;
 import io.dsub.discogs.batch.util.FileUtil;
 import io.dsub.discogs.batch.util.MalformedDateParser;
-import io.dsub.discogs.batch.dump.service.DiscogsDumpService;
-import io.dsub.discogs.batch.job.listener.StopWatchStepExecutionListener;
-import io.dsub.discogs.batch.job.listener.StringFieldNormalizingItemReadListener;
-import io.dsub.discogs.batch.job.tasklet.FileFetchTasklet;
 import io.dsub.discogs.common.entity.base.BaseEntity;
 import io.dsub.discogs.common.entity.label.LabelRelease;
 import io.dsub.discogs.common.entity.release.ReleaseItem;
@@ -104,12 +104,24 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
 
     Flow artistStepFlow =
         new FlowBuilder<SimpleFlow>(RELEASE_STEP_FLOW)
-            .from(releaseFileFetchStep()).on(FAILED).end()
-            .from(releaseFileFetchStep()).on(ANY).to(releaseItemCoreStep(null))
-            .from(releaseItemCoreStep(null)).on(FAILED).end()
-            .from(releaseItemCoreStep(null)).on(ANY).to(releaseItemSubItemsStep(null))
-            .from(releaseItemSubItemsStep(null)).on(ANY).to(releaseFileClearStep())
-            .from(releaseFileClearStep()).on(ANY).end()
+            .from(releaseFileFetchStep())
+            .on(FAILED)
+            .end()
+            .from(releaseFileFetchStep())
+            .on(ANY)
+            .to(releaseItemCoreStep(null))
+            .from(releaseItemCoreStep(null))
+            .on(FAILED)
+            .end()
+            .from(releaseItemCoreStep(null))
+            .on(ANY)
+            .to(releaseItemSubItemsStep(null))
+            .from(releaseItemSubItemsStep(null))
+            .on(ANY)
+            .to(releaseFileClearStep())
+            .from(releaseFileClearStep())
+            .on(ANY)
+            .end()
             .build();
     FlowStep artistFlowStep = new FlowStep();
     artistFlowStep.setJobRepository(jobRepository);
@@ -121,8 +133,7 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
 
   @Bean
   @JobScope
-  public Step releaseItemCoreStep(
-      @Value(CHUNK) Integer chunkSize) {
+  public Step releaseItemCoreStep(@Value(CHUNK) Integer chunkSize) {
     return sbf.get(RELEASE_CORE_STEP)
         .<ReleaseXML, ReleaseItemCommand>chunk(chunkSize)
         .reader(releaseStreamReader())
@@ -141,8 +152,7 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
 
   @Bean
   @JobScope
-  public Step releaseItemSubItemsStep(
-      @Value(CHUNK) Integer chunkSize) {
+  public Step releaseItemSubItemsStep(@Value(CHUNK) Integer chunkSize) {
     return sbf.get(RELEASE_SUB_ITEMS_STEP)
         .<ReleaseXML, Collection<BatchCommand>>chunk(200)
         .reader(releaseStreamReader())
@@ -170,9 +180,7 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
   @Bean
   @JobScope
   public Step releaseFileClearStep() {
-    return sbf.get(RELEASE_FILE_CLEAR_STEP)
-        .tasklet(new FileClearTasklet(fileUtil))
-        .build();
+    return sbf.get(RELEASE_FILE_CLEAR_STEP).tasklet(new FileClearTasklet(fileUtil)).build();
   }
 
   @Bean
@@ -200,21 +208,22 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
   @Bean
   @StepScope
   public ItemProcessor<ReleaseXML, ReleaseItemCommand> releaseItemProcessor() {
-    return xml -> ReleaseItemCommand.builder()
-        .id(xml.getReleaseId())
-        .dataQuality(xml.getDataQuality())
-        .country(xml.getCountry())
-        .isMaster(xml.getMaster() != null && xml.getMaster().isMaster())
-        .master(xml.getMaster() == null ? null : xml.getMaster().getMasterId())
-        .status(xml.getStatus())
-        .title(xml.getTitle())
-        .notes(xml.getNotes())
-        .listedReleaseDate(xml.getReleaseDate())
-        .hasValidDay(dateParser.isDayValid(xml.getReleaseDate()))
-        .hasValidMonth(dateParser.isMonthValid(xml.getReleaseDate()))
-        .hasValidYear(dateParser.isYearValid(xml.getReleaseDate()))
-        .releaseDate(dateParser.parse(xml.getReleaseDate()))
-        .build();
+    return xml ->
+        ReleaseItemCommand.builder()
+            .id(xml.getReleaseId())
+            .dataQuality(xml.getDataQuality())
+            .country(xml.getCountry())
+            .isMaster(xml.getMaster() != null && xml.getMaster().isMaster())
+            .master(xml.getMaster() == null ? null : xml.getMaster().getMasterId())
+            .status(xml.getStatus())
+            .title(xml.getTitle())
+            .notes(xml.getNotes())
+            .listedReleaseDate(xml.getReleaseDate())
+            .hasValidDay(dateParser.isDayValid(xml.getReleaseDate()))
+            .hasValidMonth(dateParser.isMonthValid(xml.getReleaseDate()))
+            .hasValidYear(dateParser.isYearValid(xml.getReleaseDate()))
+            .releaseDate(dateParser.parse(xml.getReleaseDate()))
+            .build();
   }
 
   @Bean
@@ -224,100 +233,120 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
       List<BatchCommand> commands = new ArrayList<>();
       if (xml.getAlbumArtists() != null) {
         xml.getAlbumArtists().stream()
-            .map(albumArtist -> ReleaseItemArtistCommand.builder()
-                .artist(albumArtist.getId())
-                .releaseItem(xml.getReleaseId())
-                .build())
+            .map(
+                albumArtist ->
+                    ReleaseItemArtistCommand.builder()
+                        .artist(albumArtist.getId())
+                        .releaseItem(xml.getReleaseId())
+                        .build())
             .forEach(commands::add);
       }
       if (xml.getCompanies() != null) {
         xml.getCompanies().stream()
-            .map(company -> ReleaseItemWorkCommand.builder()
-                .label(company.getId())
-                .releaseItem(xml.getReleaseId())
-                .work(normalizeString(company.getWork()))
-                .build())
+            .map(
+                company ->
+                    ReleaseItemWorkCommand.builder()
+                        .label(company.getId())
+                        .releaseItem(xml.getReleaseId())
+                        .work(normalizeString(company.getWork()))
+                        .build())
             .forEach(commands::add);
       }
       if (xml.getCreditedArtists() != null) {
         xml.getCreditedArtists().stream()
-            .map(creditedArtist -> ReleaseItemCreditedArtistCommand.builder()
-                .role(normalizeString(creditedArtist.getRole()))
-                .artist(creditedArtist.getId())
-                .releaseItem(xml.getReleaseId())
-                .build())
+            .map(
+                creditedArtist ->
+                    ReleaseItemCreditedArtistCommand.builder()
+                        .role(normalizeString(creditedArtist.getRole()))
+                        .artist(creditedArtist.getId())
+                        .releaseItem(xml.getReleaseId())
+                        .build())
             .forEach(commands::add);
       }
       if (xml.getFormats() != null) {
         xml.getFormats().stream()
-            .map(format -> ReleaseItemFormatCommand.builder()
-                .releaseItem(xml.getReleaseId())
-                .quantity(format.getQty())
-                .text(normalizeString(format.getText()))
-                .name(normalizeString(format.getName()))
-                .description(normalizeString(getFormatDescription(format)))
-                .build())
+            .map(
+                format ->
+                    ReleaseItemFormatCommand.builder()
+                        .releaseItem(xml.getReleaseId())
+                        .quantity(format.getQty())
+                        .text(normalizeString(format.getText()))
+                        .name(normalizeString(format.getName()))
+                        .description(normalizeString(getFormatDescription(format)))
+                        .build())
             .forEach(commands::add);
       }
       if (xml.getGenres() != null) {
         xml.getGenres().stream()
             .filter(genre -> !genre.isBlank())
-            .map(genre -> ReleaseItemGenreCommand.builder()
-                .genre(genre)
-                .releaseItem(xml.getReleaseId())
-                .build())
+            .map(
+                genre ->
+                    ReleaseItemGenreCommand.builder()
+                        .genre(genre)
+                        .releaseItem(xml.getReleaseId())
+                        .build())
             .forEach(commands::add);
       }
       if (xml.getStyles() != null) {
         xml.getStyles().stream()
             .filter(style -> !style.isBlank())
-            .map(style -> ReleaseItemStyleCommand.builder()
-                .style(style)
-                .releaseItem(xml.getReleaseId())
-                .build())
+            .map(
+                style ->
+                    ReleaseItemStyleCommand.builder()
+                        .style(style)
+                        .releaseItem(xml.getReleaseId())
+                        .build())
             .forEach(commands::add);
       }
 
       if (xml.getIdentifiers() != null) {
         xml.getIdentifiers().stream()
-            .map(identifier -> ReleaseItemIdentifierCommand.builder()
-                .releaseItem(xml.getReleaseId())
-                .description(normalizeString(identifier.getDescription()))
-                .type(normalizeString(identifier.getType()))
-                .value(normalizeString(identifier.getValue()))
-                .build())
+            .map(
+                identifier ->
+                    ReleaseItemIdentifierCommand.builder()
+                        .releaseItem(xml.getReleaseId())
+                        .description(normalizeString(identifier.getDescription()))
+                        .type(normalizeString(identifier.getType()))
+                        .value(normalizeString(identifier.getValue()))
+                        .build())
             .forEach(commands::add);
       }
 
       if (xml.getLabels() != null) {
         xml.getLabels().stream()
-            .map(label -> LabelReleaseCommand.builder()
-                .categoryNotation(normalizeString(label.getCatno()))
-                .label(label.getId())
-                .releaseItem(xml.getReleaseId())
-                .build())
+            .map(
+                label ->
+                    LabelReleaseCommand.builder()
+                        .categoryNotation(normalizeString(label.getCatno()))
+                        .label(label.getId())
+                        .releaseItem(xml.getReleaseId())
+                        .build())
             .forEach(commands::add);
       }
 
       if (xml.getTracks() != null) {
         xml.getTracks().stream()
-            .map(track -> ReleaseItemTrackCommand.builder()
-                .duration(normalizeString(track.getDuration()))
-                .position(normalizeString(track.getPosition()))
-                .title(normalizeString(track.getTitle()))
-                .releaseItem(xml.getReleaseId())
-                .build())
+            .map(
+                track ->
+                    ReleaseItemTrackCommand.builder()
+                        .duration(normalizeString(track.getDuration()))
+                        .position(normalizeString(track.getPosition()))
+                        .title(normalizeString(track.getTitle()))
+                        .releaseItem(xml.getReleaseId())
+                        .build())
             .forEach(commands::add);
       }
 
       if (xml.getVideos() != null) {
         xml.getVideos().stream()
-            .map(video -> ReleaseItemVideoCommand.builder()
-                .title(normalizeString(video.getTitle()))
-                .description(normalizeString(video.getDescription()))
-                .url(normalizeString(video.getUrl()))
-                .releaseItem(xml.getReleaseId())
-                .build())
+            .map(
+                video ->
+                    ReleaseItemVideoCommand.builder()
+                        .title(normalizeString(video.getTitle()))
+                        .description(normalizeString(video.getDescription()))
+                        .url(normalizeString(video.getUrl()))
+                        .releaseItem(xml.getReleaseId())
+                        .build())
             .forEach(commands::add);
       }
 
@@ -332,36 +361,37 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
         new ClassifierCompositeCollectionItemWriter<>();
 
     writer.setClassifier(
-        (Classifier<BatchCommand, ItemWriter<? super BatchCommand>>) classifiable -> {
-          if (classifiable instanceof ReleaseItemArtistCommand) {
-            return releaseItemArtistWriter();
-          }
-          if (classifiable instanceof ReleaseItemCreditedArtistCommand) {
-            return releaseItemCreditedArtistWriter();
-          }
-          if (classifiable instanceof ReleaseItemGenreCommand) {
-            return releaseItemGenreWriter();
-          }
-          if (classifiable instanceof ReleaseItemStyleCommand) {
-            return releaseItemStyleWriter();
-          }
-          if (classifiable instanceof ReleaseItemVideoCommand) {
-            return releaseItemVideoWriter();
-          }
-          if (classifiable instanceof ReleaseItemTrackCommand) {
-            return releaseItemTrackWriter();
-          }
-          if (classifiable instanceof ReleaseItemFormatCommand) {
-            return releaseItemFormatWriter();
-          }
-          if (classifiable instanceof ReleaseItemIdentifierCommand) {
-            return releaseItemIdentifierWriter();
-          }
-          if (classifiable instanceof LabelReleaseCommand) {
-            return labelReleaseItemWriter();
-          }
-          return releaseItemWorkWriter();
-        });
+        (Classifier<BatchCommand, ItemWriter<? super BatchCommand>>)
+            classifiable -> {
+              if (classifiable instanceof ReleaseItemArtistCommand) {
+                return releaseItemArtistWriter();
+              }
+              if (classifiable instanceof ReleaseItemCreditedArtistCommand) {
+                return releaseItemCreditedArtistWriter();
+              }
+              if (classifiable instanceof ReleaseItemGenreCommand) {
+                return releaseItemGenreWriter();
+              }
+              if (classifiable instanceof ReleaseItemStyleCommand) {
+                return releaseItemStyleWriter();
+              }
+              if (classifiable instanceof ReleaseItemVideoCommand) {
+                return releaseItemVideoWriter();
+              }
+              if (classifiable instanceof ReleaseItemTrackCommand) {
+                return releaseItemTrackWriter();
+              }
+              if (classifiable instanceof ReleaseItemFormatCommand) {
+                return releaseItemFormatWriter();
+              }
+              if (classifiable instanceof ReleaseItemIdentifierCommand) {
+                return releaseItemIdentifierWriter();
+              }
+              if (classifiable instanceof LabelReleaseCommand) {
+                return labelReleaseItemWriter();
+              }
+              return releaseItemWorkWriter();
+            });
 
     return writer;
   }
@@ -381,8 +411,8 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
   @Bean
   @StepScope
   public ItemWriter<BatchCommand> releaseItemCreditedArtistWriter() {
-    return buildItemWriter(queryBuilder.getUpsertQuery(ReleaseItemCreditedArtist.class),
-        dataSource);
+    return buildItemWriter(
+        queryBuilder.getUpsertQuery(ReleaseItemCreditedArtist.class), dataSource);
   }
 
   @Bean

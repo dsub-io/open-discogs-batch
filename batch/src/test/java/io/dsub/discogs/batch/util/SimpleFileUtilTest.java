@@ -26,14 +26,11 @@ class SimpleFileUtilTest {
 
   SimpleFileUtil fileUtil;
 
-  @RegisterExtension
-  LogSpy logSpy = new LogSpy();
+  @RegisterExtension LogSpy logSpy = new LogSpy();
 
   @BeforeEach
   void prepare() {
-    fileUtil = SimpleFileUtil.builder()
-        .appDirectory(RandomString.make())
-        .build();
+    fileUtil = SimpleFileUtil.builder().appDirectory(RandomString.make()).build();
   }
 
   @AfterEach
@@ -43,11 +40,16 @@ class SimpleFileUtilTest {
       if (!Files.exists(appDir)) {
         return;
       }
+      if (fileUtil.getAppDirectory().equals(fileUtil.DEFAULT_APP_DIR)) {
+        return;
+      }
       try (Stream<Path> files = Files.walk(appDir)) {
-        List<Boolean> lists = files.sorted(Comparator.reverseOrder())
-            .map(Path::toFile)
-            .map(File::delete)
-            .collect(Collectors.toList());
+        List<Boolean> lists =
+            files
+                .sorted(Comparator.reverseOrder())
+                .map(Path::toFile)
+                .map(File::delete)
+                .collect(Collectors.toList());
         assertThat(lists).doesNotContain(false);
       }
       this.fileUtil = null;
@@ -85,9 +87,7 @@ class SimpleFileUtilTest {
   void givenFileNameAndFalse__WhenGetFilePath__ShouldNotGenerateGivenFile() {
     try {
       Path p = fileUtil.getFilePath("test-name", false);
-      assertThat(p)
-          .doesNotExist()
-          .hasFileName("test-name");
+      assertThat(p).doesNotExist().hasFileName("test-name");
     } catch (IOException e) {
       fail(e);
     }
@@ -97,9 +97,7 @@ class SimpleFileUtilTest {
   void givenFileNameAndTrue__WhenGetFilePath__ShouldGenerateGivenFile() {
     try {
       Path p = fileUtil.getFilePath("test-name", true);
-      assertThat(p)
-          .exists()
-          .hasFileName("test-name");
+      assertThat(p).exists().hasFileName("test-name");
     } catch (IOException e) {
       fail(e);
     }
@@ -131,16 +129,13 @@ class SimpleFileUtilTest {
     this.fileUtil = SimpleFileUtil.builder().build();
     // then
     assertThat(fileUtil.getAppDirectory()).isEqualTo(FileUtil.DEFAULT_APP_DIR);
-    assertThat(fileUtil.isTemporary()).isFalse();
+    assertThat(fileUtil.isTemporary()).isTrue();
   }
 
   @Test
   void whenBuilderCalled__ShouldBehaveAsExpected() {
     // when
-    this.fileUtil = SimpleFileUtil.builder()
-        .isTemporary(true)
-        .appDirectory("hello")
-        .build();
+    this.fileUtil = SimpleFileUtil.builder().isTemporary(true).appDirectory("hello").build();
     // then
     assertThat(this.fileUtil.isTemporary()).isTrue();
     assertThat(this.fileUtil.getAppDirectory()).isEqualTo("hello");

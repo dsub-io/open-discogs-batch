@@ -14,8 +14,7 @@ class TypeArgumentValidatorTest {
   final TypeArgumentValidator validator = new TypeArgumentValidator();
 
   @BeforeEach
-  void setUp() {
-  }
+  void setUp() {}
 
   @Test
   void whenDuplicatedTypeArgExists__ThenShouldIncludeAllOfThemInReport() {
@@ -49,10 +48,11 @@ class TypeArgumentValidatorTest {
   void whenProperTypeValuesPresented__ThenShouldNotReportAnyIssue() {
     String prefix = "--type=";
     List<String> wantedTypes = List.of("release", "artist", "master", "label");
-    String[] optionArgs = wantedTypes.stream()
-        .map(value -> prefix + value)
-        .collect(Collectors.toList())
-        .toArray(String[]::new);
+    String[] optionArgs =
+        wantedTypes.stream()
+            .map(value -> prefix + value)
+            .collect(Collectors.toList())
+            .toArray(String[]::new);
 
     ApplicationArguments args = new DefaultApplicationArguments(optionArgs);
 

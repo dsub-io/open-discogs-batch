@@ -77,22 +77,24 @@ class ProgressBarStaxEventItemReaderTest {
   @Test
   void whenFilePathIsNull__ShouldThrow() {
     // when
-    Throwable t = catchThrowable(
-        () -> new ProgressBarStaxEventItemReader<>(ArtistXML.class, null, ""));
+    Throwable t =
+        catchThrowable(() -> new ProgressBarStaxEventItemReader<>(ArtistXML.class, null, ""));
 
     // then
-    assertThat(t).isInstanceOf(IllegalArgumentException.class)
+    assertThat(t)
+        .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("filePath cannot be null");
   }
 
   @Test
   void whenFragmentRootElementsIsNull__ShouldThrow() {
     // when
-    Throwable t = catchThrowable(() ->
-        new ProgressBarStaxEventItemReader<>(ArtistXML.class, artistPath, ""));
+    Throwable t =
+        catchThrowable(() -> new ProgressBarStaxEventItemReader<>(ArtistXML.class, artistPath, ""));
 
     // then
-    assertThat(t).isInstanceOf(IllegalArgumentException.class)
+    assertThat(t)
+        .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("at least 1 fragmentRootElement is required");
   }
 

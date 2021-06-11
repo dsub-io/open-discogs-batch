@@ -41,16 +41,11 @@ import org.springframework.boot.DefaultApplicationArguments;
 class DumpDependencyResolverUnitTest {
 
   final Random rand = new Random();
-  @Mock
-  DiscogsDumpService dumpService;
-  @InjectMocks
-  DefaultDumpDependencyResolver resolver;
-  @Captor
-  ArgumentCaptor<List<DumpType>> dumpTypeCaptor;
-  @Captor
-  ArgumentCaptor<Integer> yearCaptor;
-  @Captor
-  ArgumentCaptor<Integer> monthCaptor;
+  @Mock DiscogsDumpService dumpService;
+  @InjectMocks DefaultDumpDependencyResolver resolver;
+  @Captor ArgumentCaptor<List<DumpType>> dumpTypeCaptor;
+  @Captor ArgumentCaptor<Integer> yearCaptor;
+  @Captor ArgumentCaptor<Integer> monthCaptor;
 
   @BeforeEach
   void setUp() {
@@ -158,16 +153,16 @@ class DumpDependencyResolverUnitTest {
   @ParameterizedTest
   @ValueSource(
       strings = {
-          "artist,artist",
-          "release,release",
-          "master,master",
-          "label,label,master",
-          "artist,master,master",
-          "artist,label,artist",
-          "label,master,label",
-          "master,release,master",
-          "artist,master,release,master",
-          "label,release,release,release"
+        "artist,artist",
+        "release,release",
+        "master,master",
+        "label,label,master",
+        "artist,master,master",
+        "artist,label,artist",
+        "label,master,label",
+        "master,release,master",
+        "artist,master,release,master",
+        "label,release,release,release"
       })
   void whenDuplicatedTypesFound__ShouldParseCorrectly(String type) {
     ApplicationArguments args =
@@ -196,16 +191,16 @@ class DumpDependencyResolverUnitTest {
   @ParameterizedTest
   @ValueSource(
       strings = {
-          "artist",
-          "release",
-          "master",
-          "label",
-          "artist,master",
-          "artist,label",
-          "label,master",
-          "master,release",
-          "artist,master,release",
-          "label,release"
+        "artist",
+        "release",
+        "master",
+        "label",
+        "artist,master",
+        "artist,label",
+        "label,master",
+        "master,release",
+        "artist,master,release",
+        "label,release"
       })
   void whenTypeArgPresent__ThenShouldProvideAllDependencies(String type) {
     ApplicationArguments args =
@@ -306,7 +301,7 @@ class DumpDependencyResolverUnitTest {
         .forEach(
             dump ->
                 when(dumpService.getMostRecentDiscogsDumpByTypeYearMonth(
-                    dump.getType(), year, month))
+                        dump.getType(), year, month))
                     .thenReturn(dump));
 
     when(dumpService.getDiscogsDump("test")).thenReturn(fakeDump);
@@ -336,12 +331,12 @@ class DumpDependencyResolverUnitTest {
 
     String typeArg = "--type=" + targetType;
     String yearMonthArg = "--yearMonth=" + targetDate.getYear() + "-" + targetDate.getMonthValue();
-    when(dumpService.getAllByTypeYearMonth(dumpTypeCaptor.capture(), yearCaptor.capture(),
-        monthCaptor.capture()))
+    when(dumpService.getAllByTypeYearMonth(
+            dumpTypeCaptor.capture(), yearCaptor.capture(), monthCaptor.capture()))
         .thenReturn(expected);
     // when
-    Collection<DiscogsDump> result = resolver
-        .resolve(new DefaultApplicationArguments(typeArg, yearMonthArg));
+    Collection<DiscogsDump> result =
+        resolver.resolve(new DefaultApplicationArguments(typeArg, yearMonthArg));
 
     // then
     assertThat(yearCaptor.getValue()).isEqualTo(targetDate.getYear());
@@ -353,16 +348,16 @@ class DumpDependencyResolverUnitTest {
   @ParameterizedTest
   @ValueSource(
       strings = {
-          "artist",
-          "release",
-          "master",
-          "label",
-          "artist,master",
-          "artist,label",
-          "label,master",
-          "master,release",
-          "artist,master,release",
-          "label,release"
+        "artist",
+        "release",
+        "master",
+        "label",
+        "artist,master",
+        "artist,label",
+        "label,master",
+        "master,release",
+        "artist,master,release",
+        "label,release"
       })
   void whenTypeArgPresent__AndIsSetToStrict__ThenShouldOnlyContainGivenDumps(String type) {
     String[] types = type.split(",");
@@ -370,8 +365,8 @@ class DumpDependencyResolverUnitTest {
     List<String> argList = new ArrayList<>(List.of(makeTypeArgFromTypes(types)));
     argList.add("--strict");
 
-    DefaultApplicationArguments args = new DefaultApplicationArguments(
-        argList.toArray(String[]::new));
+    DefaultApplicationArguments args =
+        new DefaultApplicationArguments(argList.toArray(String[]::new));
 
     // when
     Collection<DumpType> parsed = resolver.parseTypes(args);
@@ -382,9 +377,7 @@ class DumpDependencyResolverUnitTest {
 
   String[] makeTypeArgFromTypes(String[] types) {
     return Arrays.stream(types)
-        .map(
-            typeString ->
-                String.format("--%s=%s", ArgType.TYPE.getGlobalName(), typeString))
+        .map(typeString -> String.format("--%s=%s", ArgType.TYPE.getGlobalName(), typeString))
         .toArray(String[]::new);
   }
 }

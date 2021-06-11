@@ -8,9 +8,7 @@ import java.util.stream.Collectors;
 import lombok.Data;
 import org.springframework.boot.ApplicationArguments;
 
-/**
- * Class to share data source related properties.
- */
+/** Class to share data source related properties. */
 @Data
 public class SimpleDataSourceProperties implements DataSourceProperties {
 
@@ -23,8 +21,10 @@ public class SimpleDataSourceProperties implements DataSourceProperties {
     Map<String, String> map =
         args.getNonOptionArgs().stream()
             .map(s -> s.split("="))
-            .collect(Collectors.toMap(parts -> parts[0],
-                parts -> Arrays.stream(parts).skip(1).collect(Collectors.joining())));
+            .collect(
+                Collectors.toMap(
+                    parts -> parts[0],
+                    parts -> Arrays.stream(parts).skip(1).collect(Collectors.joining())));
     if (!map.containsKey(ArgType.URL.getGlobalName())) {
       throw new MissingRequiredArgumentException(
           "application argument must contain url in the non-option argument.");
@@ -35,8 +35,8 @@ public class SimpleDataSourceProperties implements DataSourceProperties {
     password = map.get(ArgType.PASSWORD.getGlobalName());
   }
 
-  SimpleDataSourceProperties(String username, String password, String connectionUrl,
-      DBType dbType) {
+  SimpleDataSourceProperties(
+      String username, String password, String connectionUrl, DBType dbType) {
     this.username = username;
     this.password = password;
     this.connectionUrl = connectionUrl;
@@ -54,8 +54,7 @@ public class SimpleDataSourceProperties implements DataSourceProperties {
     private String connectionUrl;
     private DBType dbType;
 
-    SimpleDataSourcePropertiesBuilder() {
-    }
+    SimpleDataSourcePropertiesBuilder() {}
 
     public SimpleDataSourcePropertiesBuilder username(String username) {
       this.username = username;
@@ -67,8 +66,7 @@ public class SimpleDataSourceProperties implements DataSourceProperties {
       return this;
     }
 
-    public SimpleDataSourcePropertiesBuilder connectionUrl(
-        String connectionUrl) {
+    public SimpleDataSourcePropertiesBuilder connectionUrl(String connectionUrl) {
       this.connectionUrl = connectionUrl;
       return this;
     }
@@ -85,8 +83,13 @@ public class SimpleDataSourceProperties implements DataSourceProperties {
     public String toString() {
       return "SimpleDataSourceProperties.SimpleDataSourcePropertiesBuilder(username="
           + this.username
-          + ", password=" + this.password + ", connectionUrl=" + this.connectionUrl + ", dbType="
-          + this.dbType + ")";
+          + ", password="
+          + this.password
+          + ", connectionUrl="
+          + this.connectionUrl
+          + ", dbType="
+          + this.dbType
+          + ")";
     }
   }
 }

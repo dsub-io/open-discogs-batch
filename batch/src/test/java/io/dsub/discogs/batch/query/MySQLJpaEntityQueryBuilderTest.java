@@ -42,8 +42,7 @@ class MySQLJpaEntityQueryBuilderTest {
     // then
     assertAll(
         () -> assertThat(query).contains("SELECT 1 FROM artist WHERE id = :artist"),
-        () -> assertThat(query).contains("SELECT 1 FROM artist WHERE id = :alias")
-    );
+        () -> assertThat(query).contains("SELECT 1 FROM artist WHERE id = :alias"));
   }
 
   @Test
@@ -55,8 +54,10 @@ class MySQLJpaEntityQueryBuilderTest {
       @Column(name = "id")
       @GeneratedValue
       Long id;
+
       @Column(name = "name")
       String name;
+
       @Column(name = "real_name")
       String realName;
     }

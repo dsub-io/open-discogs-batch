@@ -16,14 +16,14 @@ class YearMonthValidatorUnitTest {
   @ParameterizedTest
   @ValueSource(
       strings = {
-          "year=3333",
-          "year=hell",
-          "yearmonth=2009-13",
-          "yearmonth=2009",
-          "year=2001",
-          "year=2010-03",
-          "yearmonth=2013-00",
-          "yearmonth=1991-03"
+        "year=3333",
+        "year=hell",
+        "yearmonth=2009-13",
+        "yearmonth=2009",
+        "year=2001",
+        "year=2010-03",
+        "yearmonth=2013-00",
+        "yearmonth=1991-03"
       })
   void shouldReportInvalidFormats(String arg) {
     ApplicationArguments args = new DefaultApplicationArguments("--" + arg);

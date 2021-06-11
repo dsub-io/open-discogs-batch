@@ -39,15 +39,13 @@ import org.xml.sax.SAXException;
 @ExtendWith(RequiresDiscogsDataConnection.class)
 class DefaultDumpSupplierUnitTest {
 
+  @RegisterExtension public LogSpy logSpy = new LogSpy();
   DefaultDumpSupplier dumpSupplier;
 
   @BeforeEach
   void setUp() {
     dumpSupplier = Mockito.spy(new DefaultDumpSupplier());
   }
-
-  @RegisterExtension
-  public LogSpy logSpy = new LogSpy();
 
   @Test
   void whenGet__ThenReturnsNotEmptyListOfValidDiscogsDumps() {
@@ -88,9 +86,7 @@ class DefaultDumpSupplierUnitTest {
       List<DiscogsDump> dumpList = dumpSupplier.parseDumpList(dumpSupplier.getBucketURL());
 
       // then
-      assertAll(
-          () -> Assertions.assertThat(dumpList).isNotEmpty()
-      );
+      assertAll(() -> Assertions.assertThat(dumpList).isNotEmpty());
     }
   }
 
@@ -125,16 +121,17 @@ class DefaultDumpSupplierUnitTest {
       // then
       assertAll(
           () -> Assertions.assertThat(dumpList).isNotEmpty(),
-          () -> assertAll(() -> {
-            for (DiscogsDump dump : dumpList) {
-              assertThat(dump.getUriString()).isNotBlank();
-              assertThat(dump.getCreatedAt()).isNotNull();
-              assertThat(dump.getSize()).isNotNull();
-              assertThat(dump.getETag()).isNotNull();
-              assertThat(dump.getType()).isNotNull();
-            }
-          })
-      );
+          () ->
+              assertAll(
+                  () -> {
+                    for (DiscogsDump dump : dumpList) {
+                      assertThat(dump.getUriString()).isNotBlank();
+                      assertThat(dump.getCreatedAt()).isNotNull();
+                      assertThat(dump.getSize()).isNotNull();
+                      assertThat(dump.getETag()).isNotNull();
+                      assertThat(dump.getType()).isNotNull();
+                    }
+                  }));
     } catch (IOException e) {
       fail(e);
     }
@@ -144,33 +141,34 @@ class DefaultDumpSupplierUnitTest {
   void whenGetSizeCalledWithInvalidString__ShouldThrowInvalidArgumentException__WithValidMessage() {
     assertDoesNotThrow(
         () -> {
-          try (InputStream in = new FileInputStream(getTestFile("ParseLongValueTestMalformedExample.xml"))) {
+          try (InputStream in =
+              new FileInputStream(getTestFile("ParseLongValueTestMalformedExample.xml"))) {
             DocumentBuilder documentBuilder =
                 DocumentBuilderFactory.newInstance().newDocumentBuilder();
             Document document = documentBuilder.parse(in);
             NodeList sizes = document.getElementsByTagName("Size");
             String msg =
                 assertThrows(
-                    InvalidArgumentException.class, () -> dumpSupplier.getSize(sizes.item(0)))
+                        InvalidArgumentException.class, () -> dumpSupplier.getSize(sizes.item(0)))
                     .getMessage();
             assertThat(msg).isEqualTo("failed to parse [] into long value");
 
             msg =
                 assertThrows(
-                    InvalidArgumentException.class, () -> dumpSupplier.getSize(sizes.item(1)))
+                        InvalidArgumentException.class, () -> dumpSupplier.getSize(sizes.item(1)))
                     .getMessage();
             assertThat(msg).isEqualTo("failed to parse [d] into long value");
 
             msg =
                 assertThrows(
-                    InvalidArgumentException.class, () -> dumpSupplier.getSize(sizes.item(2)))
+                        InvalidArgumentException.class, () -> dumpSupplier.getSize(sizes.item(2)))
                     .getMessage();
 
             assertThat(msg).isEqualTo("failed to parse [3323d] into long value");
 
             msg =
                 assertThrows(
-                    InvalidArgumentException.class, () -> dumpSupplier.getSize(sizes.item(3)))
+                        InvalidArgumentException.class, () -> dumpSupplier.getSize(sizes.item(3)))
                     .getMessage();
             assertThat(msg).isEqualTo("failed to parse [33211d22!!#] into long value");
           }
@@ -220,7 +218,8 @@ class DefaultDumpSupplierUnitTest {
   @Test
   void whenUTCLastModifiedMethodCalledWithMalformedEntry__()
       throws IOException, ParserConfigurationException, SAXException {
-    try (InputStream in = new FileInputStream(getTestFile("UTCLastModifiedMethodTestMalformedExample.xml"))) {
+    try (InputStream in =
+        new FileInputStream(getTestFile("UTCLastModifiedMethodTestMalformedExample.xml"))) {
       DocumentBuilder documentBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
       Document document = documentBuilder.parse(in);
       NodeList contents = document.getElementsByTagName("Contents");
@@ -232,7 +231,7 @@ class DefaultDumpSupplierUnitTest {
             // then
             String msg =
                 assertThrows(
-                    InvalidArgumentException.class, () -> dumpSupplier.getUTCLastModified(node))
+                        InvalidArgumentException.class, () -> dumpSupplier.getUTCLastModified(node))
                     .getMessage();
 
             if (node.getTextContent() == null || node.getTextContent().isBlank()) {
@@ -251,7 +250,8 @@ class DefaultDumpSupplierUnitTest {
   @Test
   void whenGetTypeCalledWithMalformedEntry__ShouldThrowInvalidArgumentException__WithValidMessage()
       throws IOException, ParserConfigurationException, SAXException {
-    try (InputStream in = new FileInputStream(getTestFile("GetTypeTestMalformedEntryExample.xml"))) {
+    try (InputStream in =
+        new FileInputStream(getTestFile("GetTypeTestMalformedEntryExample.xml"))) {
       DocumentBuilder documentBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
       Document document = documentBuilder.parse(in);
       NodeList contents = document.getElementsByTagName("Contents");

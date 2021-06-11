@@ -33,9 +33,9 @@ public class JdbcConnectionTester {
    *
    * @param args arguments to be parsed (to obtain url, username and password)
    * @throws InvalidArgumentException will be thrown under following conditions:
-   *                                  <p>1. {@link DriverManager#getConnection(String)} fails.
-   *                                  <p>2. Any required parameters are missing.
-   *                                  <p>3. Failure to load jdbc driver.
+   *     <p>1. {@link DriverManager#getConnection(String)} fails.
+   *     <p>2. Any required parameters are missing.
+   *     <p>3. Failure to load jdbc driver.
    */
   public void testConnection(String[] args) {
     testConnection(args, autoResolveJdbcDriver(args));
@@ -44,12 +44,12 @@ public class JdbcConnectionTester {
   /**
    * Test the connection from given arguments and jdbcDriverName.
    *
-   * @param args           arguments to be parsed (to obtain url, username and password)
+   * @param args arguments to be parsed (to obtain url, username and password)
    * @param jdbcDriverName driver class name. this will be default to com.mysql.cj.jdbc.Driver.
    * @throws InvalidArgumentException will be thrown under following conditions:
-   *                                  <p>1. {@link DriverManager#getConnection(String)} fails.
-   *                                  <p>2. Any required parameters are missing.
-   *                                  <p>3. Failure to load jdbc driver.
+   *     <p>1. {@link DriverManager#getConnection(String)} fails.
+   *     <p>2. Any required parameters are missing.
+   *     <p>3. Failure to load jdbc driver.
    */
   public void testConnection(String[] args, String jdbcDriverName) throws InvalidArgumentException {
 
@@ -67,8 +67,8 @@ public class JdbcConnectionTester {
     try {
       Class.forName(jdbcDriverName);
       DriverManager.setLoginTimeout(2); // set temporary login timeout
-      conn = DriverManager
-          .getConnection(url, username, password); // test if connection is available
+      conn =
+          DriverManager.getConnection(url, username, password); // test if connection is available
       DriverManager.setLoginTimeout(defaultTimeOut); // restore
     } catch (ClassNotFoundException e) {
       throw new InvalidArgumentException(

@@ -6,29 +6,19 @@ import java.util.regex.Pattern;
 
 public class DefaultMalformedDateParser implements MalformedDateParser {
 
-  private static final Pattern YEAR_PATTERN = Pattern.compile(
-      "^([\\d]{4}).*"
-  );
+  private static final Pattern YEAR_PATTERN = Pattern.compile("^([\\d]{4}).*");
 
-  private static final Pattern YEAR_PRESENT = Pattern.compile(
-      "^([\\w]{4}).*"
-  );
+  private static final Pattern YEAR_PRESENT = Pattern.compile("^([\\w]{4}).*");
 
-  private static final Pattern MONTH_PATTERN = Pattern.compile(
-      "^[\\w]{2,4}[- /.](0*[1-9]|1[0-2])[- /.]?"
-  );
+  private static final Pattern MONTH_PATTERN =
+      Pattern.compile("^[\\w]{2,4}[- /.](0*[1-9]|1[0-2])[- /.]?");
 
-  private static final Pattern MONTH_PRESENT = Pattern.compile(
-      "^[\\w]{2,4}[- /.](0*[\\w]{1,2}).*"
-  );
+  private static final Pattern MONTH_PRESENT = Pattern.compile("^[\\w]{2,4}[- /.](0*[\\w]{1,2}).*");
 
-  private static final Pattern DAY_PATTERN = Pattern.compile(
-      "^[\\d]{4}([- /.])(0*([1-9]|1[0-2]))\\1(0*(3[0-1]|[1-2][0-9]|[1-9]))$"
-  );
+  private static final Pattern DAY_PATTERN =
+      Pattern.compile("^[\\d]{4}([- /.])(0*([1-9]|1[0-2]))\\1(0*(3[0-1]|[1-2][0-9]|[1-9]))$");
 
-  private static final Pattern FLAT_PATTERN = Pattern.compile(
-      "^([\\d]{4})([\\d]{2})([\\d]{2})$"
-  );
+  private static final Pattern FLAT_PATTERN = Pattern.compile("^([\\d]{4})([\\d]{2})([\\d]{2})$");
 
   @Override
   public boolean isMonthValid(String date) {

@@ -7,12 +7,9 @@ import org.springframework.batch.core.ItemReadListener;
 @Slf4j
 public class StringFieldNormalizingItemReadListener<T> implements ItemReadListener<T> {
 
-  /**
-   * no-op
-   */
+  /** no-op */
   @Override
-  public void beforeRead() {
-  }
+  public void beforeRead() {}
 
   @Override
   public void afterRead(T item) {

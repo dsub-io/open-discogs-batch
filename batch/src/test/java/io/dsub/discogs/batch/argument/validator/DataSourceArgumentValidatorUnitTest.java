@@ -24,13 +24,13 @@ class DataSourceArgumentValidatorUnitTest {
   }
 
   void innerTestCorrectJdbcUrl(String jdbcUrl) {
-    String[] args = new String[]{jdbcUrl, "user=hello", "pass=pass"};
+    String[] args = new String[] {jdbcUrl, "user=hello", "pass=pass"};
     ValidationResult result = validator.validate(new DefaultApplicationArguments(args));
     assertThat(result.isValid()).isEqualTo(true);
   }
 
   void innerTestMalformedJdbcUrl(String jdbcUrl, String expectedReport) {
-    String[] args = new String[]{jdbcUrl, "user=hello", "pass=pass"};
+    String[] args = new String[] {jdbcUrl, "user=hello", "pass=pass"};
     ValidationResult result = validator.validate(new DefaultApplicationArguments(args));
     assertThat(result.isValid()).isEqualTo(false);
     assertThat(expectedReport).isIn(result.getIssues());
@@ -71,7 +71,7 @@ class DataSourceArgumentValidatorUnitTest {
     assertThat("username argument is missing").isIn(issues);
     assertThat("password argument is missing").isIn(issues);
 
-    arg = new String[]{"user=hello"};
+    arg = new String[] {"user=hello"};
 
     result = validator.validate(new DefaultApplicationArguments(arg));
     assertThat(result).returns(false, ValidationResult::isValid);
@@ -81,7 +81,7 @@ class DataSourceArgumentValidatorUnitTest {
     assertThat("url argument is missing").isIn(issues);
     assertThat("password argument is missing").isIn(issues);
 
-    arg = new String[]{"user=hello", "pass=password", "hello=world"};
+    arg = new String[] {"user=hello", "pass=password", "hello=world"};
     result = validator.validate(new DefaultApplicationArguments(arg));
     assertThat(result).returns(false, ValidationResult::isValid);
     assertThat(result.getIssues().size()).isEqualTo(1);
@@ -92,7 +92,7 @@ class DataSourceArgumentValidatorUnitTest {
 
   @Test
   void shouldReportEveryDuplicatedEntries() {
-    String[] arg = new String[]{"user=hello", "user=world", "pass=hi", "url=333"};
+    String[] arg = new String[] {"user=hello", "user=world", "pass=hi", "url=333"};
     ValidationResult result = validator.validate(new DefaultApplicationArguments(arg));
 
     assertThat(result).returns(false, ValidationResult::isValid);
@@ -101,7 +101,7 @@ class DataSourceArgumentValidatorUnitTest {
     List<String> issues = result.getIssues();
     assertThat("username argument has duplicated entries").isIn(issues);
 
-    arg = new String[]{"user=hello", "user=world", "url=what", "url=where", "pass=eee"};
+    arg = new String[] {"user=hello", "user=world", "url=what", "url=where", "pass=eee"};
     result = validator.validate(new DefaultApplicationArguments(arg));
 
     assertThat(result).returns(false, ValidationResult::isValid);
@@ -115,7 +115,7 @@ class DataSourceArgumentValidatorUnitTest {
   @Test
   void shouldReportAsBlankIfEverythingIsPresent() {
     String[] arg =
-        new String[]{"user=hello", "pass=pass", "url=jdbc:mysql://localhost:3306/something"};
+        new String[] {"user=hello", "pass=pass", "url=jdbc:mysql://localhost:3306/something"};
     ValidationResult result = validator.validate(new DefaultApplicationArguments(arg));
     assertThat(result).returns(true, ValidationResult::isValid);
     assertThat(result.getIssues().size()).isEqualTo(0);

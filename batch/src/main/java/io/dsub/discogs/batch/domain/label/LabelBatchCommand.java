@@ -18,11 +18,8 @@ import lombok.NoArgsConstructor;
  */
 public abstract class LabelBatchCommand {
 
-  /**
-   * Private constructor to prevent instantiation.
-   */
-  private LabelBatchCommand() {
-  }
+  /** Private constructor to prevent instantiation. */
+  private LabelBatchCommand() {}
 
   @Data
   @Builder

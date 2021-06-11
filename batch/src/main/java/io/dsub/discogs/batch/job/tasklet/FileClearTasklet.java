@@ -13,7 +13,7 @@ import org.springframework.batch.repeat.RepeatStatus;
 /**
  * A basic implementation of {@link Tasklet} to perform file clear. If file exists, this tasklet
  * will try to delete file from path offered by DiscogsDump.
- **/
+ */
 @Slf4j
 @RequiredArgsConstructor
 public class FileClearTasklet implements Tasklet {

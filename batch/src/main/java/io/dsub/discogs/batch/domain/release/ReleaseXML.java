@@ -1,6 +1,5 @@
 package io.dsub.discogs.batch.domain.release;
 
-import io.dsub.discogs.batch.aspect.annotation.XmlMapped;
 import java.util.List;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -12,7 +11,6 @@ import javax.xml.bind.annotation.XmlValue;
 import lombok.Data;
 
 @Data
-@XmlMapped
 @XmlRootElement(name = "release")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class ReleaseXML {
@@ -22,18 +20,25 @@ public class ReleaseXML {
   ///////////////////////////////////////////////////////////////////////////
   @XmlAttribute(name = "id")
   private Long releaseId;
+
   @XmlAttribute(name = "status")
   private String status;
+
   @XmlElement(name = "title")
   private String title;
+
   @XmlElement(name = "country")
   private String country;
+
   @XmlElement(name = "notes")
   private String notes;
+
   @XmlElement(name = "data_quality")
   private String dataQuality;
+
   @XmlElement(name = "master_id")
   private Master master;
+
   @XmlElement(name = "released")
   private String releaseDate;
 
@@ -86,6 +91,7 @@ public class ReleaseXML {
 
     @XmlElement(name = "id")
     Long id;
+
     @XmlElement(name = "name")
     String name;
   }
@@ -96,8 +102,10 @@ public class ReleaseXML {
 
     @XmlElement(name = "id")
     Long id;
+
     @XmlElement(name = "name")
     String name;
+
     @XmlElement(name = "role")
     String role;
   }
@@ -108,8 +116,10 @@ public class ReleaseXML {
 
     @XmlAttribute(name = "catno")
     String catno;
+
     @XmlAttribute(name = "id")
     Long id;
+
     @XmlAttribute(name = "name")
     String labelName;
   }
@@ -120,10 +130,13 @@ public class ReleaseXML {
 
     @XmlAttribute(name = "name")
     String name;
+
     @XmlAttribute(name = "qty")
     Integer qty;
+
     @XmlAttribute(name = "text")
     String text;
+
     @XmlElementWrapper(name = "descriptions")
     @XmlElement(name = "description")
     List<String> description;
@@ -135,8 +148,10 @@ public class ReleaseXML {
 
     @XmlElement(name = "position")
     String position;
+
     @XmlElement(name = "title")
     String title;
+
     @XmlElement(name = "duration")
     String duration;
   }
@@ -147,8 +162,10 @@ public class ReleaseXML {
 
     @XmlAttribute(name = "description")
     String description;
+
     @XmlAttribute(name = "type")
     String type;
+
     @XmlAttribute(name = "value")
     String value;
   }
@@ -159,6 +176,7 @@ public class ReleaseXML {
 
     @XmlElement(name = "id")
     Long id;
+
     @XmlElement(name = "entity_type_name")
     String work;
   }
@@ -169,8 +187,10 @@ public class ReleaseXML {
 
     @XmlElement(name = "title")
     String title;
+
     @XmlElement(name = "description")
     String description;
+
     @XmlAttribute(name = "src")
     String url;
   }
@@ -179,8 +199,8 @@ public class ReleaseXML {
   @XmlAccessorType(XmlAccessType.FIELD)
   public static class Master {
 
-    @XmlValue
-    Long masterId;
+    @XmlValue Long masterId;
+
     @XmlAttribute(name = "is_main_release")
     boolean isMaster;
 

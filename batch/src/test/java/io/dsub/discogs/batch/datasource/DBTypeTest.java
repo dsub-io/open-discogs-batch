@@ -12,9 +12,7 @@ class DBTypeTest {
   @ParameterizedTest
   @EnumSource(DBType.class)
   void whenGetDriverClassName__ShouldReturnNotBlank(DBType dbType) {
-    assertThat(dbType.getDriverClassName())
-        .isNotBlank()
-        .hasSizeGreaterThan(0);
+    assertThat(dbType.getDriverClassName()).isNotBlank().hasSizeGreaterThan(0);
   }
 
   @Test
@@ -35,8 +33,6 @@ class DBTypeTest {
     List<String> names = DBType.getNames();
 
     // then
-    names.forEach(name -> assertThat(name)
-        .isNotBlank()
-        .isLowerCase());
+    names.forEach(name -> assertThat(name).isNotBlank().isLowerCase());
   }
 }

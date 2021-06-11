@@ -198,8 +198,8 @@ public class DefaultDumpSupplier implements DumpSupplier {
         IntStream.range(0, nodeList.getLength())
             .mapToObj(nodeList::item)
             .filter(this::isKnownNodeType) // must be known type
-            .filter(item -> item.getTextContent() != null)// must have content
-//            .filter(item -> item.getTextContent())// must have content
+            .filter(item -> item.getTextContent() != null) // must have content
+            //            .filter(item -> item.getTextContent())// must have content
             .collect(Collectors.toList()); // conclude
 
     // if nodes has any missing field...
@@ -320,8 +320,7 @@ public class DefaultDumpSupplier implements DumpSupplier {
    *
    * @param node target node.
    * @return parsed {@link DumpType} value.
-   * @throws InvalidArgumentException thrown if we failed to recognize the type that node
-   *                                  indicates.
+   * @throws InvalidArgumentException thrown if we failed to recognize the type that node indicates.
    */
   protected DumpType getType(Node node) throws InvalidArgumentException {
     String content = node.getTextContent();

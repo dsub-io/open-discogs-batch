@@ -29,16 +29,13 @@ class AbstractStepConfigTest {
 
   AbstractStepConfig stepConfig;
 
-  @RegisterExtension
-  LogSpy logSpy = new LogSpy();
+  @RegisterExtension LogSpy logSpy = new LogSpy();
 
   @BeforeEach
   void setUp() {
     stepConfig = Mockito.mock(AbstractStepConfig.class);
-    when(stepConfig.buildItemWriter(any(), any()))
-        .thenCallRealMethod();
-    when(stepConfig.getOnKeyExecutionDecider(any()))
-        .thenCallRealMethod();
+    when(stepConfig.buildItemWriter(any(), any())).thenCallRealMethod();
+    when(stepConfig.getOnKeyExecutionDecider(any())).thenCallRealMethod();
   }
 
   @Test
@@ -49,9 +46,7 @@ class AbstractStepConfigTest {
     ItemWriter<?> writer = stepConfig.buildItemWriter("test", mockDataSource);
 
     // then
-    assertThat(writer)
-        .isNotNull()
-        .isInstanceOf(JdbcBatchItemWriter.class);
+    assertThat(writer).isNotNull().isInstanceOf(JdbcBatchItemWriter.class);
   }
 
   @ParameterizedTest
@@ -62,22 +57,24 @@ class AbstractStepConfigTest {
     }
     String finalParam = param;
     // when
-    Throwable t = catchThrowable(
-        () -> stepConfig.buildItemWriter(finalParam, Mockito.mock(DataSource.class)));
+    Throwable t =
+        catchThrowable(
+            () -> stepConfig.buildItemWriter(finalParam, Mockito.mock(DataSource.class)));
 
     // then
-    assertThat(t).isInstanceOf(InvalidArgumentException.class)
+    assertThat(t)
+        .isInstanceOf(InvalidArgumentException.class)
         .hasMessage("query cannot be null or blank.");
   }
 
   @Test
   void whenDataSourceIsNull__ShouldThrowOnBuildItemWriter() {
     // when
-    Throwable t = catchThrowable(() ->
-        stepConfig.buildItemWriter("hello", null));
+    Throwable t = catchThrowable(() -> stepConfig.buildItemWriter("hello", null));
 
     // then
-    assertThat(t).isInstanceOf(InvalidArgumentException.class)
+    assertThat(t)
+        .isInstanceOf(InvalidArgumentException.class)
         .hasMessage("datasource cannot be null.");
   }
 
@@ -90,24 +87,22 @@ class AbstractStepConfigTest {
     Throwable t = catchThrowable(() -> stepConfig.getOnKeyExecutionDecider(param));
 
     // then
-    assertThat(t).isInstanceOf(InvalidArgumentException.class)
+    assertThat(t)
+        .isInstanceOf(InvalidArgumentException.class)
         .hasMessage("key cannot be null or blank.");
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"artist", "release", "master", "label"})
   void whenGetOnKeyExecutionDecider__ShouldReturnValidExecutionDecider(String param) {
-    JobExecutionDecider jobExecutionDecider =
-        stepConfig.getOnKeyExecutionDecider(param);
+    JobExecutionDecider jobExecutionDecider = stepConfig.getOnKeyExecutionDecider(param);
     JobExecution jobExecution = Mockito.mock(JobExecution.class);
     JobParameters jobParameters = Mockito.mock(JobParameters.class);
     Map<String, JobParameter> falsyMap = new HashMap<>();
     Map<String, JobParameter> truthyMap = new HashMap<>();
     truthyMap.put(param, new JobParameter("hello"));
-    when(jobExecution.getJobParameters())
-        .thenReturn(jobParameters);
-    when(jobParameters.getParameters())
-        .thenReturn(falsyMap);
+    when(jobExecution.getJobParameters()).thenReturn(jobParameters);
+    when(jobParameters.getParameters()).thenReturn(falsyMap);
 
     FlowExecutionStatus status = jobExecutionDecider.decide(jobExecution, null);
     assertThat(status.getName()).isEqualTo("SKIPPED");
@@ -118,8 +113,7 @@ class AbstractStepConfigTest {
       logSpy.clear();
     }
 
-    when(jobParameters.getParameters())
-        .thenReturn(truthyMap);
+    when(jobParameters.getParameters()).thenReturn(truthyMap);
     status = jobExecutionDecider.decide(jobExecution, null);
 
     assertThat(status.getName()).isEqualTo("COMPLETED");

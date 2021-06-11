@@ -47,8 +47,10 @@ public class ProgressBarStaxEventItemReader<T> implements ItemStreamReader<T>, I
     this.filePath = filePath;
     this.taskName = TASK_NAME_PREPEND + clazz.getSimpleName();
     this.pbConsumer.off();
-    this.fragmentRootElements = Arrays.stream(fragmentRootElements)
-        .filter(string -> !string.isBlank()).toArray(String[]::new);
+    this.fragmentRootElements =
+        Arrays.stream(fragmentRootElements)
+            .filter(string -> !string.isBlank())
+            .toArray(String[]::new);
     this.init();
   }
 
@@ -60,13 +62,14 @@ public class ProgressBarStaxEventItemReader<T> implements ItemStreamReader<T>, I
   }
 
   private void initDelegate() throws Exception {
-    this.nestedReader = new StaxEventItemReaderBuilder<T>()
-        .resource(getInputStreamResource())
-        .name(taskName)
-        .addFragmentRootElements(fragmentRootElements)
-        .unmarshaller(getUnmarshaller(clazz))
-        .saveState(false)
-        .build();
+    this.nestedReader =
+        new StaxEventItemReaderBuilder<T>()
+            .resource(getInputStreamResource())
+            .name(taskName)
+            .addFragmentRootElements(fragmentRootElements)
+            .unmarshaller(getUnmarshaller(clazz))
+            .saveState(false)
+            .build();
   }
 
   private Unmarshaller getUnmarshaller(Class<T> clazz) throws Exception {

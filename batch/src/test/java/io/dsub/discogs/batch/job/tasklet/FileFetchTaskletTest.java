@@ -7,7 +7,6 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -38,34 +37,25 @@ import org.springframework.batch.repeat.RepeatStatus;
 @Slf4j
 class FileFetchTaskletTest {
 
-  @Mock
-  ChunkContext chunkContext;
+  @Mock ChunkContext chunkContext;
 
-  @Mock
-  StepContribution stepContribution;
+  @Mock StepContribution stepContribution;
 
-  @Mock
-  DiscogsDump dump;
+  @Mock DiscogsDump dump;
 
-  @Mock
-  FileUtil fileUtil;
+  @Mock FileUtil fileUtil;
 
   InputStream inputStream;
 
-  @InjectMocks
-  FileFetchTasklet fileFetchTasklet;
+  @InjectMocks FileFetchTasklet fileFetchTasklet;
 
-  @RegisterExtension
-  LogSpy logSpy = new LogSpy();
+  @RegisterExtension LogSpy logSpy = new LogSpy();
 
-  @Captor
-  ArgumentCaptor<String> nameCaptor;
+  @Captor ArgumentCaptor<String> nameCaptor;
 
-  @Captor
-  ArgumentCaptor<String> msgCaptor;
+  @Captor ArgumentCaptor<String> msgCaptor;
 
-  @Captor
-  ArgumentCaptor<InputStream> inCaptor;
+  @Captor ArgumentCaptor<InputStream> inCaptor;
 
   private AutoCloseable closeable;
 
@@ -97,7 +87,8 @@ class FileFetchTaskletTest {
     doNothing().when(fileUtil).copy(inCaptor.capture(), nameCaptor.capture());
     doReturn(null).when(fileUtil).getFilePath(nameCaptor.capture(), anyBoolean());
     when(fileUtil.getSize(nameCaptor.capture())).thenReturn(-1L);
-    doReturn(inputStream).when(fileFetchTasklet)
+    doReturn(inputStream)
+        .when(fileFetchTasklet)
         .wrapInputStream(inCaptor.capture(), msgCaptor.capture());
 
     // when
@@ -118,21 +109,21 @@ class FileFetchTaskletTest {
 
     // check logs
     assertThat(logSpy.getLogsByLevel(Level.ERROR).size()).isZero();
-    assertThat(logSpy.getLogsAsString(true))
-        .contains("fetching " + dump.getFileName() + "...");
+    assertThat(logSpy.getLogsAsString(true)).contains("fetching " + dump.getFileName() + "...");
   }
 
   @Test
   void givenIncompleteFileExists__WhenExecuteTask__ShouldFetchFileAgain() throws IOException {
     // given
     when(fileUtil.getSize(nameCaptor.capture())).thenReturn(100L);
-    doReturn(inputStream).when(fileFetchTasklet)
+    doReturn(inputStream)
+        .when(fileFetchTasklet)
         .wrapInputStream(inCaptor.capture(), msgCaptor.capture());
 
     // when
     RepeatStatus repeatStatus = fileFetchTasklet.execute(stepContribution, chunkContext);
 
-    //then
+    // then
     assertThat(repeatStatus).isEqualTo(RepeatStatus.FINISHED);
     verify(stepContribution, times(1)).setExitStatus(ExitStatus.COMPLETED);
     verify(stepContribution, times(1)).setExitStatus(ExitStatus.EXECUTING);
@@ -140,8 +131,7 @@ class FileFetchTaskletTest {
 
     verify(fileUtil, times(1)).deleteFile(dump.getFileName());
 
-    nameCaptor.getAllValues()
-        .forEach(name -> assertThat(name).isEqualTo(dump.getFileName()));
+    nameCaptor.getAllValues().forEach(name -> assertThat(name).isEqualTo(dump.getFileName()));
 
     // check logs
     assertThat(logSpy.getLogsByLevel(Level.ERROR).size()).isZero();
@@ -156,35 +146,35 @@ class FileFetchTaskletTest {
         .isEqualTo("fetching " + dump.getFileName() + "...");
   }
 
-//  @Test
-//  void whenExecuteWithCompleteFile__ShouldExitWithoutCopy() {
-//    try {
-//      Files.write(targetPath, RandomString.make(1000).getBytes());
-//      RepeatStatus repeatStatus = fileFetchTasklet.execute(stepContribution, chunkContext);
-//      assertThat(repeatStatus).isEqualTo(RepeatStatus.FINISHED);
-//      assertThat(Files.exists(targetPath)).isTrue();
-//      assertThat(Files.size(targetPath)).isEqualTo(Files.size(targetPath));
-//      assertThat(logSpy.getEvents().size()).isEqualTo(2);
-//      assertThat(logSpy.getEvents().get(0).getMessage())
-//          .contains("found duplicated file: ", ". checking size...", dump.getFileName());
-//      assertThat(logSpy.getEvents().get(1).getMessage())
-//          .isEqualTo("file already exists. proceeding...");
-//      assertThat(stepContribution.getExitStatus()).isEqualTo(ExitStatus.COMPLETED);
-//      assertThat(chunkContext.isComplete()).isTrue();
-//    } catch (IOException e) {
-//      fail();
-//    }
-//  }
-//
-//  @Test
-//  void whenExecute__AndDeleteThrows__ThenShouldUpdateStatusAsIntended() throws IOException {
-//    FileFetchTasklet tasklet = Mockito.spy(fileFetchTasklet);
-//    when(tasklet.execute(stepContribution, chunkContext)).thenCallRealMethod();
-//    Mockito.doThrow(FileFetchException.class).when(tasklet).deleteFile(any());
-//    Files.write(targetPath, RandomString.make(500).getBytes());
-//    Throwable t = catchThrowable(() -> tasklet.execute(stepContribution, chunkContext));
-//    assertThat(t).isNotNull().isInstanceOf(FileFetchException.class);
-//    assertThat(stepContribution.getExitStatus()).isEqualTo(ExitStatus.FAILED);
-//    assertThat(chunkContext.isComplete()).isTrue();
-//  }
+  //  @Test
+  //  void whenExecuteWithCompleteFile__ShouldExitWithoutCopy() {
+  //    try {
+  //      Files.write(targetPath, RandomString.make(1000).getBytes());
+  //      RepeatStatus repeatStatus = fileFetchTasklet.execute(stepContribution, chunkContext);
+  //      assertThat(repeatStatus).isEqualTo(RepeatStatus.FINISHED);
+  //      assertThat(Files.exists(targetPath)).isTrue();
+  //      assertThat(Files.size(targetPath)).isEqualTo(Files.size(targetPath));
+  //      assertThat(logSpy.getEvents().size()).isEqualTo(2);
+  //      assertThat(logSpy.getEvents().get(0).getMessage())
+  //          .contains("found duplicated file: ", ". checking size...", dump.getFileName());
+  //      assertThat(logSpy.getEvents().get(1).getMessage())
+  //          .isEqualTo("file already exists. proceeding...");
+  //      assertThat(stepContribution.getExitStatus()).isEqualTo(ExitStatus.COMPLETED);
+  //      assertThat(chunkContext.isComplete()).isTrue();
+  //    } catch (IOException e) {
+  //      fail();
+  //    }
+  //  }
+  //
+  //  @Test
+  //  void whenExecute__AndDeleteThrows__ThenShouldUpdateStatusAsIntended() throws IOException {
+  //    FileFetchTasklet tasklet = Mockito.spy(fileFetchTasklet);
+  //    when(tasklet.execute(stepContribution, chunkContext)).thenCallRealMethod();
+  //    Mockito.doThrow(FileFetchException.class).when(tasklet).deleteFile(any());
+  //    Files.write(targetPath, RandomString.make(500).getBytes());
+  //    Throwable t = catchThrowable(() -> tasklet.execute(stepContribution, chunkContext));
+  //    assertThat(t).isNotNull().isInstanceOf(FileFetchException.class);
+  //    assertThat(stepContribution.getExitStatus()).isEqualTo(ExitStatus.FAILED);
+  //    assertThat(chunkContext.isComplete()).isTrue();
+  //  }
 }

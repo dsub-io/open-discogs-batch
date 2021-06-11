@@ -6,9 +6,7 @@ import java.util.stream.Collectors;
 import lombok.NoArgsConstructor;
 import org.springframework.boot.ApplicationArguments;
 
-/**
- * An argument validator implementation to check if we got unknown argument.
- */
+/** An argument validator implementation to check if we got unknown argument. */
 @NoArgsConstructor
 public class KnownArgumentValidator implements ArgumentValidator {
 
@@ -17,7 +15,7 @@ public class KnownArgumentValidator implements ArgumentValidator {
    *
    * @param applicationArguments to be validated.
    * @return empty validation result if all arguments are known. Otherwise, returns a validation
-   * result with reports of unknown arguments.
+   *     result with reports of unknown arguments.
    */
   @Override
   public ValidationResult validate(ApplicationArguments applicationArguments) {

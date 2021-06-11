@@ -31,17 +31,14 @@ public class DefaultDiscogsDumpServiceIntegrationTest {
   List<DiscogsDump> sampleDumpList =
       new DefaultDumpSupplier()
           .get().stream()
-          .sorted(DiscogsDump::compareTo)
-          .skip(200)
-          .limit(10)
-          .collect(Collectors.toList());
+              .sorted(DiscogsDump::compareTo)
+              .skip(200)
+              .limit(10)
+              .collect(Collectors.toList());
 
-  @Autowired
-  TestEntityManager em;
-  @Autowired
-  DiscogsDumpRepository repository;
-  @Mock
-  DumpSupplier dumpSupplier;
+  @Autowired TestEntityManager em;
+  @Autowired DiscogsDumpRepository repository;
+  @Mock DumpSupplier dumpSupplier;
   DiscogsDumpService dumpService;
 
   @BeforeEach

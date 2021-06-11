@@ -48,10 +48,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationContext;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.support.Repositories;
-import org.springframework.test.annotation.DirtiesContext;
-import org.springframework.test.annotation.DirtiesContext.ClassMode;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.transaction.PlatformTransactionManager;
 
@@ -59,50 +56,40 @@ import org.springframework.transaction.PlatformTransactionManager;
 @SpringBatchTest
 @ContextConfiguration(
     classes = {
-        BatchConfig.class,
-        DiscogsJobIntegrationTestConfig.class,
-        ArtistStepConfig.class,
-        LabelStepConfig.class,
-        MasterStepConfig.class,
-        ReleaseItemStepConfig.class
+      BatchConfig.class,
+      DiscogsJobIntegrationTestConfig.class,
+      ArtistStepConfig.class,
+      LabelStepConfig.class,
+      MasterStepConfig.class,
+      ReleaseItemStepConfig.class
     })
 public class DiscogsJobIntegrationTest {
-  @Autowired
-  ItemStreamReader<ArtistXML> artistStreamReader;
-  @RegisterExtension
-  LogSpy logSpy = new LogSpy();
-  @Autowired
-  private JobLauncherTestUtils jobLauncherTestUtils;
-  @Autowired
-  private JobRepositoryTestUtils jobRepositoryTestUtils;
-  @Autowired
-  private ArtistRepository artistRepository;
-  @Autowired
-  private LabelRepository labelRepository;
-  @Autowired
-  private MasterRepository masterRepository;
-  @Autowired
-  private ReleaseRepository releaseRepository;
-  @Autowired
-  private FileUtil fileUtil;
+  @Autowired ItemStreamReader<ArtistXML> artistStreamReader;
+  @RegisterExtension LogSpy logSpy = new LogSpy();
+  Reflections reflections = new Reflections("io.dsub.discogs.common");
+  Repositories repositories;
+  List<Class<? extends BaseEntity>> entityClasses =
+      reflections.getSubTypesOf(BaseEntity.class).stream()
+          .filter(
+              clazz ->
+                  !Modifier.isAbstract(clazz.getModifiers())
+                      && !Modifier.isInterface(clazz.getModifiers()))
+          .collect(Collectors.toList());
+  @Autowired private JobLauncherTestUtils jobLauncherTestUtils;
+  @Autowired private JobRepositoryTestUtils jobRepositoryTestUtils;
+  @Autowired private ArtistRepository artistRepository;
+  @Autowired private LabelRepository labelRepository;
+  @Autowired private MasterRepository masterRepository;
+  @Autowired private ReleaseRepository releaseRepository;
+  @Autowired private FileUtil fileUtil;
+
   @Autowired
   @Qualifier("dataSource")
   private DataSource dataSource;
-  @Autowired
-  private PlatformTransactionManager transactionManager;
-  @Autowired
-  private ApplicationContext context;
-  @Autowired
-  private Map<DumpType, DiscogsDump> dumpMap;
 
-  Reflections reflections = new Reflections("io.dsub.discogs.common");
-  Repositories repositories;
-
-  List<Class<? extends BaseEntity>> entityClasses = reflections.getSubTypesOf(BaseEntity.class)
-      .stream()
-      .filter(clazz -> !Modifier.isAbstract(clazz.getModifiers()) && !Modifier
-          .isInterface(clazz.getModifiers()))
-      .collect(Collectors.toList());
+  @Autowired private PlatformTransactionManager transactionManager;
+  @Autowired private ApplicationContext context;
+  @Autowired private Map<DumpType, DiscogsDump> dumpMap;
 
   @BeforeEach
   void setUp() throws Exception {
@@ -161,10 +148,12 @@ public class DiscogsJobIntegrationTest {
     assertThat(artistRepository.count(), is(3L));
 
     // check every single entities have at least one entry.
-    entityClasses.forEach(entityClass -> repositories.getRepositoryFor(entityClass)
-        .map(repo -> (JpaRepository<?, ?>) repo)
-        .ifPresent(
-            repo -> assertThat((repo).count(), is(greaterThan(0L)))));
+    entityClasses.forEach(
+        entityClass ->
+            repositories
+                .getRepositoryFor(entityClass)
+                .map(repo -> (JpaRepository<?, ?>) repo)
+                .ifPresent(repo -> assertThat((repo).count(), is(greaterThan(0L)))));
   }
 
   @Test
@@ -173,10 +162,11 @@ public class DiscogsJobIntegrationTest {
     builder.addString("artist", "artist");
     builder.addString("label", "label");
     builder.addString("chunkSize", "1000");
-    JobParameters params = jobLauncherTestUtils
-        .getUniqueJobParametersBuilder()
-        .addJobParameters(builder.toJobParameters())
-        .toJobParameters();
+    JobParameters params =
+        jobLauncherTestUtils
+            .getUniqueJobParametersBuilder()
+            .addJobParameters(builder.toJobParameters())
+            .toJobParameters();
 
     JobExecution jobExecution = jobLauncherTestUtils.launchJob(params);
     ExitStatus exitStatus = jobExecution.getExitStatus();

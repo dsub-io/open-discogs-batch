@@ -52,13 +52,15 @@ public abstract class AbstractStepConfig {
   }
 
   protected Step buildSkipStep(DumpType dumpType, StepBuilderFactory factory) {
-    return factory.get("skip-step-" + dumpType.toString())
-        .tasklet((contribution, chunkContext) -> {
-          log.info("skipping {} step", dumpType);
-          contribution.setExitStatus(ExitStatus.COMPLETED);
-          chunkContext.setComplete();
-          return RepeatStatus.FINISHED;
-        })
+    return factory
+        .get("skip-step-" + dumpType.toString())
+        .tasklet(
+            (contribution, chunkContext) -> {
+              log.info("skipping {} step", dumpType);
+              contribution.setExitStatus(ExitStatus.COMPLETED);
+              chunkContext.setComplete();
+              return RepeatStatus.FINISHED;
+            })
         .allowStartIfComplete(true)
         .build();
   }

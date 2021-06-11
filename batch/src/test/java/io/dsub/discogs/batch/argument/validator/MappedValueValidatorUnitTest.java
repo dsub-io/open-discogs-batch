@@ -36,7 +36,8 @@ class MappedValueValidatorUnitTest {
       assertThat(result.getIssues().size()).isEqualTo(0);
     } else {
       assertThat(result.getIssues().size()).isEqualTo(1);
-      assertThat(result.getIssues().get(0)).isEqualTo("missing value for " + argType.getGlobalName());
+      assertThat(result.getIssues().get(0))
+          .isEqualTo("missing value for " + argType.getGlobalName());
     }
   }
 

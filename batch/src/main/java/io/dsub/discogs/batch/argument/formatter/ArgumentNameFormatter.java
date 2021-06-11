@@ -2,9 +2,7 @@ package io.dsub.discogs.batch.argument.formatter;
 
 import io.dsub.discogs.batch.argument.ArgType;
 
-/**
- * ArgumentFormatter that formats argument's name
- */
+/** ArgumentFormatter that formats argument's name */
 public class ArgumentNameFormatter implements ArgumentFormatter {
 
   /**

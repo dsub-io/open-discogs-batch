@@ -24,7 +24,7 @@ public class JdbcUrlFormatter implements ArgumentFormatter {
    *
    * @param arg argument to be evaluated.
    * @return as a jdbc connection string if arg is marked as a url entry. If not, it will simply
-   * return the input argument as-is.
+   *     return the input argument as-is.
    */
   @Override
   public String format(String arg) {

@@ -6,11 +6,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @RequiredArgsConstructor
 public class MysqlLockHandlingJobExecutionListener extends LockHandlingJobExecutionListener {
 
-  private static final String DISABLE_FK_CHK_SQL =
-      "SET FOREIGN_KEY_CHECKS=0";
+  private static final String DISABLE_FK_CHK_SQL = "SET FOREIGN_KEY_CHECKS=0";
 
-  private static final String ENABLE_FK_CHK_SQL =
-      "SET FOREIGN_KEY_CHECKS=1";
+  private static final String ENABLE_FK_CHK_SQL = "SET FOREIGN_KEY_CHECKS=1";
 
   private final JdbcTemplate jdbcTemplate;
 

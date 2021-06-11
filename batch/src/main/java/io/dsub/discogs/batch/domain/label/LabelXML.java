@@ -1,6 +1,5 @@
 package io.dsub.discogs.batch.domain.label;
 
-import io.dsub.discogs.batch.aspect.annotation.XmlMapped;
 import java.util.List;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -12,7 +11,6 @@ import javax.xml.bind.annotation.XmlValue;
 import lombok.Data;
 
 @Data
-@XmlMapped
 @XmlRootElement(name = "label")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class LabelXML {
@@ -50,8 +48,7 @@ public class LabelXML {
   @XmlAccessorType(XmlAccessType.FIELD)
   public static class SubLabel {
 
-    @XmlValue
-    private String name;
+    @XmlValue private String name;
 
     @XmlAttribute(name = "id")
     private Long id;

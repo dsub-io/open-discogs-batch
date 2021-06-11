@@ -25,11 +25,8 @@ import lombok.NoArgsConstructor;
  */
 public abstract class ReleaseItemBatchCommand {
 
-  /**
-   * Private constructor to prevent instantiation.
-   */
-  private ReleaseItemBatchCommand() {
-  }
+  /** Private constructor to prevent instantiation. */
+  private ReleaseItemBatchCommand() {}
 
   @Data
   @Builder

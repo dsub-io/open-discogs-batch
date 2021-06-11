@@ -9,14 +9,10 @@ import org.springframework.batch.core.JobExecutionListener;
  */
 public abstract class LockHandlingJobExecutionListener implements JobExecutionListener {
 
-  /**
-   * Temporarily disable the constraint check or its equivalent from target database.
-   */
+  /** Temporarily disable the constraint check or its equivalent from target database. */
   protected abstract void disableConstraints();
 
-  /**
-   * Re-enable the constraint check or its equivalent from target database.
-   */
+  /** Re-enable the constraint check or its equivalent from target database. */
   protected abstract void enableConstraints();
 
   @Override

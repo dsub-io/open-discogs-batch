@@ -3,10 +3,10 @@ package io.dsub.discogs.batch.job;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import com.zaxxer.hikari.HikariDataSource;
-import io.dsub.discogs.batch.datasource.DBType;
-import io.dsub.discogs.batch.datasource.SimpleDataSourceProperties;
 import io.dsub.discogs.batch.TestDumpGenerator;
+import io.dsub.discogs.batch.datasource.DBType;
 import io.dsub.discogs.batch.datasource.DataSourceProperties;
+import io.dsub.discogs.batch.datasource.SimpleDataSourceProperties;
 import io.dsub.discogs.batch.dump.DiscogsDump;
 import io.dsub.discogs.batch.dump.DumpType;
 import io.dsub.discogs.batch.dump.service.DiscogsDumpService;
@@ -58,8 +58,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @RequiredArgsConstructor
 @EnableTransactionManagement
 @PropertySource("classpath:application-batch-test.yml")
-@EnableJpaRepositories(basePackages = {"io.dsub.discogs.common",
-    "io.dsub.discogs.batch.dump"})
+@EnableJpaRepositories(basePackages = {"io.dsub.discogs.common", "io.dsub.discogs.batch.dump"})
 @EntityScan(basePackages = {"io.dsub.discogs.common", "io.dsub.discogs.batch"})
 public class DiscogsJobIntegrationTestConfig {
 
@@ -107,9 +106,7 @@ public class DiscogsJobIntegrationTestConfig {
 
   @Bean
   public DataSourceProperties dataSourceProperties() {
-    return SimpleDataSourceProperties.builder()
-        .dbType(DBType.MYSQL)
-        .build();
+    return SimpleDataSourceProperties.builder().dbType(DBType.MYSQL).build();
   }
 
   @Bean
@@ -132,12 +129,11 @@ public class DiscogsJobIntegrationTestConfig {
 
   private void initializeDb(DataSource dataSource) {
     try (Connection conn = dataSource.getConnection()) {
-      BufferedReader reader = new BufferedReader(
-          new InputStreamReader(mysqlSchema.getInputStream()));
+      BufferedReader reader =
+          new BufferedReader(new InputStreamReader(mysqlSchema.getInputStream()));
       String sql = reader.lines().collect(Collectors.joining("\n"));
-      List<String> queries = Arrays.stream(sql.split(";"))
-          .map(String::trim)
-          .collect(Collectors.toList());
+      List<String> queries =
+          Arrays.stream(sql.split(";")).map(String::trim).collect(Collectors.toList());
       for (String query : queries) {
         query = conn.nativeSQL(query);
         try (PreparedStatement stmt = conn.prepareStatement(query)) {
@@ -201,9 +197,7 @@ public class DiscogsJobIntegrationTestConfig {
 
     return new DiscogsDumpService() {
       @Override
-      public void updateDB() {
-
-      }
+      public void updateDB() {}
 
       @Override
       public boolean exists(String eTag) {
@@ -234,14 +228,14 @@ public class DiscogsJobIntegrationTestConfig {
       }
 
       @Override
-      public DiscogsDump getMostRecentDiscogsDumpByTypeYearMonth(DumpType type, int year,
-          int month) {
+      public DiscogsDump getMostRecentDiscogsDumpByTypeYearMonth(
+          DumpType type, int year, int month) {
         return null;
       }
 
       @Override
-      public Collection<DiscogsDump> getAllByTypeYearMonth(List<DumpType> types, int year,
-          int month) {
+      public Collection<DiscogsDump> getAllByTypeYearMonth(
+          List<DumpType> types, int year, int month) {
         return null;
       }
 
@@ -261,5 +255,4 @@ public class DiscogsJobIntegrationTestConfig {
       }
     };
   }
-
 }

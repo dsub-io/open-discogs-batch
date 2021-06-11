@@ -23,8 +23,7 @@ class StopWatchStepExecutionListenerUnitTest {
   StopWatchStepExecutionListener listener;
   StepExecution stepExecution;
 
-  @RegisterExtension
-  LogSpy logSpy = new LogSpy();
+  @RegisterExtension LogSpy logSpy = new LogSpy();
 
   @BeforeEach
   void setUp() {
@@ -52,25 +51,20 @@ class StopWatchStepExecutionListenerUnitTest {
     ExitStatus exitStatus = listener.afterStep(stepExecution);
 
     // then
-    assertThat(exitStatus)
-        .isNotNull()
-        .isEqualTo(ExitStatus.COMPLETED);
+    assertThat(exitStatus).isNotNull().isEqualTo(ExitStatus.COMPLETED);
   }
 
   @Test
   void whenListenerCalledForAfterStep__ShouldPrintValidResult() {
 
     try {
-      given(stepExecution.getWriteCount())
-          .willReturn(100);
-      given(stepExecution.getStepName())
-          .willReturn("testStep");
+      given(stepExecution.getWriteCount()).willReturn(100);
+      given(stepExecution.getStepName()).willReturn("testStep");
 
       StopWatch stopWatch = new StopWatch();
       stopWatch = Mockito.spy(stopWatch);
 
-      given(stopWatch.getTotalTimeSeconds())
-          .willReturn(10.0);
+      given(stopWatch.getTotalTimeSeconds()).willReturn(10.0);
 
       Field stopWatchField = listener.getClass().getDeclaredField("stopWatch");
       stopWatchField.setAccessible(true);
@@ -82,8 +76,7 @@ class StopWatchStepExecutionListenerUnitTest {
 
       assertThat(logSpy.countExact(Level.INFO)).isOne();
       String log = logSpy.getLogsByLevelAsString(Level.INFO, true).get(0);
-      assertThat(log)
-          .contains("testStep", "100", "10/s", "10.0");
+      assertThat(log).contains("testStep", "100", "10/s", "10.0");
     } catch (Exception e) {
       fail(e);
     }

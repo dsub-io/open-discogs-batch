@@ -17,11 +17,12 @@ public class FileUtilConfig {
   @Bean
   public FileUtil fileUtil(ApplicationArguments args) {
     boolean keepFile = args.containsOption(ArgType.MOUNT.getGlobalName());
-    FileUtil fileUtil = args.getNonOptionArgs().stream()
-        .filter(arg -> arg.equals(ArgType.MOUNT.getGlobalName()))
-        .map(arg -> SimpleFileUtil.builder().isTemporary(true).build())
-        .findFirst()
-        .orElse(SimpleFileUtil.builder().build());
+    FileUtil fileUtil =
+        args.getNonOptionArgs().stream()
+            .filter(arg -> arg.equals(ArgType.MOUNT.getGlobalName()))
+            .map(arg -> SimpleFileUtil.builder().isTemporary(true).build())
+            .findFirst()
+            .orElse(SimpleFileUtil.builder().build());
     if (keepFile) {
       log.info("detected mount option. keeping file...");
     } else {

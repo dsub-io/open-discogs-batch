@@ -71,8 +71,7 @@ public class DiscogsDump implements Comparable<DiscogsDump>, Cloneable {
   }
 
   /**
-   * Compare only equals with ETag value as it is the single most definite identification of a
-   * dump.
+   * Compare only equals with ETag value as it is the single most definite identification of a dump.
    *
    * @param o any object, or another instance of dump to be evaluated being equal.
    * @return the result of the equals method.

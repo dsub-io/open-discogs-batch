@@ -1,7 +1,6 @@
 package io.dsub.discogs.batch.dump;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -18,8 +17,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 class DiscogsDumpTest {
 
   @BeforeEach
-  void setUp() {
-  }
+  void setUp() {}
 
   @Test
   void whenCompared__ShouldDelegateComparison__ToLocalDate() {

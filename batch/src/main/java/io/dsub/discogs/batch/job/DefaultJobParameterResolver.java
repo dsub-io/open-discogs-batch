@@ -40,7 +40,10 @@ public class DefaultJobParameterResolver implements JobParameterResolver {
         throw new InvalidArgumentException("failed to parse " + chunkSizeOptName + ": " + toParse);
       }
     }
-    log.debug(chunkSizeOptName + " not specified. returning default value: " + BatchConfig.DEFAULT_CHUNK_SIZE);
+    log.debug(
+        chunkSizeOptName
+            + " not specified. returning default value: "
+            + BatchConfig.DEFAULT_CHUNK_SIZE);
     return BatchConfig.DEFAULT_CHUNK_SIZE;
   }
 }

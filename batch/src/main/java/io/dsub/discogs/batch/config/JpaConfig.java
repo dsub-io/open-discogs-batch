@@ -20,12 +20,9 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @EnableJpaAuditing
 @RequiredArgsConstructor
 @EnableTransactionManagement
-@EntityScan(basePackages = {
-    "io.dsub.discogs.common.entity",
-    "io.dsub.discogs.batch.dump"})
-@EnableJpaRepositories(basePackages = {
-    "io.dsub.discogs.common.repository",
-    "io.dsub.discogs.batch.dump"})
+@EntityScan(basePackages = {"io.dsub.discogs.common.entity", "io.dsub.discogs.batch.dump"})
+@EnableJpaRepositories(
+    basePackages = {"io.dsub.discogs.common.repository", "io.dsub.discogs.batch.dump"})
 public class JpaConfig {
 
   private final DataSource dataSource;
@@ -36,9 +33,7 @@ public class JpaConfig {
     LocalContainerEntityManagerFactoryBean emf = new LocalContainerEntityManagerFactoryBean();
     emf.setDataSource(dataSource);
     emf.setJpaVendorAdapter(jpaVendorAdapter);
-    emf.setPackagesToScan(
-        "io.dsub.discogs.common",
-        "io.dsub.discogs.batch");
+    emf.setPackagesToScan("io.dsub.discogs.common", "io.dsub.discogs.batch");
     emf.setJpaDialect(new HibernateJpaDialect());
     Properties properties = new Properties();
     properties.setProperty("hibernate.format_sql", "true");
@@ -53,8 +48,8 @@ public class JpaConfig {
 
   @Bean(name = "batchTransactionManager")
   public PlatformTransactionManager transactionManager() {
-    JpaTransactionManager transactionManager = new JpaTransactionManager(
-        Objects.requireNonNull(entityManagerFactory().getObject()));
+    JpaTransactionManager transactionManager =
+        new JpaTransactionManager(Objects.requireNonNull(entityManagerFactory().getObject()));
     transactionManager.setDataSource(dataSource);
     transactionManager.setValidateExistingTransaction(true);
     transactionManager.setRollbackOnCommitFailure(true);

@@ -26,13 +26,13 @@ class JdbcConnectionTesterUnitTest {
     assertDoesNotThrow(
         () ->
             tester.testConnection(
-                new String[]{"url=jdbc:h2:~/test", "password", "username=sa"}, "org.h2.Driver"));
+                new String[] {"url=jdbc:h2:~/test", "password", "username=sa"}, "org.h2.Driver"));
   }
 
   @Test
   void shouldThrowIfInvalidDataSourceValuePassed() {
     assertThatThrownBy(
-        () -> tester.testConnection(new String[]{"url=hello", "username=un", "password=pw"}))
+            () -> tester.testConnection(new String[] {"url=hello", "username=un", "password=pw"}))
         .hasMessage("failed to test connection! no suitable driver found for hello");
   }
 

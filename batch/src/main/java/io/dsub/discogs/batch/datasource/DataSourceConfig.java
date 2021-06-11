@@ -48,6 +48,7 @@ public class DataSourceConfig {
 
   @Value("classpath:schema/mysql-schema.sql")
   private Resource mysqlSchema;
+
   @Value("classpath:schema/postgresql-schema.sql")
   private Resource postgresSchema;
 
@@ -85,13 +86,12 @@ public class DataSourceConfig {
     JdbcTemplate jdbcTemplate = getJdbcTemplate(dataSource);
     Resource schema = getSchemaResource();
 
-    try (BufferedReader reader = new BufferedReader(
-        new InputStreamReader(schema.getInputStream()))) {
+    try (BufferedReader reader =
+        new BufferedReader(new InputStreamReader(schema.getInputStream()))) {
 
       String sql = reader.lines().collect(Collectors.joining("\n"));
-      List<String> queries = Arrays.stream(sql.split(";"))
-          .map(String::trim)
-          .collect(Collectors.toList());
+      List<String> queries =
+          Arrays.stream(sql.split(";")).map(String::trim).collect(Collectors.toList());
 
       for (String query : queries) {
         jdbcTemplate.execute(query);
@@ -120,8 +120,8 @@ public class DataSourceConfig {
 
   /**
    * Appends required arguments for batch processing.
-   * <p>
-   * The options include timezone, cache statements, server statements and rewrite batch
+   *
+   * <p>The options include timezone, cache statements, server statements and rewrite batch
    * statements.
    *
    * @param originalUrl given url that may or may not contain any of those options.
@@ -133,12 +133,13 @@ public class DataSourceConfig {
       // append entire options
       return originalUrl
           .concat("?")
-          .concat(String.join(
-              "&",
-              TIME_ZONE_UTC_OPT,
-              CACHE_PREP_STMT_OPT,
-              USE_SERVER_PREP_STMTS_OPT,
-              REWRITE_BATCHED_STMTS_OPT));
+          .concat(
+              String.join(
+                  "&",
+                  TIME_ZONE_UTC_OPT,
+                  CACHE_PREP_STMT_OPT,
+                  USE_SERVER_PREP_STMTS_OPT,
+                  REWRITE_BATCHED_STMTS_OPT));
     }
 
     if (!originalUrl.contains("serverTimezone=")) {

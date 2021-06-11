@@ -16,13 +16,13 @@ This repository contains mainly two components:
 
 ### Built With
 
-[Spring-Boot starter](https://spring.io/projects/spring-boot) - Base framework.
+[Spring-Boot starter](https://spring.io/projects/spring-boot)
 
-[Spring-Batch](https://spring.io/projects/spring-batch) - With separated DB connection (MySQL,
-MongoDB)
+[Spring-Batch](https://spring.io/projects/spring-batch)
 
-[Spring-Data](https://spring.io/projects/spring-data) - Database connection with simplified
-repositories.
+[Spring-Data](https://spring.io/projects/spring-data)
+
+[ProgressBar](https://github.com/ctongfei/progressbar)
 
 ## Batch Commands
 
@@ -119,16 +119,19 @@ batch will be executed with most recent artist, label, master, release dumps.
 ### Mount and Strict
 
 ##### Mount
-If mount option is specified, the downloaded file from the discogs data will not be removed.
-This maybe useful if you need to keep the downloaded dump.
+
+If mount option is specified, the downloaded file from the discogs data will not be removed. This
+maybe useful if you need to keep the downloaded dump.
 
 ##### Strict
+
 This option will not resolve any dependency, but to simply execute with given etag or type.
 
 ## About Chunk-Size and Concurrency
+
 The application will automatically resolve the current core size of running system (currently 80%).
 I will implement the manual options if any issue or request regarding this happens.
 
-The default chunk-size is 3000, however, in average environment, I would recommend to set to 300~500.
-This is totally up to the I/O spec of the running client and database server.
-There are chances I may dig into this issue a bit deeper, to find the sweet spot (if possible.)
+The default chunk-size is 3000, however, in average environment, I would recommend to set to 300~
+500. This is totally up to the I/O spec of the running client and database server. There are chances
+I may dig into this issue a bit deeper, to find the sweet spot (if possible.)

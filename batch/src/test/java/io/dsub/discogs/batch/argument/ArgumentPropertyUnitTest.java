@@ -1,7 +1,6 @@
 package io.dsub.discogs.batch.argument;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.dsub.discogs.common.exception.InvalidArgumentException;
@@ -95,8 +94,7 @@ class ArgumentPropertyUnitTest {
   }
 
   @Test
-  void isRequired() {
-  }
+  void isRequired() {}
 
   @ParameterizedTest
   @ValueSource(ints = {1, 53, 673, 12, 55, 3})

@@ -52,11 +52,12 @@ public class DatasourceProxyBeanPostProcessor implements BeanPostProcessor {
 
       String methodName = invocation.getMethod().getName();
 
-      Method proxyMethod = Arrays.stream(dataSource.getClass().getDeclaredMethods())
-          .filter(method -> method.getParameterCount() == 0)
-          .filter(method -> method.getName().equals(methodName))
-          .findFirst()
-          .orElse(null);
+      Method proxyMethod =
+          Arrays.stream(dataSource.getClass().getDeclaredMethods())
+              .filter(method -> method.getParameterCount() == 0)
+              .filter(method -> method.getName().equals(methodName))
+              .findFirst()
+              .orElse(null);
 
       if (proxyMethod != null) {
         return proxyMethod.invoke(dataSource, invocation.getArguments());

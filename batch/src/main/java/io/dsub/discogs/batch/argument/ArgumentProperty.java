@@ -9,9 +9,7 @@ import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
-/**
- * Argument property to be mapped to each {@link ArgType} instance.
- */
+/** Argument property to be mapped to each {@link ArgType} instance. */
 @Getter
 @AllArgsConstructor
 public class ArgumentProperty {
@@ -46,8 +44,7 @@ public class ArgumentProperty {
     private Integer maxValuesCount;
     private Class<?> supportedType;
 
-    ArgumentPropertyBuilder() {
-    }
+    ArgumentPropertyBuilder() {}
 
     public ArgumentPropertyBuilder globalName(String globalName) {
       this.globalName = globalName;

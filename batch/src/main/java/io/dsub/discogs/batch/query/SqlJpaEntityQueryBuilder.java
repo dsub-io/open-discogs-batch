@@ -10,11 +10,9 @@ import javax.persistence.Table;
 
 public abstract class SqlJpaEntityQueryBuilder<T> implements JpaEntityQueryBuilder<T> {
 
-  public static final String DEFAULT_SQL_INSERT_QUERY_FORMAT =
-      "INSERT INTO %s(%s) SELECT %s";
+  public static final String DEFAULT_SQL_INSERT_QUERY_FORMAT = "INSERT INTO %s(%s) SELECT %s";
 
-  public static final String WHERE_CLAUSE_QUERY_FORMAT =
-      "WHERE %s = %s";
+  public static final String WHERE_CLAUSE_QUERY_FORMAT = "WHERE %s = %s";
 
   public static final String WHERE_CLAUSE_QUERY_INNER_SELECT_FORMAT =
       "(SELECT 1 FROM %s WHERE %s = %s)";
@@ -31,14 +29,11 @@ public abstract class SqlJpaEntityQueryBuilder<T> implements JpaEntityQueryBuild
     String mappedValues = getFormattedValueFields(createdAt, lastModified, values);
 
     return String.format(
-        DEFAULT_SQL_INSERT_QUERY_FORMAT,
-        tblName,
-        String.join(",", columns),
-        mappedValues);
+        DEFAULT_SQL_INSERT_QUERY_FORMAT, tblName, String.join(",", columns), mappedValues);
   }
 
-  protected String getFormattedValueFields(Field createdAt, Field lastModifiedAt,
-      List<String> values) {
+  protected String getFormattedValueFields(
+      Field createdAt, Field lastModifiedAt, List<String> values) {
     String[] parts = new String[values.size()];
     for (int i = 0; i < values.size(); i++) {
       String origin = values.get(i);
@@ -54,19 +49,22 @@ public abstract class SqlJpaEntityQueryBuilder<T> implements JpaEntityQueryBuild
   }
 
   protected String getRelationExistCountingWhereClause(Class<? extends T> targetClass) {
-    List<String> innerSelects = getFields(targetClass).stream()
-        .filter(field -> field.isAnnotationPresent(JoinColumn.class))
-        .map(field -> {
-          JoinColumn joinColumn = field.getAnnotation(JoinColumn.class);
-          String tblName = field.getType().getAnnotation(Table.class).name();
-          return String
-              .format(WHERE_CLAUSE_QUERY_INNER_SELECT_FORMAT, tblName,
-                  joinColumn.referencedColumnName(),
-                  COLON + field.getName());
-        })
-        .collect(Collectors.toList());
+    List<String> innerSelects =
+        getFields(targetClass).stream()
+            .filter(field -> field.isAnnotationPresent(JoinColumn.class))
+            .map(
+                field -> {
+                  JoinColumn joinColumn = field.getAnnotation(JoinColumn.class);
+                  String tblName = field.getType().getAnnotation(Table.class).name();
+                  return String.format(
+                      WHERE_CLAUSE_QUERY_INNER_SELECT_FORMAT,
+                      tblName,
+                      joinColumn.referencedColumnName(),
+                      COLON + field.getName());
+                })
+            .collect(Collectors.toList());
     int count = innerSelects.size();
-    return String
-        .format(WHERE_CLAUSE_QUERY_FORMAT, String.join(SPACE + PLUS + SPACE, innerSelects), count);
+    return String.format(
+        WHERE_CLAUSE_QUERY_FORMAT, String.join(SPACE + PLUS + SPACE, innerSelects), count);
   }
 }

@@ -8,11 +8,11 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.dsub.discogs.batch.testutil.LogSpy;
 import io.dsub.discogs.batch.argument.ArgType;
 import io.dsub.discogs.batch.dump.DiscogsDump;
 import io.dsub.discogs.batch.dump.DumpDependencyResolver;
 import io.dsub.discogs.batch.dump.DumpType;
+import io.dsub.discogs.batch.testutil.LogSpy;
 import io.dsub.discogs.common.exception.InvalidArgumentException;
 import java.util.List;
 import java.util.Properties;
@@ -29,14 +29,11 @@ import org.springframework.boot.DefaultApplicationArguments;
 
 class DefaultJobParameterResolverTest {
 
-  @RegisterExtension
-  LogSpy logSpy = new LogSpy();
+  @RegisterExtension LogSpy logSpy = new LogSpy();
 
-  @Mock
-  DumpDependencyResolver dependencyResolver;
+  @Mock DumpDependencyResolver dependencyResolver;
 
-  @InjectMocks
-  DefaultJobParameterResolver jobParameterResolver;
+  @InjectMocks DefaultJobParameterResolver jobParameterResolver;
 
   @BeforeEach
   void setUp() {

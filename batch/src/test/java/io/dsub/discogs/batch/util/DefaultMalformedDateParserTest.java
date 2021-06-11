@@ -1,7 +1,6 @@
 package io.dsub.discogs.batch.util;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -125,7 +124,7 @@ class DefaultMalformedDateParserTest {
   void whenParse__ShouldHandleWellFormedValue() {
     // when
     LocalDate parsedDate = parser.parse("1988-03-18");
-    //then
+    // then
     assertThat(parsedDate).isNotNull();
     assertThat(parsedDate.getYear()).isEqualTo(1988);
     assertThat(parsedDate.getMonth()).isEqualTo(Month.MARCH);

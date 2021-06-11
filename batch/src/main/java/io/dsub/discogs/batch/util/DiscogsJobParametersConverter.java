@@ -22,9 +22,7 @@ public class DiscogsJobParametersConverter implements JobParametersConverter, In
   public static final String LONG = "(long)";
   public static final String STRING = "(string)";
 
-  @Getter
-  @Setter
-  private JobParametersConverter delegate;
+  @Getter @Setter private JobParametersConverter delegate;
 
   public DiscogsJobParametersConverter() {
     this.delegate = new DefaultJobParametersConverter();
@@ -107,7 +105,7 @@ public class DiscogsJobParametersConverter implements JobParametersConverter, In
    * Appends appropriate type indication for each entry name. Currently, if supported class is other
    * than long or double, it will be simply considered to be used as a string.
    *
-   * @param name          name of the argument
+   * @param name name of the argument
    * @param supportedType type of the argument
    * @return name as the type appended to
    */

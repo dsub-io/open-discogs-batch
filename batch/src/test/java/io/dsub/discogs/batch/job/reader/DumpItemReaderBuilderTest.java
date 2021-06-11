@@ -6,10 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.when;
 
+import io.dsub.discogs.batch.domain.artist.ArtistXML;
 import io.dsub.discogs.batch.dump.DiscogsDump;
 import io.dsub.discogs.batch.dump.DumpType;
 import io.dsub.discogs.batch.util.FileUtil;
-import io.dsub.discogs.batch.domain.artist.ArtistXML;
 import java.io.IOException;
 import java.nio.file.Path;
 import org.junit.jupiter.api.BeforeEach;
@@ -49,10 +49,8 @@ class DumpItemReaderBuilderTest {
       when(dump.getFileName()).thenReturn("src/test/resources/test/reader/artist.xml.gz");
       when(fileUtil.getFilePath(dump.getFileName()))
           .thenReturn(Path.of("src/test/resources/test/reader/artist.xml.gz"));
-      Throwable t =
-          catchThrowable(() -> readerBuilder.build(ArtistXML.class, dump));
-      assertThat(t)
-          .hasMessageContaining("type of DiscogsDump cannot be null");
+      Throwable t = catchThrowable(() -> readerBuilder.build(ArtistXML.class, dump));
+      assertThat(t).hasMessageContaining("type of DiscogsDump cannot be null");
     } catch (IOException e) {
       fail(e);
     }
@@ -62,12 +60,9 @@ class DumpItemReaderBuilderTest {
   void whenURINotSet__ShouldThrow() {
     try {
       when(dump.getFileName()).thenReturn(null);
-      when(fileUtil.getFilePath(dump.getFileName()))
-          .thenThrow(IOException.class);
-      Throwable t =
-          catchThrowable(() -> readerBuilder.build(ArtistXML.class, dump));
-      assertThat(t)
-          .hasMessageContaining("fileName of DiscogsDump cannot be null");
+      when(fileUtil.getFilePath(dump.getFileName())).thenThrow(IOException.class);
+      Throwable t = catchThrowable(() -> readerBuilder.build(ArtistXML.class, dump));
+      assertThat(t).hasMessageContaining("fileName of DiscogsDump cannot be null");
     } catch (IOException e) {
       fail();
     }

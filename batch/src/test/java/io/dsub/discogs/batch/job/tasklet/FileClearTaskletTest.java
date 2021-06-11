@@ -27,11 +27,9 @@ class FileClearTaskletTest {
   final ChunkContext chunkContext = new ChunkContext(new StepContext(stepExecution));
   final StepContribution stepContribution = new StepContribution(stepExecution);
 
-  @InjectMocks
-  FileClearTasklet fileClearTasklet;
+  @InjectMocks FileClearTasklet fileClearTasklet;
 
-  @Mock
-  FileUtil fileUtil;
+  @Mock FileUtil fileUtil;
 
   @BeforeEach
   void setUp() {

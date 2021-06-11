@@ -24,9 +24,10 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Table(
     name = "master_video",
-    uniqueConstraints = @UniqueConstraint(name = "uq_master_video_master_id_url", columnNames = {
-        "master_id",
-        "url"}))
+    uniqueConstraints =
+        @UniqueConstraint(
+            name = "uq_master_video_master_id_url",
+            columnNames = {"master_id", "url"}))
 public class MasterVideo extends BaseTimeEntity {
 
   private static final Long SerialVersionUID = 1L;

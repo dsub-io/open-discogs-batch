@@ -20,21 +20,24 @@ class QueryBuilderConfigTest {
 
   @BeforeEach
   void setUp() {
-    ctx = new ApplicationContextRunner()
-        .withUserConfiguration(QueryBuilderConfig.class);
+    ctx = new ApplicationContextRunner().withUserConfiguration(QueryBuilderConfig.class);
   }
 
   @Test
   void whenDBTypeIsNull__ShouldThrow() {
-    ctx = ctx.withBean(SimpleDataSourceProperties.class,
-        new DefaultApplicationArguments("url=jdbc:h2:"));
+    ctx =
+        ctx.withBean(
+            SimpleDataSourceProperties.class, new DefaultApplicationArguments("url=jdbc:h2:"));
 
-    ctx.run(it -> {
-      assertThat(it).hasFailed();
-      assertThat(it).getFailure().getRootCause()
-          .hasMessage("failed to recognize DB type from jdbc:h2:");
-      assertThat(it).getFailure().getRootCause().isInstanceOf(InvalidArgumentException.class);
-    });
+    ctx.run(
+        it -> {
+          assertThat(it).hasFailed();
+          assertThat(it)
+              .getFailure()
+              .getRootCause()
+              .hasMessage("failed to recognize DB type from jdbc:h2:");
+          assertThat(it).getFailure().getRootCause().isInstanceOf(InvalidArgumentException.class);
+        });
   }
 
   @ParameterizedTest

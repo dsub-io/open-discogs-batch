@@ -26,8 +26,8 @@ public class DataSourceArgumentValidator implements ArgumentValidator {
   public static final String QUERY_PART = "[\\w!@#$%^*]+";
   public static final String PORT_RANGE = "[1-9][0-9]{0,4}";
   public static final String REPEATING_QUERY = "(&" + QUERY_PART + "=" + QUERY_PART + ")*)?$";
-  public static final List<ArgType> REQUIRED_TYPES = List.of(
-      ArgType.URL, ArgType.USERNAME, ArgType.PASSWORD);
+  public static final List<ArgType> REQUIRED_TYPES =
+      List.of(ArgType.URL, ArgType.USERNAME, ArgType.PASSWORD);
   public static final String JDBC_PREFIX = "^jdbc:";
   public static final String JDBC_VALUES_PATTERN =
       "://"
@@ -80,7 +80,7 @@ public class DataSourceArgumentValidator implements ArgumentValidator {
   /**
    * Validation of datasource url by pattern.
    *
-   * @param args             expected to hold url entry.
+   * @param args expected to hold url entry.
    * @param validationResult accumulated result of the validation.
    * @return final accumulation of validation result.
    */
@@ -119,7 +119,7 @@ public class DataSourceArgumentValidator implements ArgumentValidator {
   /**
    * Validation of the existence of the required entries.
    *
-   * @param args   to be validated.
+   * @param args to be validated.
    * @param result {@link ValidationResult} to be accumulated.
    * @return accumulated issues during the validation.
    */
@@ -148,7 +148,7 @@ public class DataSourceArgumentValidator implements ArgumentValidator {
   /**
    * Validates duplication of required argument types.
    *
-   * @param args   to be validated.
+   * @param args to be validated.
    * @param result {@link ValidationResult} to be accumulated.
    * @return accumulated issues during the validation.
    */

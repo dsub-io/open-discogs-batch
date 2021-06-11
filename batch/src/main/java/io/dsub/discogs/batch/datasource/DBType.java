@@ -24,16 +24,18 @@ public enum DBType {
     return Arrays.stream(values())
         .filter(type -> connectionUrl.matches("^jdbc:" + type.name().toLowerCase() + ".*"))
         .findFirst()
-        .orElseThrow(() -> new InvalidArgumentException(
-            "failed to recognize DB type from " + connectionUrl));
+        .orElseThrow(
+            () ->
+                new InvalidArgumentException("failed to recognize DB type from " + connectionUrl));
   }
 
   public static DBType getDBType(ApplicationArguments args) {
-    return getDBType(args.getNonOptionArgs().stream()
-        .filter(arg -> arg.contains("url="))
-        .map(arg -> arg.split("=")[1])
-        .limit(1)
-        .collect(Collectors.joining()));
+    return getDBType(
+        args.getNonOptionArgs().stream()
+            .filter(arg -> arg.contains("url="))
+            .map(arg -> arg.split("=")[1])
+            .limit(1)
+            .collect(Collectors.joining()));
   }
 
   public static List<String> getNames() {

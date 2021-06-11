@@ -24,8 +24,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 
 class JpaEntityExtractorTest {
 
-  JpaEntityExtractor<BaseEntity> jpaEntityExtractor = new JpaEntityExtractor<>() {
-  };
+  JpaEntityExtractor<BaseEntity> jpaEntityExtractor = new JpaEntityExtractor<>() {};
 
   @Test
   void whenGetTableName__ShouldReturnExactValue() {
@@ -33,8 +32,7 @@ class JpaEntityExtractorTest {
     String name = jpaEntityExtractor.getTableName(TestEntity.class);
 
     // then
-    assertThat(name)
-        .isEqualTo(TestEntity.class.getAnnotation(Table.class).name());
+    assertThat(name).isEqualTo(TestEntity.class.getAnnotation(Table.class).name());
   }
 
   @Test
@@ -109,26 +107,27 @@ class JpaEntityExtractorTest {
   void whenGetFields__ShouldContainParentFields() {
     Field[] parentFields = TestParentEntity.class.getDeclaredFields();
 
-    List<Field> nonTransientFields = Arrays.stream(parentFields)
-        .filter(field -> !field.isAnnotationPresent(Transient.class))
-        .filter(field -> field.isAnnotationPresent(Column.class))
-        .collect(Collectors.toList());
+    List<Field> nonTransientFields =
+        Arrays.stream(parentFields)
+            .filter(field -> !field.isAnnotationPresent(Transient.class))
+            .filter(field -> field.isAnnotationPresent(Column.class))
+            .collect(Collectors.toList());
 
     // when
     List<Field> fields = jpaEntityExtractor.getFields(TestEntity.class);
 
     // then
-    assertThat(fields)
-        .containsAll(nonTransientFields);
+    assertThat(fields).containsAll(nonTransientFields);
   }
 
   @Test
   void whenGetFields__ShouldNotContainAnyTransientFields() {
     Field[] parentFields = TestParentEntity.class.getDeclaredFields();
 
-    List<Field> transientFields = Arrays.stream(parentFields)
-        .filter(field -> field.isAnnotationPresent(Transient.class))
-        .collect(Collectors.toList());
+    List<Field> transientFields =
+        Arrays.stream(parentFields)
+            .filter(field -> field.isAnnotationPresent(Transient.class))
+            .collect(Collectors.toList());
 
     Arrays.stream(TestEntity.class.getDeclaredFields())
         .filter(field -> field.isAnnotationPresent(Transient.class))
@@ -147,12 +146,13 @@ class JpaEntityExtractorTest {
     List<Field> fields = jpaEntityExtractor.getFields(TestEntity.class);
 
     // then
-    fields.forEach(field -> {
-      if (!field.isAnnotationPresent(Column.class) && !field
-          .isAnnotationPresent(JoinColumn.class)) {
-        fail("expected all fields to be annotated with column");
-      }
-    });
+    fields.forEach(
+        field -> {
+          if (!field.isAnnotationPresent(Column.class)
+              && !field.isAnnotationPresent(JoinColumn.class)) {
+            fail("expected all fields to be annotated with column");
+          }
+        });
   }
 
   @Test
@@ -173,9 +173,7 @@ class JpaEntityExtractorTest {
     Map<String, String> mappings = jpaEntityExtractor.getMappings(TestEntity.class, false);
 
     // then
-    assertThat(mappings)
-        .doesNotContainKeys("id_field")
-        .doesNotContainValue("idField");
+    assertThat(mappings).doesNotContainKeys("id_field").doesNotContainValue("idField");
   }
 
   @Test
@@ -185,8 +183,8 @@ class JpaEntityExtractorTest {
 
     // then
     assertThat(mappings)
-        .containsOnlyKeys("some_field", "other_entity", "join_column_field", "another_entity",
-            "field_one")
+        .containsOnlyKeys(
+            "some_field", "other_entity", "join_column_field", "another_entity", "field_one")
         .containsValues("anotherEntity", "otherEntity", "joinColumnField", "someField", "fieldOne");
   }
 
@@ -196,7 +194,8 @@ class JpaEntityExtractorTest {
     Map<String, String> result = jpaEntityExtractor.getUniqueConstraintColumns(TestEntity.class);
 
     // then
-    assertThat(result).containsOnlyKeys("id_field", "some_field")
+    assertThat(result)
+        .containsOnlyKeys("id_field", "some_field")
         .containsValues("idField", "someField");
   }
 
@@ -206,16 +205,15 @@ class JpaEntityExtractorTest {
     Map<String, String> idMap = jpaEntityExtractor.getIdMappings(TestEntity.class);
 
     // then
-    assertThat(idMap)
-        .containsOnlyKeys("id_field")
-        .containsValue("idField");
+    assertThat(idMap).containsOnlyKeys("id_field").containsValue("idField");
   }
 
   @Test
-  void whenGetMappingsOutsideUniqueConstraints__WithoutId__ShouldExcludeAllColumnsInUniqueConstraints() {
+  void
+      whenGetMappingsOutsideUniqueConstraints__WithoutId__ShouldExcludeAllColumnsInUniqueConstraints() {
     // when
-    Map<String, String> mappings = jpaEntityExtractor
-        .getMappingsOutsideUniqueConstraints(TestEntity.class, false);
+    Map<String, String> mappings =
+        jpaEntityExtractor.getMappingsOutsideUniqueConstraints(TestEntity.class, false);
 
     // when
     assertThat(mappings)
@@ -226,10 +224,11 @@ class JpaEntityExtractorTest {
   }
 
   @Test
-  void whenGetMappingsOutsideUniqueConstraints__WithId__ShouldExcludeAllColumnsInUniqueConstraints2() {
+  void
+      whenGetMappingsOutsideUniqueConstraints__WithId__ShouldExcludeAllColumnsInUniqueConstraints2() {
     // when
-    Map<String, String> mappings = jpaEntityExtractor
-        .getMappingsOutsideUniqueConstraints(TestEntity.class, true);
+    Map<String, String> mappings =
+        jpaEntityExtractor.getMappingsOutsideUniqueConstraints(TestEntity.class, true);
 
     // when
     assertThat(mappings)
@@ -248,33 +247,30 @@ class JpaEntityExtractorTest {
     @Column(name = "field_two")
     Long fieldTwo;
 
-    @Transient
-    Long fieldThree;
+    @Transient Long fieldThree;
 
     Long fieldWithoutColumn;
   }
 
-  @Table(uniqueConstraints = {
-      @UniqueConstraint(name = "unique_key", columnNames = {"id_field", "some_field"})
-  })
+  @Table(
+      uniqueConstraints = {
+        @UniqueConstraint(
+            name = "unique_key",
+            columnNames = {"id_field", "some_field"})
+      })
   static class TestEntity extends TestParentEntity {
 
     @Id
     @Column(name = "id_field")
     Long idField;
 
-    @GeneratedValue
-    Long autoGeneratedField;
+    @GeneratedValue Long autoGeneratedField;
 
-    @Id
-    @GeneratedValue
-    Long autoGeneratedIdField;
+    @Id @GeneratedValue Long autoGeneratedIdField;
 
-    @CreatedDate
-    LocalDateTime createdAt;
+    @CreatedDate LocalDateTime createdAt;
 
-    @LastModifiedDate
-    LocalDateTime lastModifiedAt;
+    @LastModifiedDate LocalDateTime lastModifiedAt;
 
     @Column(name = "some_field")
     String someField;

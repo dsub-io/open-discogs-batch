@@ -26,9 +26,9 @@ import lombok.NoArgsConstructor;
 @Table(
     name = "master_artist",
     uniqueConstraints =
-    @UniqueConstraint(
-        name = "uq_master_artist_master_id_artist_id",
-        columnNames = {"master_id", "artist_id"}))
+        @UniqueConstraint(
+            name = "uq_master_artist_master_id_artist_id",
+            columnNames = {"master_id", "artist_id"}))
 public class MasterArtist extends BaseTimeEntity {
 
   private static final Long SerialVersionUID = 1L;

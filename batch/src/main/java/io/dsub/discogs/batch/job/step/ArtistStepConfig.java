@@ -90,12 +90,24 @@ public class ArtistStepConfig extends AbstractStepConfig {
 
     Flow artistStepFlow =
         new FlowBuilder<SimpleFlow>(ARTIST_STEP_FLOW)
-            .from(artistFileFetchStep()).on(FAILED).end()
-            .from(artistFileFetchStep()).on(ANY).to(artistCoreStep(null))
-            .from(artistCoreStep(null)).on(FAILED).end()
-            .from(artistCoreStep(null)).on(ANY).to(artistSubItemsStep(null))
-            .from(artistSubItemsStep(null)).on(ANY).to(artistFileClearStep())
-            .from(artistFileClearStep()).on(ANY).end()
+            .from(artistFileFetchStep())
+            .on(FAILED)
+            .end()
+            .from(artistFileFetchStep())
+            .on(ANY)
+            .to(artistCoreStep(null))
+            .from(artistCoreStep(null))
+            .on(FAILED)
+            .end()
+            .from(artistCoreStep(null))
+            .on(ANY)
+            .to(artistSubItemsStep(null))
+            .from(artistSubItemsStep(null))
+            .on(ANY)
+            .to(artistFileClearStep())
+            .from(artistFileClearStep())
+            .on(ANY)
+            .end()
             .build();
     FlowStep artistFlowStep = new FlowStep();
     artistFlowStep.setJobRepository(jobRepository);
@@ -107,8 +119,7 @@ public class ArtistStepConfig extends AbstractStepConfig {
 
   @Bean
   @JobScope
-  public Step artistCoreStep(
-      @Value(CHUNK) Integer chunkSize) {
+  public Step artistCoreStep(@Value(CHUNK) Integer chunkSize) {
     return sbf.get(ARTIST_CORE_STEP)
         .<ArtistXML, ArtistCommand>chunk(chunkSize)
         .reader(artistStreamReader())
@@ -127,8 +138,7 @@ public class ArtistStepConfig extends AbstractStepConfig {
 
   @Bean
   @JobScope
-  public Step artistSubItemsStep(
-      @Value(CHUNK) Integer chunkSize) {
+  public Step artistSubItemsStep(@Value(CHUNK) Integer chunkSize) {
     return sbf.get(ARTIST_SUB_ITEMS_STEP)
         .<ArtistXML, Collection<BatchCommand>>chunk(chunkSize)
         .reader(artistStreamReader())
@@ -164,9 +174,7 @@ public class ArtistStepConfig extends AbstractStepConfig {
   @Bean
   @JobScope
   public Step artistFileClearStep() {
-    return sbf.get(ARTIST_FILE_CLEAR_STEP)
-        .tasklet(new FileClearTasklet(fileUtil))
-        .build();
+    return sbf.get(ARTIST_FILE_CLEAR_STEP).tasklet(new FileClearTasklet(fileUtil)).build();
   }
 
   ///////////////////////////////////////////////////////////////////////////
@@ -187,13 +195,14 @@ public class ArtistStepConfig extends AbstractStepConfig {
   @Bean
   @StepScope
   public ItemProcessor<ArtistXML, ArtistCommand> artistItemProcessor() {
-    return xml -> ArtistCommand.builder()
-        .id(xml.getId())
-        .name(xml.getName())
-        .realName(xml.getRealName())
-        .dataQuality(xml.getDataQuality())
-        .profile(xml.getProfile())
-        .build();
+    return xml ->
+        ArtistCommand.builder()
+            .id(xml.getId())
+            .name(xml.getName())
+            .realName(xml.getRealName())
+            .dataQuality(xml.getDataQuality())
+            .profile(xml.getProfile())
+            .build();
   }
 
   @Bean
@@ -203,48 +212,43 @@ public class ArtistStepConfig extends AbstractStepConfig {
       List<BatchCommand> batchCommands = new LinkedList<>();
       if (xml.getAliases() != null) {
         xml.getAliases().stream()
-            .map(alias -> ArtistAliasCommand.builder()
-                .alias(alias.getId())
-                .artist(xml.getId())
-                .build())
+            .map(
+                alias ->
+                    ArtistAliasCommand.builder().alias(alias.getId()).artist(xml.getId()).build())
             .forEach(batchCommands::add);
       }
 
       if (xml.getGroups() != null) {
         xml.getGroups().stream()
-            .map(group -> ArtistGroupCommand.builder()
-                .artist(xml.getId())
-                .group(group.getId())
-                .build())
+            .map(
+                group ->
+                    ArtistGroupCommand.builder().artist(xml.getId()).group(group.getId()).build())
             .forEach(batchCommands::add);
       }
 
       if (xml.getMembers() != null) {
         xml.getMembers().stream()
-            .map(member -> ArtistMemberCommand.builder()
-                .artist(xml.getId())
-                .member(member.getId())
-                .build())
+            .map(
+                member ->
+                    ArtistMemberCommand.builder()
+                        .artist(xml.getId())
+                        .member(member.getId())
+                        .build())
             .forEach(batchCommands::add);
       }
 
       if (xml.getUrls() != null) {
         xml.getUrls().stream()
             .filter(url -> !url.isBlank())
-            .map(url -> ArtistUrlCommand.builder()
-                .artist(xml.getId())
-                .url(url)
-                .build())
+            .map(url -> ArtistUrlCommand.builder().artist(xml.getId()).url(url).build())
             .forEach(batchCommands::add);
       }
 
       if (xml.getNameVariations() != null) {
         xml.getNameVariations().stream()
             .filter(name -> !name.isBlank())
-            .map(name -> ArtistNameVariationCommand.builder()
-                .artist(xml.getId())
-                .name(name)
-                .build())
+            .map(
+                name -> ArtistNameVariationCommand.builder().artist(xml.getId()).name(name).build())
             .forEach(batchCommands::add);
       }
       return batchCommands;
@@ -263,21 +267,22 @@ public class ArtistStepConfig extends AbstractStepConfig {
     ClassifierCompositeCollectionItemWriter<BatchCommand> writer =
         new ClassifierCompositeCollectionItemWriter<>();
     writer.setClassifier(
-        (Classifier<BatchCommand, ItemWriter<? super BatchCommand>>) classifiable -> {
-          if (classifiable instanceof ArtistMemberCommand) {
-            return artistMemberItemWriter();
-          }
-          if (classifiable instanceof ArtistGroupCommand) {
-            return artistGroupItemWriter();
-          }
-          if (classifiable instanceof ArtistAliasCommand) {
-            return artistAliasItemWriter();
-          }
-          if (classifiable instanceof ArtistUrlCommand) {
-            return artistUrlItemWriter();
-          }
-          return artistNameVariationItemWriter();
-        });
+        (Classifier<BatchCommand, ItemWriter<? super BatchCommand>>)
+            classifiable -> {
+              if (classifiable instanceof ArtistMemberCommand) {
+                return artistMemberItemWriter();
+              }
+              if (classifiable instanceof ArtistGroupCommand) {
+                return artistGroupItemWriter();
+              }
+              if (classifiable instanceof ArtistAliasCommand) {
+                return artistAliasItemWriter();
+              }
+              if (classifiable instanceof ArtistUrlCommand) {
+                return artistUrlItemWriter();
+              }
+              return artistNameVariationItemWriter();
+            });
     return writer;
   }
 

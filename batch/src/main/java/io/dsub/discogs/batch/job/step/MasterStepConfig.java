@@ -9,15 +9,15 @@ import io.dsub.discogs.batch.domain.master.MasterBatchCommand.MasterVideoCommand
 import io.dsub.discogs.batch.domain.master.MasterXML;
 import io.dsub.discogs.batch.dump.DiscogsDump;
 import io.dsub.discogs.batch.dump.DumpType;
-import io.dsub.discogs.batch.job.reader.DiscogsDumpItemReaderBuilder;
-import io.dsub.discogs.batch.job.tasklet.FileClearTasklet;
-import io.dsub.discogs.batch.job.writer.ClassifierCompositeCollectionItemWriter;
-import io.dsub.discogs.batch.query.QueryBuilder;
-import io.dsub.discogs.batch.util.FileUtil;
 import io.dsub.discogs.batch.dump.service.DiscogsDumpService;
 import io.dsub.discogs.batch.job.listener.StopWatchStepExecutionListener;
 import io.dsub.discogs.batch.job.listener.StringFieldNormalizingItemReadListener;
+import io.dsub.discogs.batch.job.reader.DiscogsDumpItemReaderBuilder;
+import io.dsub.discogs.batch.job.tasklet.FileClearTasklet;
 import io.dsub.discogs.batch.job.tasklet.FileFetchTasklet;
+import io.dsub.discogs.batch.job.writer.ClassifierCompositeCollectionItemWriter;
+import io.dsub.discogs.batch.query.QueryBuilder;
+import io.dsub.discogs.batch.util.FileUtil;
 import io.dsub.discogs.common.entity.Genre;
 import io.dsub.discogs.common.entity.Style;
 import io.dsub.discogs.common.entity.base.BaseEntity;
@@ -95,14 +95,30 @@ public class MasterStepConfig extends AbstractStepConfig {
 
     Flow artistStepFlow =
         new FlowBuilder<SimpleFlow>(MASTER_STEP_FLOW)
-            .from(masterFileFetchStep()).on(FAILED).end()
-            .from(masterFileFetchStep()).on(ANY).to(masterGenreStyleStep())
-            .from(masterGenreStyleStep()).on(FAILED).end()
-            .from(masterGenreStyleStep()).on(ANY).to(masterCoreStep(null))
-            .from(masterCoreStep(null)).on(FAILED).end()
-            .from(masterCoreStep(null)).on(ANY).to(masterSubItemsStep(null))
-            .from(masterSubItemsStep(null)).on(ANY).to(masterFileClearStep())
-            .from(masterFileClearStep()).on(ANY).end()
+            .from(masterFileFetchStep())
+            .on(FAILED)
+            .end()
+            .from(masterFileFetchStep())
+            .on(ANY)
+            .to(masterGenreStyleStep())
+            .from(masterGenreStyleStep())
+            .on(FAILED)
+            .end()
+            .from(masterGenreStyleStep())
+            .on(ANY)
+            .to(masterCoreStep(null))
+            .from(masterCoreStep(null))
+            .on(FAILED)
+            .end()
+            .from(masterCoreStep(null))
+            .on(ANY)
+            .to(masterSubItemsStep(null))
+            .from(masterSubItemsStep(null))
+            .on(ANY)
+            .to(masterFileClearStep())
+            .from(masterFileClearStep())
+            .on(ANY)
+            .end()
             .build();
     FlowStep artistFlowStep = new FlowStep();
     artistFlowStep.setJobRepository(jobRepository);
@@ -131,51 +147,50 @@ public class MasterStepConfig extends AbstractStepConfig {
   @Bean
   @JobScope
   public Step masterFileClearStep() {
-    return sbf.get(MASTER_FILE_CLEAR_STEP)
-        .tasklet(new FileClearTasklet(fileUtil))
-        .build();
+    return sbf.get(MASTER_FILE_CLEAR_STEP).tasklet(new FileClearTasklet(fileUtil)).build();
   }
 
   @Bean
   @JobScope
   public Step masterGenreStyleStep() {
     return sbf.get(MASTER_PRE_STEP)
-        .tasklet((contribution, chunkContext) -> {
-          SynchronizedItemStreamReader<MasterXML> reader = masterStreamReader();
-          reader.open(chunkContext.getStepContext().getStepExecution().getExecutionContext());
+        .tasklet(
+            (contribution, chunkContext) -> {
+              SynchronizedItemStreamReader<MasterXML> reader = masterStreamReader();
+              reader.open(chunkContext.getStepContext().getStepExecution().getExecutionContext());
 
-          Set<String> genres = new HashSet<>();
-          Set<String> styles = new HashSet<>();
+              Set<String> genres = new HashSet<>();
+              Set<String> styles = new HashSet<>();
 
-          MasterXML masterXML = reader.read();
-          while (masterXML != null) {
-            if (masterXML.getGenres() != null) {
-              genres.addAll(masterXML.getGenres());
-            }
-            if (masterXML.getStyles() != null) {
-              styles.addAll(masterXML.getStyles());
-            }
-            masterXML = reader.read();
-          }
-          styleRepository
-              .saveAll(styles.stream().map(style -> Style.builder().name(style).build()).collect(
-                  Collectors.toList()));
-          genreRepository
-              .saveAll(genres.stream().map(genre -> Genre.builder().name(genre).build()).collect(
-                  Collectors.toList()));
+              MasterXML masterXML = reader.read();
+              while (masterXML != null) {
+                if (masterXML.getGenres() != null) {
+                  genres.addAll(masterXML.getGenres());
+                }
+                if (masterXML.getStyles() != null) {
+                  styles.addAll(masterXML.getStyles());
+                }
+                masterXML = reader.read();
+              }
+              styleRepository.saveAll(
+                  styles.stream()
+                      .map(style -> Style.builder().name(style).build())
+                      .collect(Collectors.toList()));
+              genreRepository.saveAll(
+                  genres.stream()
+                      .map(genre -> Genre.builder().name(genre).build())
+                      .collect(Collectors.toList()));
 
-          contribution.setExitStatus(ExitStatus.COMPLETED);
-          chunkContext.setComplete();
-          return RepeatStatus.FINISHED;
-        })
+              contribution.setExitStatus(ExitStatus.COMPLETED);
+              chunkContext.setComplete();
+              return RepeatStatus.FINISHED;
+            })
         .build();
   }
 
-
   @Bean
   @JobScope
-  public Step masterCoreStep(
-      @Value(CHUNK) Integer chunkSize) {
+  public Step masterCoreStep(@Value(CHUNK) Integer chunkSize) {
     return sbf.get(MASTER_CORE_STEP)
         .<MasterXML, MasterCommand>chunk(chunkSize)
         .reader(masterStreamReader())
@@ -194,8 +209,7 @@ public class MasterStepConfig extends AbstractStepConfig {
 
   @Bean
   @JobScope
-  public Step masterSubItemsStep(
-      @Value(CHUNK) Integer chunkSize) {
+  public Step masterSubItemsStep(@Value(CHUNK) Integer chunkSize) {
     return sbf.get(MASTER_SUB_ITEMS_STEP)
         .<MasterXML, Collection<BatchCommand>>chunk(chunkSize)
         .reader(masterStreamReader())
@@ -212,7 +226,6 @@ public class MasterStepConfig extends AbstractStepConfig {
         .build();
   }
 
-
   @Bean
   @StepScope
   public SynchronizedItemStreamReader<MasterXML> masterStreamReader() {
@@ -227,13 +240,14 @@ public class MasterStepConfig extends AbstractStepConfig {
   @Bean
   @StepScope
   public ItemProcessor<MasterXML, MasterCommand> masterProcessor() {
-    return xml -> MasterCommand.builder()
-        .id(xml.getId())
-        .dataQuality(xml.getDataQuality())
-        .mainReleaseItem(null)
-        .year(xml.getYear())
-        .title(xml.getTitle())
-        .build();
+    return xml ->
+        MasterCommand.builder()
+            .id(xml.getId())
+            .dataQuality(xml.getDataQuality())
+            .mainReleaseItem(null)
+            .year(xml.getYear())
+            .title(xml.getTitle())
+            .build();
   }
 
   @Bean
@@ -243,46 +257,42 @@ public class MasterStepConfig extends AbstractStepConfig {
       List<BatchCommand> commands = new ArrayList<>();
 
       xml.getArtists().stream()
-          .map(artist -> MasterArtistCommand.builder()
-              .master(xml.getId())
-              .artist(artist.getId())
-              .build())
+          .map(
+              artist ->
+                  MasterArtistCommand.builder().master(xml.getId()).artist(artist.getId()).build())
           .forEach(commands::add);
 
       xml.getVideos().stream()
-          .peek(video -> {
-            if (video.getTitle() != null && video.getTitle().isBlank()) {
-              video.setTitle(null);
-            }
-            if (video.getDescription() != null && video.getDescription().isBlank()) {
-              video.setDescription(null);
-            }
-            if (video.getUrl() != null && video.getUrl().isBlank()) {
-              video.setUrl(null);
-            }
-          })
-          .map(video -> MasterVideoCommand.builder()
-              .master(xml.getId())
-              .url(video.getUrl())
-              .description(video.getDescription())
-              .title(video.getTitle())
-              .build())
+          .peek(
+              video -> {
+                if (video.getTitle() != null && video.getTitle().isBlank()) {
+                  video.setTitle(null);
+                }
+                if (video.getDescription() != null && video.getDescription().isBlank()) {
+                  video.setDescription(null);
+                }
+                if (video.getUrl() != null && video.getUrl().isBlank()) {
+                  video.setUrl(null);
+                }
+              })
+          .map(
+              video ->
+                  MasterVideoCommand.builder()
+                      .master(xml.getId())
+                      .url(video.getUrl())
+                      .description(video.getDescription())
+                      .title(video.getTitle())
+                      .build())
           .forEach(commands::add);
 
       xml.getGenres().stream()
           .filter(genre -> !genre.isBlank())
-          .map(genre -> MasterGenreCommand.builder()
-              .genre(genre)
-              .master(xml.getId())
-              .build())
+          .map(genre -> MasterGenreCommand.builder().genre(genre).master(xml.getId()).build())
           .forEach(commands::add);
 
       xml.getStyles().stream()
           .filter(style -> !style.isBlank())
-          .map(style -> MasterStyleCommand.builder()
-              .master(xml.getId())
-              .style(style)
-              .build())
+          .map(style -> MasterStyleCommand.builder().master(xml.getId()).style(style).build())
           .forEach(commands::add);
       return commands;
     };
@@ -300,18 +310,19 @@ public class MasterStepConfig extends AbstractStepConfig {
     ClassifierCompositeCollectionItemWriter<BatchCommand> writer =
         new ClassifierCompositeCollectionItemWriter<>();
     writer.setClassifier(
-        (Classifier<BatchCommand, ItemWriter<? super BatchCommand>>) classifiable -> {
-          if (classifiable instanceof MasterStyleCommand) {
-            return masterStyleItemWriter();
-          }
-          if (classifiable instanceof MasterVideoCommand) {
-            return masterVideoItemWriter();
-          }
-          if (classifiable instanceof MasterGenreCommand) {
-            return masterGenreItemWriter();
-          }
-          return masterArtistItemWriter();
-        });
+        (Classifier<BatchCommand, ItemWriter<? super BatchCommand>>)
+            classifiable -> {
+              if (classifiable instanceof MasterStyleCommand) {
+                return masterStyleItemWriter();
+              }
+              if (classifiable instanceof MasterVideoCommand) {
+                return masterVideoItemWriter();
+              }
+              if (classifiable instanceof MasterGenreCommand) {
+                return masterGenreItemWriter();
+              }
+              return masterArtistItemWriter();
+            });
     return writer;
   }
 

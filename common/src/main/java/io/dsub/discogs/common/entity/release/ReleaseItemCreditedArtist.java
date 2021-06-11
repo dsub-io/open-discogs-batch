@@ -23,9 +23,13 @@ import lombok.NoArgsConstructor;
 @EqualsAndHashCode(callSuper = false)
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "release_item_credited_artist", uniqueConstraints = {
-    @UniqueConstraint(name = "uq_release_item_credited_artist_release_item_id_artist_id_role", columnNames =
-        {"release_item_id", "artist_id", "role"})})
+@Table(
+    name = "release_item_credited_artist",
+    uniqueConstraints = {
+      @UniqueConstraint(
+          name = "uq_release_item_credited_artist_release_item_id_artist_id_role",
+          columnNames = {"release_item_id", "artist_id", "role"})
+    })
 public class ReleaseItemCreditedArtist extends BaseTimeEntity {
 
   private static final Long SerialVersionUID = 1L;

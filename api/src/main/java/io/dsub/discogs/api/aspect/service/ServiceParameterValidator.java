@@ -20,7 +20,7 @@ public class ServiceParameterValidator extends ServiceAspect {
     System.out.println(
         "ARGUMENTS >> "
             + Arrays.stream(joinPoint.getArgs())
-            .map(Object::toString)
-            .collect(Collectors.joining(",")));
+                .map(Object::toString)
+                .collect(Collectors.joining(",")));
   }
 }

@@ -20,11 +20,8 @@ import lombok.NoArgsConstructor;
  */
 public abstract class ArtistBatchCommand {
 
-  /**
-   * Private constructor to prevent instantiation.
-   */
-  private ArtistBatchCommand() {
-  }
+  /** Private constructor to prevent instantiation. */
+  private ArtistBatchCommand() {}
 
   @Data
   @Builder

@@ -31,8 +31,8 @@ class SqlJpaEntityQueryBuilderTest {
 
     // then
     assertThat(query)
-        .contains("id", "created_at", "last_modified_at", "profile", "data_quality", "name",
-            "real_name")
+        .contains(
+            "id", "created_at", "last_modified_at", "profile", "data_quality", "name", "real_name")
         .contains(":profile", ":dataQuality", ":name", ":realName")
         .doesNotContain(":createdAt", ":lastModifiedAt");
   }
@@ -46,8 +46,7 @@ class SqlJpaEntityQueryBuilderTest {
     assertAll(
         () -> assertThat(query).contains(":member", ":artist"),
         () -> assertThat(query).doesNotContain(":createdAt", ":lastModifiedAt"),
-        () -> assertThat(query).doesNotContain(":id")
-    );
+        () -> assertThat(query).doesNotContain(":id"));
   }
 
   @Test
@@ -58,7 +57,6 @@ class SqlJpaEntityQueryBuilderTest {
     // then
     assertAll(
         () -> assertThat(query).contains("SELECT 1 FROM artist WHERE id = :group"),
-        () -> assertThat(query).contains("SELECT 1 FROM artist WHERE id = :artist")
-    );
+        () -> assertThat(query).contains("SELECT 1 FROM artist WHERE id = :artist"));
   }
 }

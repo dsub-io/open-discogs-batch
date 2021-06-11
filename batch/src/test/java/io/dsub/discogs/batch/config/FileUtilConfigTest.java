@@ -15,13 +15,11 @@ class FileUtilConfigTest {
 
   ApplicationContextRunner ctx;
 
-  @RegisterExtension
-  LogSpy logSpy = new LogSpy();
+  @RegisterExtension LogSpy logSpy = new LogSpy();
 
   @BeforeEach
   void setUp() {
-    ctx = new ApplicationContextRunner()
-        .withUserConfiguration(FileUtilConfig.class);
+    ctx = new ApplicationContextRunner().withUserConfiguration(FileUtilConfig.class);
   }
 
   @Test
@@ -35,7 +33,8 @@ class FileUtilConfigTest {
     // then
     assertThat(logSpy.getLogsByExactLevelAsString(Level.INFO, true))
         .hasSize(1)
-        .first().isEqualTo("detected mount option. keeping file...");
+        .first()
+        .isEqualTo("detected mount option. keeping file...");
   }
 
   @Test
@@ -49,6 +48,7 @@ class FileUtilConfigTest {
     // then
     assertThat(logSpy.getLogsByExactLevelAsString(Level.INFO, true))
         .hasSize(1)
-        .first().isEqualTo("mount option not set. files will be removed after the job.");
+        .first()
+        .isEqualTo("mount option not set. files will be removed after the job.");
   }
 }

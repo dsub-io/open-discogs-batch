@@ -9,8 +9,8 @@ import org.apache.commons.lang3.SystemUtils;
  * Interface to support file creation, deletion operations only within application directory.
  * Currently, there is no need to utilize second level, hence flattening the method params by
  * String. There is NO GUARANTEE that this interface will not grow in the future.
- * <p>
- * Methods and their behaviors will depends on its implementations.
+ *
+ * <p>Methods and their behaviors will depends on its implementations.
  */
 public interface FileUtil {
 

@@ -3,9 +3,7 @@ package io.dsub.discogs.batch.util;
 import java.io.PrintStream;
 import me.tongfei.progressbar.ConsoleProgressBarConsumer;
 
-/**
- * A console progress bar consumer that can be turned on or off.
- */
+/** A console progress bar consumer that can be turned on or off. */
 public class ToggleProgressBarConsumer extends ConsoleProgressBarConsumer {
 
   private boolean print = false;
@@ -38,16 +36,12 @@ public class ToggleProgressBarConsumer extends ConsoleProgressBarConsumer {
     }
   }
 
-  /**
-   * Simple on method to activate print.
-   */
+  /** Simple on method to activate print. */
   public void on() {
     this.print = true;
   }
 
-  /**
-   * Simple off method to deactivate print.
-   */
+  /** Simple off method to deactivate print. */
   public void off() {
     this.print = false;
   }
