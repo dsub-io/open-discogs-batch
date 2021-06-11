@@ -34,7 +34,12 @@ public enum ArgType {
           .build()),
   YEAR_MONTH(ArgumentProperty.builder().globalName("yearMonth").synonyms("ym").build()),
   ETAG(ArgumentProperty.builder().globalName("eTag").synonyms("e").maxValuesCount(4).build()),
-  CORE_COUNT(ArgumentProperty.builder().globalName("coreCount").synonyms("core").build()),
+  CORE_COUNT(
+      ArgumentProperty.builder()
+          .globalName("coreCount")
+          .synonyms("core")
+          .supportedType(Long.class)
+          .build()),
   MOUNT(
       ArgumentProperty.builder()
           .globalName("mount")
