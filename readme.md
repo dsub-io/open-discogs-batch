@@ -1,18 +1,16 @@
-# Discogs-Data for Batch and API
+# Discogs Data Batch
 
 ### ABOUT THIS PROJECT
 
-This repository contains mainly two components:
+The aim of the project is to replicate the entire dump data set given
+from [data.discogs.com](https://data.discogs.com).
+The data
 
-1. Batch uploader for Database
-    - Currently, supporting PostgresQL, MySQL
-    - One shot process with many run options before firing jobs
-    - Supports docker
+In summary, the batch operates as following:
 
-
-2. Web API (WIP) - currently not implemented nor documented.
-    - Will support data-flux, async REST API
-    - Will support docker
+    - Currently, supporting PostgresQL, MySQL. Will implement or to be merged for other dbs (incl. mongo)
+    - One shot process with validations before firing jobs
+    - Supports dockerize, docker run with predefined batch commands
 
 ### Built With
 
@@ -41,6 +39,7 @@ Brief summary for the commands are given as below...
 | url        |          | :heavy_check_mark:    | 1   | 1   | addr:port | mysql://localhost:3306/discogs_data |
 | type       | t        | :black_square_button: | 1   | 4   | a,b,...   | EVERY TYPE                          |
 | chunk_size | chunk, c | :black_square_button: | 1   | 1   | 0 < N     | 3000    |
+| core_count | core     | :black_square_button: | 1   | 1   | 0 < N     | 80% of core from runtime |
 | year       | y        | :black_square_button: | 1   | 1   | yyyy      | CURRENT | this or year_month.
 | year_month | ym       | :black_square_button: | 1   | 1   | yyyy-mm   | CURRENT | this or year.
 | etag       | e        | :black_square_button: | 1   | 4   | a,b,...   | MOST_RECENT | overrides type, date.
@@ -53,7 +52,8 @@ It is important to note that there are three required arguments.
 
 ##### username
 
-Username of the target database server. This will automatically be encoded to UTF-8.
+Username of the target database server. This will automatically be encoded to UTF-8. The user must
+have sufficient permissions to create and modify the given schema or database.
 
 ##### password
 
@@ -76,6 +76,17 @@ Default for db_type, server_address, port, target_database are as following:
 
 By defining any of above will be set as-is. Plus, it is OK to prepend Jdbc: to the url value (but
 will work just the same.)
+
+If you present your own schema or database, please make sure to set it to the db prior to run batch,
+otherwise the process will fail with appropriate log messages.
+
+Therefore, even if you run the batch with most default setting will still require a schema or
+database to be present.
+
+The default value 'discogs_data', however, feel free to change it to fit your needs.
+
+It is important to note that if given schema or database is empty, this batch will automatically
+create tables via sql.
 
 ### Year, Year Month, Type and ETag.
 
@@ -127,11 +138,20 @@ maybe useful if you need to keep the downloaded dump.
 
 This option will not resolve any dependency, but to simply execute with given etag or type.
 
-## About Chunk-Size and Concurrency
+### Concurrency
 
 The application will automatically resolve the current core size of running system (currently 80%).
-I will implement the manual options if any issue or request regarding this happens.
+If core count argument will override the default setting, and validate the value accordingly.
+
+The core count cannot exceed 80% of full core size of given machine, thus setting the value above
+will simply be ignored.
+
+Also, setting core count as negative value will also ignore the setting, which will simply set the
+core count to default(80%).
+
+### Chunk Size
 
 The default chunk-size is 3000, however, in average environment, I would recommend to set to 300~
-500. This is totally up to the I/O spec of the running client and database server. There are chances
-I may dig into this issue a bit deeper, to find the sweet spot (if possible.)
+
+500. This is totally up to the I/O spec of the running client and database server, so feel free to
+     experiment with it.
