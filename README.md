@@ -1,5 +1,8 @@
 # Discogs Data Batch
 
+[![codecov](https://codecov.io/gh/state303/discogs-data/branch/master/graph/badge.svg?token=REMOVED_CODECOV_TOKEN)](https://codecov.io/gh/state303/discogs-data)
+[![Build Status](https://www.travis-ci.com/state303/discogs-data.svg?branch=master)](https://www.travis-ci.com/state303/discogs-data)
+
 ### ABOUT THIS PROJECT
 
 The aim of the project is to replicate the entire dump data set given
