@@ -103,24 +103,6 @@ class DiscogsDumpRepositoryMixedTest {
       }
     }
 
-    @Test
-    void whenFindTopByTypeOrderByCreatedAtDesc__ShouldReturnMostRecentDumpByCreatedAt() {
-      persistedDiscogsDumpList.sort(DiscogsDump::compareTo);
-      persistedDiscogsDumpList.stream()
-          .map(DiscogsDump::getCreatedAt)
-          .skip(persistedDiscogsDumpList.size() - 1) // the most recent will be in the last order.
-          .findFirst()
-          .ifPresent(
-              mostRecentDate -> {
-                DiscogsDump thisDump = // more recent one.
-                    getRandomDumpWithCreatedAt(mostRecentDate.plusYears(1).minusMonths(1));
-                repository.saveAndFlush(thisDump);
-                DiscogsDump thatDump =
-                    repository.findTopByTypeOrderByCreatedAtDesc(thisDump.getType());
-                assertThat(thisDump).isEqualTo(thatDump);
-              });
-    }
-
     @RepeatedTest(5)
     void whenFindAllByCreatedAtIsBetween__WillReturnTheProperValues() {
       long size = repository.count();
