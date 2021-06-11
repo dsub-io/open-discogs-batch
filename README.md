@@ -7,7 +7,6 @@
 
 The aim of the project is to replicate the entire dump data set given
 from [data.discogs.com](https://data.discogs.com).
-The data
 
 In summary, the batch operates as following:
 
