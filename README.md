@@ -1,7 +1,7 @@
 # Discogs Batch
 
 [![codecov](https://codecov.io/gh/state303/discogs-batch/branch/master/graph/badge.svg?token=REMOVED_CODECOV_TOKEN)](https://codecov.io/gh/state303/discogs-batch)
-[![Build Status](https://www.travis-ci.com/state303/discogs-data.svg?branch=master)](https://www.travis-ci.com/state303/discogs-data)
+[![Build Status](https://www.travis-ci.com/state303/discogs-batch.svg?branch=master)](https://www.travis-ci.com/state303/discogs-batch)
 
 ### ABOUT THIS PROJECT
 
