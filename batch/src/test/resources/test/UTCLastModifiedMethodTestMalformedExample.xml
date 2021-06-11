@@ -1,0 +1,23 @@
+<ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+  <Contents>
+    <ETag>"8fbe2987c0c4298b4fce157930495bb9-3"</ETag>
+    <Key>data/2008/discogs_20080309_artists.xml.gz</Key>
+    <LastModified>11.000Z</LastModified>
+    <Size>22233075</Size>
+    <StorageClass>STANDARD</StorageClass>
+  </Contents>
+  <Contents>
+    <ETag>"00c63a4c5cb686c350b78a79b1ca3800"</ETag>
+    <Key>data/2008/discogs_20080309_labels.xml.gz</Key>
+    <LastModified>2017-02-10Z</LastModified>
+    <Size>4500237</Size>
+    <StorageClass>STANDARD</StorageClass>
+  </Contents>
+  <Contents>
+    <ETag>"00c63a4c5cb686c350b78a79b1ca3800"</ETag>
+    <Key>data/2008/discogs_20080309_labels.xml.gz</Key>
+    <LastModified></LastModified>
+    <Size>4500237</Size>
+    <StorageClass>STANDARD</StorageClass>
+  </Contents>
+</ListBucketResult>
