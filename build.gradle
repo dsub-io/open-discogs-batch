@@ -4,6 +4,7 @@ buildscript {
     }
     repositories {
         mavenCentral()
+        maven { url "https://plugins.gradle.org/m2/" }
     }
     dependencies {
         classpath "org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}"
@@ -14,6 +15,11 @@ buildscript {
 allprojects {
     group 'io.dsub.discogs'
     version '0.1-SNAPSHOT'
+    apply plugin: 'jacoco'
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
 }
 
 subprojects {
@@ -23,10 +29,6 @@ subprojects {
 
     sourceCompatibility = 11
     targetCompatibility = 11
-
-    repositories {
-        mavenCentral()
-    }
 
     dependencies {
         implementation(
@@ -50,4 +52,35 @@ subprojects {
     test {
         useJUnitPlatform()
     }
+
+    clean {
+        delete "${rootDir}/build"
+    }
+}
+
+task codeCoverageReport(type: JacocoReport) {
+    executionData fileTree(project.rootDir.absolutePath).include("**/build/jacoco/*.exec")
+
+    subprojects.each {
+        sourceSets it.sourceSets.main
+    }
+
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: ['io/dsub/discogs/common',
+                                        'io/dsub/discogs/api',
+                                        'io/dsub/discogs/batch/domain'])
+        }))
+    }
+
+    reports {
+        xml.enabled true
+        xml.destination file("${buildDir}/reports/jacoco/report.xml")
+        html.enabled true
+        csv.enabled false
+    }
+}
+
+codeCoverageReport.dependsOn {
+    subprojects*.test
 }
