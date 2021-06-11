@@ -1,4 +1,2 @@
-rootProject.name = 'discogs'
-include 'common'
-include 'api'
-include 'batch'
+rootProject.name = 'batch'
+

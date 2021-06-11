@@ -1,86 +1,101 @@
-buildscript {
-    ext {
-        springBootVersion = '2.5.0'
-    }
-    repositories {
-        mavenCentral()
-        maven { url "https://plugins.gradle.org/m2/" }
-    }
-    dependencies {
-        classpath "org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}"
-        classpath "io.spring.gradle:dependency-management-plugin:1.0.11.RELEASE"
+plugins {
+    id 'java'
+    id 'maven-publish'
+    id 'jacoco'
+    id 'org.springframework.boot' version '2.5.1'
+    id 'io.spring.dependency-management' version '1.0.11.RELEASE'
+}
+
+group 'io.dsub.discogs'
+version '0.1'
+def props = new Properties()
+
+sourceCompatibility = JavaVersion.VERSION_11
+targetCompatibility = JavaVersion.VERSION_11
+
+if (file(".env").exists()) {
+    file(".env").withInputStream { props.load(it) }
+}
+
+repositories {
+    mavenCentral()
+    maven {
+        name = "GitHubPackages"
+        url = uri("https://maven.pkg.github.com/state303/discogs-batch")
+        credentials {
+            username = props.getProperty("USERNAME") ?: System.getenv("USERNAME")
+            password = props.getProperty("PKG_TOKEN") ?: System.getenv("PKG_TOKEN")
+        }
     }
 }
 
-allprojects {
-    group 'io.dsub.discogs'
-    version '0.1-SNAPSHOT'
-    apply plugin: 'jacoco'
-    repositories {
-        mavenLocal()
-        mavenCentral()
-    }
+dependencies {
+    implementation(
+            'io.dsub.discogs:common:0.1',
+            'org.springframework.boot:spring-boot-starter-data-jpa',
+            'org.springframework.boot:spring-boot-starter-batch',
+            'org.springframework.boot:spring-boot-starter-web',
+            'org.springframework.batch:spring-batch-integration:4.3.3',
+            'org.springframework:spring-oxm:5.3.7',
+            'javax.xml.bind:jaxb-api:2.3.1',
+            'com.sun.xml.bind:jaxb-impl:3.0.1',
+            'com.sun.istack:istack-commons-runtime:4.0.1',
+            'mysql:mysql-connector-java',
+            'org.postgresql:postgresql',
+            'me.tongfei:progressbar:0.9.1',
+            'org.projectlombok:lombok',
+            'org.apache.commons:commons-lang3',
+            'org.reflections:reflections:0.9.12',
+            'net.ttddyy:datasource-proxy:1.7'
+    )
+    testImplementation (
+            'com.h2database:h2',
+            'org.junit.jupiter:junit-jupiter:5.7.2',
+            'org.springframework.boot:spring-boot-starter-test',
+            'org.springframework.batch:spring-batch-test'
+    )
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+    annotationProcessor 'org.projectlombok:lombok'
+    testAnnotationProcessor 'org.projectlombok:lombok'
 }
 
-subprojects {
-    apply plugin: 'java'
-    apply plugin: 'org.springframework.boot'
-    apply plugin: 'io.spring.dependency-management'
-
-    sourceCompatibility = 11
-    targetCompatibility = 11
-
-    dependencies {
-        implementation(
-                'org.springframework.boot:spring-boot-starter-data-jpa',
-                'org.springframework.boot:spring-boot-starter-web',
-                'org.springframework.boot:spring-boot-starter-aop',
-                'net.ttddyy:datasource-proxy:1.7',
-                'org.projectlombok:lombok',
-                'org.reflections:reflections:0.9.12',
-                'org.apache.commons:commons-lang3'
-        )
-        testImplementation(
-                'org.springframework.boot:spring-boot-starter-test',
-                'org.junit.jupiter:junit-jupiter:5.7.2',
-                'org.projectlombok:lombok'
-        )
-        testAnnotationProcessor 'org.projectlombok:lombok'
-        annotationProcessor 'org.projectlombok:lombok'
-    }
-
-    test {
-        useJUnitPlatform()
-    }
-
-    clean {
-        delete "${rootDir}/build"
-    }
+test {
+    useJUnitPlatform()
 }
 
-task codeCoverageReport(type: JacocoReport) {
-    executionData fileTree(project.rootDir.absolutePath).include("**/build/jacoco/*.exec")
-
-    subprojects.each {
-        sourceSets it.sourceSets.main
-    }
-
-    afterEvaluate {
-        classDirectories.setFrom(files(classDirectories.files.collect {
-            fileTree(dir: it, exclude: ['io/dsub/discogs/common',
-                                        'io/dsub/discogs/api',
-                                        'io/dsub/discogs/batch/domain'])
-        }))
-    }
-
+jacocoTestReport {
     reports {
         xml.enabled true
-        xml.destination file("${buildDir}/reports/jacoco/report.xml")
-        html.enabled true
-        csv.enabled false
+        html.enabled false
     }
 }
 
-codeCoverageReport.dependsOn {
-    subprojects*.test
+publishing {
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/state303/discogs-batch")
+            credentials {
+                username = System.getenv('USERNAME')
+                password = System.getenv('PKG_TOKEN')
+            }
+        }
+    }
+    publications {
+        gpr(MavenPublication) {
+            groupId = "io.dsub.discogs"
+            artifactId = "batch"
+            version = "0.1-alpha"
+            from(components.java)
+        }
+    }
+}
+
+check.dependsOn jacocoTestReport
+
+// disable caching
+configurations.each {
+    it.resolutionStrategy.each {
+        it.cacheChangingModulesFor 0, 'seconds'
+    }
 }
