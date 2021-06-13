@@ -88,12 +88,13 @@ public class SimpleFileUtil implements FileUtil {
       log.debug("grabbing existing file path from {}", filePath.toAbsolutePath());
     }
     if (!Files.exists(filePath) && generate) {
-      Files.createFile(filePath);
-      log.debug("generated new file at {}.", filePath.toAbsolutePath());
+      Path freshPath = Files.createFile(filePath);
+      log.debug("generated new file at {}.", freshPath.toAbsolutePath());
       if (isTemporary) {
-        log.debug("marking delete on exit on {}", filePath.toAbsolutePath());
-        filePath.toFile().deleteOnExit();
+        log.debug("marking delete on exit on {}", freshPath.toAbsolutePath());
+        freshPath.toFile().deleteOnExit();
       }
+      return freshPath;
     }
     return filePath;
   }
@@ -114,7 +115,7 @@ public class SimpleFileUtil implements FileUtil {
   }
 
   /**
-   * Get DIRECTORY where this batch will use. The generation of the directory is idempotent.
+   * Get directory where this batch will use. The generation of the directory is idempotent.
    *
    * @param generate if directory should be generated or not.
    * @return application directory.
@@ -189,8 +190,7 @@ public class SimpleFileUtil implements FileUtil {
    */
   @Override
   public void copy(InputStream inputStream, String filename) throws IOException {
-    try (inputStream;
-        inputStream) {
+    try (inputStream) {
       Path filepath = getFilePath(filename, true);
       Files.copy(inputStream, filepath, StandardCopyOption.REPLACE_EXISTING);
     }

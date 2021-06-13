@@ -238,4 +238,7 @@ gradle-app.setting
 ### Environment ###
 .env
 
+### Log ###
+log
+
 # End of https://www.toptal.com/developers/gitignore/api/java,gradle,maven,git,macos,windows,linux,intellij+all

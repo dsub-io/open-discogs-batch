@@ -46,3 +46,5 @@ logging:
               item: ERROR
       hibernate: ERROR
     com.zaxxer.hikari: ERROR
+server:
+  shutdown: graceful
