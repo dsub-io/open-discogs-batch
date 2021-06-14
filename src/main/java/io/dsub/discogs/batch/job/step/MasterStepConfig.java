@@ -301,7 +301,7 @@ public class MasterStepConfig extends AbstractStepConfig {
   @Bean
   @StepScope
   ItemWriter<MasterCommand> masterWriter() {
-    return buildItemWriter(queryBuilder.getUpsertQuery(Master.class), dataSource);
+    return buildItemWriter(queryBuilder.getTemporaryInsertQuery(Master.class), dataSource);
   }
 
   @Bean
@@ -329,24 +329,24 @@ public class MasterStepConfig extends AbstractStepConfig {
   @Bean
   @StepScope
   public ItemWriter<BatchCommand> masterStyleItemWriter() {
-    return buildItemWriter(queryBuilder.getUpsertQuery(MasterStyle.class), dataSource);
+    return buildItemWriter(queryBuilder.getTemporaryInsertQuery(MasterStyle.class), dataSource);
   }
 
   @Bean
   @StepScope
   public ItemWriter<BatchCommand> masterGenreItemWriter() {
-    return buildItemWriter(queryBuilder.getUpsertQuery(MasterGenre.class), dataSource);
+    return buildItemWriter(queryBuilder.getTemporaryInsertQuery(MasterGenre.class), dataSource);
   }
 
   @Bean
   @StepScope
   public ItemWriter<BatchCommand> masterArtistItemWriter() {
-    return buildItemWriter(queryBuilder.getUpsertQuery(MasterArtist.class), dataSource);
+    return buildItemWriter(queryBuilder.getTemporaryInsertQuery(MasterArtist.class), dataSource);
   }
 
   @Bean
   @StepScope
   public ItemWriter<BatchCommand> masterVideoItemWriter() {
-    return buildItemWriter(queryBuilder.getUpsertQuery(MasterVideo.class), dataSource);
+    return buildItemWriter(queryBuilder.getTemporaryInsertQuery(MasterVideo.class), dataSource);
   }
 }

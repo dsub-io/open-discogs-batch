@@ -237,18 +237,18 @@ public class LabelStepConfig extends AbstractStepConfig {
   @Bean
   @StepScope
   public ItemWriter<BatchCommand> labelWriter() {
-    return buildItemWriter(queryBuilder.getUpsertQuery(Label.class), dataSource);
+    return buildItemWriter(queryBuilder.getTemporaryInsertQuery(Label.class), dataSource);
   }
 
   @Bean
   @StepScope
   public ItemWriter<BatchCommand> labelUrlWriter() {
-    return buildItemWriter(queryBuilder.getUpsertQuery(LabelUrl.class), dataSource);
+    return buildItemWriter(queryBuilder.getTemporaryInsertQuery(LabelUrl.class), dataSource);
   }
 
   @Bean
   @StepScope
   public ItemWriter<BatchCommand> labelSubLabelWriter() {
-    return buildItemWriter(queryBuilder.getUpsertQuery(LabelSubLabel.class), dataSource);
+    return buildItemWriter(queryBuilder.getTemporaryInsertQuery(LabelSubLabel.class), dataSource);
   }
 }

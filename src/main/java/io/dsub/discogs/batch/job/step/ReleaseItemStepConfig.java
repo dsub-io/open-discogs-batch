@@ -399,68 +399,68 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
   @Bean
   @StepScope
   public ItemWriter<ReleaseItemCommand> releaseItemWriter() {
-    return buildItemWriter(queryBuilder.getUpsertQuery(ReleaseItem.class), dataSource);
+    return buildItemWriter(queryBuilder.getTemporaryInsertQuery(ReleaseItem.class), dataSource);
   }
 
   @Bean
   @StepScope
   public ItemWriter<BatchCommand> releaseItemArtistWriter() {
-    return buildItemWriter(queryBuilder.getUpsertQuery(ReleaseItemArtist.class), dataSource);
+    return buildItemWriter(queryBuilder.getTemporaryInsertQuery(ReleaseItemArtist.class), dataSource);
   }
 
   @Bean
   @StepScope
   public ItemWriter<BatchCommand> releaseItemCreditedArtistWriter() {
     return buildItemWriter(
-        queryBuilder.getUpsertQuery(ReleaseItemCreditedArtist.class), dataSource);
+        queryBuilder.getTemporaryInsertQuery(ReleaseItemCreditedArtist.class), dataSource);
   }
 
   @Bean
   @StepScope
   public ItemWriter<BatchCommand> releaseItemGenreWriter() {
-    return buildItemWriter(queryBuilder.getUpsertQuery(ReleaseItemGenre.class), dataSource);
+    return buildItemWriter(queryBuilder.getTemporaryInsertQuery(ReleaseItemGenre.class), dataSource);
   }
 
   @Bean
   @StepScope
   public ItemWriter<BatchCommand> releaseItemStyleWriter() {
-    return buildItemWriter(queryBuilder.getUpsertQuery(ReleaseItemStyle.class), dataSource);
+    return buildItemWriter(queryBuilder.getTemporaryInsertQuery(ReleaseItemStyle.class), dataSource);
   }
 
   @Bean
   @StepScope
   public ItemWriter<BatchCommand> releaseItemVideoWriter() {
-    return buildItemWriter(queryBuilder.getUpsertQuery(ReleaseItemVideo.class), dataSource);
+    return buildItemWriter(queryBuilder.getTemporaryInsertQuery(ReleaseItemVideo.class), dataSource);
   }
 
   @Bean
   @StepScope
   public ItemWriter<BatchCommand> releaseItemWorkWriter() {
-    return buildItemWriter(queryBuilder.getUpsertQuery(ReleaseItemWork.class), dataSource);
+    return buildItemWriter(queryBuilder.getTemporaryInsertQuery(ReleaseItemWork.class), dataSource);
   }
 
   @Bean
   @StepScope
   public ItemWriter<BatchCommand> releaseItemFormatWriter() {
-    return buildItemWriter(queryBuilder.getUpsertQuery(ReleaseItemFormat.class), dataSource);
+    return buildItemWriter(queryBuilder.getTemporaryInsertQuery(ReleaseItemFormat.class), dataSource);
   }
 
   @Bean
   @StepScope
   public ItemWriter<BatchCommand> releaseItemIdentifierWriter() {
-    return buildItemWriter(queryBuilder.getUpsertQuery(ReleaseItemIdentifier.class), dataSource);
+    return buildItemWriter(queryBuilder.getTemporaryInsertQuery(ReleaseItemIdentifier.class), dataSource);
   }
 
   @Bean
   @StepScope
   public ItemWriter<BatchCommand> releaseItemTrackWriter() {
-    return buildItemWriter(queryBuilder.getUpsertQuery(ReleaseItemTrack.class), dataSource);
+    return buildItemWriter(queryBuilder.getTemporaryInsertQuery(ReleaseItemTrack.class), dataSource);
   }
 
   @Bean
   @StepScope
   public ItemWriter<BatchCommand> labelReleaseItemWriter() {
-    return buildItemWriter(queryBuilder.getUpsertQuery(LabelRelease.class), dataSource);
+    return buildItemWriter(queryBuilder.getTemporaryInsertQuery(LabelRelease.class), dataSource);
   }
 
   private String normalizeString(String input) {

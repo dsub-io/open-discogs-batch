@@ -1057,7 +1057,7 @@ CREATE TABLE IF NOT EXISTS release_item_style
     release_item_id,
     style
 ),
-    CONSTRAINT fq_release_item_style_style_style
+    CONSTRAINT fk_release_item_style_style_style
     FOREIGN KEY
 (
     style
@@ -1065,7 +1065,7 @@ CREATE TABLE IF NOT EXISTS release_item_style
 (
     name
 ),
-    CONSTRAINT fq_release_item_style_release_item_id_release_item
+    CONSTRAINT fk_release_item_style_release_item_id_release_item
     FOREIGN KEY
 (
     release_item_id

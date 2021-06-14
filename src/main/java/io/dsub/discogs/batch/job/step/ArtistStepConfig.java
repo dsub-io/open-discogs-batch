@@ -258,7 +258,7 @@ public class ArtistStepConfig extends AbstractStepConfig {
   @Bean
   @StepScope
   public ItemWriter<ArtistCommand> artistItemWriter() {
-    return buildItemWriter(queryBuilder.getUpsertQuery(Artist.class), dataSource);
+    return buildItemWriter(queryBuilder.getTemporaryInsertQuery(Artist.class), dataSource);
   }
 
   @Bean
@@ -289,30 +289,30 @@ public class ArtistStepConfig extends AbstractStepConfig {
   @Bean
   @StepScope
   public ItemWriter<BatchCommand> artistMemberItemWriter() {
-    return buildItemWriter(queryBuilder.getUpsertQuery(ArtistMember.class), dataSource);
+    return buildItemWriter(queryBuilder.getTemporaryInsertQuery(ArtistMember.class), dataSource);
   }
 
   @Bean
   @StepScope
   public ItemWriter<BatchCommand> artistGroupItemWriter() {
-    return buildItemWriter(queryBuilder.getUpsertQuery(ArtistGroup.class), dataSource);
+    return buildItemWriter(queryBuilder.getTemporaryInsertQuery(ArtistGroup.class), dataSource);
   }
 
   @Bean
   @StepScope
   public ItemWriter<BatchCommand> artistAliasItemWriter() {
-    return buildItemWriter(queryBuilder.getUpsertQuery(ArtistAlias.class), dataSource);
+    return buildItemWriter(queryBuilder.getTemporaryInsertQuery(ArtistAlias.class), dataSource);
   }
 
   @Bean
   @StepScope
   public ItemWriter<BatchCommand> artistUrlItemWriter() {
-    return buildItemWriter(queryBuilder.getUpsertQuery(ArtistUrl.class), dataSource);
+    return buildItemWriter(queryBuilder.getTemporaryInsertQuery(ArtistUrl.class), dataSource);
   }
 
   @Bean
   @StepScope
   public ItemWriter<BatchCommand> artistNameVariationItemWriter() {
-    return buildItemWriter(queryBuilder.getUpsertQuery(ArtistNameVariation.class), dataSource);
+    return buildItemWriter(queryBuilder.getTemporaryInsertQuery(ArtistNameVariation.class), dataSource);
   }
 }
