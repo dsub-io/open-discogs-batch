@@ -6,6 +6,9 @@ public interface QueryBuilder<T> {
   String PERIOD = ".";
   String COMMA = ",";
   String AND = "AND";
+  String INSERT = "INSERT";
+  String INTO = "INTO";
+  String INSERT_INTO = INSERT + SPACE + INTO;
   String COLON = ":";
   String PLUS = "+";
   String SEMICOLON = ";";
@@ -19,6 +22,4 @@ public interface QueryBuilder<T> {
   String getSelectInsertQuery(Class<? extends T> targetClass);
 
   String getPruneQuery(Class<? extends T> targetClass);
-
-  String getIdOnlyInsertQuery(Class<? extends T> targetClass);
 }
