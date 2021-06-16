@@ -91,15 +91,18 @@ public class BatchConfig implements BatchConfigurer {
     return jobBuilderFactory
         .get(JOB_NAME)
         .listener(temporaryTableHandlingJobExecutionListener)
-        .listener(new JobExecutionListener(){
-          @Override
-          public void beforeJob(JobExecution jobExecution) {}
-          @Override
-          public void afterJob(JobExecution jobExecution) {
-            Runtime current = Runtime.getRuntime();
-            current.addShutdownHook(new Thread(() -> System.out.println("shutdown hook initiated")));
-          }
-        })
+        .listener(
+            new JobExecutionListener() {
+              @Override
+              public void beforeJob(JobExecution jobExecution) {}
+
+              @Override
+              public void afterJob(JobExecution jobExecution) {
+                Runtime current = Runtime.getRuntime();
+                current.addShutdownHook(
+                    new Thread(() -> System.out.println("shutdown hook initiated")));
+              }
+            })
         .start(artistStep)
         .on(FAILED)
         .end()

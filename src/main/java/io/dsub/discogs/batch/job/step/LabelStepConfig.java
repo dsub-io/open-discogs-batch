@@ -9,6 +9,7 @@ import io.dsub.discogs.batch.dump.DiscogsDump;
 import io.dsub.discogs.batch.dump.DumpType;
 import io.dsub.discogs.batch.dump.service.DiscogsDumpService;
 import io.dsub.discogs.batch.exception.DumpNotFoundException;
+import io.dsub.discogs.batch.exception.InitializationFailureException;
 import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import io.dsub.discogs.batch.job.listener.StopWatchStepExecutionListener;
 import io.dsub.discogs.batch.job.listener.StringFieldNormalizingItemReadListener;
@@ -19,13 +20,10 @@ import io.dsub.discogs.batch.job.tasklet.QueryExecutionTasklet;
 import io.dsub.discogs.batch.job.writer.ClassifierCompositeCollectionItemWriter;
 import io.dsub.discogs.batch.query.QueryBuilder;
 import io.dsub.discogs.batch.util.FileUtil;
-import io.dsub.discogs.common.entity.artist.Artist;
 import io.dsub.discogs.common.entity.base.BaseEntity;
 import io.dsub.discogs.common.entity.label.Label;
 import io.dsub.discogs.common.entity.label.LabelSubLabel;
 import io.dsub.discogs.common.entity.label.LabelUrl;
-import io.dsub.discogs.common.exception.InitializationFailureException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
@@ -67,7 +65,8 @@ public class LabelStepConfig extends AbstractStepConfig<BatchCommand> {
   private static final String LABEL_SUB_ITEMS_STEP = "label sub items step";
   private static final String LABEL_FILE_FETCH_STEP = "label file fetch step";
   private static final String LABEL_FILE_CLEAR_STEP = "label file clear step";
-  private static final String LABEL_TEMPORARY_TABLES_PRUNE_STEP = "label temporary tables prune step";
+  private static final String LABEL_TEMPORARY_TABLES_PRUNE_STEP =
+      "label temporary tables prune step";
   private static final String LABEL_SELECT_INSERT_STEP = "label select insert step";
 
   private final QueryBuilder<BaseEntity> queryBuilder;
@@ -188,10 +187,11 @@ public class LabelStepConfig extends AbstractStepConfig<BatchCommand> {
   @Bean
   @JobScope
   public Step labelTemporaryTablesPruneStep() {
-    List<String> queries = entities.stream()
-        .filter(clazz -> clazz != Label.class)
-        .map(queryBuilder::getPruneQuery)
-        .collect(Collectors.toList());
+    List<String> queries =
+        entities.stream()
+            .filter(clazz -> clazz != Label.class)
+            .map(queryBuilder::getPruneQuery)
+            .collect(Collectors.toList());
     return sbf.get(LABEL_TEMPORARY_TABLES_PRUNE_STEP)
         .tasklet(new QueryExecutionTasklet(queries, jdbcTemplate))
         .build();
@@ -200,9 +200,8 @@ public class LabelStepConfig extends AbstractStepConfig<BatchCommand> {
   @Bean
   @JobScope
   public Step labelSelectInsertStep() {
-    List<String> queries = entities.stream()
-        .map(queryBuilder::getSelectInsertQuery)
-        .collect(Collectors.toList());
+    List<String> queries =
+        entities.stream().map(queryBuilder::getSelectInsertQuery).collect(Collectors.toList());
     return sbf.get(LABEL_SELECT_INSERT_STEP)
         .tasklet(new QueryExecutionTasklet(queries, jdbcTemplate))
         .build();

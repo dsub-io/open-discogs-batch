@@ -1,6 +1,6 @@
 package io.dsub.discogs.batch.datasource;
 
-import io.dsub.discogs.common.exception.InvalidArgumentException;
+import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;

@@ -13,7 +13,6 @@ import static org.mockito.Mockito.when;
 
 import ch.qos.logback.classic.Level;
 import io.dsub.discogs.batch.dump.DiscogsDump;
-import io.dsub.discogs.batch.exception.FileDeleteException;
 import io.dsub.discogs.batch.exception.FileException;
 import io.dsub.discogs.batch.testutil.LogSpy;
 import io.dsub.discogs.batch.util.FileUtil;
