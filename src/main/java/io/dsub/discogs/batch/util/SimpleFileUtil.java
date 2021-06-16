@@ -1,6 +1,7 @@
 package io.dsub.discogs.batch.util;
 
-import io.dsub.discogs.common.exception.FileFetchException;
+import io.dsub.discogs.batch.exception.FileDeleteException;
+import io.dsub.discogs.batch.exception.FileException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -42,30 +43,40 @@ public class SimpleFileUtil implements FileUtil {
   /**
    * Clears all files and directories used by this application.
    *
-   * @throws IOException if any method from {@link Files} has thrown.
+   * @throws FileException if any method from {@link Files} has thrown.
    */
   @Override
-  public void clearAll() throws IOException {
+  public void clearAll() throws FileException {
     Path appDir = getAppDirectory(false);
     if (!Files.exists(appDir)) { // if directory does not exist
       log.debug("application directory does not exists. skip clear...");
       return; // nothing to do, so return.
     }
-
-    List<Path> paths = new ArrayList<>();
-
-    try (Stream<Path> pathStream = Files.walk(appDir)) {
-      pathStream.sorted(Comparator.reverseOrder()).forEachOrdered(paths::add);
-    }
-
+    List<Path> paths = collectByWalkDir(appDir);
     log.debug("collected {} paths to be deleted.", paths.size());
+    clearPaths(paths);
+    log.debug("application directory is cleared.");
+  }
 
+  private void clearPaths(List<Path> paths) throws FileDeleteException {
     for (Path fileOrDir : paths) {
-      Files.deleteIfExists(fileOrDir);
+      try {
+        Files.deleteIfExists(fileOrDir);
+      } catch (IOException e) {
+        throw new FileDeleteException("failed to delete " + fileOrDir.toAbsolutePath(), e);
+      }
       log.debug("deleted {}", fileOrDir);
     }
+  }
 
-    log.debug("application directory is cleared.");
+  private List<Path> collectByWalkDir(Path appDir) throws FileDeleteException {
+    List<Path> paths = new ArrayList<>();
+    try (Stream<Path> pathStream = Files.walk(appDir)) {
+      pathStream.sorted(Comparator.reverseOrder()).forEachOrdered(paths::add);
+    } catch (IOException e) {
+      throw new FileDeleteException("failed traversing subdirectories", e);
+    }
+    return paths;
   }
 
   /**
@@ -77,18 +88,18 @@ public class SimpleFileUtil implements FileUtil {
    * @param fileName required name of the file.
    * @param generate whether the file has to be generated.
    * @return Generated file path.
-   * @throws IOException thrown by either {{@link #getAppDirectory(boolean)}} or {@link
+   * @throws FileException thrown by either {{@link #getAppDirectory(boolean)}} or {@link
    *     Files#createFile(Path, FileAttribute[])}.
    */
   @Override
-  public Path getFilePath(String fileName, boolean generate) throws IOException {
+  public Path getFilePath(String fileName, boolean generate) throws FileException {
     Path appPath = getAppDirectory(true);
     Path filePath = Path.of(appPath.toString(), fileName);
     if (Files.exists(filePath)) {
       log.debug("grabbing existing file path from {}", filePath.toAbsolutePath());
     }
     if (!Files.exists(filePath) && generate) {
-      Files.createFile(filePath);
+      tryCreateFile(filePath);
       log.debug("generated new file at {}.", filePath.toAbsolutePath());
       if (isTemporary) {
         log.debug("marking delete on exit on {}", filePath.toAbsolutePath());
@@ -98,6 +109,16 @@ public class SimpleFileUtil implements FileUtil {
     return filePath;
   }
 
+  private void tryCreateFile(Path filePath) throws FileException {
+    try {
+      Files.createFile(filePath);
+    } catch (IOException e) {
+      FileException ex = new FileException("failed to crate file: " + filePath, e);
+      log.error(ex.getMessage(), ex);
+      throw ex;
+    }
+  }
+
   /**
    * Generates file path for given file name to the application directory. If application directory
    * does not exists, it will automatically generate one. If you wish to create file at the time
@@ -105,11 +126,11 @@ public class SimpleFileUtil implements FileUtil {
    *
    * @param filename required name of the file.
    * @return Generated file path.
-   * @throws IOException thrown by either {{@link #getAppDirectory(boolean)}} or {@link
+   * @throws FileException thrown by either {{@link #getAppDirectory(boolean)}} or {@link
    *     Files#createFile(Path, FileAttribute[])}.
    */
   @Override
-  public Path getFilePath(String filename) throws IOException {
+  public Path getFilePath(String filename) throws FileException {
     return getFilePath(filename, false);
   }
 
@@ -118,10 +139,10 @@ public class SimpleFileUtil implements FileUtil {
    *
    * @param generate if directory should be generated or not.
    * @return application directory.
-   * @throws IOException from {@link Files#createDirectory(Path, FileAttribute[])}.
+   * @throws FileException from {@link Files#createDirectory(Path, FileAttribute[])}.
    */
   @Override
-  public Path getAppDirectory(boolean generate) throws IOException {
+  public Path getAppDirectory(boolean generate) throws FileException {
     if (!dirCreated && Files.exists(appDirPath)) { // check if exists
       log.debug("found application directory exists: {}", appDirPath.toAbsolutePath());
       dirCreated = true;
@@ -130,7 +151,7 @@ public class SimpleFileUtil implements FileUtil {
 
     if (!dirCreated && generate) {
       log.debug("generating new application directory in {}", appDirPath.toAbsolutePath());
-      Files.createDirectory(appDirPath);
+      tryCreateDirectory(appDirPath);
       if (isTemporary()) {
         appDirPath.toFile().deleteOnExit();
         log.debug(
@@ -141,17 +162,28 @@ public class SimpleFileUtil implements FileUtil {
     return appDirPath;
   }
 
+  private void tryCreateDirectory(Path path) throws FileException {
+    try {
+      Files.createDirectory(path);
+    } catch (IOException e) {
+      FileException ex = new FileException("failed to create directory: " + path, e);
+      log.error("failed to create directory", ex);
+      throw ex;
+    }
+  }
+
   /**
    * Deletes a file from given path if exists.
    *
    * @param filename a file to be deleted.
    */
-  public void deleteFile(String filename) {
+  public void deleteFile(String filename) throws FileDeleteException {
     try {
       Files.deleteIfExists(Path.of(appDirPath.toAbsolutePath().toString(), filename));
     } catch (Exception e) {
-      throw new FileFetchException(
-          "failed to delete file: " + filename + ". reason: " + e.getMessage());
+      FileDeleteException ex = new FileDeleteException("failed to delete file: " + filename, e);
+      log.error(ex.getMessage(), ex);
+      throw ex;
     }
   }
 
@@ -172,9 +204,15 @@ public class SimpleFileUtil implements FileUtil {
    * @param filename a file to be checked.
    */
   @Override
-  public long getSize(String filename) throws IOException {
+  public long getSize(String filename) throws FileException {
     if (isExisting(filename)) {
-      return Files.size(Path.of(appDirPath.toAbsolutePath().toString(), filename));
+      try {
+        return Files.size(Path.of(appDirPath.toAbsolutePath().toString(), filename));
+      } catch (IOException e) {
+        FileException ex = new FileException("failed to fetch size from " + filename, e);
+        log.error(ex.getMessage(), ex);
+        throw ex;
+      }
     }
     return -1;
   }
@@ -185,14 +223,17 @@ public class SimpleFileUtil implements FileUtil {
    *
    * @param inputStream to read from.
    * @param filename to be written.
-   * @throws IOException
+   * @throws FileException delegated from IO operation.
    */
   @Override
-  public void copy(InputStream inputStream, String filename) throws IOException {
-    try (inputStream;
-        inputStream) {
+  public void copy(InputStream inputStream, String filename) throws FileException {
+    try (inputStream) {
       Path filepath = getFilePath(filename, true);
       Files.copy(inputStream, filepath, StandardCopyOption.REPLACE_EXISTING);
+    } catch (IOException e) {
+      FileException ex = new FileException("failed to copy " + filename, e);
+      log.error(ex.getMessage(), ex);
+      throw ex;
     }
   }
 

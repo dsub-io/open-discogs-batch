@@ -1,8 +1,8 @@
 package io.dsub.discogs.batch.util;
 
 import io.dsub.discogs.batch.argument.ArgType;
-import io.dsub.discogs.common.exception.InvalidArgumentException;
-import io.dsub.discogs.common.exception.MissingRequiredArgumentException;
+import io.dsub.discogs.batch.exception.InvalidArgumentException;
+import io.dsub.discogs.batch.exception.MissingRequiredArgumentException;
 import java.util.List;
 import java.util.Properties;
 import lombok.Getter;
@@ -39,7 +39,7 @@ public class DiscogsJobParametersConverter implements JobParametersConverter, In
    * @param args arguments to be parsed into {@link JobParameters}.
    * @return parsed result.
    */
-  public JobParameters getJobParameters(ApplicationArguments args) {
+  public JobParameters getJobParameters(ApplicationArguments args) throws InvalidArgumentException {
     PropertiesBuilder builder = new PropertiesBuilder();
 
     for (String optionName : args.getOptionNames()) { // option arguments for the beginning...

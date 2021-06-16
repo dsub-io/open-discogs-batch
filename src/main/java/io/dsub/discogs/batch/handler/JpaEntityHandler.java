@@ -4,7 +4,6 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -74,7 +73,7 @@ public interface JpaEntityHandler {
       name = field.getAnnotation(Column.class).name();
     } else {
       name = field.getAnnotation(JoinColumn.class).name();
-    };
+    }
     if (name.isBlank()) {
       name = field.getName();
     }
@@ -107,11 +106,13 @@ public interface JpaEntityHandler {
   }
 
   default String getTableName(Class<?> clazz) {
-    Assert.isTrue(clazz.isAnnotationPresent(Table.class), "class must has table annotation.");
-    return clazz.getAnnotation(Table.class).name();
+    if (clazz.isAnnotationPresent(Table.class)) {
+      return clazz.getAnnotation(Table.class).name();
+    }
+    return clazz.getSimpleName().replaceAll("([A-Z])", "_$1").toLowerCase();
   }
 
-  default Field getLastModifiedField(Class<?> clazz) {
+  default Field getLastModifiedAtField(Class<?> clazz) {
     return getFieldByAnnotation(clazz, LastModifiedDate.class);
   }
 
@@ -120,7 +121,9 @@ public interface JpaEntityHandler {
   }
 
   default boolean hasUniqueConstraints(Class<?> clazz) {
-    Assert.isTrue(clazz.isAnnotationPresent(Table.class), "class must has table annotation.");
+    if (!clazz.isAnnotationPresent(Table.class)) {
+      return false;
+    }
     return clazz.getAnnotation(Table.class).uniqueConstraints().length > 0;
   }
 
@@ -134,7 +137,7 @@ public interface JpaEntityHandler {
   default List<String> getUniqueConstraintColumns(Class<?> clazz) {
     if (!clazz.isAnnotationPresent(Table.class)
         || clazz.getAnnotation(Table.class).uniqueConstraints().length == 0) {
-      return Collections.emptyList();
+      return new ArrayList<>();
     }
     return Arrays.stream(clazz.getAnnotation(Table.class).uniqueConstraints())
         .map(UniqueConstraint::columnNames)
@@ -150,5 +153,30 @@ public interface JpaEntityHandler {
         .map(this::getColumnName)
         .filter(name -> !uqList.contains(name))
         .collect(Collectors.toList());
+  }
+
+  default List<String> getIdColumns(Class<?> clazz) {
+    return getMappedFields(clazz).stream()
+        .filter(this::isIdField)
+        .map(this::getColumnName)
+        .collect(Collectors.toList());
+  }
+
+  default List<String> getConstraintColumns(Class<?> clazz) {
+    List<String> constraintColumns = getUniqueConstraintColumns(clazz);
+    if (hasKnownId(clazz)) {
+      constraintColumns.addAll(getIdColumns(clazz));
+    }
+    return constraintColumns;
+  }
+
+  default List<String> getUpdateColumns(Class<?> clazz) {
+    List<String> columns = getColumnsWithoutConstraints(clazz);
+    Field createdAt = getCreatedAtField(clazz);
+    if (createdAt != null) {
+      columns.remove(getColumnName(getCreatedAtField(clazz)));
+    }
+    List<String> idColumns = getIdColumns(clazz);
+    return columns.stream().filter(col -> !idColumns.contains(col)).collect(Collectors.toList());
   }
 }

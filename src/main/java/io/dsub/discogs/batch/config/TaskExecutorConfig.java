@@ -37,7 +37,7 @@ public class TaskExecutorConfig {
   }
 
   private int getCoreCount(ApplicationArguments args) {
-    int coreCount =  DEFAULT_THROTTLE_LIMIT;
+    int coreCount = DEFAULT_THROTTLE_LIMIT;
     if (args.containsOption(CORE_COUNT.getGlobalName())) {
       int givenCnt = Integer.parseInt(args.getOptionValues(CORE_COUNT.getGlobalName()).get(0));
       log.info("found core count argument: {}", givenCnt);

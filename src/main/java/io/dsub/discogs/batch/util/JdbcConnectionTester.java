@@ -1,7 +1,7 @@
 package io.dsub.discogs.batch.util;
 
 import io.dsub.discogs.batch.argument.ArgType;
-import io.dsub.discogs.common.exception.InvalidArgumentException;
+import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
@@ -37,7 +37,7 @@ public class JdbcConnectionTester {
    *     <p>2. Any required parameters are missing.
    *     <p>3. Failure to load jdbc driver.
    */
-  public void testConnection(String[] args) {
+  public void testConnection(String[] args) throws InvalidArgumentException {
     testConnection(args, autoResolveJdbcDriver(args));
   }
 
@@ -151,7 +151,7 @@ public class JdbcConnectionTester {
    * @param args to be extracted.
    * @return driver class name. default is com.mysql.cj.jdbc.Driver.
    */
-  public String autoResolveJdbcDriver(String[] args) {
+  public String autoResolveJdbcDriver(String[] args) throws InvalidArgumentException {
     Map<String, String> jdbcArgs = parseJdbcArgs(new DefaultApplicationArguments(args));
     String url = jdbcArgs.get(URL);
     if (url.matches(".*postgresql.*")) {

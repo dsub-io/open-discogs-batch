@@ -17,11 +17,14 @@ import io.dsub.discogs.batch.domain.release.ReleaseXML.Format;
 import io.dsub.discogs.batch.dump.DiscogsDump;
 import io.dsub.discogs.batch.dump.DumpType;
 import io.dsub.discogs.batch.dump.service.DiscogsDumpService;
+import io.dsub.discogs.batch.exception.DumpNotFoundException;
+import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import io.dsub.discogs.batch.job.listener.StopWatchStepExecutionListener;
 import io.dsub.discogs.batch.job.listener.StringFieldNormalizingItemReadListener;
 import io.dsub.discogs.batch.job.reader.DiscogsDumpItemReaderBuilder;
 import io.dsub.discogs.batch.job.tasklet.FileClearTasklet;
 import io.dsub.discogs.batch.job.tasklet.FileFetchTasklet;
+import io.dsub.discogs.batch.job.tasklet.QueryExecutionTasklet;
 import io.dsub.discogs.batch.job.writer.ClassifierCompositeCollectionItemWriter;
 import io.dsub.discogs.batch.query.QueryBuilder;
 import io.dsub.discogs.batch.util.DefaultMalformedDateParser;
@@ -47,6 +50,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import javax.sql.DataSource;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.JobScope;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
@@ -64,12 +68,14 @@ import org.springframework.classify.Classifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.dao.DeadlockLoserDataAccessException;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
 
+@Slf4j
 @Configuration
 @RequiredArgsConstructor
-public class ReleaseItemStepConfig extends AbstractStepConfig {
+public class ReleaseItemStepConfig extends AbstractStepConfig<BatchCommand> {
 
   private static final String ETAG = "#{jobParameters['release']}";
   private static final String RELEASE_STEP_FLOW = "release step flow";
@@ -78,6 +84,9 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
   private static final String RELEASE_SUB_ITEMS_STEP = "release sub items step";
   private static final String RELEASE_FILE_FETCH_STEP = "release file fetch step";
   private static final String RELEASE_FILE_CLEAR_STEP = "release file clear step";
+  private static final String RELEASE_TEMPORARY_TABLES_PRUNE_STEP =
+      "release temporary tables prune step";
+  private static final String RELEASE_SELECT_INSERT_STEP = "release select insert step";
 
   private final QueryBuilder<BaseEntity> queryBuilder;
   private final DataSource dataSource;
@@ -90,6 +99,20 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
   private final DiscogsDumpItemReaderBuilder readerBuilder;
   private final FileUtil fileUtil;
   private final Map<DumpType, DiscogsDump> dumpMap;
+  private final JdbcTemplate jdbcTemplate;
+  private List<Class<? extends BaseEntity>> entities =
+      List.of(ReleaseItem.class,
+          ReleaseItemArtist.class,
+          ReleaseItemFormat.class,
+          ReleaseItemCreditedArtist.class,
+          ReleaseItemIdentifier.class,
+          ReleaseItemTrack.class,
+          ReleaseItemWork.class,
+          ReleaseItemVideo.class,
+          ReleaseItemFormat.class,
+          ReleaseItemGenre.class,
+          ReleaseItemStyle.class,
+          LabelRelease.class);
 
   ///////////////////////////////////////////////////////////////////////////
   // STEPS
@@ -97,7 +120,8 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
 
   @Bean
   @JobScope
-  public Step releaseStep(@Value(ETAG) String eTag) {
+  public Step releaseStep(@Value(ETAG) String eTag)
+      throws InvalidArgumentException, DumpNotFoundException {
     if (eTag == null || eTag.isBlank()) {
       return buildSkipStep(DumpType.RELEASE, sbf);
     }
@@ -106,17 +130,29 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
         new FlowBuilder<SimpleFlow>(RELEASE_STEP_FLOW)
             .from(releaseFileFetchStep())
             .on(FAILED)
-            .end()
+            .to(releaseFileClearStep())
             .from(releaseFileFetchStep())
             .on(ANY)
             .to(releaseItemCoreStep(null))
             .from(releaseItemCoreStep(null))
             .on(FAILED)
-            .end()
+            .to(releaseFileClearStep())
             .from(releaseItemCoreStep(null))
             .on(ANY)
             .to(releaseItemSubItemsStep(null))
             .from(releaseItemSubItemsStep(null))
+            .on(FAILED)
+            .to(releaseFileClearStep())
+            .from(releaseItemSubItemsStep(null))
+            .on(ANY)
+            .to(releaseItemTemporaryTablesPruneStep())
+            .from(releaseItemTemporaryTablesPruneStep())
+            .on(FAILED)
+            .to(releaseFileClearStep())
+            .from(releaseItemTemporaryTablesPruneStep())
+            .on(ANY)
+            .to(releaseItemSelectInsertStep())
+            .from(releaseItemSelectInsertStep())
             .on(ANY)
             .to(releaseFileClearStep())
             .from(releaseFileClearStep())
@@ -133,7 +169,7 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
 
   @Bean
   @JobScope
-  public Step releaseItemCoreStep(@Value(CHUNK) Integer chunkSize) {
+  public Step releaseItemCoreStep(@Value(CHUNK) Integer chunkSize) throws InvalidArgumentException {
     return sbf.get(RELEASE_CORE_STEP)
         .<ReleaseXML, ReleaseItemCommand>chunk(chunkSize)
         .reader(releaseStreamReader())
@@ -171,7 +207,7 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
 
   @Bean
   @JobScope
-  public Step releaseFileFetchStep() {
+  public Step releaseFileFetchStep() throws DumpNotFoundException {
     return sbf.get(RELEASE_FILE_FETCH_STEP)
         .tasklet(new FileFetchTasklet(releaseItemDump(null), fileUtil))
         .build();
@@ -185,7 +221,30 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
 
   @Bean
   @JobScope
-  public DiscogsDump releaseItemDump(@Value(ETAG) String eTag) {
+  public Step releaseItemTemporaryTablesPruneStep() {
+    List<String> queries = entities.stream()
+        .filter(clazz -> clazz != ReleaseItem.class)
+        .map(queryBuilder::getPruneQuery)
+        .collect(Collectors.toList());
+    return sbf.get(RELEASE_TEMPORARY_TABLES_PRUNE_STEP)
+        .tasklet(new QueryExecutionTasklet(queries, jdbcTemplate))
+        .build();
+  }
+
+  @Bean
+  @JobScope
+  public Step releaseItemSelectInsertStep() {
+    List<String> queries = entities.stream()
+        .map(queryBuilder::getSelectInsertQuery)
+        .collect(Collectors.toList());
+    return sbf.get(RELEASE_SELECT_INSERT_STEP)
+        .tasklet(new QueryExecutionTasklet(queries, jdbcTemplate))
+        .build();
+  }
+
+  @Bean
+  @JobScope
+  public DiscogsDump releaseItemDump(@Value(ETAG) String eTag) throws DumpNotFoundException {
     DiscogsDump dump = dumpService.getDiscogsDump(eTag);
     dumpMap.put(DumpType.RELEASE, dump);
     return dump;
@@ -363,34 +422,12 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
     writer.setClassifier(
         (Classifier<BatchCommand, ItemWriter<? super BatchCommand>>)
             classifiable -> {
-              if (classifiable instanceof ReleaseItemArtistCommand) {
-                return releaseItemArtistWriter();
+              try {
+                return classify(classifiable);
+              } catch (InvalidArgumentException e) {
+                log.error(e.getMessage(), e);
               }
-              if (classifiable instanceof ReleaseItemCreditedArtistCommand) {
-                return releaseItemCreditedArtistWriter();
-              }
-              if (classifiable instanceof ReleaseItemGenreCommand) {
-                return releaseItemGenreWriter();
-              }
-              if (classifiable instanceof ReleaseItemStyleCommand) {
-                return releaseItemStyleWriter();
-              }
-              if (classifiable instanceof ReleaseItemVideoCommand) {
-                return releaseItemVideoWriter();
-              }
-              if (classifiable instanceof ReleaseItemTrackCommand) {
-                return releaseItemTrackWriter();
-              }
-              if (classifiable instanceof ReleaseItemFormatCommand) {
-                return releaseItemFormatWriter();
-              }
-              if (classifiable instanceof ReleaseItemIdentifierCommand) {
-                return releaseItemIdentifierWriter();
-              }
-              if (classifiable instanceof LabelReleaseCommand) {
-                return labelReleaseItemWriter();
-              }
-              return releaseItemWorkWriter();
+              return null;
             });
 
     return writer;
@@ -398,68 +435,76 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
 
   @Bean
   @StepScope
-  public ItemWriter<ReleaseItemCommand> releaseItemWriter() {
+  public ItemWriter<BatchCommand> releaseItemWriter() throws InvalidArgumentException {
     return buildItemWriter(queryBuilder.getTemporaryInsertQuery(ReleaseItem.class), dataSource);
   }
 
   @Bean
   @StepScope
-  public ItemWriter<BatchCommand> releaseItemArtistWriter() {
-    return buildItemWriter(queryBuilder.getTemporaryInsertQuery(ReleaseItemArtist.class), dataSource);
+  public ItemWriter<BatchCommand> releaseItemArtistWriter() throws InvalidArgumentException {
+    return buildItemWriter(
+        queryBuilder.getTemporaryInsertQuery(ReleaseItemArtist.class), dataSource);
   }
 
   @Bean
   @StepScope
-  public ItemWriter<BatchCommand> releaseItemCreditedArtistWriter() {
+  public ItemWriter<BatchCommand> releaseItemCreditedArtistWriter()
+      throws InvalidArgumentException {
     return buildItemWriter(
         queryBuilder.getTemporaryInsertQuery(ReleaseItemCreditedArtist.class), dataSource);
   }
 
   @Bean
   @StepScope
-  public ItemWriter<BatchCommand> releaseItemGenreWriter() {
-    return buildItemWriter(queryBuilder.getTemporaryInsertQuery(ReleaseItemGenre.class), dataSource);
+  public ItemWriter<BatchCommand> releaseItemGenreWriter() throws InvalidArgumentException {
+    return buildItemWriter(
+        queryBuilder.getTemporaryInsertQuery(ReleaseItemGenre.class), dataSource);
   }
 
   @Bean
   @StepScope
-  public ItemWriter<BatchCommand> releaseItemStyleWriter() {
-    return buildItemWriter(queryBuilder.getTemporaryInsertQuery(ReleaseItemStyle.class), dataSource);
+  public ItemWriter<BatchCommand> releaseItemStyleWriter() throws InvalidArgumentException {
+    return buildItemWriter(
+        queryBuilder.getTemporaryInsertQuery(ReleaseItemStyle.class), dataSource);
   }
 
   @Bean
   @StepScope
-  public ItemWriter<BatchCommand> releaseItemVideoWriter() {
-    return buildItemWriter(queryBuilder.getTemporaryInsertQuery(ReleaseItemVideo.class), dataSource);
+  public ItemWriter<BatchCommand> releaseItemVideoWriter() throws InvalidArgumentException {
+    return buildItemWriter(
+        queryBuilder.getTemporaryInsertQuery(ReleaseItemVideo.class), dataSource);
   }
 
   @Bean
   @StepScope
-  public ItemWriter<BatchCommand> releaseItemWorkWriter() {
+  public ItemWriter<BatchCommand> releaseItemWorkWriter() throws InvalidArgumentException {
     return buildItemWriter(queryBuilder.getTemporaryInsertQuery(ReleaseItemWork.class), dataSource);
   }
 
   @Bean
   @StepScope
-  public ItemWriter<BatchCommand> releaseItemFormatWriter() {
-    return buildItemWriter(queryBuilder.getTemporaryInsertQuery(ReleaseItemFormat.class), dataSource);
+  public ItemWriter<BatchCommand> releaseItemFormatWriter() throws InvalidArgumentException {
+    return buildItemWriter(
+        queryBuilder.getTemporaryInsertQuery(ReleaseItemFormat.class), dataSource);
   }
 
   @Bean
   @StepScope
-  public ItemWriter<BatchCommand> releaseItemIdentifierWriter() {
-    return buildItemWriter(queryBuilder.getTemporaryInsertQuery(ReleaseItemIdentifier.class), dataSource);
+  public ItemWriter<BatchCommand> releaseItemIdentifierWriter() throws InvalidArgumentException {
+    return buildItemWriter(
+        queryBuilder.getTemporaryInsertQuery(ReleaseItemIdentifier.class), dataSource);
   }
 
   @Bean
   @StepScope
-  public ItemWriter<BatchCommand> releaseItemTrackWriter() {
-    return buildItemWriter(queryBuilder.getTemporaryInsertQuery(ReleaseItemTrack.class), dataSource);
+  public ItemWriter<BatchCommand> releaseItemTrackWriter() throws InvalidArgumentException {
+    return buildItemWriter(
+        queryBuilder.getTemporaryInsertQuery(ReleaseItemTrack.class), dataSource);
   }
 
   @Bean
   @StepScope
-  public ItemWriter<BatchCommand> labelReleaseItemWriter() {
+  public ItemWriter<BatchCommand> labelReleaseItemWriter() throws InvalidArgumentException {
     return buildItemWriter(queryBuilder.getTemporaryInsertQuery(LabelRelease.class), dataSource);
   }
 
@@ -477,5 +522,38 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
     return format.getDescription().stream()
         .map(desc -> "[d:" + desc + "]")
         .collect(Collectors.joining(","));
+  }
+
+  @Override
+  protected ItemWriter<? super BatchCommand> classify(BatchCommand classifiable)
+      throws InvalidArgumentException {
+    if (classifiable instanceof ReleaseItemArtistCommand) {
+      return releaseItemArtistWriter();
+    }
+    if (classifiable instanceof ReleaseItemCreditedArtistCommand) {
+      return releaseItemCreditedArtistWriter();
+    }
+    if (classifiable instanceof ReleaseItemGenreCommand) {
+      return releaseItemGenreWriter();
+    }
+    if (classifiable instanceof ReleaseItemStyleCommand) {
+      return releaseItemStyleWriter();
+    }
+    if (classifiable instanceof ReleaseItemVideoCommand) {
+      return releaseItemVideoWriter();
+    }
+    if (classifiable instanceof ReleaseItemTrackCommand) {
+      return releaseItemTrackWriter();
+    }
+    if (classifiable instanceof ReleaseItemFormatCommand) {
+      return releaseItemFormatWriter();
+    }
+    if (classifiable instanceof ReleaseItemIdentifierCommand) {
+      return releaseItemIdentifierWriter();
+    }
+    if (classifiable instanceof LabelReleaseCommand) {
+      return labelReleaseItemWriter();
+    }
+    return releaseItemWorkWriter();
   }
 }

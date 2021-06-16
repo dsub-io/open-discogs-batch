@@ -8,8 +8,8 @@ import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.doReturn;
 
 import io.dsub.discogs.batch.condition.RequiresDiscogsDataConnection;
+import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import io.dsub.discogs.batch.testutil.LogSpy;
-import io.dsub.discogs.common.exception.InvalidArgumentException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -187,6 +187,8 @@ class DefaultDumpSupplierUnitTest {
         Long value = Long.parseLong(node.getTextContent());
         assertThat(dumpSupplier.getSize(node)).isEqualTo(value);
       }
+    } catch (InvalidArgumentException e) {
+      fail(e);
     }
   }
 
@@ -212,6 +214,8 @@ class DefaultDumpSupplierUnitTest {
           }
         }
       }
+    } catch (InvalidArgumentException e) {
+      fail(e);
     }
   }
 

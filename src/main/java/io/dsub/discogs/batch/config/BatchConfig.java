@@ -1,17 +1,15 @@
 package io.dsub.discogs.batch.config;
 
-import io.dsub.discogs.batch.datasource.DBType;
-import io.dsub.discogs.batch.datasource.DataSourceProperties;
 import io.dsub.discogs.batch.dump.DiscogsDump;
 import io.dsub.discogs.batch.dump.DumpType;
-import io.dsub.discogs.batch.job.listener.MysqlLockHandlingJobExecutionListener;
-import io.dsub.discogs.batch.job.listener.PostgresLockHandlingJobExecutionListener;
+import io.dsub.discogs.batch.job.listener.TemporaryTableHandlingJobExecutionListener;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import javax.sql.DataSource;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.Job;
+import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobExecutionListener;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.BatchConfigurer;
@@ -26,7 +24,6 @@ import org.springframework.batch.core.repository.support.JobRepositoryFactoryBea
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.TaskExecutor;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.transaction.PlatformTransactionManager;
 
@@ -49,9 +46,9 @@ public class BatchConfig implements BatchConfigurer {
   private final Step labelStep;
   private final Step masterStep;
   private final Step releaseStep;
-  private final JdbcTemplate jdbcTemplate;
   private final TaskExecutor batchTaskExecutor;
-  private final DataSourceProperties dataSourceProperties;
+  private final TemporaryTableHandlingJobExecutionListener
+      temporaryTableHandlingJobExecutionListener;
 
   @Override
   public JobRepository getJobRepository() throws Exception {
@@ -85,29 +82,6 @@ public class BatchConfig implements BatchConfigurer {
   }
 
   @Bean
-  public JobExecutionListener lockHandlingJobExecutionListener(JdbcTemplate jdbcTemplate) {
-
-    JobExecutionListener listener = null;
-
-    DBType dbType = dataSourceProperties.getDbType();
-
-    switch (dbType) {
-      case MYSQL:
-        listener = new MysqlLockHandlingJobExecutionListener(jdbcTemplate);
-        break;
-      case POSTGRESQL:
-        listener = new PostgresLockHandlingJobExecutionListener(jdbcTemplate);
-        break;
-      default:
-        break;
-    }
-    if (listener == null) {
-      throw new UnsupportedOperationException("DBType " + dbType + " is not supported.");
-    }
-    return listener;
-  }
-
-  @Bean
   public Map<DumpType, DiscogsDump> dumpMap() {
     return new HashMap<>();
   }
@@ -116,7 +90,16 @@ public class BatchConfig implements BatchConfigurer {
   public Job discogsBatchJob() {
     return jobBuilderFactory
         .get(JOB_NAME)
-        .listener(lockHandlingJobExecutionListener(jdbcTemplate))
+        .listener(temporaryTableHandlingJobExecutionListener)
+        .listener(new JobExecutionListener(){
+          @Override
+          public void beforeJob(JobExecution jobExecution) {}
+          @Override
+          public void afterJob(JobExecution jobExecution) {
+            Runtime current = Runtime.getRuntime();
+            current.addShutdownHook(new Thread(() -> System.out.println("shutdown hook initiated")));
+          }
+        })
         .start(artistStep)
         .on(FAILED)
         .end()

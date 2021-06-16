@@ -3,6 +3,7 @@ package io.dsub.discogs.batch.util;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import io.dsub.discogs.batch.exception.FileException;
 import io.dsub.discogs.batch.testutil.LogSpy;
 import java.io.File;
 import java.io.IOException;
@@ -51,9 +52,11 @@ class SimpleFileUtilTest {
                 .map(File::delete)
                 .collect(Collectors.toList());
         assertThat(lists).doesNotContain(false);
+      } catch (IOException e) {
+        fail(e);
       }
       this.fileUtil = null;
-    } catch (IOException e) {
+    } catch (FileException e) {
       fail(e);
     }
   }
@@ -76,7 +79,7 @@ class SimpleFileUtilTest {
         assertThat(filePath).doesNotExist();
       }
 
-    } catch (IOException e) {
+    } catch (FileException e) {
       fail(e);
     } finally {
       Thread.sleep(500);
@@ -88,7 +91,7 @@ class SimpleFileUtilTest {
     try {
       Path p = fileUtil.getFilePath("test-name", false);
       assertThat(p).doesNotExist().hasFileName("test-name");
-    } catch (IOException e) {
+    } catch (FileException e) {
       fail(e);
     }
   }
@@ -98,7 +101,7 @@ class SimpleFileUtilTest {
     try {
       Path p = fileUtil.getFilePath("test-name", true);
       assertThat(p).exists().hasFileName("test-name");
-    } catch (IOException e) {
+    } catch (FileException e) {
       fail(e);
     }
   }
@@ -108,7 +111,7 @@ class SimpleFileUtilTest {
     try {
       Path appDir = fileUtil.getAppDirectory(false);
       assertThat(appDir).doesNotExist();
-    } catch (IOException e) {
+    } catch (FileException e) {
       fail(e);
     }
   }
@@ -118,7 +121,7 @@ class SimpleFileUtilTest {
     try {
       Path appDir = fileUtil.getAppDirectory(true);
       assertThat(appDir).exists();
-    } catch (IOException e) {
+    } catch (FileException e) {
       fail(e);
     }
   }

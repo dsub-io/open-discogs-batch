@@ -10,12 +10,14 @@ import io.dsub.discogs.batch.domain.master.MasterXML;
 import io.dsub.discogs.batch.dump.DiscogsDump;
 import io.dsub.discogs.batch.dump.DumpType;
 import io.dsub.discogs.batch.dump.service.DiscogsDumpService;
+import io.dsub.discogs.batch.exception.DumpNotFoundException;
+import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import io.dsub.discogs.batch.job.listener.StopWatchStepExecutionListener;
 import io.dsub.discogs.batch.job.listener.StringFieldNormalizingItemReadListener;
 import io.dsub.discogs.batch.job.reader.DiscogsDumpItemReaderBuilder;
 import io.dsub.discogs.batch.job.tasklet.FileClearTasklet;
 import io.dsub.discogs.batch.job.tasklet.FileFetchTasklet;
-import io.dsub.discogs.batch.job.writer.ClassifierCompositeCollectionItemWriter;
+import io.dsub.discogs.batch.job.tasklet.QueryExecutionTasklet;
 import io.dsub.discogs.batch.query.QueryBuilder;
 import io.dsub.discogs.batch.util.FileUtil;
 import io.dsub.discogs.common.entity.Genre;
@@ -38,6 +40,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import javax.sql.DataSource;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.JobScope;
@@ -53,16 +56,17 @@ import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.support.SynchronizedItemStreamReader;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.classify.Classifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.dao.DeadlockLoserDataAccessException;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
 
+@Slf4j
 @Configuration
 @RequiredArgsConstructor
-public class MasterStepConfig extends AbstractStepConfig {
+public class MasterStepConfig extends AbstractStepConfig<BatchCommand> {
 
   private static final String ETAG = "#{jobParameters['master']}";
   private static final String MASTER_STEP_FLOW = "master step flow";
@@ -72,6 +76,9 @@ public class MasterStepConfig extends AbstractStepConfig {
   private static final String MASTER_FILE_FETCH_STEP = "master file fetch step";
   private static final String MASTER_FILE_CLEAR_STEP = "master file clear step";
   private static final String MASTER_PRE_STEP = "master pre step";
+  private static final String MASTER_TEMPORARY_TABLES_PRUNE_STEP =
+      "master temporary tables prune step";
+  private static final String MASTER_SELECT_INSERT_STEP = "master select insert step";
 
   private final QueryBuilder<BaseEntity> queryBuilder;
   private final GenreRepository genreRepository;
@@ -85,10 +92,19 @@ public class MasterStepConfig extends AbstractStepConfig {
   private final DiscogsDumpItemReaderBuilder readerBuilder;
   private final FileUtil fileUtil;
   private final Map<DumpType, DiscogsDump> dumpMap;
+  private final JdbcTemplate jdbcTemplate;
+  private final List<Class<? extends BaseEntity>> entities =
+      List.of(
+          Master.class,
+          MasterStyle.class,
+          MasterGenre.class,
+          MasterArtist.class,
+          MasterVideo.class);
 
   @Bean
   @JobScope
-  public Step masterStep(@Value(ETAG) String eTag) {
+  public Step masterStep(@Value(ETAG) String eTag)
+      throws InvalidArgumentException, DumpNotFoundException {
     if (eTag == null || eTag.isBlank()) {
       return buildSkipStep(DumpType.MASTER, sbf);
     }
@@ -97,23 +113,35 @@ public class MasterStepConfig extends AbstractStepConfig {
         new FlowBuilder<SimpleFlow>(MASTER_STEP_FLOW)
             .from(masterFileFetchStep())
             .on(FAILED)
-            .end()
+            .to(masterFileClearStep())
             .from(masterFileFetchStep())
             .on(ANY)
             .to(masterGenreStyleStep())
             .from(masterGenreStyleStep())
             .on(FAILED)
-            .end()
+            .to(masterFileClearStep())
             .from(masterGenreStyleStep())
             .on(ANY)
             .to(masterCoreStep(null))
             .from(masterCoreStep(null))
             .on(FAILED)
-            .end()
+            .to(masterFileClearStep())
             .from(masterCoreStep(null))
             .on(ANY)
             .to(masterSubItemsStep(null))
             .from(masterSubItemsStep(null))
+            .on(FAILED)
+            .to(masterFileClearStep())
+            .from(masterSubItemsStep(null))
+            .on(ANY)
+            .to(masterTemporaryTablesPruneStep())
+            .from(masterTemporaryTablesPruneStep())
+            .on(FAILED)
+            .to(masterFileClearStep())
+            .from(masterTemporaryTablesPruneStep())
+            .on(ANY)
+            .to(masterSelectInsertStep())
+            .from(masterSelectInsertStep())
             .on(ANY)
             .to(masterFileClearStep())
             .from(masterFileClearStep())
@@ -130,7 +158,7 @@ public class MasterStepConfig extends AbstractStepConfig {
 
   @Bean
   @JobScope
-  public DiscogsDump masterDump(@Value(ETAG) String eTag) {
+  public DiscogsDump masterDump(@Value(ETAG) String eTag) throws DumpNotFoundException {
     DiscogsDump dump = dumpService.getDiscogsDump(eTag);
     dumpMap.put(DumpType.MASTER, dump);
     return dump;
@@ -138,7 +166,7 @@ public class MasterStepConfig extends AbstractStepConfig {
 
   @Bean
   @JobScope
-  public Step masterFileFetchStep() {
+  public Step masterFileFetchStep() throws DumpNotFoundException {
     return sbf.get(MASTER_FILE_FETCH_STEP)
         .tasklet(new FileFetchTasklet(masterDump(null), fileUtil))
         .build();
@@ -190,9 +218,9 @@ public class MasterStepConfig extends AbstractStepConfig {
 
   @Bean
   @JobScope
-  public Step masterCoreStep(@Value(CHUNK) Integer chunkSize) {
+  public Step masterCoreStep(@Value(CHUNK) Integer chunkSize) throws InvalidArgumentException {
     return sbf.get(MASTER_CORE_STEP)
-        .<MasterXML, MasterCommand>chunk(chunkSize)
+        .<MasterXML, BatchCommand>chunk(chunkSize)
         .reader(masterStreamReader())
         .processor(masterProcessor())
         .writer(masterWriter())
@@ -223,6 +251,28 @@ public class MasterStepConfig extends AbstractStepConfig {
         .taskExecutor(taskExecutor)
         .transactionManager(transactionManager)
         .throttleLimit(taskExecutor.getMaxPoolSize())
+        .build();
+  }
+
+  @Bean
+  @StepScope
+  public Step masterTemporaryTablesPruneStep() {
+    List<String> queries = entities.stream()
+        .filter(clazz -> clazz != Master.class)
+        .map(queryBuilder::getPruneQuery)
+        .collect(Collectors.toList());
+    return sbf.get(MASTER_TEMPORARY_TABLES_PRUNE_STEP)
+        .tasklet(new QueryExecutionTasklet(queries, jdbcTemplate))
+        .build();
+  }
+
+  @Bean
+  @StepScope
+  public Step masterSelectInsertStep() {
+    List<String> queries = entities.stream().map(queryBuilder::getSelectInsertQuery)
+        .collect(Collectors.toList());
+    return sbf.get(MASTER_SELECT_INSERT_STEP)
+        .tasklet(new QueryExecutionTasklet(queries, jdbcTemplate))
         .build();
   }
 
@@ -300,53 +350,52 @@ public class MasterStepConfig extends AbstractStepConfig {
 
   @Bean
   @StepScope
-  ItemWriter<MasterCommand> masterWriter() {
+  ItemWriter<BatchCommand> masterWriter() throws InvalidArgumentException {
     return buildItemWriter(queryBuilder.getTemporaryInsertQuery(Master.class), dataSource);
   }
 
   @Bean
   @StepScope
   ItemWriter<Collection<BatchCommand>> masterSubItemsWriter() {
-    ClassifierCompositeCollectionItemWriter<BatchCommand> writer =
-        new ClassifierCompositeCollectionItemWriter<>();
-    writer.setClassifier(
-        (Classifier<BatchCommand, ItemWriter<? super BatchCommand>>)
-            classifiable -> {
-              if (classifiable instanceof MasterStyleCommand) {
-                return masterStyleItemWriter();
-              }
-              if (classifiable instanceof MasterVideoCommand) {
-                return masterVideoItemWriter();
-              }
-              if (classifiable instanceof MasterGenreCommand) {
-                return masterGenreItemWriter();
-              }
-              return masterArtistItemWriter();
-            });
-    return writer;
+    return getClassifierCollectionItemWriter();
   }
 
   @Bean
   @StepScope
-  public ItemWriter<BatchCommand> masterStyleItemWriter() {
+  public ItemWriter<BatchCommand> masterStyleItemWriter() throws InvalidArgumentException {
     return buildItemWriter(queryBuilder.getTemporaryInsertQuery(MasterStyle.class), dataSource);
   }
 
   @Bean
   @StepScope
-  public ItemWriter<BatchCommand> masterGenreItemWriter() {
+  public ItemWriter<BatchCommand> masterGenreItemWriter() throws InvalidArgumentException {
     return buildItemWriter(queryBuilder.getTemporaryInsertQuery(MasterGenre.class), dataSource);
   }
 
   @Bean
   @StepScope
-  public ItemWriter<BatchCommand> masterArtistItemWriter() {
+  public ItemWriter<BatchCommand> masterArtistItemWriter() throws InvalidArgumentException {
     return buildItemWriter(queryBuilder.getTemporaryInsertQuery(MasterArtist.class), dataSource);
   }
 
   @Bean
   @StepScope
-  public ItemWriter<BatchCommand> masterVideoItemWriter() {
+  public ItemWriter<BatchCommand> masterVideoItemWriter() throws InvalidArgumentException {
     return buildItemWriter(queryBuilder.getTemporaryInsertQuery(MasterVideo.class), dataSource);
+  }
+
+  @Override
+  protected ItemWriter<? super BatchCommand> classify(BatchCommand classifiable)
+      throws InvalidArgumentException {
+    if (classifiable instanceof MasterStyleCommand) {
+      return masterStyleItemWriter();
+    }
+    if (classifiable instanceof MasterVideoCommand) {
+      return masterVideoItemWriter();
+    }
+    if (classifiable instanceof MasterGenreCommand) {
+      return masterGenreItemWriter();
+    }
+    return masterArtistItemWriter();
   }
 }

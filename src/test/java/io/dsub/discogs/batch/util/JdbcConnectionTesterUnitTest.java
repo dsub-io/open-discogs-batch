@@ -5,7 +5,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import io.dsub.discogs.common.exception.InvalidArgumentException;
+import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -66,7 +66,7 @@ class JdbcConnectionTesterUnitTest {
   }
 
   @Test
-  void shouldParseProperly() {
+  void shouldParseProperly() throws InvalidArgumentException {
     String[] arguments = {"url=something", "username=un", "password=pw"};
     ApplicationArguments args = new DefaultApplicationArguments(arguments);
     Map<String, String> parsedArgs = tester.parseJdbcArgs(args);

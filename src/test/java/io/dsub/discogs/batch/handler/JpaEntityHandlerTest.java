@@ -68,7 +68,7 @@ class JpaEntityHandlerTest {
     class TestEntity {}
 
     // when
-    Field field = jpaEntityExtractor.getLastModifiedField(TestEntity.class);
+    Field field = jpaEntityExtractor.getLastModifiedAtField(TestEntity.class);
 
     // then
     assertThat(field).isNull();
@@ -82,7 +82,7 @@ class JpaEntityHandlerTest {
     }
 
     // when
-    Field lastModifiedField = jpaEntityExtractor.getLastModifiedField(Artist.class);
+    Field lastModifiedField = jpaEntityExtractor.getLastModifiedAtField(Artist.class);
 
     // then
     assertThat(lastModifiedField).isNotNull();
@@ -337,8 +337,7 @@ class JpaEntityHandlerTest {
       @Column(name = "id")
       Long id;
 
-      @JoinColumn
-      TestEntity other;
+      @JoinColumn TestEntity other;
     }
     Field joinColumnField = TestEntity.class.getDeclaredField("other");
     // when
@@ -352,14 +351,10 @@ class JpaEntityHandlerTest {
   void givenEntityHasBothColumnsAndJoinColumns__WhenGetPlainColumns__ShouldReturnAsSuch() {
     // given
     class TestEntity {
-      @Column
-      String first;
-      @Column
-      String second;
-      @JoinColumn
-      String third;
-      @JoinColumn
-      String fourth;
+      @Column String first;
+      @Column String second;
+      @JoinColumn String third;
+      @JoinColumn String fourth;
     }
 
     // when
@@ -373,14 +368,10 @@ class JpaEntityHandlerTest {
   void givenEntityHasBothColumnsAndJoinColumns__WhenGetJoinColumns__ShouldReturnAsSuch() {
     // given
     class TestEntity {
-      @Column
-      String first;
-      @Column
-      String second;
-      @JoinColumn
-      String third;
-      @JoinColumn
-      String fourth;
+      @Column String first;
+      @Column String second;
+      @JoinColumn String third;
+      @JoinColumn String fourth;
     }
 
     // when

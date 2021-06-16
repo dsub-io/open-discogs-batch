@@ -1,6 +1,7 @@
 package io.dsub.discogs.batch.job.tasklet;
 
 import io.dsub.discogs.batch.dump.DiscogsDump;
+import io.dsub.discogs.batch.exception.FileException;
 import io.dsub.discogs.batch.util.FileUtil;
 import io.dsub.discogs.batch.util.ProgressBarUtil;
 import java.io.IOException;
@@ -43,46 +44,71 @@ public class FileFetchTasklet implements Tasklet {
 
     String filename = targetDump.getFileName();
     long filesize;
-
     try {
       filesize = fileUtil.getSize(filename);
-      if (filesize > 0) {
-        log.info("found duplicated file: {}. checking size...", filename);
-        if (!targetDump.getSize().equals(filesize)) { // should delete then fetch again.
-          log.info("incomplete size. deleting current file...");
-          try {
-            fileUtil.deleteFile(targetDump.getFileName());
-          } catch (IOException e) {
-            log.error("failed to delete incomplete file: {}", filename, e);
-            chunkContext.setComplete();
-            contribution.setExitStatus(ExitStatus.FAILED);
-            return RepeatStatus.FINISHED;
-          }
-        } else {
-          log.info("file already exists. proceeding...");
-          chunkContext.setComplete();
-          contribution.setExitStatus(ExitStatus.COMPLETED);
-          return RepeatStatus.FINISHED;
-        }
-      }
-
-      String message = "fetching " + targetDump.getFileName() + "...";
-
-      try (InputStream inputStream = wrapInputStream(targetDump.getInputStream(), message)) {
-        log.info(message);
-        fileUtil.copy(inputStream, targetDump.getFileName());
-        contribution.setExitStatus(ExitStatus.COMPLETED);
-      }
-
-      chunkContext.setComplete();
-      return RepeatStatus.FINISHED;
-
-    } catch (IOException e) {
-      log.error("failed to fetch file: {}", filename, e);
-      contribution.setExitStatus(ExitStatus.FAILED);
-      chunkContext.setComplete();
-      return RepeatStatus.FINISHED;
+    } catch (FileException e) {
+      log.error(e.getMessage(), e);
+      return concludeFailure(contribution, chunkContext);
     }
+
+    boolean fileExists = filesize > 0;
+    boolean filesizeMatches = filesize == targetDump.getSize();
+
+    if (fileExists) {
+      log.info("found duplicated file: {}. checking size...", filename);
+      if (filesizeMatches) {
+        log.info("file already exists. proceeding...");
+        chunkContext.setComplete();
+        contribution.setExitStatus(ExitStatus.COMPLETED);
+        return RepeatStatus.FINISHED;
+      }
+
+      log.info("incomplete size. deleting current file...");
+      boolean deleted = tryDeleteFile(filename);
+
+      if (!deleted) {
+        log.error("failed to delete incomplete file: {}", filename);
+        return concludeFailure(contribution, chunkContext);
+      }
+    }
+
+    String message = "fetching " + targetDump.getFileName() + "...";
+
+    try {
+      tryCopyFile(contribution, message);
+    } catch (FileException e) {
+      return concludeFailure(contribution, chunkContext);
+    }
+    chunkContext.setComplete();
+    return RepeatStatus.FINISHED;
+  }
+
+  private void tryCopyFile(StepContribution contribution, String message) throws FileException {
+    try (InputStream inputStream = wrapInputStream(targetDump.getInputStream(), message)) {
+      log.info(message);
+      fileUtil.copy(inputStream, targetDump.getFileName());
+      contribution.setExitStatus(ExitStatus.COMPLETED);
+    } catch (IOException e) {
+      FileException ex = new FileException("failed to fetch " + targetDump.getFileName(), e);
+      log.error(ex.getMessage(), ex);
+      throw ex;
+    }
+  }
+
+  private RepeatStatus concludeFailure(StepContribution contribution, ChunkContext chunkContext) {
+    contribution.setExitStatus(ExitStatus.FAILED);
+    chunkContext.setComplete();
+    return RepeatStatus.FINISHED;
+  }
+
+  private boolean tryDeleteFile(String fileName) {
+    try {
+      fileUtil.deleteFile(fileName);
+    } catch (FileException e) {
+      log.error(e.getMessage(), e);
+      return false;
+    }
+    return true;
   }
 
   public InputStream wrapInputStream(InputStream in, String message) {

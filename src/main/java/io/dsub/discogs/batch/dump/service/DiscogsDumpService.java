@@ -2,7 +2,7 @@ package io.dsub.discogs.batch.dump.service;
 
 import io.dsub.discogs.batch.dump.DiscogsDump;
 import io.dsub.discogs.batch.dump.DumpType;
-import io.dsub.discogs.common.exception.DumpNotFoundException;
+import io.dsub.discogs.batch.exception.DumpNotFoundException;
 import java.util.Collection;
 import java.util.List;
 
@@ -13,13 +13,14 @@ public interface DiscogsDumpService {
   // todo: implement test
   boolean exists(String eTag);
 
-  DiscogsDump getDiscogsDump(String eTag);
+  DiscogsDump getDiscogsDump(String eTag) throws DumpNotFoundException;
 
   DiscogsDump getMostRecentDiscogsDumpByType(DumpType type);
 
   DiscogsDump getMostRecentDiscogsDumpByTypeYearMonth(DumpType type, int year, int month);
 
-  Collection<DiscogsDump> getAllByTypeYearMonth(List<DumpType> types, int year, int month);
+  Collection<DiscogsDump> getAllByTypeYearMonth(List<DumpType> types, int year, int month)
+      throws DumpNotFoundException;
 
   List<DiscogsDump> getDumpByTypeInRange(DumpType type, int year, int month);
 

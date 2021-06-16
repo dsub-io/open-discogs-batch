@@ -1,5 +1,7 @@
 package io.dsub.discogs.batch.util;
 
+import io.dsub.discogs.batch.exception.FileDeleteException;
+import io.dsub.discogs.batch.exception.FileException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
@@ -16,21 +18,21 @@ public interface FileUtil {
 
   String DEFAULT_APP_DIR = "discogs-data-batch";
 
-  void clearAll() throws IOException;
+  void clearAll() throws FileException;
 
-  Path getFilePath(String filename, boolean generate) throws IOException;
+  Path getFilePath(String filename, boolean generate) throws FileException;
 
-  Path getFilePath(String filename) throws IOException;
+  Path getFilePath(String filename) throws FileException;
 
-  Path getAppDirectory(boolean generate) throws IOException;
+  Path getAppDirectory(boolean generate) throws FileException;
 
-  void deleteFile(String filename) throws IOException;
+  void deleteFile(String filename) throws FileDeleteException;
 
   boolean isExisting(String filename);
 
-  long getSize(String filename) throws IOException;
+  long getSize(String filename) throws FileException;
 
-  void copy(InputStream inputStream, String filename) throws IOException;
+  void copy(InputStream inputStream, String filename) throws FileException;
 
   /**
    * A wrapper method to get home directory from the parent OS. The implementation of the method may

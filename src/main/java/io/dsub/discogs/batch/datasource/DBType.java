@@ -4,7 +4,6 @@ import io.dsub.discogs.common.exception.InvalidArgumentException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
-import org.springframework.boot.ApplicationArguments;
 
 public enum DBType {
   MYSQL("com.mysql.cj.jdbc.Driver"),
@@ -27,15 +26,6 @@ public enum DBType {
         .orElseThrow(
             () ->
                 new InvalidArgumentException("failed to recognize DB type from " + connectionUrl));
-  }
-
-  public static DBType getDBType(ApplicationArguments args) {
-    return getDBType(
-        args.getNonOptionArgs().stream()
-            .filter(arg -> arg.contains("url="))
-            .map(arg -> arg.split("=")[1])
-            .limit(1)
-            .collect(Collectors.joining()));
   }
 
   public static List<String> getNames() {

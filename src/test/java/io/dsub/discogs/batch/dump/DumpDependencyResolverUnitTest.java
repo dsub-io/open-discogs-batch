@@ -12,8 +12,8 @@ import static org.mockito.Mockito.when;
 
 import io.dsub.discogs.batch.argument.ArgType;
 import io.dsub.discogs.batch.dump.service.DiscogsDumpService;
-import io.dsub.discogs.common.exception.DumpNotFoundException;
-import io.dsub.discogs.common.exception.InvalidArgumentException;
+import io.dsub.discogs.batch.exception.DumpNotFoundException;
+import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -53,7 +53,8 @@ class DumpDependencyResolverUnitTest {
   }
 
   @RepeatedTest(10)
-  void whenDumpServiceFailedToFetchDumpByTypeYearMonth__ThenShouldThrowDumpNotFoundException() {
+  void whenDumpServiceFailedToFetchDumpByTypeYearMonth__ThenShouldThrowDumpNotFoundException()
+      throws InvalidArgumentException, DumpNotFoundException {
     String typeName = rand.nextBoolean() ? "release" : "master";
     DiscogsDump fakeDump = getFakeDump();
     fakeDump.setType(DumpType.of(typeName));
@@ -84,7 +85,8 @@ class DumpDependencyResolverUnitTest {
   }
 
   @Test
-  void whenETagsContainDifferentDifferentCreatedAt__ThenShouldThrowInvalidArgumentException() {
+  void whenETagsContainDifferentDifferentCreatedAt__ThenShouldThrowInvalidArgumentException()
+      throws InvalidArgumentException, DumpNotFoundException {
     DiscogsDump fakeDump = getFakeDump();
     when(dumpService.getDiscogsDump("a")).thenReturn(fakeDump);
     when(dumpService.getDiscogsDump("b"))
@@ -120,7 +122,8 @@ class DumpDependencyResolverUnitTest {
   }
 
   @Test
-  void whenDumpServiceReturnsNull__ThenShouldThrowDumpNotFoundException() {
+  void whenDumpServiceReturnsNull__ThenShouldThrowDumpNotFoundException()
+      throws DumpNotFoundException {
     String eTag = RandomString.make();
     when(dumpService.getDiscogsDump(eTag)).thenReturn(null);
     // when
@@ -131,7 +134,8 @@ class DumpDependencyResolverUnitTest {
   }
 
   @Test
-  void whenDumpServiceThrows__DumpNotFoundException__ThenShouldThrowAsIs() {
+  void whenDumpServiceThrows__DumpNotFoundException__ThenShouldThrowAsIs()
+      throws DumpNotFoundException {
     when(dumpService.getDiscogsDump(any())).thenThrow(new DumpNotFoundException("test"));
     // when
     assertThatThrownBy(() -> resolver.resolveByETagEntries(List.of(RandomString.make())))
@@ -141,12 +145,13 @@ class DumpDependencyResolverUnitTest {
   }
 
   @Test
-  void whenDumpServiceThrows__InvalidArgumentException__ThenShouldThrowAsIs() {
-    when(dumpService.getDiscogsDump(any())).thenThrow(new InvalidArgumentException("test"));
+  void whenDumpServiceThrows__InvalidArgumentException__ThenShouldThrowAsIs()
+      throws DumpNotFoundException {
+    when(dumpService.getDiscogsDump(any())).thenThrow(new DumpNotFoundException("test"));
     // when
     assertThatThrownBy(() -> resolver.resolveByETagEntries(List.of(RandomString.make())))
         // then
-        .isInstanceOf(InvalidArgumentException.class)
+        .isInstanceOf(DumpNotFoundException.class)
         .hasMessage("test");
   }
 
@@ -164,7 +169,7 @@ class DumpDependencyResolverUnitTest {
         "artist,master,release,master",
         "label,release,release,release"
       })
-  void whenDuplicatedTypesFound__ShouldParseCorrectly(String type) {
+  void whenDuplicatedTypesFound__ShouldParseCorrectly(String type) throws InvalidArgumentException {
     ApplicationArguments args =
         new DefaultApplicationArguments(
             Arrays.stream(type.split(","))
@@ -175,10 +180,11 @@ class DumpDependencyResolverUnitTest {
 
     Set<DumpType> expectedValues = new HashSet<>();
 
-    Arrays.stream(type.split(","))
-        .map(DumpType::of)
-        .map(DumpType::getDependencies)
-        .forEach(expectedValues::addAll);
+    for (String s : type.split(",")) {
+      DumpType of = DumpType.of(s);
+      List<DumpType> dependencies = of.getDependencies();
+      expectedValues.addAll(dependencies);
+    }
 
     // when
     Collection<DumpType> parsed = resolver.parseTypes(args);
@@ -202,7 +208,8 @@ class DumpDependencyResolverUnitTest {
         "artist,master,release",
         "label,release"
       })
-  void whenTypeArgPresent__ThenShouldProvideAllDependencies(String type) {
+  void whenTypeArgPresent__ThenShouldProvideAllDependencies(String type)
+      throws InvalidArgumentException {
     ApplicationArguments args =
         new DefaultApplicationArguments(
             Arrays.stream(type.split(","))
@@ -213,10 +220,11 @@ class DumpDependencyResolverUnitTest {
 
     Set<DumpType> expectedValues = new HashSet<>();
 
-    Arrays.stream(type.split(","))
-        .map(DumpType::of)
-        .map(DumpType::getDependencies)
-        .forEach(expectedValues::addAll);
+    for (String s : type.split(",")) {
+      DumpType of = DumpType.of(s);
+      List<DumpType> dependencies = of.getDependencies();
+      expectedValues.addAll(dependencies);
+    }
 
     // when
     Collection<DumpType> parsed = resolver.parseTypes(args);
@@ -284,7 +292,8 @@ class DumpDependencyResolverUnitTest {
   }
 
   @Test
-  void whenResolveWithETag__ThenShouldReturnAsExpected() {
+  void whenResolveWithETag__ThenShouldReturnAsExpected()
+      throws InvalidArgumentException, DumpNotFoundException {
     // preparing
     String arg = "--" + ArgType.ETAG.getGlobalName() + "=test";
     DiscogsDump fakeDump = getFakeDump();
@@ -323,7 +332,8 @@ class DumpDependencyResolverUnitTest {
   }
 
   @RepeatedTest(10)
-  void whenResolveWithoutETag__ThenShouldReturnAsExpected() {
+  void whenResolveWithoutETag__ThenShouldReturnAsExpected()
+      throws DumpNotFoundException, InvalidArgumentException {
     // preparing
     LocalDate targetDate = LocalDate.now().minusDays(1000 + rand.nextInt(1000));
     DumpType targetType = DumpType.values()[rand.nextInt(4)];
@@ -359,7 +369,8 @@ class DumpDependencyResolverUnitTest {
         "artist,master,release",
         "label,release"
       })
-  void whenTypeArgPresent__AndIsSetToStrict__ThenShouldOnlyContainGivenDumps(String type) {
+  void whenTypeArgPresent__AndIsSetToStrict__ThenShouldOnlyContainGivenDumps(String type)
+      throws InvalidArgumentException {
     String[] types = type.split(",");
     int typeSize = types.length;
     List<String> argList = new ArrayList<>(List.of(makeTypeArgFromTypes(types)));

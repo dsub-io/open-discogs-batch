@@ -200,6 +200,7 @@ public class TestDumpGenerator {
           + "    <styles>\n"
           + "      <style>Techno</style>\n"
           + "      <style>Tech House</style>\n"
+          + "      <style>Broken Beat</style>\n"
           + "    </styles>\n"
           + "    <year>2002</year>\n"
           + "    <title>Moments In Time</title>\n"

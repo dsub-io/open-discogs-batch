@@ -1,7 +1,8 @@
 package io.dsub.discogs.batch.datasource;
 
 import com.zaxxer.hikari.HikariDataSource;
-import io.dsub.discogs.common.exception.InitializationFailureException;
+import io.dsub.discogs.batch.exception.InitializationFailureException;
+import io.dsub.discogs.batch.exception.MissingRequiredArgumentException;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -14,12 +15,13 @@ import javax.sql.DataSource;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.core.io.DefaultResourceLoader;
 import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 @Slf4j
@@ -45,14 +47,9 @@ public class DataSourceConfig {
 
   private final ApplicationArguments args;
 
-  @Value("classpath:schema/mysql-schema.sql")
-  private Resource mysqlSchema;
-
-  @Value("classpath:schema/postgresql-schema.sql")
-  private Resource postgresSchema;
-
   @Bean(name = "batchDataSource")
-  public HikariDataSource batchDataSource() {
+  public HikariDataSource batchDataSource()
+      throws MissingRequiredArgumentException, InitializationFailureException {
     DataSourceProperties dbProps = dataSourceProperties();
     Properties properties = new Properties();
     properties.setProperty("rewriteBatchedStatements", "true");
@@ -67,7 +64,7 @@ public class DataSourceConfig {
   }
 
   @Bean
-  public DataSourceProperties dataSourceProperties() {
+  public DataSourceProperties dataSourceProperties() throws MissingRequiredArgumentException {
     SimpleDataSourceProperties properties = new SimpleDataSourceProperties(args);
     String url = appendOptions(properties.getConnectionUrl());
     properties.setConnectionUrl(url);
@@ -80,8 +77,8 @@ public class DataSourceConfig {
    *
    * @param dataSource to be initialized.
    */
-  protected void initializeSchema(DataSource dataSource) {
-
+  protected void initializeSchema(DataSource dataSource)
+      throws InitializationFailureException, MissingRequiredArgumentException {
     JdbcTemplate jdbcTemplate = getJdbcTemplate(dataSource);
     Resource schema = getSchemaResource();
 
@@ -106,15 +103,10 @@ public class DataSourceConfig {
     return new JdbcTemplate(dataSource);
   }
 
-  protected Resource getSchemaResource() {
-    DBType type = dataSourceProperties().getDbType();
-    Resource schema;
-    if (type.equals(DBType.POSTGRESQL)) {
-      schema = postgresSchema;
-    } else {
-      schema = mysqlSchema;
-    }
-    return schema;
+  protected Resource getSchemaResource() throws MissingRequiredArgumentException {
+    ResourceLoader resourceLoader = new DefaultResourceLoader();
+    String dbTypeName = dataSourceProperties().getDbType().name().toLowerCase();
+    return resourceLoader.getResource("classpath:schema/" + dbTypeName + "-schema.sql");
   }
 
   /**

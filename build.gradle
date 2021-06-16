@@ -34,7 +34,6 @@ dependencies {
             'io.dsub.discogs:discogs-common:0.0.1',
             'org.springframework.boot:spring-boot-starter-data-jpa',
             'org.springframework.boot:spring-boot-starter-batch',
-            'org.springframework.boot:spring-boot-starter-web',
             'org.springframework.batch:spring-batch-integration:4.3.3',
             'org.springframework:spring-oxm:5.3.7',
             'javax.xml.bind:jaxb-api:2.3.1',

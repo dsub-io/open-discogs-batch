@@ -1,6 +1,6 @@
 package io.dsub.discogs.batch.argument.handler;
 
-import io.dsub.discogs.common.exception.InvalidArgumentException;
+import io.dsub.discogs.batch.exception.InvalidArgumentException;
 
 /**
  * argument handler that takes care about the application argument. i.e. jdbc url, username,

@@ -1,6 +1,7 @@
 package io.dsub.discogs.batch.dump.service;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.when;
 
 import io.dsub.discogs.batch.condition.RequiresDiscogsDataConnection;
@@ -9,6 +10,7 @@ import io.dsub.discogs.batch.dump.DiscogsDump;
 import io.dsub.discogs.batch.dump.DumpSupplier;
 import io.dsub.discogs.batch.dump.DumpType;
 import io.dsub.discogs.batch.dump.repository.DiscogsDumpRepository;
+import io.dsub.discogs.batch.exception.DumpNotFoundException;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -84,10 +86,15 @@ public class DefaultDiscogsDumpServiceIntegrationTest {
       sampleDumpList.stream()
           .map(DiscogsDump::getETag)
           .peek(
-              eTag ->
+              eTag -> {
+                try {
                   assertThat(dumpService.getDiscogsDump(eTag))
                       .isNotNull()
-                      .satisfies(dump -> assertThat(dump.getETag()).isEqualTo(eTag)))
+                      .satisfies(dump -> assertThat(dump.getETag()).isEqualTo(eTag));
+                } catch (DumpNotFoundException e) {
+                  fail(e);
+                }
+              })
           .close();
     }
 
@@ -108,7 +115,8 @@ public class DefaultDiscogsDumpServiceIntegrationTest {
     }
 
     @Test
-    void whenGetLatestCompleteDumpSet__ThenShouldReturnAllRecentDumpsWithEachTypes() {
+    void whenGetLatestCompleteDumpSet__ThenShouldReturnAllRecentDumpsWithEachTypes()
+        throws DumpNotFoundException {
       List<DiscogsDump> recentDumps =
           sampleDumpList.stream()
               .collect(

@@ -6,8 +6,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import ch.qos.logback.classic.Level;
+import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import io.dsub.discogs.batch.testutil.LogSpy;
-import io.dsub.discogs.common.exception.InvalidArgumentException;
 import java.util.HashMap;
 import java.util.Map;
 import javax.sql.DataSource;
@@ -32,14 +32,14 @@ class AbstractStepConfigTest {
   @RegisterExtension LogSpy logSpy = new LogSpy();
 
   @BeforeEach
-  void setUp() {
+  void setUp() throws InvalidArgumentException {
     stepConfig = Mockito.mock(AbstractStepConfig.class);
     when(stepConfig.buildItemWriter(any(), any())).thenCallRealMethod();
     when(stepConfig.getOnKeyExecutionDecider(any())).thenCallRealMethod();
   }
 
   @Test
-  void whenAllItemsGiven__ShouldNotThrowOnBuildItemWriter() {
+  void whenAllItemsGiven__ShouldNotThrowOnBuildItemWriter() throws InvalidArgumentException {
     DataSource mockDataSource = Mockito.mock(DataSource.class);
 
     // when
@@ -94,7 +94,8 @@ class AbstractStepConfigTest {
 
   @ParameterizedTest
   @ValueSource(strings = {"artist", "release", "master", "label"})
-  void whenGetOnKeyExecutionDecider__ShouldReturnValidExecutionDecider(String param) {
+  void whenGetOnKeyExecutionDecider__ShouldReturnValidExecutionDecider(String param)
+      throws InvalidArgumentException {
     JobExecutionDecider jobExecutionDecider = stepConfig.getOnKeyExecutionDecider(param);
     JobExecution jobExecution = Mockito.mock(JobExecution.class);
     JobParameters jobParameters = Mockito.mock(JobParameters.class);

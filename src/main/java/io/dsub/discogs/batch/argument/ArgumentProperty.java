@@ -1,6 +1,6 @@
 package io.dsub.discogs.batch.argument;
 
-import io.dsub.discogs.common.exception.InvalidArgumentException;
+import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -102,15 +102,14 @@ public class ArgumentProperty {
       int minValuesCount = this.minValuesCount == null ? 1 : this.minValuesCount;
       int maxValuesCount = this.maxValuesCount == null ? 1 : this.maxValuesCount;
       Class<?> supportedType = this.supportedType == null ? String.class : this.supportedType;
-
-      if (globalName == null) {
-        throw new InvalidArgumentException("global name should not be null");
-      }
       if (minValuesCount > maxValuesCount) {
-        throw new InvalidArgumentException("minValues cannot be greater than maxValues");
+        throw new InvalidArgumentException("minValuesCount cannot be greater than maxValuesCount");
       }
       if (minValuesCount < 0) {
-        throw new InvalidArgumentException("minValues cannot be lower than 0");
+        throw new InvalidArgumentException("minValuesCount cannot be lower than zero");
+      }
+      if (globalName == null || globalName.isBlank()) {
+        throw new InvalidArgumentException("globalName cannot be null or blank string");
       }
       List<String> synonyms = new ArrayList<>();
       if (this.synonyms != null && !this.synonyms.isEmpty()) {
