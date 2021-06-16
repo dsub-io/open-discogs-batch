@@ -7,7 +7,7 @@ plugins {
 }
 
 group 'io.dsub.discogs'
-version '0.0.1.1'
+version '0.1.0'
 
 sourceCompatibility = JavaVersion.VERSION_11
 targetCompatibility = JavaVersion.VERSION_11
@@ -31,7 +31,7 @@ repositories {
 
 dependencies {
     implementation(
-            'io.dsub.discogs:discogs-common:0.0.1',
+            'io.dsub.discogs:discogs-common:0.1.0',
             'org.springframework.boot:spring-boot-starter-data-jpa',
             'org.springframework.boot:spring-boot-starter-batch',
             'org.springframework.batch:spring-batch-integration:4.3.3',
@@ -51,7 +51,8 @@ dependencies {
             'com.h2database:h2',
             'org.junit.jupiter:junit-jupiter:5.7.2',
             'org.springframework.boot:spring-boot-starter-test',
-            'org.springframework.batch:spring-batch-test'
+            'org.springframework.batch:spring-batch-test',
+            'org.mockito:mockito-inline:3.11.1'
     )
 
     annotationProcessor (
@@ -104,7 +105,7 @@ publishing {
 }
 
 bootBuildImage {
-    setImageName('sehy0121/discogs-batch-0.0.1.1')
+    setImageName('sehy0121/discogs-batch-0.1.0')
 }
 
 // disable caching

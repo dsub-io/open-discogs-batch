@@ -1,6 +1,6 @@
 package io.dsub.discogs.batch.job.writer;
 
-import io.dsub.discogs.common.exception.InitializationFailureException;
+import io.dsub.discogs.batch.exception.InitializationFailureException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;

@@ -2,7 +2,6 @@ package io.dsub.discogs.batch.util;
 
 import io.dsub.discogs.batch.exception.FileDeleteException;
 import io.dsub.discogs.batch.exception.FileException;
-import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
 import org.apache.commons.lang3.SystemUtils;

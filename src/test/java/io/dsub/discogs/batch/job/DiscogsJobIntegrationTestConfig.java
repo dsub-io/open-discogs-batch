@@ -18,7 +18,7 @@ import io.dsub.discogs.batch.query.MySQLJpaEntityQueryBuilder;
 import io.dsub.discogs.batch.util.FileUtil;
 import io.dsub.discogs.batch.util.SimpleFileUtil;
 import io.dsub.discogs.common.entity.base.BaseEntity;
-import io.dsub.discogs.common.exception.DumpNotFoundException;
+import io.dsub.discogs.batch.exception.DumpNotFoundException;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -98,7 +98,8 @@ public class DiscogsJobIntegrationTestConfig {
     Properties properties = new Properties();
     properties.setProperty("rewriteBatchedStatements", "true");
     dataSource.setDataSourceProperties(properties);
-    dataSource.setJdbcUrl("jdbc:h2:mem:testdb;MODE=MySQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE;");
+    dataSource.setJdbcUrl(
+        "jdbc:h2:mem:testdb;MODE=MySQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE;");
     dataSource.setUsername("sa");
     dataSource.setPassword("");
     dataSource.setDriverClassName("org.h2.Driver");

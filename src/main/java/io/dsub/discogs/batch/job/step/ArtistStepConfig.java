@@ -12,6 +12,7 @@ import io.dsub.discogs.batch.dump.DiscogsDump;
 import io.dsub.discogs.batch.dump.DumpType;
 import io.dsub.discogs.batch.dump.service.DiscogsDumpService;
 import io.dsub.discogs.batch.exception.DumpNotFoundException;
+import io.dsub.discogs.batch.exception.InitializationFailureException;
 import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import io.dsub.discogs.batch.job.listener.StopWatchStepExecutionListener;
 import io.dsub.discogs.batch.job.listener.StringFieldNormalizingItemReadListener;
@@ -28,7 +29,6 @@ import io.dsub.discogs.common.entity.artist.ArtistMember;
 import io.dsub.discogs.common.entity.artist.ArtistNameVariation;
 import io.dsub.discogs.common.entity.artist.ArtistUrl;
 import io.dsub.discogs.common.entity.base.BaseEntity;
-import io.dsub.discogs.common.exception.InitializationFailureException;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
@@ -37,17 +37,13 @@ import java.util.stream.Collectors;
 import javax.sql.DataSource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.Step;
-import org.springframework.batch.core.StepExecution;
 import org.springframework.batch.core.configuration.annotation.JobScope;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.job.builder.FlowBuilder;
 import org.springframework.batch.core.job.flow.Flow;
-import org.springframework.batch.core.job.flow.FlowExecutionStatus;
 import org.springframework.batch.core.job.flow.FlowStep;
-import org.springframework.batch.core.job.flow.JobExecutionDecider;
 import org.springframework.batch.core.job.flow.support.SimpleFlow;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.item.ItemProcessor;
@@ -73,7 +69,8 @@ public class ArtistStepConfig extends AbstractStepConfig<BatchCommand> {
   private static final String ARTIST_SUB_ITEMS_STEP = "artist sub items step";
   private static final String ARTIST_FILE_FETCH_STEP = "artist file fetch step";
   private static final String ARTIST_FILE_CLEAR_STEP = "artist file clear step";
-  private static final String ARTIST_TEMPORARY_TABLES_PRUNE_STEP = "artist temporary tables prune step";
+  private static final String ARTIST_TEMPORARY_TABLES_PRUNE_STEP =
+      "artist temporary tables prune step";
   private static final String ARTIST_SELECT_INSERT_STEP = "artist select insert step";
 
   private final QueryBuilder<BaseEntity> queryBuilder;
@@ -213,10 +210,11 @@ public class ArtistStepConfig extends AbstractStepConfig<BatchCommand> {
   @Bean
   @JobScope
   public Step artistTemporaryTablesPruneStep() {
-    List<String> queries = entityClasses
-            .stream()
+    List<String> queries =
+        entityClasses.stream()
             .filter(clazz -> clazz != Artist.class)
-            .map(queryBuilder::getPruneQuery).collect(Collectors.toList());
+            .map(queryBuilder::getPruneQuery)
+            .collect(Collectors.toList());
     return sbf.get(ARTIST_TEMPORARY_TABLES_PRUNE_STEP)
         .tasklet(new QueryExecutionTasklet(queries, jdbcTemplate))
         .build();
@@ -343,8 +341,7 @@ public class ArtistStepConfig extends AbstractStepConfig<BatchCommand> {
   @Bean
   @StepScope
   public ItemWriter<BatchCommand> artistUrlItemWriter() throws InvalidArgumentException {
-    return buildItemWriter(
-        queryBuilder.getTemporaryInsertQuery(ArtistUrl.class), dataSource);
+    return buildItemWriter(queryBuilder.getTemporaryInsertQuery(ArtistUrl.class), dataSource);
   }
 
   @Bean

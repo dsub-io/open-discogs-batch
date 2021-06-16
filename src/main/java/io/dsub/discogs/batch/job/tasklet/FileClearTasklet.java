@@ -2,7 +2,6 @@ package io.dsub.discogs.batch.job.tasklet;
 
 import io.dsub.discogs.batch.exception.FileException;
 import io.dsub.discogs.batch.util.FileUtil;
-import java.io.IOException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.ExitStatus;

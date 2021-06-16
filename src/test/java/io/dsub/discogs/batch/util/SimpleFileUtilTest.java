@@ -10,9 +10,7 @@ import io.dsub.discogs.batch.testutil.LogSpy;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
@@ -167,10 +165,7 @@ class SimpleFileUtilTest {
       fileUtil.copy(inputStream, fileName);
 
       File copied = fileUtil.getFilePath(fileName).toFile();
-      assertThat(copied)
-          .exists()
-          .hasSize(1000)
-          .hasContent(randStr);
+      assertThat(copied).exists().hasSize(1000).hasContent(randStr);
 
       Files.delete(copied.toPath());
       randStr += randStr;
@@ -179,10 +174,7 @@ class SimpleFileUtilTest {
 
       fileUtil.copy(inputStream, fileName);
       copied = fileUtil.getFilePath(fileName).toFile();
-      assertThat(copied)
-          .exists()
-          .hasSize(2000)
-          .hasContent(randStr);
+      assertThat(copied).exists().hasSize(2000).hasContent(randStr);
 
     } catch (FileException e) {
       fail(e);

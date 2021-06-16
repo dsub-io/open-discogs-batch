@@ -18,6 +18,7 @@ import io.dsub.discogs.batch.dump.DiscogsDump;
 import io.dsub.discogs.batch.dump.DumpType;
 import io.dsub.discogs.batch.dump.service.DiscogsDumpService;
 import io.dsub.discogs.batch.exception.DumpNotFoundException;
+import io.dsub.discogs.batch.exception.InitializationFailureException;
 import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import io.dsub.discogs.batch.job.listener.StopWatchStepExecutionListener;
 import io.dsub.discogs.batch.job.listener.StringFieldNormalizingItemReadListener;
@@ -42,7 +43,6 @@ import io.dsub.discogs.common.entity.release.ReleaseItemStyle;
 import io.dsub.discogs.common.entity.release.ReleaseItemTrack;
 import io.dsub.discogs.common.entity.release.ReleaseItemVideo;
 import io.dsub.discogs.common.entity.release.ReleaseItemWork;
-import io.dsub.discogs.common.exception.InitializationFailureException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -100,8 +100,9 @@ public class ReleaseItemStepConfig extends AbstractStepConfig<BatchCommand> {
   private final FileUtil fileUtil;
   private final Map<DumpType, DiscogsDump> dumpMap;
   private final JdbcTemplate jdbcTemplate;
-  private List<Class<? extends BaseEntity>> entities =
-      List.of(ReleaseItem.class,
+  private final List<Class<? extends BaseEntity>> entities =
+      List.of(
+          ReleaseItem.class,
           ReleaseItemArtist.class,
           ReleaseItemFormat.class,
           ReleaseItemCreditedArtist.class,
@@ -222,10 +223,11 @@ public class ReleaseItemStepConfig extends AbstractStepConfig<BatchCommand> {
   @Bean
   @JobScope
   public Step releaseItemTemporaryTablesPruneStep() {
-    List<String> queries = entities.stream()
-        .filter(clazz -> clazz != ReleaseItem.class)
-        .map(queryBuilder::getPruneQuery)
-        .collect(Collectors.toList());
+    List<String> queries =
+        entities.stream()
+            .filter(clazz -> clazz != ReleaseItem.class)
+            .map(queryBuilder::getPruneQuery)
+            .collect(Collectors.toList());
     return sbf.get(RELEASE_TEMPORARY_TABLES_PRUNE_STEP)
         .tasklet(new QueryExecutionTasklet(queries, jdbcTemplate))
         .build();
@@ -234,9 +236,8 @@ public class ReleaseItemStepConfig extends AbstractStepConfig<BatchCommand> {
   @Bean
   @JobScope
   public Step releaseItemSelectInsertStep() {
-    List<String> queries = entities.stream()
-        .map(queryBuilder::getSelectInsertQuery)
-        .collect(Collectors.toList());
+    List<String> queries =
+        entities.stream().map(queryBuilder::getSelectInsertQuery).collect(Collectors.toList());
     return sbf.get(RELEASE_SELECT_INSERT_STEP)
         .tasklet(new QueryExecutionTasklet(queries, jdbcTemplate))
         .build();

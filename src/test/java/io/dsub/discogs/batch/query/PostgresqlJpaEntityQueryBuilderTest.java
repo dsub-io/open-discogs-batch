@@ -169,7 +169,8 @@ class PostgresqlJpaEntityQueryBuilderTest {
 
     // then
     assertThat(m.matches()).isTrue();
-    assertThat(query).doesNotContain(createdAt.getName(), lastModifiedAt.getName())
+    assertThat(query)
+        .doesNotContain(createdAt.getName(), lastModifiedAt.getName())
         .contains("NOW()");
   }
 

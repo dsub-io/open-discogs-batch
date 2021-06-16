@@ -11,6 +11,7 @@ import io.dsub.discogs.batch.dump.DiscogsDump;
 import io.dsub.discogs.batch.dump.DumpType;
 import io.dsub.discogs.batch.dump.service.DiscogsDumpService;
 import io.dsub.discogs.batch.exception.DumpNotFoundException;
+import io.dsub.discogs.batch.exception.InitializationFailureException;
 import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import io.dsub.discogs.batch.job.listener.StopWatchStepExecutionListener;
 import io.dsub.discogs.batch.job.listener.StringFieldNormalizingItemReadListener;
@@ -28,7 +29,6 @@ import io.dsub.discogs.common.entity.master.MasterArtist;
 import io.dsub.discogs.common.entity.master.MasterGenre;
 import io.dsub.discogs.common.entity.master.MasterStyle;
 import io.dsub.discogs.common.entity.master.MasterVideo;
-import io.dsub.discogs.common.exception.InitializationFailureException;
 import io.dsub.discogs.common.repository.GenreRepository;
 import io.dsub.discogs.common.repository.StyleRepository;
 import java.util.ArrayList;
@@ -257,10 +257,11 @@ public class MasterStepConfig extends AbstractStepConfig<BatchCommand> {
   @Bean
   @StepScope
   public Step masterTemporaryTablesPruneStep() {
-    List<String> queries = entities.stream()
-        .filter(clazz -> clazz != Master.class)
-        .map(queryBuilder::getPruneQuery)
-        .collect(Collectors.toList());
+    List<String> queries =
+        entities.stream()
+            .filter(clazz -> clazz != Master.class)
+            .map(queryBuilder::getPruneQuery)
+            .collect(Collectors.toList());
     return sbf.get(MASTER_TEMPORARY_TABLES_PRUNE_STEP)
         .tasklet(new QueryExecutionTasklet(queries, jdbcTemplate))
         .build();
@@ -269,8 +270,8 @@ public class MasterStepConfig extends AbstractStepConfig<BatchCommand> {
   @Bean
   @StepScope
   public Step masterSelectInsertStep() {
-    List<String> queries = entities.stream().map(queryBuilder::getSelectInsertQuery)
-        .collect(Collectors.toList());
+    List<String> queries =
+        entities.stream().map(queryBuilder::getSelectInsertQuery).collect(Collectors.toList());
     return sbf.get(MASTER_SELECT_INSERT_STEP)
         .tasklet(new QueryExecutionTasklet(queries, jdbcTemplate))
         .build();
