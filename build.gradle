@@ -51,7 +51,8 @@ dependencies {
             'com.h2database:h2',
             'org.junit.jupiter:junit-jupiter:5.7.2',
             'org.springframework.boot:spring-boot-starter-test',
-            'org.springframework.batch:spring-batch-test'
+            'org.springframework.batch:spring-batch-test',
+            'org.mockito:mockito-inline:3.11.1'
     )
 
     annotationProcessor (
