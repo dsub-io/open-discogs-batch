@@ -1,5 +1,6 @@
 package io.dsub.discogs.batch.job.tasklet;
 
+import io.dsub.discogs.batch.exception.FileException;
 import io.dsub.discogs.batch.util.FileUtil;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
@@ -32,7 +33,7 @@ public class FileClearTasklet implements Tasklet {
     if (fileUtil.isTemporary()) {
       try {
         fileUtil.clearAll();
-      } catch (IOException e) {
+      } catch (FileException e) {
         log.error("failed to clear application directory.", e);
       }
     }

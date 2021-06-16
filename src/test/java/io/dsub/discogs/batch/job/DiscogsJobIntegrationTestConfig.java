@@ -10,6 +10,8 @@ import io.dsub.discogs.batch.datasource.SimpleDataSourceProperties;
 import io.dsub.discogs.batch.dump.DiscogsDump;
 import io.dsub.discogs.batch.dump.DumpType;
 import io.dsub.discogs.batch.dump.service.DiscogsDumpService;
+import io.dsub.discogs.batch.exception.FileException;
+import io.dsub.discogs.batch.job.listener.TemporaryTableHandlingJobExecutionListener;
 import io.dsub.discogs.batch.job.reader.DiscogsDumpItemReaderBuilder;
 import io.dsub.discogs.batch.query.JpaEntityQueryBuilder;
 import io.dsub.discogs.batch.query.MySQLJpaEntityQueryBuilder;
@@ -62,7 +64,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 @EntityScan(basePackages = {"io.dsub.discogs.common", "io.dsub.discogs.batch"})
 public class DiscogsJobIntegrationTestConfig {
 
-  @Value("classpath:mysql-test-schema.sql")
+  @Value("classpath:schema/h2-test-schema.sql")
   private Resource mysqlSchema;
 
   @Bean
@@ -96,7 +98,7 @@ public class DiscogsJobIntegrationTestConfig {
     Properties properties = new Properties();
     properties.setProperty("rewriteBatchedStatements", "true");
     dataSource.setDataSourceProperties(properties);
-    dataSource.setJdbcUrl("jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1");
+    dataSource.setJdbcUrl("jdbc:h2:mem:testdb;MODE=MySQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE;");
     dataSource.setUsername("sa");
     dataSource.setPassword("");
     dataSource.setDriverClassName("org.h2.Driver");
@@ -107,6 +109,11 @@ public class DiscogsJobIntegrationTestConfig {
   @Bean
   public DataSourceProperties dataSourceProperties() {
     return SimpleDataSourceProperties.builder().dbType(DBType.MYSQL).build();
+  }
+
+  @Bean
+  public TemporaryTableHandlingJobExecutionListener temporaryTableHandlingJobExecutionListener() {
+    return new TemporaryTableHandlingJobExecutionListener(dataSourceProperties(), jdbcTemplate());
   }
 
   @Bean
@@ -186,12 +193,12 @@ public class DiscogsJobIntegrationTestConfig {
   }
 
   @Bean
-  public Map<DumpType, File> dumpFiles() throws IOException {
+  public Map<DumpType, File> dumpFiles() throws IOException, FileException {
     return new TestDumpGenerator(fileUtil().getAppDirectory(true)).createDiscogsDumpFiles();
   }
 
   @Bean
-  public DiscogsDumpService dumpService() throws IOException {
+  public DiscogsDumpService dumpService() throws IOException, FileException {
 
     Map<DumpType, File> dumpFiles = dumpFiles();
 

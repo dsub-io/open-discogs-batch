@@ -1,6 +1,5 @@
 SET
 FOREIGN_KEY_CHECKS = 0;
-
 CREATE TABLE IF NOT EXISTS artist
 (
     id
@@ -29,12 +28,12 @@ CREATE TABLE IF NOT EXISTS artist
 (
     2000
 ) NULL,
-    CONSTRAINT pk_artist_id PRIMARY KEY
+    CONSTRAINT pk_artist_id
+    PRIMARY KEY
 (
     id
 )
     );
-
 CREATE TABLE IF NOT EXISTS artist_alias
 (
     id
@@ -51,8 +50,7 @@ CREATE TABLE IF NOT EXISTS artist_alias
 ) NOT NULL,
     artist_id BIGINT NULL,
     alias_id BIGINT NULL,
-    CONSTRAINT uq_artist_alias_artist_id_alias_id
-    UNIQUE
+    CONSTRAINT uq_artist_alias_artist_id_alias_id UNIQUE
 (
     artist_id,
     alias_id
@@ -61,7 +59,8 @@ CREATE TABLE IF NOT EXISTS artist_alias
     FOREIGN KEY
 (
     artist_id
-) REFERENCES artist
+)
+    REFERENCES artist
 (
     id
 ),
@@ -69,16 +68,17 @@ CREATE TABLE IF NOT EXISTS artist_alias
     FOREIGN KEY
 (
     alias_id
-) REFERENCES artist
+)
+    REFERENCES artist
 (
     id
 ),
-    CONSTRAINT pk_artist_alias_id PRIMARY KEY
+    CONSTRAINT pk_artist_alias_id
+    PRIMARY KEY
 (
     id
 )
     );
-
 CREATE TABLE IF NOT EXISTS artist_group
 (
     id
@@ -95,8 +95,7 @@ CREATE TABLE IF NOT EXISTS artist_group
 ) NOT NULL,
     artist_id BIGINT NULL,
     group_id BIGINT NULL,
-    CONSTRAINT uq_artist_group_artist_id_group_id
-    UNIQUE
+    CONSTRAINT uq_artist_group_artist_id_group_id UNIQUE
 (
     artist_id,
     group_id
@@ -105,7 +104,8 @@ CREATE TABLE IF NOT EXISTS artist_group
     FOREIGN KEY
 (
     artist_id
-) REFERENCES artist
+)
+    REFERENCES artist
 (
     id
 ),
@@ -113,16 +113,17 @@ CREATE TABLE IF NOT EXISTS artist_group
     FOREIGN KEY
 (
     group_id
-) REFERENCES artist
+)
+    REFERENCES artist
 (
     id
 ),
-    CONSTRAINT pk_artist_group_id PRIMARY KEY
+    CONSTRAINT pk_artist_group_id
+    PRIMARY KEY
 (
     id
 )
     );
-
 CREATE TABLE IF NOT EXISTS artist_member
 (
     id
@@ -139,8 +140,7 @@ CREATE TABLE IF NOT EXISTS artist_member
 ) NOT NULL,
     artist_id BIGINT NULL,
     member_id BIGINT NULL,
-    CONSTRAINT uq_artist_member_artist_id_member_id
-    UNIQUE
+    CONSTRAINT uq_artist_member_artist_id_member_id UNIQUE
 (
     artist_id,
     member_id
@@ -149,7 +149,8 @@ CREATE TABLE IF NOT EXISTS artist_member
     FOREIGN KEY
 (
     artist_id
-) REFERENCES artist
+)
+    REFERENCES artist
 (
     id
 ),
@@ -157,16 +158,17 @@ CREATE TABLE IF NOT EXISTS artist_member
     FOREIGN KEY
 (
     member_id
-) REFERENCES artist
+)
+    REFERENCES artist
 (
     id
 ),
-    CONSTRAINT pk_artist_member_id PRIMARY KEY
+    CONSTRAINT pk_artist_member_id
+    PRIMARY KEY
 (
     id
 )
     );
-
 CREATE TABLE IF NOT EXISTS artist_name_variation
 (
     id
@@ -190,16 +192,17 @@ CREATE TABLE IF NOT EXISTS artist_name_variation
     FOREIGN KEY
 (
     artist_id
-) REFERENCES artist
+)
+    REFERENCES artist
 (
     id
 ),
-    CONSTRAINT pk_artist_name_variation_id PRIMARY KEY
+    CONSTRAINT pk_artist_name_variation_id
+    PRIMARY KEY
 (
     id
 )
     );
-
 CREATE TABLE IF NOT EXISTS artist_url
 (
     id
@@ -220,16 +223,17 @@ CREATE TABLE IF NOT EXISTS artist_url
     FOREIGN KEY
 (
     artist_id
-) REFERENCES artist
+)
+    REFERENCES artist
 (
     id
 ),
-    CONSTRAINT pk_artist_url_id PRIMARY KEY
+    CONSTRAINT pk_artist_url_id
+    PRIMARY KEY
 (
     id
 )
     );
-
 CREATE TABLE IF NOT EXISTS discogs_dump
 (
     id
@@ -261,24 +265,24 @@ CREATE TABLE IF NOT EXISTS discogs_dump
 (
     255
 ) NULL,
-    CONSTRAINT pk_discogs_dump_id PRIMARY KEY
+    CONSTRAINT pk_discogs_dump_id
+    PRIMARY KEY
 (
     id
 )
     );
-
 CREATE TABLE IF NOT EXISTS genre
 (
     name VARCHAR
 (
     255
 ) NOT NULL,
-    CONSTRAINT pk_genre_name PRIMARY KEY
+    CONSTRAINT pk_genre_name
+    PRIMARY KEY
 (
     name
 )
     );
-
 CREATE TABLE IF NOT EXISTS label
 (
     id
@@ -304,12 +308,12 @@ CREATE TABLE IF NOT EXISTS label
     255
 ) NULL,
     profile LONGTEXT NULL,
-    CONSTRAINT pk_label_id PRIMARY KEY
+    CONSTRAINT pk_label_id
+    PRIMARY KEY
 (
     id
 )
     );
-
 CREATE TABLE IF NOT EXISTS label_sub_label
 (
     id
@@ -326,8 +330,7 @@ CREATE TABLE IF NOT EXISTS label_sub_label
 ) NOT NULL,
     parent_label_id BIGINT NULL,
     sub_label_id BIGINT NULL,
-    CONSTRAINT uq_label_sub_label_parent_label_id_sub_label_id
-    UNIQUE
+    CONSTRAINT uq_label_sub_label_parent_label_id_sub_label_id UNIQUE
 (
     parent_label_id,
     sub_label_id
@@ -336,7 +339,8 @@ CREATE TABLE IF NOT EXISTS label_sub_label
     FOREIGN KEY
 (
     parent_label_id
-) REFERENCES label
+)
+    REFERENCES label
 (
     id
 ),
@@ -344,16 +348,17 @@ CREATE TABLE IF NOT EXISTS label_sub_label
     FOREIGN KEY
 (
     sub_label_id
-) REFERENCES label
+)
+    REFERENCES label
 (
     id
 ),
-    CONSTRAINT pk_label_sub_label_id PRIMARY KEY
+    CONSTRAINT pk_label_sub_label_id
+    PRIMARY KEY
 (
     id
 )
     );
-
 CREATE TABLE IF NOT EXISTS label_url
 (
     id
@@ -374,16 +379,17 @@ CREATE TABLE IF NOT EXISTS label_url
     FOREIGN KEY
 (
     label_id
-) REFERENCES label
+)
+    REFERENCES label
 (
     id
 ),
-    CONSTRAINT pk_label_url_id PRIMARY KEY
+    CONSTRAINT pk_label_url_id
+    PRIMARY KEY
 (
     id
 )
     );
-
 CREATE TABLE IF NOT EXISTS master
 (
     id
@@ -407,22 +413,23 @@ CREATE TABLE IF NOT EXISTS master
 (
     2000
 ) NULL,
-    year smallint NOT NULL,
+    year SMALLINT NOT NULL,
     main_release_item_id BIGINT NULL,
     CONSTRAINT fk_master_main_release_item_id_release_item
     FOREIGN KEY
 (
     main_release_item_id
-) REFERENCES release_item
+)
+    REFERENCES release_item
 (
     id
 ),
-    CONSTRAINT pk_master_id PRIMARY KEY
+    CONSTRAINT pk_master_id
+    PRIMARY KEY
 (
     id
 )
     );
-
 CREATE TABLE IF NOT EXISTS master_artist
 (
     id
@@ -439,8 +446,7 @@ CREATE TABLE IF NOT EXISTS master_artist
 ) NOT NULL,
     artist_id BIGINT NULL,
     master_id BIGINT NULL,
-    CONSTRAINT uq_master_artist_master_id_artist_id
-    UNIQUE
+    CONSTRAINT uq_master_artist_master_id_artist_id UNIQUE
 (
     master_id,
     artist_id
@@ -449,7 +455,8 @@ CREATE TABLE IF NOT EXISTS master_artist
     FOREIGN KEY
 (
     artist_id
-) REFERENCES artist
+)
+    REFERENCES artist
 (
     id
 ),
@@ -457,16 +464,17 @@ CREATE TABLE IF NOT EXISTS master_artist
     FOREIGN KEY
 (
     master_id
-) REFERENCES master
+)
+    REFERENCES master
 (
     id
 ),
-    CONSTRAINT pk_master_artist_id PRIMARY KEY
+    CONSTRAINT pk_master_artist_id
+    PRIMARY KEY
 (
     id
 )
     );
-
 CREATE TABLE IF NOT EXISTS master_genre
 (
     id
@@ -486,8 +494,7 @@ CREATE TABLE IF NOT EXISTS master_genre
     255
 ) NULL,
     master_id BIGINT NULL,
-    CONSTRAINT uq_master_genre_master_id_genre
-    UNIQUE
+    CONSTRAINT uq_master_genre_master_id_genre UNIQUE
 (
     master_id,
     genre
@@ -496,7 +503,8 @@ CREATE TABLE IF NOT EXISTS master_genre
     FOREIGN KEY
 (
     genre
-) REFERENCES genre
+)
+    REFERENCES genre
 (
     name
 ),
@@ -504,16 +512,17 @@ CREATE TABLE IF NOT EXISTS master_genre
     FOREIGN KEY
 (
     master_id
-) REFERENCES master
+)
+    REFERENCES master
 (
     id
 ),
-    CONSTRAINT master_genre_id PRIMARY KEY
+    CONSTRAINT master_genre_id
+    PRIMARY KEY
 (
     id
 )
     );
-
 CREATE TABLE IF NOT EXISTS master_video
 (
     id
@@ -539,16 +548,17 @@ CREATE TABLE IF NOT EXISTS master_video
     FOREIGN KEY
 (
     master_id
-) REFERENCES master
+)
+    REFERENCES master
 (
     id
 ),
-    CONSTRAINT pk_master_video_id PRIMARY KEY
+    CONSTRAINT pk_master_video_id
+    PRIMARY KEY
 (
     id
 )
     );
-
 CREATE TABLE IF NOT EXISTS release_item
 (
     id
@@ -572,39 +582,37 @@ CREATE TABLE IF NOT EXISTS release_item
 (
     255
 ) NULL,
-    has_valid_day bit NOT NULL,
-    has_valid_month bit NOT NULL,
-    has_valid_year bit NOT NULL,
-    is_master bit NOT NULL,
+    has_valid_day BIT NOT NULL,
+    has_valid_month BIT NOT NULL,
+    has_valid_year BIT NOT NULL,
+    is_master BIT NOT NULL,
     listed_release_date VARCHAR
 (
     255
 ) NULL,
     notes LONGTEXT NULL,
-    release_date date NULL,
+    release_date DATE NULL,
     status VARCHAR
 (
     255
 ) NULL,
-    title VARCHAR
-(
-    10000
-) NULL,
+    title TEXT NULL,
     master_id BIGINT NULL,
     CONSTRAINT fk_release_item_master_id_master
     FOREIGN KEY
 (
     master_id
-) REFERENCES master
+)
+    REFERENCES master
 (
     id
 ),
-    CONSTRAINT pk_release_item_id PRIMARY KEY
+    CONSTRAINT pk_release_item_id
+    PRIMARY KEY
 (
     id
 )
     );
-
 CREATE TABLE IF NOT EXISTS release_item_format
 (
     id
@@ -634,45 +642,17 @@ CREATE TABLE IF NOT EXISTS release_item_format
     FOREIGN KEY
 (
     release_item_id
-) REFERENCES release_item
+)
+    REFERENCES release_item
 (
     id
 ),
-    CONSTRAINT pk_release_item_format_id PRIMARY KEY
+    CONSTRAINT pk_release_item_format_id
+    PRIMARY KEY
 (
     id
 )
     );
-
-CREATE TABLE IF NOT EXISTS release_item_format_description
-(
-    format_id
-    BIGINT
-    NOT
-    NULL,
-    created_at
-    DATETIME
-(
-    6
-) NOT NULL,
-    last_modified_at DATETIME
-(
-    6
-) NOT NULL,
-    description VARCHAR
-(
-    255
-) NULL,
-    CONSTRAINT fk_release_item_format_description_format_id
-    FOREIGN KEY
-(
-    format_id
-) REFERENCES release_item_format
-(
-    id
-)
-    );
-
 CREATE TABLE IF NOT EXISTS release_item_identifier
 (
     id
@@ -688,29 +668,24 @@ CREATE TABLE IF NOT EXISTS release_item_identifier
     6
 ) NOT NULL,
     description TEXT NULL,
-    type VARCHAR
-(
-    10000
-) NULL,
-    value VARCHAR
-(
-    10000
-) NULL,
+    type TEXT NULL,
+    value TEXT NULL,
     release_item_id BIGINT NULL,
     CONSTRAINT fk_release_item_identifier_release_item_id
     FOREIGN KEY
 (
     release_item_id
-) REFERENCES release_item
+)
+    REFERENCES release_item
 (
     id
 ),
-    CONSTRAINT pk_release_item_identifier_id PRIMARY KEY
+    CONSTRAINT pk_release_item_identifier_id
+    PRIMARY KEY
 (
     id
 )
     );
-
 CREATE TABLE IF NOT EXISTS label_item_release
 (
     id
@@ -731,8 +706,7 @@ CREATE TABLE IF NOT EXISTS label_item_release
 ) NULL,
     label_id BIGINT NULL,
     release_item_id BIGINT NULL,
-    CONSTRAINT uq_label_item_release_release_item_id_label_id
-    UNIQUE
+    CONSTRAINT uq_label_item_release_release_item_id_label_id UNIQUE
 (
     release_item_id,
     label_id
@@ -741,7 +715,8 @@ CREATE TABLE IF NOT EXISTS label_item_release
     FOREIGN KEY
 (
     label_id
-) REFERENCES label
+)
+    REFERENCES label
 (
     id
 ),
@@ -749,16 +724,17 @@ CREATE TABLE IF NOT EXISTS label_item_release
     FOREIGN KEY
 (
     release_item_id
-) REFERENCES release_item
+)
+    REFERENCES release_item
 (
     id
 ),
-    CONSTRAINT pk_label_item_release_id PRIMARY KEY
+    CONSTRAINT pk_label_item_release_id
+    PRIMARY KEY
 (
     id
 )
     );
-
 CREATE TABLE IF NOT EXISTS release_item_artist
 (
     id
@@ -775,8 +751,7 @@ CREATE TABLE IF NOT EXISTS release_item_artist
 ) NOT NULL,
     artist_id BIGINT NULL,
     release_item_id BIGINT NULL,
-    CONSTRAINT uq_release_item_artist_release_item_id_artist_id
-    UNIQUE
+    CONSTRAINT uq_release_item_artist_release_item_id_artist_id UNIQUE
 (
     release_item_id,
     artist_id
@@ -785,7 +760,8 @@ CREATE TABLE IF NOT EXISTS release_item_artist
     FOREIGN KEY
 (
     artist_id
-) REFERENCES artist
+)
+    REFERENCES artist
 (
     id
 ),
@@ -793,16 +769,17 @@ CREATE TABLE IF NOT EXISTS release_item_artist
     FOREIGN KEY
 (
     release_item_id
-) REFERENCES release_item
+)
+    REFERENCES release_item
 (
     id
 ),
-    CONSTRAINT pk_release_item_artist_id PRIMARY KEY
+    CONSTRAINT pk_release_item_artist_id
+    PRIMARY KEY
 (
     id
 )
     );
-
 CREATE TABLE IF NOT EXISTS release_item_credited_artist
 (
     id
@@ -824,7 +801,8 @@ CREATE TABLE IF NOT EXISTS release_item_credited_artist
     FOREIGN KEY
 (
     artist_id
-) REFERENCES artist
+)
+    REFERENCES artist
 (
     id
 ),
@@ -832,16 +810,17 @@ CREATE TABLE IF NOT EXISTS release_item_credited_artist
     FOREIGN KEY
 (
     release_item_id
-) REFERENCES release_item
+)
+    REFERENCES release_item
 (
     id
 ),
-    CONSTRAINT pk_release_item_credited_artist_id PRIMARY KEY
+    CONSTRAINT pk_release_item_credited_artist_id
+    PRIMARY KEY
 (
     id
 )
     );
-
 CREATE TABLE IF NOT EXISTS release_item_genre
 (
     id
@@ -861,8 +840,7 @@ CREATE TABLE IF NOT EXISTS release_item_genre
     255
 ) NULL,
     release_item_id BIGINT NULL,
-    CONSTRAINT uq_release_item_genre_release_item_id_genre
-    UNIQUE
+    CONSTRAINT uq_release_item_genre_release_item_id_genre UNIQUE
 (
     release_item_id,
     genre
@@ -871,7 +849,8 @@ CREATE TABLE IF NOT EXISTS release_item_genre
     FOREIGN KEY
 (
     release_item_id
-) REFERENCES release_item
+)
+    REFERENCES release_item
 (
     id
 ),
@@ -879,16 +858,17 @@ CREATE TABLE IF NOT EXISTS release_item_genre
     FOREIGN KEY
 (
     genre
-) REFERENCES genre
+)
+    REFERENCES genre
 (
     name
 ),
-    CONSTRAINT pk_release_item_genre_id PRIMARY KEY
+    CONSTRAINT pk_release_item_genre_id
+    PRIMARY KEY
 (
     id
 )
     );
-
 CREATE TABLE IF NOT EXISTS release_item_video
 (
     id
@@ -905,25 +885,23 @@ CREATE TABLE IF NOT EXISTS release_item_video
 ) NOT NULL,
     description TEXT NULL,
     title TEXT NULL,
-    url VARCHAR
-(
-    10000
-) NULL,
+    url TEXT NULL,
     release_item_id BIGINT NULL,
     CONSTRAINT fk_release_item_video_release_item_id_release_item
     FOREIGN KEY
 (
     release_item_id
-) REFERENCES release_item
+)
+    REFERENCES release_item
 (
     id
 ),
-    CONSTRAINT pk_release_item_video_id PRIMARY KEY
+    CONSTRAINT pk_release_item_video_id
+    PRIMARY KEY
 (
     id
 )
     );
-
 CREATE TABLE IF NOT EXISTS release_item_work
 (
     id
@@ -944,18 +922,20 @@ CREATE TABLE IF NOT EXISTS release_item_work
 ) NULL,
     label_id BIGINT NULL,
     release_item_id BIGINT NULL,
-    CONSTRAINT uq_release_item_work_release_item_id_label_id_work
-    UNIQUE
+    CONSTRAINT uq_release_item_work_release_item_id_label_id_work UNIQUE
 (
     release_item_id,
     label_id,
-    work
-),
+    `work`
+(
+    100
+)),
     CONSTRAINT fk_release_item_work_label_id_label
     FOREIGN KEY
 (
     label_id
-) REFERENCES label
+)
+    REFERENCES label
 (
     id
 ),
@@ -963,28 +943,29 @@ CREATE TABLE IF NOT EXISTS release_item_work
     FOREIGN KEY
 (
     release_item_id
-) REFERENCES release_item
+)
+    REFERENCES release_item
 (
     id
 ),
-    CONSTRAINT pk_release_item_work_id PRIMARY KEY
+    CONSTRAINT pk_release_item_work_id
+    PRIMARY KEY
 (
     id
 )
     );
-
 CREATE TABLE IF NOT EXISTS style
 (
     name VARCHAR
 (
     255
 ) NOT NULL,
-    CONSTRAINT pk_style_name PRIMARY KEY
+    CONSTRAINT pk_style_name
+    PRIMARY KEY
 (
     name
 )
     );
-
 CREATE TABLE IF NOT EXISTS master_style
 (
     id
@@ -1004,8 +985,7 @@ CREATE TABLE IF NOT EXISTS master_style
 (
     255
 ) NULL,
-    CONSTRAINT uq_master_style_master_id_style
-    UNIQUE
+    CONSTRAINT uq_master_style_master_id_style UNIQUE
 (
     master_id,
     style
@@ -1014,7 +994,8 @@ CREATE TABLE IF NOT EXISTS master_style
     FOREIGN KEY
 (
     master_id
-) REFERENCES master
+)
+    REFERENCES master
 (
     id
 ),
@@ -1022,16 +1003,17 @@ CREATE TABLE IF NOT EXISTS master_style
     FOREIGN KEY
 (
     style
-) REFERENCES style
+)
+    REFERENCES style
 (
     name
 ),
-    CONSTRAINT pk_master_style_id PRIMARY KEY
+    CONSTRAINT pk_master_style_id
+    PRIMARY KEY
 (
     id
 )
     );
-
 CREATE TABLE IF NOT EXISTS release_item_style
 (
     id
@@ -1051,34 +1033,35 @@ CREATE TABLE IF NOT EXISTS release_item_style
 (
     255
 ) NULL,
-    CONSTRAINT uq_release_item_style_release_item_id_style
-    UNIQUE
+    CONSTRAINT uq_release_item_style_release_item_id_style UNIQUE
 (
     release_item_id,
     style
 ),
-    CONSTRAINT fq_release_item_style_style_style
+    CONSTRAINT fk_release_item_style_style_style
     FOREIGN KEY
 (
     style
-) REFERENCES style
+)
+    REFERENCES style
 (
     name
 ),
-    CONSTRAINT fq_release_item_style_release_item_id_release_item
+    CONSTRAINT fk_release_item_style_release_item_id_release_item
     FOREIGN KEY
 (
     release_item_id
-) REFERENCES release_item
+)
+    REFERENCES release_item
 (
     id
 ),
-    CONSTRAINT pk_release_item_style_id PRIMARY KEY
+    CONSTRAINT pk_release_item_style_id
+    PRIMARY KEY
 (
     id
 )
     );
-
 CREATE TABLE IF NOT EXISTS release_item_track
 (
     id
@@ -1093,40 +1076,41 @@ CREATE TABLE IF NOT EXISTS release_item_track
 (
     6
 ) NOT NULL,
-    position VARCHAR
-(
-    15000
-) NULL,
-    title VARCHAR
-(
-    15000
-) NULL,
+    position TEXT NULL,
+    title TEXT NULL,
     duration VARCHAR
 (
     5000
 ) NULL,
     release_item_id BIGINT NULL,
-    CONSTRAINT uq_release_item_track_position_title_duration_release_item_id
-    UNIQUE
+    CONSTRAINT uq_release_item_track_position_title_duration_release_item_id UNIQUE
 (
-    position,
-    title,
-    duration,
-    release_item_id
+    `position`
+(
+    100
+), title
+(
+    100
+), duration
+(
+    100
 ),
+    release_item_id
+    ),
     CONSTRAINT fk_release_item_track_release_item_id_release_item
     FOREIGN KEY
 (
     release_item_id
-) REFERENCES release_item
+)
+    REFERENCES release_item
 (
     id
 ),
-    CONSTRAINT pk_release_item_track_id PRIMARY KEY
+    CONSTRAINT pk_release_item_track_id
+    PRIMARY KEY
 (
     id
 )
     );
-
 SET
 FOREIGN_KEY_CHECKS = 1;

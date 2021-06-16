@@ -1,7 +1,7 @@
 package io.dsub.discogs.batch.datasource;
 
 import io.dsub.discogs.batch.argument.ArgType;
-import io.dsub.discogs.common.exception.MissingRequiredArgumentException;
+import io.dsub.discogs.batch.exception.MissingRequiredArgumentException;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -17,7 +17,8 @@ public class SimpleDataSourceProperties implements DataSourceProperties {
   private String connectionUrl;
   private DBType dbType;
 
-  public SimpleDataSourceProperties(ApplicationArguments args) {
+  public SimpleDataSourceProperties(ApplicationArguments args)
+      throws MissingRequiredArgumentException {
     Map<String, String> map =
         args.getNonOptionArgs().stream()
             .map(s -> s.split("="))

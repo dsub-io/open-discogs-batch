@@ -3,7 +3,7 @@ package io.dsub.discogs.batch.argument;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import io.dsub.discogs.common.exception.InvalidArgumentException;
+import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Assertions;

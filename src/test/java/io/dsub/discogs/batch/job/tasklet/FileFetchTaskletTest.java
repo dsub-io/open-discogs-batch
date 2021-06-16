@@ -13,6 +13,8 @@ import static org.mockito.Mockito.when;
 
 import ch.qos.logback.classic.Level;
 import io.dsub.discogs.batch.dump.DiscogsDump;
+import io.dsub.discogs.batch.exception.FileDeleteException;
+import io.dsub.discogs.batch.exception.FileException;
 import io.dsub.discogs.batch.testutil.LogSpy;
 import io.dsub.discogs.batch.util.FileUtil;
 import java.io.IOException;
@@ -81,7 +83,8 @@ class FileFetchTaskletTest {
   }
 
   @Test
-  void givenFileNotExists__WhenExecuteTask__ShouldProceedWithoutCheckFileSize() throws IOException {
+  void givenFileNotExists__WhenExecuteTask__ShouldProceedWithoutCheckFileSize()
+      throws IOException, FileException {
     // given
     doNothing().when(fileUtil).deleteFile(nameCaptor.capture());
     doNothing().when(fileUtil).copy(inCaptor.capture(), nameCaptor.capture());
@@ -113,7 +116,8 @@ class FileFetchTaskletTest {
   }
 
   @Test
-  void givenIncompleteFileExists__WhenExecuteTask__ShouldFetchFileAgain() throws IOException {
+  void givenIncompleteFileExists__WhenExecuteTask__ShouldFetchFileAgain()
+      throws IOException, FileException {
     // given
     when(fileUtil.getSize(nameCaptor.capture())).thenReturn(100L);
     doReturn(inputStream)

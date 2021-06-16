@@ -1,6 +1,6 @@
 package io.dsub.discogs.batch.dump;
 
-import io.dsub.discogs.common.exception.InvalidArgumentException;
+import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import java.util.List;
 import java.util.Locale;
 
@@ -10,7 +10,7 @@ public enum DumpType {
   MASTER,
   RELEASE;
 
-  public static DumpType of(String name) {
+  public static DumpType of(String name) throws InvalidArgumentException {
     String targetName = name.toLowerCase(Locale.US);
     for (DumpType value : values()) {
       if (value.toString().equals(targetName)) {

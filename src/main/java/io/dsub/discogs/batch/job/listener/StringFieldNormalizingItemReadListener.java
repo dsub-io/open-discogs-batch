@@ -34,6 +34,6 @@ public class StringFieldNormalizingItemReadListener<T> implements ItemReadListen
 
   @Override
   public void onReadError(Exception ex) {
-    log.error("read item failure! {}", ex.getMessage());
+    log.error("failed to read item: {}", ex.getMessage());
   }
 }

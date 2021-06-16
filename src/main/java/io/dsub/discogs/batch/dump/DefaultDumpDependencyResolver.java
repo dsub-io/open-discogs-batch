@@ -2,8 +2,8 @@ package io.dsub.discogs.batch.dump;
 
 import io.dsub.discogs.batch.argument.ArgType;
 import io.dsub.discogs.batch.dump.service.DiscogsDumpService;
-import io.dsub.discogs.common.exception.DumpNotFoundException;
-import io.dsub.discogs.common.exception.InvalidArgumentException;
+import io.dsub.discogs.batch.exception.DumpNotFoundException;
+import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.Collection;
@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -38,7 +39,8 @@ public class DefaultDumpDependencyResolver implements DumpDependencyResolver {
    * @return List of {@link DiscogsDump} to be handled.
    */
   @Override
-  public Collection<DiscogsDump> resolve(ApplicationArguments args) {
+  public Collection<DiscogsDump> resolve(ApplicationArguments args)
+      throws DumpNotFoundException, InvalidArgumentException {
     if (args.containsOption(ETAG)) {
       if (args.containsOption(STRICT)) {
         return resolveByStrictETagEntries(args);
@@ -91,7 +93,16 @@ public class DefaultDumpDependencyResolver implements DumpDependencyResolver {
   private List<DiscogsDump> resolveByStrictETagEntries(ApplicationArguments args) {
     log.info("strict option found. skip resolve dependencies..");
     return args.getOptionValues(ETAG).stream()
-        .map(this::getDumpByETag)
+        .map(
+            etag -> {
+              try {
+                return this.getDumpByETag(etag);
+              } catch (DumpNotFoundException | InvalidArgumentException e) {
+                log.error(e.getMessage(), e);
+                return null;
+              }
+            })
+        .filter(Objects::nonNull)
         .collect(Collectors.toList());
   }
 
@@ -104,7 +115,8 @@ public class DefaultDumpDependencyResolver implements DumpDependencyResolver {
    * @throws InvalidArgumentException thrown if given list is null or empty, or eTag is not present.
    * @throws DumpNotFoundException if dump cannot be found under specific type, year and month.
    */
-  protected Collection<DiscogsDump> resolveByETagEntries(List<String> eTags) {
+  protected Collection<DiscogsDump> resolveByETagEntries(List<String> eTags)
+      throws DumpNotFoundException, InvalidArgumentException {
     if (eTags == null || eTags.isEmpty()) {
       throw new InvalidArgumentException("eTags cannot be null or empty");
     }
@@ -152,7 +164,8 @@ public class DefaultDumpDependencyResolver implements DumpDependencyResolver {
   }
 
   /** Calls dumpService to fetch dump via ETag entry. */
-  private DiscogsDump getDumpByETag(String eTag) {
+  private DiscogsDump getDumpByETag(String eTag)
+      throws InvalidArgumentException, DumpNotFoundException {
     DiscogsDump dump = dumpService.getDiscogsDump(eTag);
     if (dump == null) {
       throw new DumpNotFoundException("dump of eTag " + eTag + " not found");
@@ -207,7 +220,7 @@ public class DefaultDumpDependencyResolver implements DumpDependencyResolver {
    * @param args Argument to be extracted.
    * @return Resolved types if type entry present, or simply all types of {@link DumpType}.
    */
-  protected List<DumpType> parseTypes(ApplicationArguments args) {
+  protected List<DumpType> parseTypes(ApplicationArguments args) throws InvalidArgumentException {
     if (!args.containsOption(TYPE)) {
       return List.of(DumpType.values());
     }
@@ -216,14 +229,18 @@ public class DefaultDumpDependencyResolver implements DumpDependencyResolver {
 
     if (args.containsOption(STRICT)) {
       log.info("strict option found. skip resolve dependencies..");
-      args.getOptionValues(TYPE).stream().map(DumpType::of).forEach(requiredTypes::add);
+      for (String s : args.getOptionValues(TYPE)) {
+        DumpType of = DumpType.of(s);
+        requiredTypes.add(of);
+      }
       return List.copyOf(requiredTypes);
     }
 
-    args.getOptionValues(TYPE).stream()
-        .map(DumpType::of)
-        .map(DumpType::getDependencies)
-        .forEach(requiredTypes::addAll);
+    for (String s : args.getOptionValues(TYPE)) {
+      DumpType of = DumpType.of(s);
+      List<DumpType> dependencies = of.getDependencies();
+      requiredTypes.addAll(dependencies);
+    }
     return List.copyOf(requiredTypes);
   }
 }

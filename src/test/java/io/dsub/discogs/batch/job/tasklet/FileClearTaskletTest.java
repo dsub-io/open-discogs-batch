@@ -8,7 +8,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import io.dsub.discogs.batch.exception.FileException;
 import io.dsub.discogs.batch.util.FileUtil;
+import java.io.File;
 import java.io.IOException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,7 +49,7 @@ class FileClearTaskletTest {
 
       // then
       verify(fileUtil, times(1)).clearAll();
-    } catch (IOException e) {
+    } catch (FileException e) {
       fail(e);
     }
   }
@@ -63,7 +65,7 @@ class FileClearTaskletTest {
 
       // then
       verify(fileUtil, never()).clearAll();
-    } catch (IOException e) {
+    } catch (FileException e) {
       fail(e);
     }
   }
@@ -85,7 +87,7 @@ class FileClearTaskletTest {
   void givenClearAllThrows__WhenTaskExecutes__WillMarkAsComplete() {
     try {
       // given
-      willThrow(new IOException("FAIL")).given(fileUtil).clearAll();
+      willThrow(new FileException("FAIL")).given(fileUtil).clearAll();
 
       // when
       fileClearTasklet.execute(stepContribution, chunkContext);
@@ -93,7 +95,7 @@ class FileClearTaskletTest {
       // then
       assertThat(chunkContext.isComplete()).isTrue();
       assertThat(stepContribution.getExitStatus().getExitCode()).isEqualTo("COMPLETED");
-    } catch (IOException e) {
+    } catch (FileException e) {
       fail(e);
     }
   }

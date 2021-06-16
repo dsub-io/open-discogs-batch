@@ -1,6 +1,6 @@
 package io.dsub.discogs.batch.dump;
 
-import io.dsub.discogs.common.exception.InvalidArgumentException;
+import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;

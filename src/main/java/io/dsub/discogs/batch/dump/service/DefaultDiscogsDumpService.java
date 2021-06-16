@@ -4,9 +4,9 @@ import io.dsub.discogs.batch.dump.DiscogsDump;
 import io.dsub.discogs.batch.dump.DumpSupplier;
 import io.dsub.discogs.batch.dump.DumpType;
 import io.dsub.discogs.batch.dump.repository.DiscogsDumpRepository;
-import io.dsub.discogs.common.exception.DumpNotFoundException;
-import io.dsub.discogs.common.exception.InitializationFailureException;
-import io.dsub.discogs.common.exception.InvalidArgumentException;
+import io.dsub.discogs.batch.exception.DumpNotFoundException;
+import io.dsub.discogs.batch.exception.InitializationFailureException;
+import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -73,7 +73,7 @@ public class DefaultDiscogsDumpService implements DiscogsDumpService, Initializi
    * @return {@link DiscogsDump} if found, otherwise null.
    */
   @Override
-  public DiscogsDump getDiscogsDump(String eTag) throws InvalidArgumentException {
+  public DiscogsDump getDiscogsDump(String eTag) throws DumpNotFoundException {
     return repository.findByeTag(eTag);
   }
 
@@ -118,7 +118,8 @@ public class DefaultDiscogsDumpService implements DiscogsDumpService, Initializi
    * @throws DumpNotFoundException thrown if given type, year and month cannot be found.
    */
   @Override
-  public Collection<DiscogsDump> getAllByTypeYearMonth(List<DumpType> types, int year, int month) {
+  public Collection<DiscogsDump> getAllByTypeYearMonth(List<DumpType> types, int year, int month)
+      throws DumpNotFoundException {
     List<DiscogsDump> dumpList = new ArrayList<>();
     for (DumpType type : types.stream().distinct().collect(Collectors.toList())) {
       LocalDate targetDate = LocalDate.of(year, month, 1);

@@ -122,7 +122,7 @@ public class DiscogsJobIntegrationTest {
   }
 
   @Test
-  public void whenAllTypesProvided__ShouldNotSkipAnyType() throws Exception {
+  void whenAllTypesProvided__ShouldNotSkipAnyType() throws Exception {
     JobParameters params =
         jobLauncherTestUtils
             .getUniqueJobParametersBuilder()
@@ -142,12 +142,12 @@ public class DiscogsJobIntegrationTest {
       assertThat(Files.exists(filePath), is(true));
     }
 
-    assertThat(releaseRepository.count(), is(3L));
-    assertThat(masterRepository.count(), is(3L));
-    assertThat(labelRepository.count(), is(2L));
     assertThat(artistRepository.count(), is(3L));
+    assertThat(labelRepository.count(), is(2L));
+    assertThat(masterRepository.count(), is(3L));
+    assertThat(releaseRepository.count(), is(3L));
 
-    // check every single entities have at least one entry.
+    //     check every single entities have at least one entry.
     entityClasses.forEach(
         entityClass ->
             repositories

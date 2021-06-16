@@ -16,9 +16,9 @@ import io.dsub.discogs.batch.dump.DiscogsDump;
 import io.dsub.discogs.batch.dump.DumpSupplier;
 import io.dsub.discogs.batch.dump.DumpType;
 import io.dsub.discogs.batch.dump.repository.DiscogsDumpRepository;
+import io.dsub.discogs.batch.exception.DumpNotFoundException;
+import io.dsub.discogs.batch.exception.InitializationFailureException;
 import io.dsub.discogs.batch.testutil.LogSpy;
-import io.dsub.discogs.common.exception.DumpNotFoundException;
-import io.dsub.discogs.common.exception.InitializationFailureException;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -129,7 +129,8 @@ class DefaultDiscogsDumpServiceUnitTest {
   }
 
   @Test
-  void getDiscogsDumpShouldHandoverSameParameter__ThenReturnsTheSameResult__FromRepository() {
+  void getDiscogsDumpShouldHandoverSameParameter__ThenReturnsTheSameResult__FromRepository()
+      throws DumpNotFoundException {
     String fakeETag = RandomString.make(20);
     DiscogsDump fakeDump = getRandomDump();
     ArgumentCaptor<String> stringCaptor = ArgumentCaptor.forClass(String.class);
@@ -190,7 +191,8 @@ class DefaultDiscogsDumpServiceUnitTest {
   }
 
   @Test
-  void whenGetLatestCompleteDumpSet__ThenShouldRetryWithPreviousMonths__IfCountIsLowerThan4() {
+  void whenGetLatestCompleteDumpSet__ThenShouldRetryWithPreviousMonths__IfCountIsLowerThan4()
+      throws io.dsub.discogs.batch.exception.DumpNotFoundException {
     LocalDate existingDate = LocalDate.now(Clock.systemUTC()).minusMonths(2);
 
     List<DiscogsDump> fakeDumps =
@@ -303,8 +305,7 @@ class DefaultDiscogsDumpServiceUnitTest {
   @Test
   void whenGetAllByTypeYearMonth__WithDuplicatedType__ShouldNotThrow() {
     DumpType type = DumpType.values()[random.nextInt(4)];
-    when(repository.findTopByTypeAndCreatedAtBetween(any(), any(), ArgumentMatchers
-        .any()))
+    when(repository.findTopByTypeAndCreatedAtBetween(any(), any(), ArgumentMatchers.any()))
         .thenReturn(getRandomDumpWithType(type));
 
     // when
@@ -314,8 +315,8 @@ class DefaultDiscogsDumpServiceUnitTest {
 
   @Test
   void whenGetAllByTypeYearMonth__ShouldThrowIfRepositoryReturnsNull() {
-    when(repository.findTopByTypeAndCreatedAtBetween(any(), any(), ArgumentMatchers
-        .any())).thenReturn(null);
+    when(repository.findTopByTypeAndCreatedAtBetween(any(), any(), ArgumentMatchers.any()))
+        .thenReturn(null);
     DumpType type = DumpType.values()[random.nextInt(4)];
     Throwable t = catchThrowable(() -> dumpService.getAllByTypeYearMonth(List.of(type), 1, 1));
     assertThat(t)
@@ -325,10 +326,10 @@ class DefaultDiscogsDumpServiceUnitTest {
 
   @ParameterizedTest
   @EnumSource(DumpType.class)
-  void whenGetAllByTypeYearMonth__ShouldReturnProperValue(DumpType type) {
+  void whenGetAllByTypeYearMonth__ShouldReturnProperValue(DumpType type)
+      throws io.dsub.discogs.batch.exception.DumpNotFoundException {
     Collection<DiscogsDump> expected = List.of(getRandomDumpWithType(type));
-    when(repository.findTopByTypeAndCreatedAtBetween(any(), any(), ArgumentMatchers
-        .any()))
+    when(repository.findTopByTypeAndCreatedAtBetween(any(), any(), ArgumentMatchers.any()))
         .thenReturn(expected.iterator().next());
 
     // when
@@ -337,8 +338,8 @@ class DefaultDiscogsDumpServiceUnitTest {
     // then
     assertThat(result.size()).isEqualTo(expected.size());
     assertThat(result.iterator().next()).isEqualTo(expected.iterator().next());
-    verify(repository, times(1)).findTopByTypeAndCreatedAtBetween(any(), ArgumentMatchers
-        .any(), any());
+    verify(repository, times(1))
+        .findTopByTypeAndCreatedAtBetween(any(), ArgumentMatchers.any(), any());
   }
 
   @Test

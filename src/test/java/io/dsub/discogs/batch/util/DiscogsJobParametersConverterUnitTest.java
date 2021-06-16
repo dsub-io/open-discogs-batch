@@ -4,6 +4,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
+import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
@@ -24,7 +25,8 @@ class DiscogsJobParametersConverterUnitTest {
   final DiscogsJobParametersConverter converter = new DiscogsJobParametersConverter(delegate);
 
   @Test
-  void getJobParametersBy__ApplicationArguments__ShouldHaveProperValueMapped() {
+  void getJobParametersBy__ApplicationArguments__ShouldHaveProperValueMapped()
+      throws InvalidArgumentException {
     String[] args =
         "url=localhost user=root pass=pass --type=hello,world,java,land --chunk=1000".split(" ");
     ApplicationArguments applicationArguments = new DefaultApplicationArguments(args);

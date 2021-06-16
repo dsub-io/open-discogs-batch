@@ -3,7 +3,8 @@ package io.dsub.discogs.batch.job;
 import io.dsub.discogs.batch.argument.ArgType;
 import io.dsub.discogs.batch.config.BatchConfig;
 import io.dsub.discogs.batch.dump.DumpDependencyResolver;
-import io.dsub.discogs.common.exception.InvalidArgumentException;
+import io.dsub.discogs.batch.exception.DumpNotFoundException;
+import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import java.util.Properties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,7 +21,8 @@ public class DefaultJobParameterResolver implements JobParameterResolver {
   private final DumpDependencyResolver dumpDependencyResolver;
 
   @Override
-  public Properties resolve(ApplicationArguments args) {
+  public Properties resolve(ApplicationArguments args)
+      throws InvalidArgumentException, DumpNotFoundException {
     Properties props = new Properties();
     dumpDependencyResolver
         .resolve(args)
@@ -29,7 +31,7 @@ public class DefaultJobParameterResolver implements JobParameterResolver {
     return props;
   }
 
-  protected int parseChunkSize(ApplicationArguments args) {
+  protected int parseChunkSize(ApplicationArguments args) throws InvalidArgumentException {
     String chunkSizeOptName = ArgType.CHUNK_SIZE.getGlobalName();
     if (args.containsOption(chunkSizeOptName)) {
       String toParse = args.getOptionValues(chunkSizeOptName).get(0);

@@ -12,7 +12,7 @@ import io.dsub.discogs.batch.argument.validator.MappedValueValidator;
 import io.dsub.discogs.batch.argument.validator.TypeArgumentValidator;
 import io.dsub.discogs.batch.argument.validator.ValidationResult;
 import io.dsub.discogs.batch.argument.validator.YearMonthValidator;
-import io.dsub.discogs.common.exception.InvalidArgumentException;
+import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;

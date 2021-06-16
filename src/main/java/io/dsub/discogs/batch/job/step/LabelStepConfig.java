@@ -8,25 +8,32 @@ import io.dsub.discogs.batch.domain.label.LabelXML;
 import io.dsub.discogs.batch.dump.DiscogsDump;
 import io.dsub.discogs.batch.dump.DumpType;
 import io.dsub.discogs.batch.dump.service.DiscogsDumpService;
+import io.dsub.discogs.batch.exception.DumpNotFoundException;
+import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import io.dsub.discogs.batch.job.listener.StopWatchStepExecutionListener;
 import io.dsub.discogs.batch.job.listener.StringFieldNormalizingItemReadListener;
 import io.dsub.discogs.batch.job.reader.DiscogsDumpItemReaderBuilder;
 import io.dsub.discogs.batch.job.tasklet.FileClearTasklet;
 import io.dsub.discogs.batch.job.tasklet.FileFetchTasklet;
+import io.dsub.discogs.batch.job.tasklet.QueryExecutionTasklet;
 import io.dsub.discogs.batch.job.writer.ClassifierCompositeCollectionItemWriter;
 import io.dsub.discogs.batch.query.QueryBuilder;
 import io.dsub.discogs.batch.util.FileUtil;
+import io.dsub.discogs.common.entity.artist.Artist;
 import io.dsub.discogs.common.entity.base.BaseEntity;
 import io.dsub.discogs.common.entity.label.Label;
 import io.dsub.discogs.common.entity.label.LabelSubLabel;
 import io.dsub.discogs.common.entity.label.LabelUrl;
 import io.dsub.discogs.common.exception.InitializationFailureException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import javax.sql.DataSource;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.JobScope;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
@@ -44,12 +51,14 @@ import org.springframework.classify.Classifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.dao.DeadlockLoserDataAccessException;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
 
+@Slf4j
 @Configuration
 @RequiredArgsConstructor
-public class LabelStepConfig extends AbstractStepConfig {
+public class LabelStepConfig extends AbstractStepConfig<BatchCommand> {
 
   private static final String ETAG = "#{jobParameters['label']}";
   private static final String LABEL_STEP_FLOW = "label step flow";
@@ -58,6 +67,8 @@ public class LabelStepConfig extends AbstractStepConfig {
   private static final String LABEL_SUB_ITEMS_STEP = "label sub items step";
   private static final String LABEL_FILE_FETCH_STEP = "label file fetch step";
   private static final String LABEL_FILE_CLEAR_STEP = "label file clear step";
+  private static final String LABEL_TEMPORARY_TABLES_PRUNE_STEP = "label temporary tables prune step";
+  private static final String LABEL_SELECT_INSERT_STEP = "label select insert step";
 
   private final QueryBuilder<BaseEntity> queryBuilder;
   private final DataSource dataSource;
@@ -68,11 +79,15 @@ public class LabelStepConfig extends AbstractStepConfig {
   private final PlatformTransactionManager transactionManager;
   private final DiscogsDumpItemReaderBuilder readerBuilder;
   private final FileUtil fileUtil;
+  private final JdbcTemplate jdbcTemplate;
   private final Map<DumpType, DiscogsDump> dumpMap;
+  private final List<Class<? extends BaseEntity>> entities =
+      List.of(Label.class, LabelUrl.class, LabelSubLabel.class);
 
   @Bean
   @JobScope
-  public Step labelStep(@Value(ETAG) String eTag) {
+  public Step labelStep(@Value(ETAG) String eTag)
+      throws InvalidArgumentException, DumpNotFoundException {
     if (eTag == null || eTag.isBlank()) {
       return buildSkipStep(DumpType.LABEL, sbf);
     }
@@ -81,17 +96,29 @@ public class LabelStepConfig extends AbstractStepConfig {
         new FlowBuilder<SimpleFlow>(LABEL_STEP_FLOW)
             .from(labelFileFetchStep())
             .on(FAILED)
-            .end()
+            .to(labelFileClearStep())
             .from(labelFileFetchStep())
             .on(ANY)
             .to(labelCoreStep(null))
             .from(labelCoreStep(null))
             .on(FAILED)
-            .end()
+            .to(labelFileClearStep())
             .from(labelCoreStep(null))
             .on(ANY)
             .to(labelSubItemsStep(null))
             .from(labelSubItemsStep(null))
+            .on(FAILED)
+            .to(labelFileClearStep())
+            .from(labelSubItemsStep(null))
+            .on(ANY)
+            .to(labelTemporaryTablesPruneStep())
+            .from(labelTemporaryTablesPruneStep())
+            .on(FAILED)
+            .to(labelFileClearStep())
+            .from(labelTemporaryTablesPruneStep())
+            .on(ANY)
+            .to(labelSelectInsertStep())
+            .from(labelSelectInsertStep())
             .on(ANY)
             .to(labelFileClearStep())
             .from(labelFileClearStep())
@@ -108,7 +135,7 @@ public class LabelStepConfig extends AbstractStepConfig {
 
   @Bean
   @JobScope
-  public Step labelCoreStep(@Value(CHUNK) Integer chunkSize) {
+  public Step labelCoreStep(@Value(CHUNK) Integer chunkSize) throws InvalidArgumentException {
     return sbf.get(LABEL_CORE_STEP)
         .<LabelXML, LabelCommand>chunk(chunkSize)
         .reader(labelStreamReader())
@@ -146,7 +173,7 @@ public class LabelStepConfig extends AbstractStepConfig {
 
   @Bean
   @JobScope
-  public Step labelFileFetchStep() {
+  public Step labelFileFetchStep() throws DumpNotFoundException {
     return sbf.get(LABEL_FILE_FETCH_STEP)
         .tasklet(new FileFetchTasklet(labelDump(null), fileUtil))
         .build();
@@ -160,7 +187,30 @@ public class LabelStepConfig extends AbstractStepConfig {
 
   @Bean
   @JobScope
-  public DiscogsDump labelDump(@Value(ETAG) String eTag) {
+  public Step labelTemporaryTablesPruneStep() {
+    List<String> queries = entities.stream()
+        .filter(clazz -> clazz != Label.class)
+        .map(queryBuilder::getPruneQuery)
+        .collect(Collectors.toList());
+    return sbf.get(LABEL_TEMPORARY_TABLES_PRUNE_STEP)
+        .tasklet(new QueryExecutionTasklet(queries, jdbcTemplate))
+        .build();
+  }
+
+  @Bean
+  @JobScope
+  public Step labelSelectInsertStep() {
+    List<String> queries = entities.stream()
+        .map(queryBuilder::getSelectInsertQuery)
+        .collect(Collectors.toList());
+    return sbf.get(LABEL_SELECT_INSERT_STEP)
+        .tasklet(new QueryExecutionTasklet(queries, jdbcTemplate))
+        .build();
+  }
+
+  @Bean
+  @JobScope
+  public DiscogsDump labelDump(@Value(ETAG) String eTag) throws DumpNotFoundException {
     DiscogsDump dump = dumpService.getDiscogsDump(eTag);
     dumpMap.put(DumpType.LABEL, dump);
     return dump;
@@ -226,29 +276,39 @@ public class LabelStepConfig extends AbstractStepConfig {
     writer.setClassifier(
         (Classifier<BatchCommand, ItemWriter<? super BatchCommand>>)
             classifiable -> {
-              if (classifiable instanceof LabelSubLabelCommand) {
-                return labelSubLabelWriter();
+              try {
+                return classify(classifiable);
+              } catch (InvalidArgumentException e) {
+                log.error(e.getMessage(), e);
+                return null;
               }
-              return labelUrlWriter();
             });
     return writer;
   }
 
   @Bean
   @StepScope
-  public ItemWriter<BatchCommand> labelWriter() {
-    return buildItemWriter(queryBuilder.getUpsertQuery(Label.class), dataSource);
+  public ItemWriter<BatchCommand> labelWriter() throws InvalidArgumentException {
+    return buildItemWriter(queryBuilder.getTemporaryInsertQuery(Label.class), dataSource);
   }
 
   @Bean
   @StepScope
-  public ItemWriter<BatchCommand> labelUrlWriter() {
-    return buildItemWriter(queryBuilder.getUpsertQuery(LabelUrl.class), dataSource);
+  public ItemWriter<BatchCommand> labelUrlWriter() throws InvalidArgumentException {
+    return buildItemWriter(queryBuilder.getTemporaryInsertQuery(LabelUrl.class), dataSource);
   }
 
   @Bean
   @StepScope
-  public ItemWriter<BatchCommand> labelSubLabelWriter() {
-    return buildItemWriter(queryBuilder.getUpsertQuery(LabelSubLabel.class), dataSource);
+  public ItemWriter<BatchCommand> labelSubLabelWriter() throws InvalidArgumentException {
+    return buildItemWriter(queryBuilder.getTemporaryInsertQuery(LabelSubLabel.class), dataSource);
+  }
+
+  protected ItemWriter<? super BatchCommand> classify(BatchCommand classifiable)
+      throws InvalidArgumentException {
+    if (classifiable instanceof LabelSubLabelCommand) {
+      return labelSubLabelWriter();
+    }
+    return labelUrlWriter();
   }
 }

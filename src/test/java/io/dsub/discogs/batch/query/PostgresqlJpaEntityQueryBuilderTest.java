@@ -1,213 +1,179 @@
 package io.dsub.discogs.batch.query;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertAll;
 
-import io.dsub.discogs.batch.query.JpaEntityExtractorTest.TestEntity;
-import io.dsub.discogs.common.entity.artist.Artist;
-import io.dsub.discogs.common.entity.artist.ArtistMember;
 import io.dsub.discogs.common.entity.base.BaseEntity;
-import io.dsub.discogs.common.entity.base.BaseTimeEntity;
-import io.dsub.discogs.common.entity.release.ReleaseItemTrack;
 import java.lang.reflect.Field;
 import java.util.Arrays;
-import java.util.Map;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import javax.persistence.Column;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.Table;
-import javax.persistence.UniqueConstraint;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 class PostgresqlJpaEntityQueryBuilderTest {
 
+  final Pattern selectInsertQueryPattern =
+      Pattern.compile(
+          "^INSERT INTO (?<targetTable>\\w*)"
+              + "\\((?<targetColumns>[\\w,]*)\\) "
+              + "SELECT (?<sourceColumns>[\\w,]*) "
+              + "FROM (?<sourceTable>\\w*) "
+              + "ON CONFLICT \\((?<constraintColumns>[\\w,]*)\\) "
+              + "DO UPDATE SET \\((?<updateTargetColumns>[\\w,]*)\\)"
+              + "="
+              + "\\((?<updateSourceColumns>[\\w.,()]*)\\)$");
+  final Pattern selectPattern = Pattern.compile("(SELECT)");
+  final Pattern prunePattern =
+      Pattern.compile("DELETE FROM \\w+ WHERE (\\+? ?\\([\\w =.]*\\) ?)* < (\\d+)");
+  final Pattern temporaryInsertPattern =
+      Pattern.compile(
+          "INSERT INTO (?<tableName>\\w+_tmp)\\((?<columns>[\\w,]+)\\) SELECT (?<fields>[\\w:,()]+)");
   PostgresqlJpaEntityQueryBuilder builder = new PostgresqlJpaEntityQueryBuilder();
 
-  @Test
-  void ifUniqueConstraintExistsTwice__AndAutoId__ShouldContainIdsAndUniqueConstraints() {
-    // when
-    String query = builder.getUpsertQuery(JpaQueryTestEntityTwo.class);
-
-    int startLen = "ON CONFLICT (".length();
-    int startIdx = query.indexOf("ON CONFLICT (");
-    int lastIdx = query.indexOf(") DO UPDATE");
-    String[] parts = query.substring(startIdx + startLen, lastIdx).split(",");
-
-    // then
-    assertThat(parts).contains("profile", "last_name", "hello", "id");
-  }
-
-  @Test
-  void ifUniqueConstraintExists__AndAutoId__ShouldContainConstraintsOnWhereClause() {
-    // when
-    String query = builder.getUpsertQuery(JpaQueryTestEntityOne.class);
-    String target = query.substring(query.indexOf("WHERE"));
-
-    // then
-    assertThat(target).contains("profile=:profile", "last_name=:lastName");
-  }
-
-  @Test
-  void whenNoUniqueConstraintExists__AndAutoId__ShouldNotContainWhereClause() {
-    // when
-    String query = builder.getUpsertQuery(JpaQueryTestEntityThree.class);
-    // then
-    assertThat(query).doesNotContain("WHERE");
-  }
-
-  @Test
-  void whenIdAutoAndHasNoUniqueColumns__ShouldContainIdsInWhereClause() {
-    Map<String, String> idMappings =
-        Arrays.stream(JpaQueryTestEntityThree.class.getDeclaredFields())
-            .filter(field -> field.isAnnotationPresent(Id.class))
-            .collect(
-                Collectors.toMap(
-                    field -> field.getAnnotation(Column.class).name(), Field::getName));
+  @ParameterizedTest
+  @MethodSource("io.dsub.discogs.batch.TestArguments#entities")
+  void givenAnEntity__whenGetSelectInsertQuery__ShouldMatchGivenPattern(
+      Class<? extends BaseEntity> entityClass) {
 
     // when
-    String query = builder.getUpsertQuery(JpaQueryTestEntityThree.class);
-
-    // then
-    idMappings.forEach((key, value) -> assertThat(query).contains(key).contains(value));
-  }
-
-  @Test
-  void whenJoinColumn__ShouldContainCorrectFieldName() {
-    // when
-    String query = builder.getUpsertQuery(JpaQueryTestEntityThree.class);
-
-    // then
-    assertThat(query).contains("test_entity_id").contains("testEntity");
-  }
-
-  @Test
-  void whenLastModifiedExists__ShouldReflectSuchFieldAndColumn() {
-    // when
-    String query = builder.getUpsertQuery(Artist.class);
-
-    // then
-    assertThat(query).contains("last_modified_at=NOW()");
-  }
-
-  @Test
-  void whenCreatedAtdExists__ShouldReflectSuchFieldAndColumn() {
-    // when
-    String query = builder.getUpsertQuery(Artist.class);
-
-    // then
-    assertThat(query).contains("created_at");
-  }
-
-  @Test
-  void whenGetUpsertQuery__WithEntityWithJoinColumns__ShouldIncludeWhereClause() {
-    // when
-    String query = builder.getUpsertQuery(ArtistMember.class);
+    String query = builder.getSelectInsertQuery(entityClass);
+    Matcher matcher = selectInsertQueryPattern.matcher(query);
 
     // then
     assertAll(
-        () -> assertThat(query).contains("SELECT 1 FROM artist WHERE id = :artist"),
-        () -> assertThat(query).contains("SELECT 1 FROM artist WHERE id = :member"));
+        () -> assertThat(matcher.matches()).isTrue(),
+        () -> assertThat(matcher.group(1)).isNotNull().isNotBlank(),
+        () -> assertThat(matcher.group(2).split(",")).hasSize(matcher.group(3).split(",").length),
+        () -> assertThat(matcher.group(4)).endsWith("_tmp"),
+        () -> assertThat(matcher.group(5).split(",")).doesNotContain(matcher.group(6).split(",")));
   }
 
-  @Test
-  void whenGetIdOnlyInsertQuery__ShouldOnlyIncludeIdFields() {
+  @ParameterizedTest
+  @MethodSource("io.dsub.discogs.batch.TestArguments#entities")
+  void givenEntityHasLastModifiedField__WhenGetSelectInsertQuery__ShouldMapToNow(
+      Class<? extends BaseEntity> entityClass) {
+
+    // given
+    Field lastModifiedField = builder.getLastModifiedAtField(entityClass);
+    if (lastModifiedField == null) {
+      return;
+    }
+
     // when
-    String query = builder.getIdOnlyInsertQuery(ArtistMember.class);
+    String query = builder.getSelectInsertQuery(entityClass);
+    Matcher matcher = selectInsertQueryPattern.matcher(query);
 
     // then
-    assertAll(
-        () -> assertThat(query).doesNotContain(":artist"),
-        () -> assertThat(query).doesNotContain(":member"),
-        () -> assertThat(query).contains("ON CONFLICT DO NOTHING"));
+    assertThat(matcher.matches()).isTrue();
+    String targetColumns = matcher.group("updateTargetColumns");
+    int idx = split(targetColumns).indexOf(builder.getColumnName(lastModifiedField));
+    List<String> updateSourceColumns = split(matcher.group("updateSourceColumns"));
+
+    assertThat(updateSourceColumns.get(idx)).isEqualTo("NOW()");
   }
 
-  @Test
-  void test() {
-    String query = builder.getUpsertQuery(ReleaseItemTrack.class);
+  @ParameterizedTest
+  @MethodSource("io.dsub.discogs.batch.TestArguments#entities")
+  void givenEntityHasCreatedAt__WhenGetSelectInsertQuery__ShouldNotUpdate(
+      Class<? extends BaseEntity> entityClass) {
+
+    Field createdAtField = builder.getCreatedAtField(entityClass);
+    if (createdAtField == null) {
+      return;
+    }
+    String createdAtCol = builder.getColumnName(createdAtField);
+
+    // when
+    String query = builder.getSelectInsertQuery(entityClass);
+    Matcher matcher = selectInsertQueryPattern.matcher(query);
+
+    // then
+    assertThat(matcher.matches()).isTrue();
+    List<String> targetColumns = split(matcher.group("updateTargetColumns"));
+    assertThat(targetColumns).doesNotContain(createdAtCol);
+  }
+
+  @ParameterizedTest
+  @MethodSource("io.dsub.discogs.batch.TestArguments#entities")
+  void givenEntity__WhenGetSelectInsertQuery__ShouldNotUpdateId(
+      Class<? extends BaseEntity> entityClass) {
+
+    List<String> idColumns = builder.getIdColumns(entityClass);
+
+    // when
+    String query = builder.getSelectInsertQuery(entityClass);
+    Matcher matcher = selectInsertQueryPattern.matcher(query);
+
+    // then
+    assertThat(matcher.matches()).isTrue();
+    List<String> targetColumns = split(matcher.group("updateTargetColumns"));
+    assertThat(targetColumns).doesNotContain(idColumns.toArray(String[]::new));
+
+    List<String> sourceColumns = split(matcher.group("updateSourceColumns"));
+    assertThat(sourceColumns).doesNotContain(idColumns.toArray(String[]::new));
+  }
+
+  @ParameterizedTest
+  @MethodSource("io.dsub.discogs.batch.TestArguments#entities")
+  void givenEntityHasJoinColumn__WhenGetPruneQuery__ShouldCountAllReferencingColumns(
+      Class<? extends BaseEntity> entityClass) {
+
+    // given
+    int count = builder.getJoinColumns(entityClass).size();
+    if (count == 0) {
+      return;
+    }
+
+    // when
+    String query = builder.getPruneQuery(entityClass);
+    long selectCnt = selectPattern.matcher(query).results().count();
+    Matcher m = prunePattern.matcher(query);
+
+    // then
+    assertThat(m.matches()).isTrue();
+    long expectedCnt = Long.parseLong(m.group(2));
+    assertThat(selectCnt).isEqualTo(expectedCnt);
+  }
+
+  @ParameterizedTest
+  @MethodSource("io.dsub.discogs.batch.TestArguments#entities")
+  void givenAnEntity__whenGetTemporaryInsertQuery__ShouldMatchGivenPattern(
+      Class<? extends BaseEntity> entityClass) {
+
+    // when
+    String query = builder.getTemporaryInsertQuery(entityClass);
+    Matcher m = temporaryInsertPattern.matcher(query);
+
+    // then
+    assertThat(m.matches()).isTrue();
+  }
+
+  @ParameterizedTest
+  @MethodSource("io.dsub.discogs.batch.TestArguments#entities")
+  void givenCreatedAtOrLastModifiedAt__whenGetTemporaryInsertQuery__ShouldMapAsNow(
+      Class<? extends BaseEntity> entityClass) {
+    // given
+    Field createdAt = builder.getCreatedAtField(entityClass);
+    Field lastModifiedAt = builder.getLastModifiedAtField(entityClass);
+    if (createdAt == null || lastModifiedAt == null) {
+      return;
+    }
+
+    // when
+    String query = builder.getTemporaryInsertQuery(entityClass);
+    Matcher m = temporaryInsertPattern.matcher(query);
     System.out.println(query);
+
+    // then
+    assertThat(m.matches()).isTrue();
+    assertThat(query).doesNotContain(createdAt.getName(), lastModifiedAt.getName())
+        .contains("NOW()");
   }
 
-  @Data
-  @Table(
-      name = "query_entity",
-      uniqueConstraints = {})
-  @EqualsAndHashCode(callSuper = true)
-  private static final class JpaQueryTestEntity extends BaseTimeEntity {
-
-    @Id
-    @Column(name = "")
-    private Long id;
-
-    @Column(name = "name")
-    private String name;
-
-    @Column(name = "other_name")
-    private String otherName;
-  }
-
-  @Table(
-      name = "jpa_query_test_entity_one",
-      uniqueConstraints = {
-        @UniqueConstraint(
-            name = "entity_one_unique",
-            columnNames = {"profile", "last_name"})
-      })
-  private static final class JpaQueryTestEntityOne extends BaseEntity {
-
-    @Column(name = "profile")
-    String profile;
-
-    @Column(name = "last_name")
-    String lastName;
-
-    @Column(name = "hello")
-    String hello;
-
-    @Id
-    @GeneratedValue
-    @Column(name = "id")
-    private Long id;
-  }
-
-  @Table(
-      name = "jpa_query_test_entity_two",
-      uniqueConstraints = {
-        @UniqueConstraint(
-            name = "entity_two_unique_one",
-            columnNames = {"profile", "last_name"}),
-        @UniqueConstraint(
-            name = "entity_two_unique_two",
-            columnNames = {"last_name", "hello"})
-      })
-  private static final class JpaQueryTestEntityTwo extends BaseEntity {
-
-    @Column(name = "profile")
-    String profile;
-
-    @Column(name = "last_name")
-    String lastName;
-
-    @Column(name = "hello")
-    String hello;
-
-    @Id
-    @Column(name = "id")
-    private Long id;
-  }
-
-  @Table(name = "jpa_query_test_entity_three")
-  private static final class JpaQueryTestEntityThree extends BaseEntity {
-
-    @Id
-    @GeneratedValue
-    @Column(name = "id")
-    private Long id;
-
-    @JoinColumn(name = "test_entity_id")
-    private TestEntity testEntity;
+  private List<String> split(String s) {
+    return Arrays.stream(s.split(",")).collect(Collectors.toList());
   }
 }

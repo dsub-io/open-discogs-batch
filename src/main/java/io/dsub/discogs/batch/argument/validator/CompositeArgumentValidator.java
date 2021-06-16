@@ -1,6 +1,6 @@
 package io.dsub.discogs.batch.argument.validator;
 
-import io.dsub.discogs.common.exception.MissingRequiredParamsException;
+import io.dsub.discogs.batch.exception.MissingRequiredParamsException;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.beans.factory.InitializingBean;

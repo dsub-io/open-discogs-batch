@@ -12,8 +12,9 @@ import io.dsub.discogs.batch.argument.ArgType;
 import io.dsub.discogs.batch.dump.DiscogsDump;
 import io.dsub.discogs.batch.dump.DumpDependencyResolver;
 import io.dsub.discogs.batch.dump.DumpType;
+import io.dsub.discogs.batch.exception.DumpNotFoundException;
+import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import io.dsub.discogs.batch.testutil.LogSpy;
-import io.dsub.discogs.common.exception.InvalidArgumentException;
 import java.util.List;
 import java.util.Properties;
 import java.util.Random;
@@ -41,7 +42,8 @@ class DefaultJobParameterResolverTest {
   }
 
   @Test
-  void whenParseChunkSize__ShouldReturnSameValue() {
+  void whenParseChunkSize__ShouldReturnSameValue()
+      throws io.dsub.discogs.batch.exception.InvalidArgumentException {
     ApplicationArguments args = new DefaultApplicationArguments("--chunkSize=3000");
     // when
     int result = jobParameterResolver.parseChunkSize(args);
@@ -51,7 +53,8 @@ class DefaultJobParameterResolverTest {
   }
 
   @Test
-  void whenParseChunkSize__WithNoValue__ShouldReturnDefaultValue() {
+  void whenParseChunkSize__WithNoValue__ShouldReturnDefaultValue()
+      throws io.dsub.discogs.batch.exception.InvalidArgumentException {
     ApplicationArguments args = new DefaultApplicationArguments();
 
     // when
@@ -81,7 +84,8 @@ class DefaultJobParameterResolverTest {
   }
 
   @Test
-  void whenResolve__ShouldCallDumpResolverOnlyOnce() {
+  void whenResolve__ShouldCallDumpResolverOnlyOnce()
+      throws InvalidArgumentException, DumpNotFoundException {
     DiscogsDump dump =
         DiscogsDump.builder()
             .eTag("testEtag")
@@ -100,7 +104,8 @@ class DefaultJobParameterResolverTest {
   }
 
   @Test
-  void whenResolve__ShouldReturnAsExpected() {
+  void whenResolve__ShouldReturnAsExpected()
+      throws io.dsub.discogs.batch.exception.InvalidArgumentException, DumpNotFoundException {
     DiscogsDump dump =
         DiscogsDump.builder()
             .eTag("testEtag")

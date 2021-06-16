@@ -14,7 +14,7 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 /**
- * Batch commands for {@link io.dsub.discogsdata.common.entity.master} package. This class is NOT
+ * Batch commands for {@link io.dsub.discogs.common.entity.master} package. This class is NOT
  * instantiatable.
  */
 public abstract class MasterBatchCommand {

@@ -16,6 +16,7 @@ class StringFieldNormalizingItemReadListenerUnitTest {
 
   StringFieldNormalizingItemReadListener<Artist> listener =
       new StringFieldNormalizingItemReadListener<>();
+
   @RegisterExtension LogSpy logSpy = new LogSpy();
 
   @Test
