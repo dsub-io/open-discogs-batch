@@ -102,10 +102,10 @@ public class SimpleFileUtil implements FileUtil {
       tryCreateFile(filePath);
       log.debug("generated new file at {}.", filePath.toAbsolutePath());
       if (isTemporary) {
-        log.debug("marking delete on exit on {}", freshPath.toAbsolutePath());
-        freshPath.toFile().deleteOnExit();
+        log.debug("marking delete on exit on {}", filePath.toAbsolutePath());
+        filePath.toFile().deleteOnExit();
       }
-      return freshPath;
+      return filePath;
     }
     return filePath;
   }

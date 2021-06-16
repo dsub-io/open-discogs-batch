@@ -145,7 +145,7 @@ class SimpleFileUtilTest {
       inputStream = Mockito.spy(inputStream);
       fileUtil.copy(inputStream, fileName);
       verify(inputStream, times(1)).close();
-    } catch (IOException e) {
+    } catch (FileException e) {
       fail(e);
     } finally {
       if (inputStream != null) {
@@ -184,7 +184,7 @@ class SimpleFileUtilTest {
           .hasSize(2000)
           .hasContent(randStr);
 
-    } catch (IOException e) {
+    } catch (FileException e) {
       fail(e);
     } finally {
       if (inputStream != null) {
