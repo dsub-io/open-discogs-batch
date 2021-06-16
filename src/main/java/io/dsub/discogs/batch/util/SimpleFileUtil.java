@@ -102,9 +102,10 @@ public class SimpleFileUtil implements FileUtil {
       tryCreateFile(filePath);
       log.debug("generated new file at {}.", filePath.toAbsolutePath());
       if (isTemporary) {
-        log.debug("marking delete on exit on {}", filePath.toAbsolutePath());
-        filePath.toFile().deleteOnExit();
+        log.debug("marking delete on exit on {}", freshPath.toAbsolutePath());
+        freshPath.toFile().deleteOnExit();
       }
+      return freshPath;
     }
     return filePath;
   }
@@ -135,7 +136,7 @@ public class SimpleFileUtil implements FileUtil {
   }
 
   /**
-   * Get DIRECTORY where this batch will use. The generation of the directory is idempotent.
+   * Get directory where this batch will use. The generation of the directory is idempotent.
    *
    * @param generate if directory should be generated or not.
    * @return application directory.
