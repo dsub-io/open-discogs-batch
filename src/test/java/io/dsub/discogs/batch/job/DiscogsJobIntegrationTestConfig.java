@@ -109,6 +109,7 @@ public class DiscogsJobIntegrationTestConfig {
 
   @Bean
   public DataSourceProperties dataSourceProperties() {
+
     return SimpleDataSourceProperties.builder().dbType(DBType.MYSQL).build();
   }
 

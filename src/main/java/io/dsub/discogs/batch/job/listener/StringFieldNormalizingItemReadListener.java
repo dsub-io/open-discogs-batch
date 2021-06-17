@@ -1,5 +1,6 @@
 package io.dsub.discogs.batch.job.listener;
 
+import java.lang.reflect.Field;
 import java.util.Arrays;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.ItemReadListener;
@@ -16,20 +17,19 @@ public class StringFieldNormalizingItemReadListener<T> implements ItemReadListen
     Arrays.stream(item.getClass().getDeclaredFields())
         .filter(field -> field.getType().equals(String.class))
         .peek(field -> field.setAccessible(true))
-        .forEach(
-            field -> {
-              try {
-                String value = ((String) field.get(item));
-                if (value != null) {
-                  value = value.trim();
-                  if (value.isBlank()) {
-                    field.set(item, null);
-                  }
-                }
-              } catch (IllegalAccessException e) {
-                log.error("failed to access field: {}", field.getName());
-              }
-            });
+        .forEach(field -> normalize(item, field));
+  }
+
+  private void normalize(T item, Field stringField) {
+    try {
+      Object assigned = stringField.get(item);
+      if (assigned == null || !assigned.toString().isBlank()) {
+        return;
+      }
+      String s = assigned.toString();
+      s = s.isBlank() ? null : s;
+      stringField.set(item, s);
+    } catch (Exception ignored){}
   }
 
   @Override

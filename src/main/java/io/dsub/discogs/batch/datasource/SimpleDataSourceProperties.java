@@ -5,11 +5,17 @@ import io.dsub.discogs.batch.exception.MissingRequiredArgumentException;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.stream.Collectors;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.springframework.boot.ApplicationArguments;
 
 /** Class to share data source related properties. */
 @Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class SimpleDataSourceProperties implements DataSourceProperties {
 
   private String username;
