@@ -6,6 +6,7 @@ spring:
     hikari:
       data-source-properties:
         rewriteBatchedStatements: true
+      maximum-pool-size: 16
   batch:
     job:
       enabled: false
@@ -30,6 +31,9 @@ spring:
         bootstrap-mode: default
   jmx:
     enabled: false
+  sql:
+    init:
+      mode: NEVER
 logging:
   file:
     path: ./log

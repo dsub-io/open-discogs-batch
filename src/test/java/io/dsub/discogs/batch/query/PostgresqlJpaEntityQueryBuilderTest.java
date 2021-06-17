@@ -27,7 +27,7 @@ class PostgresqlJpaEntityQueryBuilderTest {
               + "\\((?<updateSourceColumns>[\\w.,()]*)\\)$");
   final Pattern selectPattern = Pattern.compile("(SELECT)");
   final Pattern prunePattern =
-      Pattern.compile("DELETE FROM \\w+ WHERE (\\+? ?\\([\\w =.]*\\) ?)* < (\\d+)");
+      Pattern.compile("DELETE FROM \\w+ WHERE NOT EXISTS (\\+? ?\\([\\w =.]*\\) ?) ?(OR NOT EXISTS (\\+? ?\\([\\w =.]*\\) ?))*");
   final Pattern temporaryInsertPattern =
       Pattern.compile(
           "INSERT INTO (?<tableName>\\w+_tmp)\\((?<columns>[\\w,]+)\\) SELECT (?<fields>[\\w:,()]+)");
@@ -72,7 +72,8 @@ class PostgresqlJpaEntityQueryBuilderTest {
     int idx = split(targetColumns).indexOf(builder.getColumnName(lastModifiedField));
     List<String> updateSourceColumns = split(matcher.group("updateSourceColumns"));
 
-    assertThat(updateSourceColumns.get(idx)).isEqualTo("NOW()");
+    String value = updateSourceColumns.size() == 1 ? "SELECT(NOW())" : "NOW()";
+    assertThat(updateSourceColumns.get(idx)).isEqualTo(value);
   }
 
   @ParameterizedTest
@@ -122,7 +123,7 @@ class PostgresqlJpaEntityQueryBuilderTest {
       Class<? extends BaseEntity> entityClass) {
 
     // given
-    int count = builder.getJoinColumns(entityClass).size();
+    int count = builder.getNotNullableJoinColumnFields(entityClass).size();
     if (count == 0) {
       return;
     }
@@ -134,8 +135,7 @@ class PostgresqlJpaEntityQueryBuilderTest {
 
     // then
     assertThat(m.matches()).isTrue();
-    long expectedCnt = Long.parseLong(m.group(2));
-    assertThat(selectCnt).isEqualTo(expectedCnt);
+    assertThat(selectCnt).isEqualTo(count);
   }
 
   @ParameterizedTest
@@ -165,7 +165,6 @@ class PostgresqlJpaEntityQueryBuilderTest {
     // when
     String query = builder.getTemporaryInsertQuery(entityClass);
     Matcher m = temporaryInsertPattern.matcher(query);
-    System.out.println(query);
 
     // then
     assertThat(m.matches()).isTrue();

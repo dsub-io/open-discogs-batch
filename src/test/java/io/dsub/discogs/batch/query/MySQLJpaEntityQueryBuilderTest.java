@@ -21,7 +21,7 @@ class MySQLJpaEntityQueryBuilderTest {
           "INSERT IGNORE INTO (?<tableName>\\w+)\\((?<columns>[\\w,]+)\\) SELECT \\2 FROM \\1_tmp");
   final Pattern selectPattern = Pattern.compile("(SELECT)");
   final Pattern prunePattern =
-      Pattern.compile("DELETE FROM \\w+ WHERE (\\+? ?\\([\\w =.]*\\) ?)* < (\\d+)");
+      Pattern.compile("DELETE FROM \\w+ WHERE NOT EXISTS (\\+? ?\\([\\w =.]*\\) ?) ?(OR NOT EXISTS (\\+? ?\\([\\w =.]*\\) ?))*");
   final Pattern temporaryInsertPattern =
       Pattern.compile(
           "INSERT INTO (?<tableName>\\w+_tmp)\\((?<columns>[\\w,]+)\\) SELECT (?<fields>[\\w:,()]+)");
@@ -89,7 +89,7 @@ class MySQLJpaEntityQueryBuilderTest {
       Class<? extends BaseEntity> entityClass) {
 
     // given
-    int count = builder.getJoinColumns(entityClass).size();
+    int count = builder.getNotNullableJoinColumnFields(entityClass).size();
     if (count == 0) {
       return;
     }
@@ -101,8 +101,7 @@ class MySQLJpaEntityQueryBuilderTest {
 
     // then
     assertThat(m.matches()).isTrue();
-    long expectedCnt = Long.parseLong(m.group(2));
-    assertThat(selectCnt).isEqualTo(expectedCnt);
+    assertThat(selectCnt).isEqualTo(count);
   }
 
   private Pattern getMatchingSelectInsertPattern(Class<? extends BaseEntity> entityClass) {

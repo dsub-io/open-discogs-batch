@@ -4,6 +4,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import javax.persistence.JoinColumn;
 
 public abstract class SqlJpaEntityQueryBuilder<T> implements JpaEntityQueryBuilder<T> {
 
@@ -12,6 +13,10 @@ public abstract class SqlJpaEntityQueryBuilder<T> implements JpaEntityQueryBuild
   public static final String WHERE_CLAUSE_QUERY_FORMAT = "WHERE %s < %d";
 
   public static final String JOIN_INNER_SEL_FMT = "(SELECT 1 FROM %s WHERE %s = %s)";
+
+  public static final String PRUNE_QUERY_INIT_COND_FMT = "WHERE NOT EXISTS %s";
+
+  public static final String PRUNE_QUERY_ADDITION = "OR NOT EXISTS %s";
 
   public static final String DEFAULT_SQL_PRUNE_QUERY_FORMAT = "DELETE FROM %s %s";
 
@@ -61,10 +66,11 @@ public abstract class SqlJpaEntityQueryBuilder<T> implements JpaEntityQueryBuild
   }
 
   protected String getRelationExistCountingWhereClause(Class<? extends T> targetClass) {
-    List<Field> joinColumnFields =
-        getMappedFields(targetClass).stream()
-            .filter(this::isJoinColumn)
-            .collect(Collectors.toList());
+    List<Field> joinColumnFields = getNotNullableJoinColumnFields(targetClass);
+
+    if (joinColumnFields.size() == 0) {
+      return null;
+    }
 
     List<String> innerSelects = new ArrayList<>();
     String srcTblName = getTableName(targetClass) + TMP;
@@ -73,9 +79,21 @@ public abstract class SqlJpaEntityQueryBuilder<T> implements JpaEntityQueryBuild
       innerSelects.add(getJoinColumnFieldInnerSelect(field, srcTblName));
     }
 
-    int count = innerSelects.size();
-    String delim = SPACE + PLUS + SPACE;
-    return String.format(WHERE_CLAUSE_QUERY_FORMAT, String.join(delim, innerSelects), count);
+    String initial = String.format(PRUNE_QUERY_INIT_COND_FMT, innerSelects.get(0)) + SPACE;
+    String additions =
+        innerSelects.stream()
+            .skip(1)
+            .map(sel -> String.format(PRUNE_QUERY_ADDITION, sel))
+            .collect(Collectors.joining(SPACE));
+
+    return initial + additions;
+  }
+
+  protected List<Field> getNotNullableJoinColumnFields(Class<? extends T> targetClass) {
+    return getMappedFields(targetClass).stream()
+        .filter(field -> field.isAnnotationPresent(JoinColumn.class))
+        .filter(field -> !field.getAnnotation(JoinColumn.class).nullable())
+        .collect(Collectors.toList());
   }
 
   private String getJoinColumnFieldInnerSelect(Field joinColumnField, String srcTblName) {

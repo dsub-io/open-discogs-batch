@@ -34,6 +34,7 @@ public class PostgresqlJpaEntityQueryBuilder extends SqlJpaEntityQueryBuilder<Ba
     Field lastModField = getLastModifiedAtField(targetClass);
     List<String> columnsToUpdate = getUpdateColumns(targetClass);
     String lastModCol = lastModField != null ? getColumnName(lastModField) : null;
+    boolean isSingle = columnsToUpdate.size() == 1;
 
     return OPEN_BRACE
         + String.join(",", columnsToUpdate)
@@ -42,14 +43,14 @@ public class PostgresqlJpaEntityQueryBuilder extends SqlJpaEntityQueryBuilder<Ba
         + OPEN_BRACE
         + columnsToUpdate.stream()
             .map(col -> EXCLUDED + PERIOD + col)
-            .map(col -> normalizeUpdateValueColumn(lastModCol, col))
+            .map(col -> normalizeUpdateValueColumn(lastModCol, col, isSingle))
             .collect(Collectors.joining(","))
         + CLOSE_BRACE;
   }
 
-  private String normalizeUpdateValueColumn(String lastModCol, String col) {
+  private String normalizeUpdateValueColumn(String lastModCol, String col, boolean isSingle) {
     if (lastModCol != null && !lastModCol.isBlank() && col.contains(lastModCol)) {
-      return "NOW()";
+      return isSingle ? "SELECT(NOW())" : "NOW()";
     }
     return col;
   }
