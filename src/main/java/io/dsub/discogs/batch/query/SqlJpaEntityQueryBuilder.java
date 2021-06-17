@@ -10,8 +10,6 @@ public abstract class SqlJpaEntityQueryBuilder<T> implements JpaEntityQueryBuild
 
   public static final String DEFAULT_SQL_INSERT_QUERY_FORMAT = "INSERT INTO %s(%s) SELECT %s";
 
-  public static final String WHERE_CLAUSE_QUERY_FORMAT = "WHERE %s < %d";
-
   public static final String JOIN_INNER_SEL_FMT = "(SELECT 1 FROM %s WHERE %s = %s)";
 
   public static final String PRUNE_QUERY_INIT_COND_FMT = "WHERE NOT EXISTS %s";
@@ -68,9 +66,6 @@ public abstract class SqlJpaEntityQueryBuilder<T> implements JpaEntityQueryBuild
   protected String getRelationExistCountingWhereClause(Class<? extends T> targetClass) {
     List<Field> joinColumnFields = getNotNullableJoinColumnFields(targetClass);
 
-    if (joinColumnFields.size() == 0) {
-      return null;
-    }
 
     List<String> innerSelects = new ArrayList<>();
     String srcTblName = getTableName(targetClass) + TMP;
