@@ -6,7 +6,9 @@ spring:
     hikari:
       data-source-properties:
         rewriteBatchedStatements: true
-      maximum-pool-size: 16
+    url: ${url}
+    username: ${username}
+    password: ${password}
   batch:
     job:
       enabled: false
@@ -15,12 +17,16 @@ spring:
   jpa:
     properties:
       hibernate:
-        format_sql: true
-        order_inserts: true
-        order_updates: true
         jdbc:
-          batch_size: 20000
+          batch_size: 500
           time_zone: UTC
+          batch_versioned_data: true
+        order_updates: true
+        order_inserts: true
+        format_sql: true
+    hibernate:
+      ddl-auto: update
+
   data:
     jpa:
       repositories:
@@ -31,9 +37,7 @@ spring:
         bootstrap-mode: default
   jmx:
     enabled: false
-  sql:
-    init:
-      mode: NEVER
+
 logging:
   file:
     path: ./log

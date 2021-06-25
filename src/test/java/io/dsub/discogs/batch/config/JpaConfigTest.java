@@ -10,7 +10,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
-import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.JpaVendorAdapter;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 
@@ -24,6 +23,8 @@ class JpaConfigTest {
   @Autowired DataSource dataSource;
 
   @Autowired JpaVendorAdapter jpaVendorAdapter;
+
+  @Autowired LocalContainerEntityManagerFactoryBean localContainerEntityManagerFactoryBean;
 
   @BeforeEach
   void setUp() {
@@ -40,16 +41,8 @@ class JpaConfigTest {
     ctx.run(
         it -> {
           // then
-          it.containsBean("entityManagerFactory");
-          it.containsBean("batchTransactionManager");
-          LocalContainerEntityManagerFactoryBean emfBean =
-              it.getBean(LocalContainerEntityManagerFactoryBean.class);
-          assertThat(emfBean.getDataSource()).isEqualTo(dataSource);
-
-          JpaTransactionManager tm = it.getBean(JpaTransactionManager.class);
-          assertThat(tm.getDataSource()).isEqualTo(dataSource);
-
-          assertThat(emfBean.getJpaPropertyMap())
+          assertThat(localContainerEntityManagerFactoryBean.getDataSource()).isEqualTo(dataSource);
+          assertThat(localContainerEntityManagerFactoryBean.getJpaPropertyMap())
               .containsEntry("hibernate.format_sql", "true")
               .containsEntry("hibernate.order_inserts", "true")
               .containsEntry("hibernate.order_updates", "true")

@@ -179,11 +179,11 @@ class DiscogsDumpTest {
   @ValueSource(ints = {0, 1, 2, 3})
   void whenGetTypeCalled__ThenShouldReturnMatchingType(int idx) {
     DiscogsDump discogsDump = getDiscogsDump();
-    DumpType targetType = DumpType.values()[idx];
+    EntityType targetType = EntityType.values()[idx];
     discogsDump.setType(targetType);
 
     // when
-    DumpType result = discogsDump.getType();
+    EntityType result = discogsDump.getType();
 
     // then
     assertThat(result).isEqualTo(targetType);
@@ -239,15 +239,15 @@ class DiscogsDumpTest {
     return DiscogsDump.builder()
         .uriString(RandomString.make(10))
         .eTag(RandomString.make(10))
-        .type(DumpType.values()[new Random().nextInt(4)])
+        .type(EntityType.values()[new Random().nextInt(4)])
         .size(10L)
         .createdAt(createdAt)
         .registeredAt(LocalDateTime.now().minusDays(new Random().nextInt(1000)))
         .build();
   }
 
-  DumpType getDifferentTypeThan(DumpType that) {
-    return Arrays.stream(DumpType.values())
+  EntityType getDifferentTypeThan(EntityType that) {
+    return Arrays.stream(EntityType.values())
         .filter(item -> !item.equals(that))
         .collect(Collectors.toList())
         .get(0);

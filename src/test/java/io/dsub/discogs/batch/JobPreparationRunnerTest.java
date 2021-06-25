@@ -19,6 +19,7 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.converter.JobParametersConverter;
 import org.springframework.boot.ApplicationArguments;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 class JobPreparationRunnerTest {
@@ -28,6 +29,7 @@ class JobPreparationRunnerTest {
   @Mock JobParametersConverter jobParametersConverter;
   @Mock HikariDataSource dataSource;
   @Mock ThreadPoolTaskExecutor taskExecutor;
+  @Mock ConfigurableApplicationContext ctx;
   @InjectMocks JobPreparationRunner runner;
 
   @BeforeEach

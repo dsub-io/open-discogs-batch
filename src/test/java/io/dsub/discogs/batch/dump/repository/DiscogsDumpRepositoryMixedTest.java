@@ -3,7 +3,7 @@ package io.dsub.discogs.batch.dump.repository;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.dsub.discogs.batch.dump.DiscogsDump;
-import io.dsub.discogs.batch.dump.DumpType;
+import io.dsub.discogs.batch.dump.EntityType;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Random;
@@ -36,7 +36,7 @@ class DiscogsDumpRepositoryMixedTest {
 
   private DiscogsDump getRandomDumpWithCreatedAt(LocalDate createdAt) {
     return DiscogsDump.builder()
-        .type(DumpType.ARTIST)
+        .type(EntityType.ARTIST)
         .eTag(RandomString.make(10))
         .size(random.nextLong())
         .uriString(RandomString.make(10))
@@ -140,7 +140,7 @@ class DiscogsDumpRepositoryMixedTest {
       }
       assertThat(mid).isNotNull();
 
-      DumpType type = mid.getType();
+      EntityType type = mid.getType();
       LocalDate createdAt = mid.getCreatedAt();
 
       // when

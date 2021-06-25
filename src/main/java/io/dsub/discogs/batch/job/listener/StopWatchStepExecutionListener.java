@@ -8,62 +8,74 @@ import org.springframework.batch.core.StepExecutionListener;
 import org.springframework.util.NumberUtils;
 import org.springframework.util.StopWatch;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 @Slf4j
 public class StopWatchStepExecutionListener implements StepExecutionListener {
 
-  private StopWatch stopWatch;
+    private final AtomicLong itemsCounter;
+    private StopWatch stopWatch;
 
-  public StopWatchStepExecutionListener() {
-    this.init();
-  }
-
-  private void init() {
-    this.stopWatch = new StopWatch();
-    this.stopWatch.setKeepTaskList(false);
-  }
-
-  @Override
-  public void beforeStep(StepExecution stepExecution) {
-    stepExecution.setStatus(BatchStatus.STARTING);
-    stopWatch.start(stepExecution.getStepName());
-  }
-
-  @Override
-  public ExitStatus afterStep(StepExecution stepExecution) {
-    printStepDetails(stepExecution.getWriteCount());
-    stepExecution.setStatus(BatchStatus.COMPLETED);
-    this.init();
-    return ExitStatus.COMPLETED;
-  }
-
-  /**
-   * reports step execution details as log.
-   *
-   * @param writeCount items has been written during step
-   */
-  private void printStepDetails(int writeCount) {
-    if (stopWatch.isRunning()) {
-      stopWatch.stop();
+    public StopWatchStepExecutionListener(final AtomicLong itemsCounter) {
+        this.itemsCounter = itemsCounter;
+        this.stopWatch = new StopWatch();
+        this.stopWatch.setKeepTaskList(false);
+        this.init();
     }
 
-    int seconds =
-        NumberUtils.convertNumberToTargetClass(stopWatch.getTotalTimeSeconds(), Integer.class);
-
-    if (seconds == 0) { // nothing to report...
-      return;
+    private void init() {
+        this.stopWatch = getStopWatch();
+        this.itemsCounter.set(0);
     }
 
-    int itemsPerSecond = writeCount / seconds;
+    @Override
+    public void beforeStep(StepExecution stepExecution) {
+        stepExecution.setStatus(BatchStatus.STARTING);
+        getStopWatch().start(stepExecution.getStepName());
+    }
 
-    String timeTookSeconds = String.valueOf(stopWatch.getTotalTimeSeconds());
+    @Override
+    public ExitStatus afterStep(StepExecution stepExecution) {
+        printStepDetails(itemsCounter.get() == 0 ? stepExecution.getWriteCount() : itemsCounter.get());
+        stepExecution.setStatus(BatchStatus.COMPLETED);
+        this.init();
+        return ExitStatus.COMPLETED;
+    }
 
-    String itemsProcPerSec = itemsPerSecond + "/s";
+    /**
+     * reports step execution details as log.
+     *
+     * @param writeCount items has been written during step
+     */
+    private void printStepDetails(long writeCount) {
+        int seconds = getTotalTimeSeconds();
 
-    log.info(
-        "task {} took {} seconds and written {} items. processed items per second: {}",
-        stopWatch.getLastTaskName(),
-        timeTookSeconds,
-        writeCount,
-        itemsProcPerSec);
-  }
+        if (seconds == 0) { // nothing to report...
+            return;
+        }
+
+        long itemsPerSecond = writeCount / seconds;
+
+        String timeTookSeconds = String.valueOf(seconds);
+        String itemsProcPerSec = itemsPerSecond + "/s";
+        String taskName = getStopWatch().getLastTaskName();
+
+        log.info("task {} took {} seconds and updated {} items. processed items per second: {}",
+                taskName,
+                timeTookSeconds,
+                writeCount,
+                itemsProcPerSec);
+    }
+
+    protected StopWatch getStopWatch() {
+        return stopWatch;
+    }
+
+    protected int getTotalTimeSeconds() {
+        StopWatch stopWatch = getStopWatch();
+        if (stopWatch.isRunning()) {
+            stopWatch.stop();
+        }
+        return NumberUtils.convertNumberToTargetClass(stopWatch.getTotalTimeSeconds(), Integer.class);
+    }
 }

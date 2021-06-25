@@ -1,6 +1,6 @@
 package io.dsub.discogs.batch;
 
-import io.dsub.discogs.batch.dump.DumpType;
+import io.dsub.discogs.batch.dump.EntityType;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -1104,19 +1104,23 @@ public class TestDumpGenerator {
 
   private final Path tempDir;
 
-  public Map<DumpType, File> createDiscogsDumpFiles() throws IOException {
-    Map<DumpType, File> dumpFiles = new HashMap<>();
-    for (DumpType value : DumpType.values()) {
+  public Map<EntityType, File> createDiscogsDumpFiles() throws IOException {
+    Map<EntityType, File> dumpFiles = new HashMap<>();
+    for (EntityType value : EntityType.values()) {
+      Path path = tempDir.resolve("test-" + value + ".xml.gz");
+      if (Files.exists(path)) {
+        Files.delete(path);
+      }
       File file = Files.createFile(tempDir.resolve("test-" + value + ".xml.gz")).toFile();
       file.deleteOnExit();
       OutputStreamWriter writer =
           new OutputStreamWriter(new GZIPOutputStream(new FileOutputStream(file)));
       String content;
-      if (value.equals(DumpType.ARTIST)) {
+      if (value.equals(EntityType.ARTIST)) {
         content = ARTIST_XML;
-      } else if (value.equals(DumpType.RELEASE)) {
+      } else if (value.equals(EntityType.RELEASE)) {
         content = RELEASE_XML;
-      } else if (value.equals(DumpType.MASTER)) {
+      } else if (value.equals(EntityType.MASTER)) {
         content = MASTER_XML;
       } else {
         content = LABEL_XML;

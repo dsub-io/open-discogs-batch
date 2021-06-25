@@ -8,7 +8,7 @@ import io.dsub.discogs.batch.condition.RequiresDiscogsDataConnection;
 import io.dsub.discogs.batch.dump.DefaultDumpSupplier;
 import io.dsub.discogs.batch.dump.DiscogsDump;
 import io.dsub.discogs.batch.dump.DumpSupplier;
-import io.dsub.discogs.batch.dump.DumpType;
+import io.dsub.discogs.batch.dump.EntityType;
 import io.dsub.discogs.batch.dump.repository.DiscogsDumpRepository;
 import io.dsub.discogs.batch.exception.DumpNotFoundException;
 import java.util.List;
@@ -101,7 +101,7 @@ public class DefaultDiscogsDumpServiceIntegrationTest {
     @ParameterizedTest
     @ValueSource(ints = {0, 1, 2, 3})
     void whenCallMostRecentDiscogsDumpByType__ThenShouldReturnMostRecentResult(int idx) {
-      DumpType targetType = DumpType.values()[idx];
+      EntityType targetType = EntityType.values()[idx];
       DiscogsDump want =
           sampleDumpList.stream()
               .filter(dump -> dump.getType().equals(targetType))
@@ -141,7 +141,7 @@ public class DefaultDiscogsDumpServiceIntegrationTest {
     @Test
     void whenDumpByTypeInRangeCalled__ThenShouldContainCorrectItems() {
       for (DiscogsDump expectedDump : sampleDumpList) {
-        DumpType type = expectedDump.getType();
+        EntityType type = expectedDump.getType();
         int year = expectedDump.getCreatedAt().getYear();
         int month = expectedDump.getCreatedAt().getMonthValue();
         // when

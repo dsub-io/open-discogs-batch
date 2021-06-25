@@ -11,7 +11,7 @@ import static org.mockito.Mockito.when;
 import io.dsub.discogs.batch.argument.ArgType;
 import io.dsub.discogs.batch.dump.DiscogsDump;
 import io.dsub.discogs.batch.dump.DumpDependencyResolver;
-import io.dsub.discogs.batch.dump.DumpType;
+import io.dsub.discogs.batch.dump.EntityType;
 import io.dsub.discogs.batch.exception.DumpNotFoundException;
 import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import io.dsub.discogs.batch.testutil.LogSpy;
@@ -89,7 +89,7 @@ class DefaultJobParameterResolverTest {
     DiscogsDump dump =
         DiscogsDump.builder()
             .eTag("testEtag")
-            .type(DumpType.values()[new Random().nextInt(4)])
+            .type(EntityType.values()[new Random().nextInt(4)])
             .build();
     ApplicationArguments targetArg = new DefaultApplicationArguments();
     ArgumentCaptor<ApplicationArguments> argCaptor =
@@ -109,7 +109,7 @@ class DefaultJobParameterResolverTest {
     DiscogsDump dump =
         DiscogsDump.builder()
             .eTag("testEtag")
-            .type(DumpType.values()[new Random().nextInt(4)])
+            .type(EntityType.values()[new Random().nextInt(4)])
             .build();
     when(dependencyResolver.resolve(any())).thenReturn(List.of(dump));
 

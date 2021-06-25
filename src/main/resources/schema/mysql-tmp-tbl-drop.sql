@@ -25,3 +25,4 @@ DROP TABLE IF EXISTS style_tmp;
 DROP TABLE IF EXISTS master_style_tmp;
 DROP TABLE IF EXISTS release_item_style_tmp;
 DROP TABLE IF EXISTS release_item_track_tmp;
+DROP TABLE IF EXISTS release_item_master_tmp;

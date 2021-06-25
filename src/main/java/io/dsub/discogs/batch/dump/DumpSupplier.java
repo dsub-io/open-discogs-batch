@@ -5,6 +5,6 @@ import java.util.function.Supplier;
 
 public interface DumpSupplier extends Supplier<List<DiscogsDump>> {
 
-  @Override
-  List<DiscogsDump> get();
+    @Override
+    List<DiscogsDump> get();
 }

@@ -15,8 +15,8 @@ CREATE TABLE IF NOT EXISTS artist_alias_tmp
         KEY,
     created_at       TIMESTAMP NOT NULL,
     last_modified_at TIMESTAMP NOT NULL,
-    alias_id         SERIAL NOT NULL,
-    artist_id        SERIAL NOT NULL
+    alias_id         INTEGER NOT NULL,
+    artist_id        INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS artist_group_tmp
@@ -25,8 +25,8 @@ CREATE TABLE IF NOT EXISTS artist_group_tmp
         KEY,
     created_at       TIMESTAMP NOT NULL,
     last_modified_at TIMESTAMP NOT NULL,
-    artist_id        SERIAL NOT NULL,
-    group_id         SERIAL NOT NULL
+    artist_id        INTEGER NOT NULL,
+    group_id         INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS artist_member_tmp
@@ -35,8 +35,8 @@ CREATE TABLE IF NOT EXISTS artist_member_tmp
         KEY,
     created_at       TIMESTAMP NOT NULL,
     last_modified_at TIMESTAMP NOT NULL,
-    artist_id        SERIAL NOT NULL,
-    member_id        SERIAL NOT NULL
+    artist_id        INTEGER NOT NULL,
+    member_id        INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS artist_name_variation_tmp
@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS artist_name_variation_tmp
     created_at       TIMESTAMP NOT NULL,
     last_modified_at TIMESTAMP NOT NULL,
     name_variation   VARCHAR (2000),
-    artist_id        SERIAL NOT NULL
+    artist_id        INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS artist_url_tmp
@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS artist_url_tmp
     created_at       TIMESTAMP NOT NULL,
     last_modified_at TIMESTAMP NOT NULL,
     url              VARCHAR (5000),
-    artist_id        SERIAL NOT NULL
+    artist_id        INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS genre_tmp
@@ -81,8 +81,8 @@ CREATE TABLE IF NOT EXISTS label_sub_label_tmp
         PRIMARY KEY,
     created_at       TIMESTAMP NOT NULL,
     last_modified_at TIMESTAMP NOT NULL,
-    parent_label_id  SERIAL NOT NULL,
-    sub_label_id     SERIAL NOT NULL
+    parent_label_id  INTEGER NOT NULL,
+    sub_label_id     INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS label_url_tmp
@@ -92,7 +92,7 @@ CREATE TABLE IF NOT EXISTS label_url_tmp
     created_at       TIMESTAMP NOT NULL,
     last_modified_at TIMESTAMP NOT NULL,
     url              VARCHAR (5000),
-    label_id         SERIAL NOT NULL
+    label_id         INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS master_tmp
@@ -111,8 +111,8 @@ CREATE TABLE IF NOT EXISTS master_artist_tmp
         KEY,
     created_at       TIMESTAMP NOT NULL,
     last_modified_at TIMESTAMP NOT NULL,
-    artist_id        SERIAL NOT NULL,
-    master_id        SERIAL NOT NULL
+    artist_id        INTEGER NOT NULL,
+    master_id        INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS master_genre_tmp
@@ -122,7 +122,7 @@ CREATE TABLE IF NOT EXISTS master_genre_tmp
     created_at       TIMESTAMP NOT NULL,
     last_modified_at TIMESTAMP NOT NULL,
     genre            VARCHAR (255),
-    master_id        SERIAL NOT NULL
+    master_id        INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS master_video_tmp
@@ -134,7 +134,7 @@ CREATE TABLE IF NOT EXISTS master_video_tmp
     description      VARCHAR (40000),
     title            VARCHAR (2000),
     url              VARCHAR (5000),
-    master_id        SERIAL NOT NULL
+    master_id        INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS release_item_tmp
@@ -154,7 +154,7 @@ CREATE TABLE IF NOT EXISTS release_item_tmp
     release_date        DATE,
     status              VARCHAR (255),
     title               VARCHAR (10000),
-    master_id           SERIAL
+    master_id           INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS label_item_release_tmp
@@ -163,8 +163,8 @@ CREATE TABLE IF NOT EXISTS label_item_release_tmp
         PRIMARY KEY,
     created_at        TIMESTAMP NOT NULL,
     last_modified_at  TIMESTAMP NOT NULL,
-    label_id          SERIAL NOT NULL,
-    release_item_id   SERIAL NOT NULL,
+    label_id          INTEGER NOT NULL,
+    release_item_id   INTEGER NOT NULL,
     category_notation VARCHAR (5000)
 );
 
@@ -174,8 +174,8 @@ CREATE TABLE IF NOT EXISTS release_item_artist_tmp
         PRIMARY KEY,
     created_at       TIMESTAMP NOT NULL,
     last_modified_at TIMESTAMP NOT NULL,
-    artist_id        SERIAL NOT NULL,
-    release_item_id  SERIAL NOT NULL
+    artist_id        INTEGER NOT NULL,
+    release_item_id  INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS release_item_credited_artist_tmp
@@ -185,8 +185,8 @@ CREATE TABLE IF NOT EXISTS release_item_credited_artist_tmp
     created_at       TIMESTAMP NOT NULL,
     last_modified_at TIMESTAMP NOT NULL,
     role             VARCHAR (20000),
-    artist_id        SERIAL NOT NULL,
-    release_item_id  SERIAL NOT NULL
+    artist_id        INTEGER NOT NULL,
+    release_item_id  INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS release_item_genre_tmp
@@ -196,7 +196,7 @@ CREATE TABLE IF NOT EXISTS release_item_genre_tmp
     created_at       TIMESTAMP NOT NULL,
     last_modified_at TIMESTAMP NOT NULL,
     genre            VARCHAR (255),
-    release_item_id  SERIAL NOT NULL
+    release_item_id  INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS release_item_video_tmp
@@ -208,7 +208,7 @@ CREATE TABLE IF NOT EXISTS release_item_video_tmp
     description      VARCHAR (10000),
     title            VARCHAR (10000),
     url              VARCHAR (10000),
-    release_item_id  SERIAL NOT NULL
+    release_item_id  INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS release_item_work_tmp
@@ -218,8 +218,8 @@ CREATE TABLE IF NOT EXISTS release_item_work_tmp
     created_at       TIMESTAMP NOT NULL,
     last_modified_at TIMESTAMP NOT NULL,
     work             VARCHAR (5000),
-    label_id         SERIAL NOT NULL,
-    release_item_id  SERIAL NOT NULL
+    label_id         INTEGER NOT NULL,
+    release_item_id  INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS style_tmp
@@ -233,7 +233,7 @@ CREATE TABLE IF NOT EXISTS master_style_tmp
         KEY,
     created_at       TIMESTAMP NOT NULL,
     last_modified_at TIMESTAMP NOT NULL,
-    master_id        SERIAL NOT NULL,
+    master_id        INTEGER NOT NULL,
     style            VARCHAR (255)
 );
 
@@ -243,7 +243,7 @@ CREATE TABLE IF NOT EXISTS release_item_style_tmp
         PRIMARY KEY,
     created_at       TIMESTAMP NOT NULL,
     last_modified_at TIMESTAMP NOT NULL,
-    release_item_id  SERIAL NOT NULL,
+    release_item_id  INTEGER NOT NULL,
     style            VARCHAR (255)
 );
 
@@ -256,7 +256,7 @@ CREATE TABLE IF NOT EXISTS release_item_track_tmp
     position         VARCHAR (15000),
     title            VARCHAR (15000),
     duration         VARCHAR (5000),
-    release_item_id  SERIAL NOT NULL
+    release_item_id  INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS release_item_format_tmp
@@ -269,7 +269,7 @@ CREATE TABLE IF NOT EXISTS release_item_format_tmp
     quantity         INTEGER,
     text             VARCHAR (5000),
     description      VARCHAR (10000),
-    release_item_id  SERIAL NOT NULL
+    release_item_id  INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS release_item_identifier_tmp
@@ -281,5 +281,14 @@ CREATE TABLE IF NOT EXISTS release_item_identifier_tmp
     description      VARCHAR (20000),
     type             VARCHAR (10000),
     value            VARCHAR (10000),
-    release_item_id  SERIAL NOT NULL
+    release_item_id  INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS release_item_master_tmp
+(
+    id               SERIAL NOT NULL CONSTRAINT pk_release_item_master_tmp_id  PRIMARY KEY,
+    created_at       TIMESTAMP NOT NULL,
+    last_modified_at TIMESTAMP NOT NULL,
+    release_item_id  INTEGER NOT NULL,
+    master_id        INTEGER NOT NULL
 );

@@ -14,7 +14,7 @@ import static org.mockito.Mockito.when;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import io.dsub.discogs.batch.dump.DiscogsDump;
 import io.dsub.discogs.batch.dump.DumpSupplier;
-import io.dsub.discogs.batch.dump.DumpType;
+import io.dsub.discogs.batch.dump.EntityType;
 import io.dsub.discogs.batch.dump.repository.DiscogsDumpRepository;
 import io.dsub.discogs.batch.exception.DumpNotFoundException;
 import io.dsub.discogs.batch.exception.InitializationFailureException;
@@ -150,8 +150,8 @@ class DefaultDiscogsDumpServiceUnitTest {
   void
       whenGetMostRecentDiscogsDumpByTypeCalled__ThenShouldCallRepositoryOnce__AndShouldHaveProperResult() {
     DiscogsDump fakeDump = getRandomDump();
-    DumpType type = fakeDump.getType();
-    ArgumentCaptor<DumpType> dumpTypeCaptor = ArgumentCaptor.forClass(DumpType.class);
+    EntityType type = fakeDump.getType();
+    ArgumentCaptor<EntityType> dumpTypeCaptor = ArgumentCaptor.forClass(EntityType.class);
     when(repository.findTopByTypeOrderByCreatedAtDesc(dumpTypeCaptor.capture()))
         .thenReturn(fakeDump);
 
@@ -167,9 +167,9 @@ class DefaultDiscogsDumpServiceUnitTest {
   @Test
   void getDumpByTypeInRange() {
     DiscogsDump fakeDump = getRandomDump();
-    DumpType type = fakeDump.getType();
+    EntityType type = fakeDump.getType();
 
-    ArgumentCaptor<DumpType> typeCaptor = ArgumentCaptor.forClass(DumpType.class);
+    ArgumentCaptor<EntityType> typeCaptor = ArgumentCaptor.forClass(EntityType.class);
     ArgumentCaptor<LocalDate> localDateCaptor = ArgumentCaptor.forClass(LocalDate.class);
     when(repository.findByTypeAndCreatedAtBetween(
             typeCaptor.capture(), localDateCaptor.capture(), localDateCaptor.capture()))
@@ -197,7 +197,7 @@ class DefaultDiscogsDumpServiceUnitTest {
 
     List<DiscogsDump> fakeDumps =
         IntStream.range(0, 4)
-            .mapToObj(n -> getRandomDumpWithType(DumpType.values()[n]))
+            .mapToObj(n -> getRandomDumpWithType(EntityType.values()[n]))
             .peek(dump -> dump.setCreatedAt(existingDate))
             .collect(Collectors.toList());
 
@@ -250,12 +250,12 @@ class DefaultDiscogsDumpServiceUnitTest {
   }
 
   @ParameterizedTest
-  @EnumSource(DumpType.class)
+  @EnumSource(EntityType.class)
   void whenGetMostRecentDiscogsDumpByTypeYearMonth__ThenShouldCallRepositoryWithExpectedValue(
-      DumpType type) {
+      EntityType type) {
     ArgumentCaptor<LocalDate> startDateCaptor = ArgumentCaptor.forClass(LocalDate.class);
     ArgumentCaptor<LocalDate> endDateCaptor = ArgumentCaptor.forClass(LocalDate.class);
-    ArgumentCaptor<DumpType> dumpTypeArgumentCaptor = ArgumentCaptor.forClass(DumpType.class);
+    ArgumentCaptor<EntityType> dumpTypeArgumentCaptor = ArgumentCaptor.forClass(EntityType.class);
     DiscogsDump expectedDump = getRandomDump();
 
     LocalDate startDate = LocalDate.now().minusDays(1000 + random.nextInt(1000)).withDayOfMonth(1);
@@ -304,7 +304,7 @@ class DefaultDiscogsDumpServiceUnitTest {
 
   @Test
   void whenGetAllByTypeYearMonth__WithDuplicatedType__ShouldNotThrow() {
-    DumpType type = DumpType.values()[random.nextInt(4)];
+    EntityType type = EntityType.values()[random.nextInt(4)];
     when(repository.findTopByTypeAndCreatedAtBetween(any(), any(), ArgumentMatchers.any()))
         .thenReturn(getRandomDumpWithType(type));
 
@@ -317,7 +317,7 @@ class DefaultDiscogsDumpServiceUnitTest {
   void whenGetAllByTypeYearMonth__ShouldThrowIfRepositoryReturnsNull() {
     when(repository.findTopByTypeAndCreatedAtBetween(any(), any(), ArgumentMatchers.any()))
         .thenReturn(null);
-    DumpType type = DumpType.values()[random.nextInt(4)];
+    EntityType type = EntityType.values()[random.nextInt(4)];
     Throwable t = catchThrowable(() -> dumpService.getAllByTypeYearMonth(List.of(type), 1, 1));
     assertThat(t)
         .isInstanceOf(DumpNotFoundException.class)
@@ -325,8 +325,8 @@ class DefaultDiscogsDumpServiceUnitTest {
   }
 
   @ParameterizedTest
-  @EnumSource(DumpType.class)
-  void whenGetAllByTypeYearMonth__ShouldReturnProperValue(DumpType type)
+  @EnumSource(EntityType.class)
+  void whenGetAllByTypeYearMonth__ShouldReturnProperValue(EntityType type)
       throws io.dsub.discogs.batch.exception.DumpNotFoundException {
     Collection<DiscogsDump> expected = List.of(getRandomDumpWithType(type));
     when(repository.findTopByTypeAndCreatedAtBetween(any(), any(), ArgumentMatchers.any()))
@@ -358,10 +358,10 @@ class DefaultDiscogsDumpServiceUnitTest {
   }
 
   DiscogsDump getRandomDump() {
-    return getRandomDumpWithType(DumpType.values()[random.nextInt(4)]);
+    return getRandomDumpWithType(EntityType.values()[random.nextInt(4)]);
   }
 
-  DiscogsDump getRandomDumpWithType(DumpType type) {
+  DiscogsDump getRandomDumpWithType(EntityType type) {
     return DiscogsDump.builder()
         .type(type)
         .eTag(RandomString.make(19))

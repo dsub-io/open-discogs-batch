@@ -8,11 +8,11 @@ import org.springframework.boot.ApplicationArguments;
  */
 public interface ArgumentValidator {
 
-  /**
-   * method to validate {@link ApplicationArguments}.
-   *
-   * @param applicationArguments to be validated.
-   * @return result of validation represented as {@link ValidationResult}.
-   */
-  ValidationResult validate(ApplicationArguments applicationArguments);
+    /**
+     * method to validate {@link ApplicationArguments}.
+     *
+     * @param applicationArguments to be validated.
+     * @return result of validation represented as {@link ValidationResult}.
+     */
+    ValidationResult validate(ApplicationArguments applicationArguments);
 }

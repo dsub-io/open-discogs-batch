@@ -6,9 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.when;
 
-import io.dsub.discogs.batch.domain.artist.ArtistXML;
+import io.dsub.discogs.batch.domain.artist.ArtistSubItemsCommand;
 import io.dsub.discogs.batch.dump.DiscogsDump;
-import io.dsub.discogs.batch.dump.DumpType;
+import io.dsub.discogs.batch.dump.EntityType;
 import io.dsub.discogs.batch.exception.FileException;
 import io.dsub.discogs.batch.util.FileUtil;
 import java.nio.file.Path;
@@ -35,8 +35,8 @@ class DumpItemReaderBuilderTest {
       when(fileUtil.getFilePath("artist.xml.gz"))
           .thenReturn(Path.of("src/test/resources/test/reader/artist.xml.gz"));
       when(dump.getFileName()).thenReturn("artist.xml.gz");
-      when(dump.getType()).thenReturn(DumpType.ARTIST);
-      assertDoesNotThrow(() -> readerBuilder.build(ArtistXML.class, dump));
+      when(dump.getType()).thenReturn(EntityType.ARTIST);
+      assertDoesNotThrow(() -> readerBuilder.build(ArtistSubItemsCommand.class, dump));
     } catch (FileException e) {
       fail(e);
     }
@@ -49,7 +49,7 @@ class DumpItemReaderBuilderTest {
       when(dump.getFileName()).thenReturn("src/test/resources/test/reader/artist.xml.gz");
       when(fileUtil.getFilePath(dump.getFileName()))
           .thenReturn(Path.of("src/test/resources/test/reader/artist.xml.gz"));
-      Throwable t = catchThrowable(() -> readerBuilder.build(ArtistXML.class, dump));
+      Throwable t = catchThrowable(() -> readerBuilder.build(ArtistSubItemsCommand.class, dump));
       assertThat(t).hasMessageContaining("type of DiscogsDump cannot be null");
     } catch (FileException e) {
       fail(e);
@@ -61,7 +61,7 @@ class DumpItemReaderBuilderTest {
     try {
       when(dump.getFileName()).thenReturn(null);
       when(fileUtil.getFilePath(dump.getFileName())).thenThrow(FileException.class);
-      Throwable t = catchThrowable(() -> readerBuilder.build(ArtistXML.class, dump));
+      Throwable t = catchThrowable(() -> readerBuilder.build(ArtistSubItemsCommand.class, dump));
       assertThat(t).hasMessageContaining("fileName of DiscogsDump cannot be null");
     } catch (FileException e) {
       fail();

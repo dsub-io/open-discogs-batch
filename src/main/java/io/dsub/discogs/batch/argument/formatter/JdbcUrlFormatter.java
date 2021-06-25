@@ -1,6 +1,8 @@
 package io.dsub.discogs.batch.argument.formatter;
 
-import io.dsub.discogs.batch.datasource.DBType;
+import io.dsub.discogs.batch.argument.DBType;
+
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -8,66 +10,146 @@ import java.util.regex.Pattern;
  */
 public class JdbcUrlFormatter implements ArgumentFormatter {
 
-  /*
-   * Static patterns to be used!
-   */
-  private static final String DB_NAMES = "(" + String.join("|", DBType.getNames()) + ")";
-  private static final Pattern URL_ENTRY = Pattern.compile("^[-]{0,3}url=.*");
-  private static final Pattern STARTS_WITH_DB = Pattern.compile("^" + DB_NAMES + "://.*");
-  private static final Pattern STARTS_WITH_JDBC = Pattern.compile("^jdbc:.*");
-  private static final Pattern STARTS_WITH_JDBC_DB = Pattern.compile("^jdbc:" + DB_NAMES + "://.*");
-  private static final Pattern PORT_PATTERN = Pattern.compile(".*:[1-9][0-9]{0,4}.*");
-  private static final Pattern SCHEMA_PATTERN = Pattern.compile(".*[^/]/[\\w!@#$%^&*-]+.*");
+    private static final String DB_NAMES = "(" + String.join("|", DBType.getNames()) + ")";
 
-  /**
-   * Formats argument to be proper jdbc connection string if marked as url entry.
-   *
-   * @param arg argument to be evaluated.
-   * @return as a jdbc connection string if arg is marked as a url entry. If not, it will simply
-   *     return the input argument as-is.
-   */
-  @Override
-  public String format(String arg) {
-    if (!URL_ENTRY.matcher(arg).matches()) {
-      return arg;
+    /*
+     * options for connection url
+     */
+    private static final String TIME_ZONE_UTC_OPT = "serverTimeZone=UTC";
+    private static final String CACHE_PREP_STMT_OPT = "cachePrepStmts=true";
+    private static final String USE_SERVER_PREP_STMTS_OPT = "useServerPrepStmts=true";
+    private static final String REWRITE_BATCHED_STMTS_OPT = "rewriteBatchedStatements=true";
+    private static final String NO_LEGACY_DATE_TIME_CODE = "useLegacyDatetimeCode=false";
+
+    public static final Pattern URL_PATTERN = Pattern.compile(
+            "(?<jdbcGrp>(?<jdbcHead>jdbc)?(?<jdbcTail>:)?)?" +
+                    "(?<typeGrp>(?<type>\\w+)?(?<typeTail>://)?)?" +
+                    "(?<addr>\\w+)?(?<addrTail>:)?" +
+                    "(?<port>[1-9]\\d{0,4})?" +
+                    "(?<schemaGrp>(?<schemaHead>/)?(?<schema>\\w+)?)?" +
+                    "(?<optGrp>(?<initOptHead>\\?)(?<initOpt>\\w+=\\w+)((?<optionHead>&)(?<option>\\w+=\\w+))*)?");
+
+    public static final Pattern KNOWN_DB_PATTERN = Pattern.compile(".*" + DB_NAMES + ".*");
+
+    public static final Pattern ADDRESS_PATTERN = Pattern.compile(
+            "^(localhost|\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|\\w+\\.\\w+.*)$", Pattern.CASE_INSENSITIVE);
+
+    public static final Pattern EQUALS = Pattern.compile("^url=.*", Pattern.CASE_INSENSITIVE);
+
+    /**
+     * Formats argument to be proper jdbc connection string if marked as url entry.
+     *
+     * @param arg argument to be evaluated.
+     * @return as a jdbc connection string if arg is marked as a url entry. If not, it will simply
+     * return the input argument as-is.
+     */
+    @Override
+    public String format(String arg) {
+
+        if (!EQUALS.matcher(arg).matches()) {
+            return arg;
+        }
+
+        int eqIdx = arg.indexOf('=');
+        String urlValue = arg.substring(eqIdx + 1);
+        int bIdx = urlValue.indexOf(' ');
+        urlValue = urlValue.substring(0, bIdx < 0 ? urlValue.length() : bIdx);
+
+        Matcher matcher = URL_PATTERN.matcher(urlValue);
+        if (!matcher.matches()) {
+            return arg;
+        }
+
+        String typeInput = matcher.group("type");
+        String url = "jdbc:";
+        String type = isKnownType(typeInput) ? typeInput : "mysql";
+        String address = getAddress(matcher.group("addr"));
+        String port = getPort(matcher.group("port"), type);
+        String schema = getSchema(matcher.group("schema"));
+        String compiled = url + type + "://" + address + ":" + port + "/" + schema;
+
+        return "url=" + appendOptionsTo(compiled, matcher);
     }
 
-    String[] parts = arg.split("=");
-    if (parts.length <= 1) {
-      return arg;
+    private String getAddress(String address) {
+        if (address != null && ADDRESS_PATTERN.matcher(address).matches()) {
+            return address;
+        }
+        return "localhost";
     }
 
-    String urlValue = arg.substring(arg.indexOf('=') + 1);
-
-    boolean startsWithMysql = STARTS_WITH_DB.matcher(urlValue).matches();
-    boolean startsWithJdbc = STARTS_WITH_JDBC.matcher(urlValue).matches();
-    boolean startsWithProtocol = STARTS_WITH_JDBC_DB.matcher(urlValue).matches();
-
-    if (startsWithMysql) {
-      urlValue = "jdbc:" + urlValue;
-    } else if (startsWithJdbc && !startsWithProtocol) {
-      urlValue = urlValue.replaceFirst("jdbc:", "jdbc:mysql://");
-    } else if (!startsWithProtocol) {
-      urlValue = "jdbc:mysql://" + urlValue;
+    private String getPort(String port, String type) {
+        if (port != null && !port.isBlank()) {
+            return port;
+        }
+        switch (type) {
+            case "mysql":
+            case "mariadb":
+                return "3306";
+            case "postgresql":
+                return "5432";
+            default:
+                return "8080";
+        }
     }
 
-    boolean portExists = PORT_PATTERN.matcher(urlValue).matches();
-    boolean schemaExists = SCHEMA_PATTERN.matcher(urlValue).matches();
-
-    if (portExists && schemaExists) {
-      return String.join("=", parts[0], urlValue);
+    private String getSchema(String schema) {
+        if (schema != null && !schema.isBlank()) {
+            return schema;
+        }
+        return "discogs_data";
     }
 
-    if (!portExists && !schemaExists) {
-      return parts[0] + "=" + urlValue + ":3306/discogs_data";
+    private boolean isKnownType(String type) {
+        if (type == null || type.isBlank()) {
+            return false;
+        }
+        return KNOWN_DB_PATTERN.matcher(type).matches();
     }
 
-    if (!portExists) {
-      int idx = urlValue.lastIndexOf('/');
-      return parts[0] + "=" + urlValue.substring(0, idx) + ":3306" + urlValue.substring(idx);
-    }
+    /**
+     * Appends required arguments for batch processing.
+     *
+     * <p>The options include timezone, cache statements, server statements and rewrite batch
+     * statements.
+     *
+     * @param originalUrl given url that may or may not contain any of those options.
+     * @return url that has all required options.
+     */
+    protected String appendOptionsTo(String originalUrl, Matcher matcher) {
 
-    // missing schema, so we add the default value.
-    return parts[0] + "=" + urlValue + "/discogs_data";
-  }
+        String optHead = matcher.group("initOptHead");
+        String optGrp = matcher.group("optGrp");
+        // check if options are missing
+        if ((optGrp == null || optGrp.isBlank()) && optHead == null || optHead.isBlank()) {
+            // append entire options
+            return originalUrl
+                    .concat("?")
+                    .concat(String.join(
+                            "&",
+                            TIME_ZONE_UTC_OPT,
+                            CACHE_PREP_STMT_OPT,
+                            USE_SERVER_PREP_STMTS_OPT,
+                            REWRITE_BATCHED_STMTS_OPT,
+                            NO_LEGACY_DATE_TIME_CODE));
+        }
+
+        // option already exists. additional options accordingly.
+        if (!originalUrl.contains("serverTimezone=")) {
+            originalUrl += "&" + TIME_ZONE_UTC_OPT;
+        }
+        if (!originalUrl.contains("cachePrepStmts")) {
+            originalUrl += "&" + CACHE_PREP_STMT_OPT;
+        }
+        if (!originalUrl.contains("rewriteBatchedStatements")) {
+            originalUrl += "&" + REWRITE_BATCHED_STMTS_OPT;
+        }
+        if (!originalUrl.contains("useServerPrepStmts")) {
+            originalUrl += "&" + USE_SERVER_PREP_STMTS_OPT;
+        }
+        if (!originalUrl.contains("useLegacyDatetimeCode")) {
+            originalUrl += "&" + NO_LEGACY_DATE_TIME_CODE;
+        }
+        return originalUrl;
+    }
 }
