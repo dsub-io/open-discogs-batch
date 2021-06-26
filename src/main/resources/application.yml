@@ -26,7 +26,6 @@ spring:
         format_sql: true
     hibernate:
       ddl-auto: update
-
   data:
     jpa:
       repositories:
@@ -37,7 +36,10 @@ spring:
         bootstrap-mode: default
   jmx:
     enabled: false
-
+  sql:
+    init:
+      mode: always
+      schema-locations: db/{database}/schema.sql
 logging:
   file:
     path: ./log

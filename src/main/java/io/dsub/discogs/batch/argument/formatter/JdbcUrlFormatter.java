@@ -65,7 +65,7 @@ public class JdbcUrlFormatter implements ArgumentFormatter {
         String type = isKnownType(typeInput) ? typeInput : "mysql";
         String address = getAddress(matcher.group("addr"));
         String port = getPort(matcher.group("port"), type);
-        String schema = getSchema(matcher.group("schema"));
+        String schema = getSchema(matcher.group("db"));
         String compiled = url + type + "://" + address + ":" + port + "/" + schema;
 
         return "url=" + appendOptionsTo(compiled, matcher);
