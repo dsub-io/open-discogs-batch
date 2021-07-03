@@ -1,56 +1,44 @@
 package io.dsub.discogs.batch.domain.label;
 
-import java.util.List;
+import io.dsub.discogs.batch.domain.BaseXML;
+import io.dsub.discogs.common.jooq.postgres.tables.records.LabelRecord;
+import lombok.Data;
+
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlElementWrapper;
 import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.XmlValue;
-import lombok.Data;
+import java.time.Clock;
+import java.time.LocalDateTime;
 
 @Data
 @XmlRootElement(name = "label")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class LabelXML {
+public class LabelXML implements BaseXML<LabelRecord> {
+    @XmlElement(name = "id")
+    private Integer id;
 
-  ///////////////////////////////////////////////////////////////////////////
-  // FIELDS
-  //////////////////////////////////////////////////////////////////////////
-  @XmlElement(name = "id")
-  private Long id;
+    @XmlElement(name = "name")
+    private String name;
 
-  @XmlElement(name = "name")
-  private String name;
+    @XmlElement(name = "contactinfo")
+    private String contactInfo;
 
-  @XmlElement(name = "contactinfo")
-  private String contactInfo;
+    @XmlElement(name = "profile")
+    private String profile;
 
-  @XmlElement(name = "profile")
-  private String profile;
+    @XmlElement(name = "data_quality")
+    private String dataQuality;
 
-  @XmlElement(name = "data_quality")
-  private String dataQuality;
-
-  @XmlElementWrapper(name = "sublabels")
-  @XmlElement(name = "label")
-  private List<SubLabel> SubLabels;
-
-  @XmlElementWrapper(name = "urls")
-  @XmlElement(name = "url")
-  private List<String> urls;
-
-  ///////////////////////////////////////////////////////////////////////////
-  // INNER CLASSES
-  //////////////////////////////////////////////////////////////////////////
-  @Data
-  @XmlAccessorType(XmlAccessType.FIELD)
-  public static class SubLabel {
-
-    @XmlValue private String name;
-
-    @XmlAttribute(name = "id")
-    private Long id;
-  }
+    @Override
+    public LabelRecord buildRecord() {
+        return new LabelRecord()
+                .setId(id)
+                .setName(name)
+                .setContactInfo(contactInfo)
+                .setProfile(profile)
+                .setDataQuality(dataQuality)
+                .setCreatedAt(LocalDateTime.now(Clock.systemUTC()))
+                .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()));
+    }
 }

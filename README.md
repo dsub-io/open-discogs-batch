@@ -63,7 +63,7 @@ Password for the username given. This will automatically be encoded to UTF-8.
 
 ##### url
 
-URL for the target database. The expected format for the url would be...
+URL for the target database. The expected releaseFormat for the url would be...
 
 ```text
 --url={db_type://}{server_address}:{port}/{target_database}
