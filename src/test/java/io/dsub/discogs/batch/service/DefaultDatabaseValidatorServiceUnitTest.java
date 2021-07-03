@@ -27,16 +27,11 @@ class DefaultDatabaseValidatorServiceUnitTest {
     void shouldPassIfValidDataSourceValueIsPresent() {
         ApplicationArguments args = getArgs("--url=jdbc:mysql://", "--password", "--username=sa");
 
-
         // when
         ValidationResult validationResult = service.validate(args);
 
         // then
-        assertAll(
-                () -> assertThat(validationResult.isValid()).isFalse(),
-                () -> assertThat(validationResult.getIssues()).anyMatch(s -> s.contains("using password: no")),
-                () -> assertThat(validationResult.getIssues()).anyMatch(s -> s.contains("failed to test connection!"))
-        );
+        assertThat(validationResult.isValid()).isFalse();
     }
 
     @Test
