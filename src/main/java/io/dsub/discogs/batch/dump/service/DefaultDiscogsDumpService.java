@@ -43,7 +43,7 @@ public class DefaultDiscogsDumpService implements DiscogsDumpService, Initializi
     @Override
     public void updateDB() {
         int monthlyDumpCount =
-                repository.countAllByCreatedAtIsGreaterThanEqual(LocalDate.now().withDayOfMonth(1));
+                repository.countItemsAfter(LocalDate.now().withDayOfMonth(1));
 
         if (monthlyDumpCount == 4) {
             log.info("repository is up to date. skipping the update...");
@@ -72,7 +72,7 @@ public class DefaultDiscogsDumpService implements DiscogsDumpService, Initializi
 
     @Override
     public boolean exists(String eTag) {
-        return repository.existsByeTag(eTag);
+        return repository.existsByETag(eTag);
     }
 
     /**
@@ -84,7 +84,7 @@ public class DefaultDiscogsDumpService implements DiscogsDumpService, Initializi
      */
     @Override
     public DiscogsDump getDiscogsDump(String eTag) throws DumpNotFoundException {
-        return repository.findByeTag(eTag);
+        return repository.findByETag(eTag);
     }
 
     /**
@@ -95,7 +95,7 @@ public class DefaultDiscogsDumpService implements DiscogsDumpService, Initializi
      */
     @Override
     public DiscogsDump getMostRecentDiscogsDumpByType(EntityType type) {
-        return repository.findTopByTypeOrderByCreatedAtDesc(type);
+        return repository.findTopByType(type);
     }
 
     /**
@@ -108,7 +108,7 @@ public class DefaultDiscogsDumpService implements DiscogsDumpService, Initializi
     @Override
     public DiscogsDump getMostRecentDiscogsDumpByTypeYearMonth(EntityType type, int year, int month) {
         LocalDate start = LocalDate.of(year, month, 1);
-        return repository.findTopByTypeAndCreatedAtBetween(
+        return repository.findTopByTypeAndLastModifiedAtBetween(
                 type, start, start.plusMonths(1).minusDays(1));
     }
 
@@ -134,7 +134,7 @@ public class DefaultDiscogsDumpService implements DiscogsDumpService, Initializi
         for (EntityType type : types.stream().distinct().collect(Collectors.toList())) {
             LocalDate targetDate = LocalDate.of(year, month, 1);
             DiscogsDump dump =
-                    repository.findTopByTypeAndCreatedAtBetween(
+                    repository.findTopByTypeAndLastModifiedAtBetween(
                             type, targetDate, targetDate.plusMonths(1).minusDays(1));
             if (dump == null) {
 
@@ -165,7 +165,7 @@ public class DefaultDiscogsDumpService implements DiscogsDumpService, Initializi
     public List<DiscogsDump> getDumpByTypeInRange(EntityType type, int year, int month) {
         LocalDate start = LocalDate.of(year, month, 1);
         LocalDate end = start.plusMonths(1).minusDays(1);
-        return repository.findByTypeAndCreatedAtBetween(type, start, end);
+        return repository.findByTypeAndLastModifiedAtBetween(type, start, end);
     }
 
     /**
@@ -182,12 +182,12 @@ public class DefaultDiscogsDumpService implements DiscogsDumpService, Initializi
         int year = curr.getYear(), month = curr.getMonthValue();
 
         LocalDate start = LocalDate.of(year, month, 1);
-        LocalDate end = LocalDate.of(year, month, 1).plusMonths(1);
+        LocalDate end = start.plusMonths(1);
 
         // limit condition to first known year and month.
         while (start.isAfter(FIRST_DUMP_YEAR_MONTH)) {
             // first.. count the existing rows between the start and end date.
-            int count = repository.countAllByCreatedAtIsBetween(start, end);
+            int count = repository.countItemsBetween(start, end);
 
             // count < 4 means that if we have a missing piece... i.e. artist is missing.
             if (count < 4) {
@@ -196,7 +196,7 @@ public class DefaultDiscogsDumpService implements DiscogsDumpService, Initializi
                 continue;
             }
 
-            return repository.findAllByCreatedAtIsBetween(start, end).stream()
+            return repository.findAllByLastModifiedAtIsBetween(start, end).stream()
                     .sorted(DiscogsDump::compareTo)
                     .limit(4)
                     .collect(Collectors.toList());

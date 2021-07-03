@@ -13,9 +13,7 @@ import static io.dsub.discogs.batch.argument.ArgType.CORE_COUNT;
 public class TaskExecutorConfig {
 
     private static final int CORE_SIZE = Runtime.getRuntime().availableProcessors();
-
-    // todo: revert if not working
-    private static final int DEFAULT_THROTTLE_LIMIT = CORE_SIZE > 2 ? CORE_SIZE : 1;
+    private static final int DEFAULT_THROTTLE_LIMIT = CORE_SIZE > 2 ? (int) (CORE_SIZE * 0.8) : 1;
 
     /**
      * Primary bean for batch processing. The core and max pool size is fit into same value, just as

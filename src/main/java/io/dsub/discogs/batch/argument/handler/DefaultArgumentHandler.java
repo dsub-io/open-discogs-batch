@@ -21,8 +21,6 @@ import java.util.stream.Collectors;
 /**
  * A default implementation of {@link ArgumentHandler}.
  */
-@Primary
-@Component
 public class DefaultArgumentHandler implements ArgumentHandler {
 
     private final ArgumentFormatter argumentFormatter;
@@ -83,7 +81,6 @@ public class DefaultArgumentHandler implements ArgumentHandler {
 
         String[] finalized = getArgumentsWithDriverClassName(arguments);
         finalized =  addRequiredFlags(finalized);
-        System.out.println("FINALIZED >> " + Arrays.toString(finalized));
         return finalized;
     }
 

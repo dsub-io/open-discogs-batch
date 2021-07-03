@@ -59,7 +59,7 @@ public class SimpleFileUtil implements FileUtil {
         log.debug("application directory is cleared.");
     }
 
-    private void clearPaths(List<Path> paths) throws FileDeleteException {
+    protected void clearPaths(List<Path> paths) throws FileDeleteException {
         for (Path fileOrDir : paths) {
             try {
                 Files.deleteIfExists(fileOrDir);
@@ -70,12 +70,15 @@ public class SimpleFileUtil implements FileUtil {
         }
     }
 
-    private List<Path> collectByWalkDir(Path appDir) throws FileDeleteException {
+    protected List<Path> collectByWalkDir(Path appDir) throws FileDeleteException {
         List<Path> paths = new ArrayList<>();
         try (Stream<Path> pathStream = Files.walk(appDir)) {
             pathStream.sorted(Comparator.reverseOrder()).forEachOrdered(paths::add);
         } catch (IOException e) {
-            throw new FileDeleteException("failed traversing subdirectories", e);
+            FileDeleteException ex =
+                    new FileDeleteException("failed traversing subdirectories", e);
+            log.error(ex.getMessage(), e);
+            throw ex;
         }
         return paths;
     }
@@ -111,11 +114,11 @@ public class SimpleFileUtil implements FileUtil {
         return filePath;
     }
 
-    private void tryCreateFile(Path filePath) throws FileException {
+    protected void tryCreateFile(Path filePath) throws FileException {
         try {
             Files.createFile(filePath);
         } catch (IOException e) {
-            FileException ex = new FileException("failed to crate file: " + filePath, e);
+            FileException ex = new FileException("failed to create file: " + filePath, e);
             log.error(ex.getMessage(), ex);
             throw ex;
         }
@@ -164,12 +167,12 @@ public class SimpleFileUtil implements FileUtil {
         return appDirPath;
     }
 
-    private void tryCreateDirectory(Path path) throws FileException {
+    protected void tryCreateDirectory(Path path) throws FileException {
         try {
             Files.createDirectory(path);
         } catch (IOException e) {
             FileException ex = new FileException("failed to create directory: " + path, e);
-            log.error("failed to create directory", ex);
+            log.error(ex.getMessage(), e);
             throw ex;
         }
     }
@@ -182,7 +185,7 @@ public class SimpleFileUtil implements FileUtil {
     public void deleteFile(String filename) throws FileDeleteException {
         try {
             Files.deleteIfExists(Path.of(appDirPath.toAbsolutePath().toString(), filename));
-        } catch (Exception e) {
+        } catch (IOException e) {
             FileDeleteException ex = new FileDeleteException("failed to delete file: " + filename, e);
             log.error(ex.getMessage(), ex);
             throw ex;

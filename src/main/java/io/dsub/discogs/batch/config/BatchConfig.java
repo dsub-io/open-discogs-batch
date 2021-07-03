@@ -1,5 +1,6 @@
 package io.dsub.discogs.batch.config;
 
+import io.dsub.discogs.batch.job.listener.ClearanceJobExecutionListener;
 import io.dsub.discogs.batch.job.listener.ExitSignalJobExecutionListener;
 import io.dsub.discogs.batch.job.listener.IdCachingJobExecutionListener;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +35,7 @@ public class BatchConfig {
     private final JobBuilderFactory jobBuilderFactory;
     private final IdCachingJobExecutionListener idCachingJobExecutionListener;
     private final ExitSignalJobExecutionListener exitSignalJobExecutionListener;
+    private final ClearanceJobExecutionListener clearanceJobExecutionListener;
 
     @Bean
     public Job discogsBatchJob() {
@@ -44,6 +46,7 @@ public class BatchConfig {
                 // listeners
                 .listener(idCachingJobExecutionListener)
                 .listener(exitSignalJobExecutionListener)
+                .listener(clearanceJobExecutionListener)
 
                 // from artist step
                 .start(artistStep)

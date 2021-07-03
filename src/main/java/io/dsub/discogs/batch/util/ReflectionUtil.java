@@ -58,7 +58,6 @@ public class ReflectionUtil {
         }
     }
 
-
     public static List<Field> getDeclaredFields(Object target) {
         return getDeclaredFields(target.getClass());
     }

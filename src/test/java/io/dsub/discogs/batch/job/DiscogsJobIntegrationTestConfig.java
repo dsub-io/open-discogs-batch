@@ -1,13 +1,11 @@
 package io.dsub.discogs.batch.job;
 
 import io.dsub.discogs.batch.TestDumpGenerator;
-import io.dsub.discogs.batch.config.JpaConfig;
+import io.dsub.discogs.batch.container.PostgreSQLContainerBaseTest;
 import io.dsub.discogs.batch.dump.DiscogsDump;
-import io.dsub.discogs.batch.dump.DumpSupplier;
 import io.dsub.discogs.batch.dump.EntityType;
-import io.dsub.discogs.batch.dump.repository.DiscogsDumpRepository;
-import io.dsub.discogs.batch.dump.service.DefaultDiscogsDumpService;
 import io.dsub.discogs.batch.dump.service.DiscogsDumpService;
+import io.dsub.discogs.batch.exception.DumpNotFoundException;
 import io.dsub.discogs.batch.exception.FileException;
 import io.dsub.discogs.batch.job.reader.DiscogsDumpItemReaderBuilder;
 import io.dsub.discogs.batch.util.FileUtil;
@@ -20,23 +18,26 @@ import org.springframework.boot.DefaultApplicationArguments;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
+import javax.sql.DataSource;
 import java.io.File;
 import java.io.IOException;
+import java.time.LocalDate;
+import java.util.Collection;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 @Configuration
-@Import(JpaConfig.class)
 @EnableAutoConfiguration
 @PropertySource("classpath:application-test.yml")
-public class DiscogsJobIntegrationTestConfig {
+public class DiscogsJobIntegrationTestConfig extends PostgreSQLContainerBaseTest {
 
     @Bean
     public JobLauncherTestUtils getJobLauncherTestUtils() {
@@ -49,6 +50,16 @@ public class DiscogsJobIntegrationTestConfig {
     }
 
     @Bean
+    public DataSource dataSource() {
+        return DiscogsJobIntegrationTest.dataSource;
+    }
+
+    @Bean
+    public ApplicationArguments applicationArguments() {
+        return new DefaultApplicationArguments(CONTAINER.getJdbcUrl(), CONTAINER.getUsername(), CONTAINER.getPassword());
+    }
+
+    @Bean
     public ThreadPoolTaskExecutor batchTaskExecutor() {
         ThreadPoolTaskExecutor taskExecutor = new ThreadPoolTaskExecutor();
         taskExecutor.setCorePoolSize(1);
@@ -58,10 +69,6 @@ public class DiscogsJobIntegrationTestConfig {
         return taskExecutor;
     }
 
-    @Bean
-    public CountDownLatch countDownLatch() {
-        return Mockito.spy(new CountDownLatch(1));
-    }
 
     @Bean
     public FileUtil fileUtil() {
@@ -72,6 +79,68 @@ public class DiscogsJobIntegrationTestConfig {
     }
 
     @Bean
+    CountDownLatch countDownLatch() {
+        return spy(new CountDownLatch(1));
+    }
+
+    @Bean
+    public DiscogsDumpService dumpService() throws IOException, FileException {
+
+        Map<EntityType, File> dumpFiles = dumpFiles();
+
+        return new DiscogsDumpService() {
+            @Override
+            public void updateDB() {
+            }
+
+            @Override
+            public boolean exists(String eTag) {
+                return false;
+            }
+
+            @Override
+            public DiscogsDump getDiscogsDump(String eTag) {
+                // i.e call by artist, release, ...
+                EntityType type = EntityType.valueOf(eTag.toUpperCase(Locale.ROOT));
+                File file = dumpFiles.get(type);
+                return new DiscogsDump(eTag, type, file.getAbsolutePath(), file.length(), LocalDate.now(), null);
+            }
+            @Override
+            public DiscogsDump getMostRecentDiscogsDumpByType(EntityType type) {
+                return null;
+            }
+
+            @Override
+            public DiscogsDump getMostRecentDiscogsDumpByTypeYearMonth(
+                    EntityType type, int year, int month) {
+                return null;
+            }
+
+            @Override
+            public Collection<DiscogsDump> getAllByTypeYearMonth(
+                    List<EntityType> types, int year, int month) {
+                return null;
+            }
+
+            @Override
+            public List<DiscogsDump> getDumpByTypeInRange(EntityType type, int year, int month) {
+                return null;
+            }
+
+            @Override
+            public List<DiscogsDump> getLatestCompleteDumpSet() throws DumpNotFoundException {
+                return null;
+            }
+
+            @Override
+            public List<DiscogsDump> getAll() {
+                return null;
+            }
+        };
+    }
+
+
+     @Bean
     public DiscogsDumpItemReaderBuilder readerBuilder() {
         return new DiscogsDumpItemReaderBuilder(fileUtil());
     }
@@ -82,44 +151,12 @@ public class DiscogsJobIntegrationTestConfig {
     }
 
     @Bean
-    public ApplicationArguments applicationArguments() {
-        String url = "url=jdbc:h2:mem:testdb;MODE=MYSQL;CASE_INSENSITIVE_IDENTIFIERS=TRUE;DATABASE_TO_UPPER=false";
-        String user = "username=sa";
-        String pass = "password=";
-        return new DefaultApplicationArguments(url, user, pass);
-    }
-
-    @Bean
     public TestDumpGenerator testDumpGenerator() throws FileException {
         return new TestDumpGenerator(fileUtil().getAppDirectory(true));
     }
 
-    @Bean
-    public DiscogsDumpService dumpService(DiscogsDumpRepository repository) throws IOException, FileException {
-        Map<EntityType, File> dumpFiles = dumpFiles();
-        DiscogsDumpService dumpService = new DefaultDiscogsDumpService(repository, Mockito.mock(DumpSupplier.class)) {
-            @Override
-            public void afterPropertiesSet() {
-            }
-
-            @Override
-            public DiscogsDump getDiscogsDump(String eTag) {
-                // i.e call by artist, release, ...
-                EntityType type = EntityType.valueOf(eTag.toUpperCase(Locale.ROOT));
-                File file = dumpFiles.get(type);
-
-                DiscogsDump dump = new DiscogsDump();
-                dump.setUriString(file.getAbsolutePath());
-                try {
-                    dump.setUrl(file.toURI().toURL());
-                } catch (IOException e) {
-                    return null;
-                }
-                dump.setSize(file.length());
-                dump.setType(type);
-                return dump;
-            }
-        };
-        return spy(dumpService);
-    }
+//    @Bean
+//    public DiscogsDumpRepository repository() {
+//        return Mockito.mock(DiscogsDumpRepository.class);
+//    }
 }

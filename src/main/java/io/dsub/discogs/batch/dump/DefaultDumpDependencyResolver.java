@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -125,8 +126,7 @@ public class DefaultDumpDependencyResolver implements DumpDependencyResolver {
         for (String eTag : eTags.stream().distinct().collect(Collectors.toList())) {
 
             DiscogsDump dump = getDumpByETag(eTag);
-
-            LocalDate dumpYearMonth = dump.getCreatedAt().withDayOfMonth(1);
+            LocalDate dumpYearMonth = dump.getLastModifiedAt().withDayOfMonth(1);
 
             if (foundDate == null) {
                 foundDate = dumpYearMonth;

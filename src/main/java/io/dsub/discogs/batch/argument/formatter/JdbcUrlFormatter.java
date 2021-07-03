@@ -23,16 +23,16 @@ public class JdbcUrlFormatter implements ArgumentFormatter {
 
     public static final Pattern URL_PATTERN = Pattern.compile(
             "(?<jdbcGrp>(?<jdbcHead>jdbc)?(?<jdbcTail>:)?)?" +
-                    "(?<typeGrp>(?<type>\\w+)?(?<typeTail>://)?)?" +
-                    "(?<addr>\\w+)?(?<addrTail>:)?" +
-                    "(?<port>[1-9]\\d{0,4})?" +
+                    "(?<type>\\w+://)?" +
+                    "(?<addr>\\w+)?" +
+                    "(?<port>:[1-9]\\d{0,4})?" +
                     "(?<schemaGrp>(?<schemaHead>/)?(?<schema>\\w+)?)?" +
                     "(?<optGrp>(?<initOptHead>\\?)(?<initOpt>\\w+=\\w+)((?<optionHead>&)(?<option>\\w+=\\w+))*)?");
 
     public static final Pattern KNOWN_DB_PATTERN = Pattern.compile(".*" + DB_NAMES + ".*");
 
     public static final Pattern ADDRESS_PATTERN = Pattern.compile(
-            "^(localhost|\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|\\w+\\.\\w+.*)$", Pattern.CASE_INSENSITIVE);
+            "^(localhost|\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|\\w+(\\.[^.]+)*)$", Pattern.CASE_INSENSITIVE);
 
     public static final Pattern EQUALS = Pattern.compile("^url=.*", Pattern.CASE_INSENSITIVE);
 
@@ -60,15 +60,23 @@ public class JdbcUrlFormatter implements ArgumentFormatter {
             return arg;
         }
 
-        String typeInput = matcher.group("type");
+        String typeInput = getType(matcher);
         String url = "jdbc:";
         String type = isKnownType(typeInput) ? typeInput : "mysql";
         String address = getAddress(matcher.group("addr"));
         String port = getPort(matcher.group("port"), type);
-        String schema = getSchema(matcher.group("db"));
+        String schema = getSchema(matcher.group("schema"));
         String compiled = url + type + "://" + address + ":" + port + "/" + schema;
 
         return "url=" + appendOptionsTo(compiled, matcher);
+    }
+
+    private String getType(Matcher matcher) {
+        String type = matcher.group("type");
+        if (type == null) {
+            return null;
+        }
+        return type.replaceAll("://", "");
     }
 
     private String getAddress(String address) {
@@ -80,17 +88,13 @@ public class JdbcUrlFormatter implements ArgumentFormatter {
 
     private String getPort(String port, String type) {
         if (port != null && !port.isBlank()) {
-            return port;
+            return port.replaceAll(":", "");
         }
-        switch (type) {
-            case "mysql":
-            case "mariadb":
-                return "3306";
-            case "postgresql":
-                return "5432";
-            default:
-                return "8080";
-        }
+        return switch (type) {
+            case "mysql", "mariadb" -> "3306";
+            case "postgresql" -> "5432";
+            default -> "8080";
+        };
     }
 
     private String getSchema(String schema) {

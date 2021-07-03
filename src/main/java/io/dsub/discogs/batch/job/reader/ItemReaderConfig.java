@@ -1,13 +1,14 @@
 package io.dsub.discogs.batch.job.reader;
 
-import io.dsub.discogs.batch.domain.artist.ArtistCommand;
-import io.dsub.discogs.batch.domain.artist.ArtistSubItemsCommand;
-import io.dsub.discogs.batch.domain.label.LabelCommand;
-import io.dsub.discogs.batch.domain.label.LabelSubItemsCommand;
-import io.dsub.discogs.batch.domain.master.MasterCommand;
-import io.dsub.discogs.batch.domain.master.MasterSubItemsCommand;
-import io.dsub.discogs.batch.domain.release.ReleaseItemCommand;
-import io.dsub.discogs.batch.domain.release.ReleaseItemSubItemsCommand;
+import io.dsub.discogs.batch.domain.artist.ArtistXML;
+import io.dsub.discogs.batch.domain.artist.ArtistSubItemsXML;
+import io.dsub.discogs.batch.domain.label.LabelXML;
+import io.dsub.discogs.batch.domain.label.LabelSubItemsXML;
+import io.dsub.discogs.batch.domain.master.MasterMainReleaseXML;
+import io.dsub.discogs.batch.domain.master.MasterXML;
+import io.dsub.discogs.batch.domain.master.MasterSubItemsXML;
+import io.dsub.discogs.batch.domain.release.ReleaseItemXML;
+import io.dsub.discogs.batch.domain.release.ReleaseItemSubItemsXML;
 import io.dsub.discogs.batch.dump.DiscogsDump;
 import io.dsub.discogs.batch.dump.EntityType;
 import io.dsub.discogs.batch.dump.service.DiscogsDumpService;
@@ -25,6 +26,7 @@ import java.util.Map;
 
 @Configuration
 @RequiredArgsConstructor
+// TODO: test!
 public class ItemReaderConfig {
 
     private static final String ARTIST_ETAG = "#{jobParameters['artist']}";
@@ -38,9 +40,9 @@ public class ItemReaderConfig {
 
     @Bean
     @StepScope
-    public SynchronizedItemStreamReader<ArtistCommand> artistStreamReader() {
+    public SynchronizedItemStreamReader<ArtistXML> artistStreamReader() {
         try {
-            return readerBuilder.build(ArtistCommand.class, artistDump(null));
+            return readerBuilder.build(ArtistXML.class, artistDump(null));
         } catch (Exception e) {
             throw new InitializationFailureException(
                     "failed to initialize artist stream reader: " + e.getMessage());
@@ -49,9 +51,9 @@ public class ItemReaderConfig {
 
     @Bean
     @StepScope
-    public SynchronizedItemStreamReader<ArtistSubItemsCommand> artistSubItemsStreamReader() {
+    public SynchronizedItemStreamReader<ArtistSubItemsXML> artistSubItemsStreamReader() {
         try {
-            return readerBuilder.build(ArtistSubItemsCommand.class, artistDump(null));
+            return readerBuilder.build(ArtistSubItemsXML.class, artistDump(null));
         } catch (Exception e) {
             throw new InitializationFailureException(
                     "failed to initialize artist stream reader: " + e.getMessage());
@@ -60,9 +62,9 @@ public class ItemReaderConfig {
 
     @Bean
     @StepScope
-    public SynchronizedItemStreamReader<LabelCommand> labelStreamReader() {
+    public SynchronizedItemStreamReader<LabelXML> labelStreamReader() {
         try {
-            return readerBuilder.build(LabelCommand.class, labelDump(null));
+            return readerBuilder.build(LabelXML.class, labelDump(null));
         } catch (Exception e) {
             throw new InitializationFailureException(
                     "failed to initialize label stream reader: " + e.getMessage());
@@ -71,9 +73,9 @@ public class ItemReaderConfig {
 
     @Bean
     @StepScope
-    public SynchronizedItemStreamReader<LabelSubItemsCommand> labelSubItemsStreamReader() {
+    public SynchronizedItemStreamReader<LabelSubItemsXML> labelSubItemsStreamReader() {
         try {
-            return readerBuilder.build(LabelSubItemsCommand.class, labelDump(null));
+            return readerBuilder.build(LabelSubItemsXML.class, labelDump(null));
         } catch (Exception e) {
             throw new InitializationFailureException(
                     "failed to initialize label stream reader: " + e.getMessage());
@@ -82,9 +84,9 @@ public class ItemReaderConfig {
 
     @Bean
     @StepScope
-    public SynchronizedItemStreamReader<MasterCommand> masterStreamReader() {
+    public SynchronizedItemStreamReader<MasterXML> masterStreamReader() {
         try {
-            return readerBuilder.build(MasterCommand.class, masterDump(null));
+            return readerBuilder.build(MasterXML.class, masterDump(null));
         } catch (Exception e) {
             throw new InitializationFailureException(
                     "failed to initialize master stream reader: " + e.getMessage());
@@ -93,9 +95,20 @@ public class ItemReaderConfig {
 
     @Bean
     @StepScope
-    public SynchronizedItemStreamReader<MasterSubItemsCommand> masterSubItemsStreamReader() {
+    public SynchronizedItemStreamReader<MasterMainReleaseXML> masterMainReleaseStreamReader() {
         try {
-            return readerBuilder.build(MasterSubItemsCommand.class, masterDump(null));
+            return readerBuilder.build(MasterMainReleaseXML.class, masterDump(null));
+        } catch (Exception e) {
+            throw new InitializationFailureException(
+                    "failed to initialize master main release stream reader: " + e.getMessage());
+        }
+    }
+
+    @Bean
+    @StepScope
+    public SynchronizedItemStreamReader<MasterSubItemsXML> masterSubItemsStreamReader() {
+        try {
+            return readerBuilder.build(MasterSubItemsXML.class, masterDump(null));
         } catch (Exception e) {
             throw new InitializationFailureException(
                     "failed to initialize master stream reader: " + e.getMessage());
@@ -104,9 +117,9 @@ public class ItemReaderConfig {
 
     @Bean
     @StepScope
-    public SynchronizedItemStreamReader<ReleaseItemCommand> releaseItemStreamReader() {
+    public SynchronizedItemStreamReader<ReleaseItemXML> releaseItemStreamReader() {
         try {
-            return readerBuilder.build(ReleaseItemCommand.class, releaseItemDump(null));
+            return readerBuilder.build(ReleaseItemXML.class, releaseItemDump(null));
         } catch (Exception e) {
             throw new InitializationFailureException(
                     "failed to initialize release stream reader: " + e.getMessage());
@@ -115,9 +128,9 @@ public class ItemReaderConfig {
 
     @Bean
     @StepScope
-    public SynchronizedItemStreamReader<ReleaseItemSubItemsCommand> releaseItemSubItemsStreamReader() {
+    public SynchronizedItemStreamReader<ReleaseItemSubItemsXML> releaseItemSubItemsStreamReader() {
         try {
-            return readerBuilder.build(ReleaseItemSubItemsCommand.class, releaseItemDump(null));
+            return readerBuilder.build(ReleaseItemSubItemsXML.class, releaseItemDump(null));
         } catch (Exception e) {
             throw new InitializationFailureException(
                     "failed to initialize release stream reader: " + e.getMessage());

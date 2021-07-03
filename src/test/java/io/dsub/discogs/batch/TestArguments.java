@@ -1,39 +1,52 @@
 package io.dsub.discogs.batch;
 
-import io.dsub.discogs.batch.domain.artist.ArtistCommand;
-import io.dsub.discogs.batch.domain.artist.ArtistSubItemsCommand;
-import io.dsub.discogs.batch.domain.label.LabelCommand;
-import io.dsub.discogs.batch.domain.label.LabelSubItemsCommand;
-import io.dsub.discogs.batch.domain.master.MasterCommand;
-import io.dsub.discogs.batch.domain.master.MasterSubItemsCommand;
-import io.dsub.discogs.batch.domain.release.ReleaseItemCommand;
-import io.dsub.discogs.batch.domain.release.ReleaseItemSubItemsCommand;
+import io.dsub.discogs.batch.domain.artist.ArtistXML;
+import io.dsub.discogs.batch.domain.artist.ArtistSubItemsXML;
+import io.dsub.discogs.batch.domain.label.LabelXML;
+import io.dsub.discogs.batch.domain.label.LabelSubItemsXML;
+import io.dsub.discogs.batch.domain.master.MasterXML;
+import io.dsub.discogs.batch.domain.master.MasterSubItemsXML;
+import io.dsub.discogs.batch.domain.release.ReleaseItemXML;
+import io.dsub.discogs.batch.domain.release.ReleaseItemSubItemsXML;
+import io.dsub.discogs.batch.dump.DiscogsDump;
+import io.dsub.discogs.batch.dump.EntityType;
 import io.dsub.discogs.common.entity.BaseEntity;
+import io.github.classgraph.ClassGraph;
+import io.github.classgraph.ScanResult;
 import lombok.Data;
-import org.reflections.Reflections;
+import net.bytebuddy.utility.RandomString;
 
-import java.lang.reflect.Modifier;
 import java.nio.file.Path;
+import java.time.Clock;
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class TestArguments {
-    public static final String BASE_PKG = "io.dsub.discogs";
     public static final String ENTITY_PKG = "io.dsub.discogs.common";
     public static final String BASE_XML_PATH = "src/test/resources/test/reader";
     public static final String ARTIST = "artist";
     public static final String LABEL = "label";
     public static final String MASTER = "master";
     public static final String RELEASE = "release";
+    public static final List<Class<? extends BaseEntity>> ENTITIES;
+    public static final Random random = new Random();
 
-    public static final Reflections REFLECTIONS = new Reflections(BASE_PKG);
-    public static final List<Class<? extends BaseEntity>> ENTITIES =
-            REFLECTIONS.getSubTypesOf(BaseEntity.class).stream()
-                    .filter(clazz -> clazz.getPackageName().contains(ENTITY_PKG))
-                    .filter(clazz -> !Modifier.isAbstract(clazz.getModifiers()))
-                    .filter(clazz -> !Modifier.isInterface(clazz.getModifiers()))
+    static {
+        try (ScanResult scanResult = new ClassGraph()
+                .enableAllInfo()
+                .acceptPackages(ENTITY_PKG)
+                .scan()) {
+
+            ENTITIES = scanResult.getSubclasses(BaseEntity.class.getName()).stream()
+                    .filter(classInfo -> !classInfo.isAbstract())
+                    .map(classInfo -> classInfo.loadClass(BaseEntity.class))
                     .collect(Collectors.toList());
+        }
+    }
 
     public static Stream<Class<? extends BaseEntity>> entities() {
         return ENTITIES.stream();
@@ -63,13 +76,59 @@ public class TestArguments {
 
     public static Stream<ItemReaderTestArgument> itemReaderTestArguments() {
         return List.of(
-                new ItemReaderTestArgument(ArtistCommand.class, "artist"),
-                new ItemReaderTestArgument(ArtistSubItemsCommand.class, "artist"),
-                new ItemReaderTestArgument(LabelCommand.class, "label"),
-                new ItemReaderTestArgument(LabelSubItemsCommand.class, "label"),
-                new ItemReaderTestArgument(MasterCommand.class, "master"),
-                new ItemReaderTestArgument(MasterSubItemsCommand.class, "master"),
-                new ItemReaderTestArgument(ReleaseItemCommand.class, "release"),
-                new ItemReaderTestArgument(ReleaseItemSubItemsCommand.class, "release")).stream();
+                new ItemReaderTestArgument(ArtistXML.class, "artist"),
+                new ItemReaderTestArgument(ArtistSubItemsXML.class, "artist"),
+                new ItemReaderTestArgument(LabelXML.class, "label"),
+                new ItemReaderTestArgument(LabelSubItemsXML.class, "label"),
+                new ItemReaderTestArgument(MasterXML.class, "master"),
+                new ItemReaderTestArgument(MasterSubItemsXML.class, "master"),
+                new ItemReaderTestArgument(ReleaseItemXML.class, "release"),
+                new ItemReaderTestArgument(ReleaseItemSubItemsXML.class, "release")).stream();
+    }
+
+    public static LocalDate getLocalDateFrom(int year, int month, int day) {
+        return LocalDate.of(year, month, day);
+    }
+
+    public static DiscogsDump getRandomDump() {
+        return getRandomDumpWithType(getRandomType());
+    }
+
+    public static DiscogsDump getRandomDumpWithType(EntityType type) {
+        LocalDate lastModifiedAt = LocalDate.now(Clock.systemUTC())
+                .minusYears(random.nextInt(10))
+                .minusDays(random.nextInt(10))
+                .minusMonths(random.nextInt(19));
+        return getRandomDumpWithType(type, lastModifiedAt);
+    }
+
+    public static DiscogsDump getRandomDumpWithLastModifiedAt(LocalDate lastModifiedAt) {
+        String etag = RandomString.make(19);
+        long size = random.nextLong();
+        String uriString = RandomString.make(30);
+        EntityType type = getRandomType();
+        return new DiscogsDump(etag, type, uriString, size, lastModifiedAt, null);
+    }
+
+    public static DiscogsDump getRandomDumpWithType(EntityType type, LocalDate lastModifiedAt) {
+        String etag = RandomString.make(19);
+        long size = random.nextLong();
+        String uriString = RandomString.make(30);
+        return new DiscogsDump(etag, type, uriString, size, lastModifiedAt, null);
+    }
+
+    public static Stream<LocalDate> getLocalDateTimes() {
+        LocalDate ldt = LocalDate.of(2016, 1, 1);
+        List<LocalDate> list = new ArrayList<>();
+        while (ldt.isBefore(LocalDate.now())) {
+            list.add(ldt);
+            ldt = ldt.plusMonths(1);
+        }
+        return list.stream();
+    }
+
+
+    public static EntityType getRandomType() {
+        return EntityType.values()[random.nextInt(4)];
     }
 }

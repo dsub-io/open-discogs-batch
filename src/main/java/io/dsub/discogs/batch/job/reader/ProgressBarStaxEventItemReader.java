@@ -22,6 +22,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.zip.GZIPInputStream;
 
 /**
@@ -36,16 +37,16 @@ public class ProgressBarStaxEventItemReader<T> implements ItemStreamReader<T>, I
     private static final String TASK_NAME_PREPEND = "READ ";
 
     private final String taskName;
-    private final Class<T> clazz;
+    private final Class<T> mappedClass;
     private final Path filePath;
     private final ToggleProgressBarConsumer pbConsumer = new ToggleProgressBarConsumer(System.err);
     private String[] fragmentRootElements;
     private StaxEventItemReader<T> nestedReader;
 
-    public ProgressBarStaxEventItemReader(Class<T> clazz, Path filePath, String... fragmentRootElements) throws Exception {
-        this.clazz = clazz;
+    public ProgressBarStaxEventItemReader(Class<T> mappedClass, Path filePath, String... fragmentRootElements) throws Exception {
+        this.mappedClass = mappedClass;
         this.filePath = filePath;
-        this.taskName = TASK_NAME_PREPEND + clazz.getSimpleName();
+        this.taskName = TASK_NAME_PREPEND + mappedClass.getSimpleName();
         this.pbConsumer.off();
         this.fragmentRootElements =
                 Arrays.stream(fragmentRootElements)
@@ -55,7 +56,7 @@ public class ProgressBarStaxEventItemReader<T> implements ItemStreamReader<T>, I
     }
 
     private void init() throws Exception {
-        Assert.notNull(this.clazz, "clazz cannot be null");
+        Assert.notNull(this.mappedClass, "clazz cannot be null");
         Assert.notNull(this.filePath, "filePath cannot be null");
         Assert.notEmpty(this.fragmentRootElements, "at least 1 fragmentRootElement is required");
         initDelegate();
@@ -67,7 +68,7 @@ public class ProgressBarStaxEventItemReader<T> implements ItemStreamReader<T>, I
                         .resource(getInputStreamResource())
                         .name(taskName)
                         .addFragmentRootElements(fragmentRootElements)
-                        .unmarshaller(getUnmarshaller(clazz))
+                        .unmarshaller(getUnmarshaller(mappedClass))
                         .saveState(false)
                         .build();
     }

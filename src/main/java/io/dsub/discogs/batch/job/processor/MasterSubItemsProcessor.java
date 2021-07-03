@@ -1,16 +1,17 @@
 package io.dsub.discogs.batch.job.processor;
 
-import io.dsub.discogs.batch.domain.master.MasterSubItemsCommand;
+import io.dsub.discogs.batch.domain.master.MasterSubItemsXML;
 import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
 import io.dsub.discogs.batch.util.ReflectionUtil;
-import io.dsub.discogs.common.artist.entity.Artist;
-import io.dsub.discogs.common.entity.BaseEntity;
-import io.dsub.discogs.common.genre.entity.Genre;
-import io.dsub.discogs.common.master.entity.*;
-import io.dsub.discogs.common.style.entity.Style;
+import io.dsub.discogs.common.jooq.postgres.tables.records.MasterGenreRecord;
+import io.dsub.discogs.common.jooq.postgres.tables.records.MasterStyleRecord;
+import io.dsub.discogs.common.jooq.postgres.tables.records.MasterVideoRecord;
 import lombok.RequiredArgsConstructor;
+import org.jooq.UpdatableRecord;
 import org.springframework.batch.item.ItemProcessor;
 
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -20,64 +21,64 @@ import java.util.stream.Collectors;
 import static io.dsub.discogs.batch.job.registry.EntityIdRegistry.Type.*;
 
 @RequiredArgsConstructor
-public class MasterSubItemsProcessor implements ItemProcessor<MasterSubItemsCommand, Collection<BaseEntity>> {
+public class MasterSubItemsProcessor implements ItemProcessor<MasterSubItemsXML, Collection<UpdatableRecord<?>>> {
 
     private final EntityIdRegistry idRegistry;
-    @Override
-    public Collection<BaseEntity> process(MasterSubItemsCommand command) {
 
-        if (command.getId() == null || command.getId() < 1) {
+    @Override
+    public Collection<UpdatableRecord<?>> process(MasterSubItemsXML master) {
+
+        if (master.getId() == null || master.getId() < 1) {
             return null;
         }
 
-        ReflectionUtil.normalizeStringFields(command);
+        ReflectionUtil.normalizeStringFields(master);
 
-        List<BaseEntity> items = new ArrayList<>();
-        long masterId = command.getId();
+        List<UpdatableRecord<?>> items = new ArrayList<>();
+        Integer masterId = master.getId();
 
-        if (command.getArtists() != null) {
-            command.getArtists().stream()
+        if (master.getMasterArtists() != null) {
+            master.getMasterArtists().stream()
                     .filter(Objects::nonNull)
-                    .map(MasterSubItemsCommand.Artist::getId)
                     .distinct()
-                    .filter(this::isExistingArtist)
-                    .map(artistId -> getMasterArtist(masterId, artistId))
+                    .filter(masterArtist -> isExistingArtist(masterArtist.getArtistId()))
+                    .map(xml -> xml.getRecord(masterId))
                     .forEach(items::add);
         }
 
-        if (command.getVideos() != null) {
-            command.getVideos().stream()
+        if (master.getMasterVideos() != null) {
+            master.getMasterVideos().stream()
                     .filter(Objects::nonNull)
                     .distinct()
                     .filter(video -> video.getUrl() != null && !video.getUrl().isBlank())
-                    .map(video -> getMasterVideo(masterId, video))
+                    .map(video -> getMasterVideoRecord(masterId, video))
                     .forEach(items::add);
         }
 
-        if (command.getGenres() != null) {
-            command.getGenres().stream()
+        if (master.getGenres() != null) {
+            master.getGenres().stream()
                     .filter(Objects::nonNull)
                     .map(String::trim)
                     .distinct()
                     .filter(this::isExistingGenre)
-                    .map(genre -> getMasterGenre(masterId, genre))
+                    .map(genre -> getMasterGenreRecord(masterId, genre))
                     .forEach(items::add);
         }
 
-        if (command.getStyles() != null) {
-            command.getStyles().stream()
+        if (master.getStyles() != null) {
+            master.getStyles().stream()
                     .filter(Objects::nonNull)
                     .map(String::trim)
                     .distinct()
                     .filter(this::isExistingStyle)
-                    .map(style -> getMasterStyle(masterId, style))
+                    .map(style -> getMasterStyleRecord(masterId, style))
                     .forEach(items::add);
         }
 
         return items.stream().filter(Objects::nonNull).collect(Collectors.toList());
     }
 
-    private boolean isExistingArtist(long id) {
+    private boolean isExistingArtist(Integer id) {
         return idRegistry.exists(ARTIST, id);
     }
 
@@ -89,49 +90,33 @@ public class MasterSubItemsProcessor implements ItemProcessor<MasterSubItemsComm
         return idRegistry.exists(GENRE, name);
     }
 
-    private MasterGenre getMasterGenre(long masterId, String genre) {
-        return MasterGenre.builder()
-                .master(getMaster(masterId))
-                .genre(getGenre(genre))
-                .build();
+    private MasterGenreRecord getMasterGenreRecord(Integer masterId, String genre) {
+        return new MasterGenreRecord()
+                .setMasterId(masterId)
+                .setGenre(genre)
+                .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()))
+                .setCreatedAt(LocalDateTime.now(Clock.systemUTC()));
     }
 
-    private MasterStyle getMasterStyle(long masterId, String style) {
-        return MasterStyle.builder()
-                .master(getMaster(masterId))
-                .style(getStyle(style))
-                .build();
+    private MasterStyleRecord getMasterStyleRecord(Integer masterId, String style) {
+        return new MasterStyleRecord()
+                .setMasterId(masterId)
+                .setStyle(style)
+                .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()))
+                .setCreatedAt(LocalDateTime.now(Clock.systemUTC()));
     }
 
-    private Genre getGenre(String genre) {
-        return Genre.builder().name(genre).build();
-    }
-
-    private Style getStyle(String style) {
-        return Style.builder().name(style).build();
-    }
-
-    private MasterVideo getMasterVideo(long masterId, MasterSubItemsCommand.Video video) {
-        return MasterVideo.builder()
-                .master(getMaster(masterId))
-                .description(video.getDescription())
-                .title(video.getTitle())
-                .url(video.getUrl())
-                .build();
-    }
-
-    private MasterArtist getMasterArtist(long masterId, long artistId) {
-        return MasterArtist.builder()
-                .master(getMaster(masterId))
-                .artist(getArtist(artistId))
-                .build();
-    }
-
-    private Artist getArtist(long id) {
-        return Artist.builder().id(id).build();
-    }
-
-    private Master getMaster(long id) {
-        return Master.builder().id(id).build();
+    private MasterVideoRecord getMasterVideoRecord(Integer masterId, MasterSubItemsXML.MasterVideoXML video) {
+        String hashSrc = (video.getTitle() == null ? "" : video.getTitle()) +
+                (video.getDescription() == null ? "" : video.getDescription()) +
+                (video.getUrl() == null ? "" : video.getUrl());
+        return new MasterVideoRecord()
+                .setMasterId(masterId)
+                .setTitle(video.getTitle())
+                .setDescription(video.getDescription())
+                .setUrl(video.getUrl())
+                .setHash(hashSrc.hashCode())
+                .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()))
+                .setCreatedAt(LocalDateTime.now(Clock.systemUTC()));
     }
 }

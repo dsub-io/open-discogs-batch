@@ -21,9 +21,8 @@ public class ItemCountingItemProcessListener implements ItemProcessListener<Obje
         if (result == null) {
             return;
         }
-        if (Collection.class.isAssignableFrom(result.getClass())) {
-            Collection<?> itemsToBeWritten = (Collection<?>) result;
-            itemsCounter.addAndGet(itemsToBeWritten.size());
+        if (result instanceof Collection<?>){
+            itemsCounter.addAndGet(((Collection<?>) result).size());
         } else {
             itemsCounter.addAndGet(1L);
         }

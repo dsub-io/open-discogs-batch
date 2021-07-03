@@ -4,6 +4,7 @@ import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
 import io.dsub.discogs.batch.job.step.core.ArtistStepConfig;
 import io.dsub.discogs.batch.job.step.core.LabelStepConfig;
 import io.dsub.discogs.batch.job.step.core.MasterStepConfig;
+import io.dsub.discogs.batch.job.step.core.ReleaseItemStepConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.ExitStatus;
@@ -19,7 +20,7 @@ public class CacheInversionStepExecutionListener implements StepExecutionListene
     private static final String ARTIST = "artist";
     private static final String LABEL = "label";
     private static final String MASTER = "master";
-    private static final String RELEASE_ITEM = "release";
+    private static final String RELEASE_ITEM = "release item";
 
     @Override
     public void beforeStep(StepExecution stepExecution) {
@@ -47,6 +48,11 @@ public class CacheInversionStepExecutionListener implements StepExecutionListene
         if (stepName.equals(MasterStepConfig.MASTER_CORE_INSERTION_STEP) && doRelease) {
             log.info(INVERT_CACHE_MSG, MASTER);
             idRegistry.invert(EntityIdRegistry.Type.MASTER);
+        }
+
+        if (stepName.equals(ReleaseItemStepConfig.RELEASE_ITEM_CORE_INSERTION_STEP) && (doMaster)) {
+            log.info(INVERT_CACHE_MSG, RELEASE_ITEM);
+            idRegistry.invert(EntityIdRegistry.Type.RELEASE);
         }
 
         return stepExecution.getExitStatus();

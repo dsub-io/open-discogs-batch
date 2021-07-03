@@ -2,16 +2,31 @@ plugins {
     id 'java'
     id 'maven-publish'
     id 'jacoco'
-    id 'org.springframework.boot' version '2.5.1'
+    id 'org.springframework.boot' version '2.5.2'
     id 'io.spring.dependency-management' version '1.0.11.RELEASE'
 }
 
-
 group 'io.dsub.discogs'
 version '0.1.2'
+sourceCompatibility = 16
+targetCompatibility = 16
 
-sourceCompatibility = JavaVersion.VERSION_11
-targetCompatibility = JavaVersion.VERSION_11
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+ext {
+    set('testcontainersVersion', "1.15.3")
+    set('springOxmVersion', "5.3.8")
+    set('jaxbApiVersion', "2.3.1")
+    set('jaxbImplVersion', "3.0.1")
+    set('istackCommonsRuntimeVersion', "4.0.1")
+    set('classGraphVersion', "4.8.108")
+    set('pbVersion', "0.9.1")
+    set('discogsCommonVersion', "0.0.2.14")
+}
 
 def props = new Properties()
 if (file(".env").exists()) {
@@ -30,26 +45,30 @@ repositories {
     }
 }
 
+dependencyManagement {
+    imports {
+        mavenBom "org.testcontainers:testcontainers-bom:${testcontainersVersion}"
+    }
+}
+
 dependencies {
     implementation(
-            platform('org.testcontainers:testcontainers-bom:1.15.3'),
-            'io.dsub.discogs:discogs-common:0.0.2.6',
-            'org.springframework.boot:spring-boot-starter-data-jpa',
+            'com.fasterxml.jackson.datatype:jackson-datatype-jsr310',
             'org.springframework.boot:spring-boot-starter-batch',
-            'org.springframework.batch:spring-batch-integration:4.3.3',
+            'org.springframework.boot:spring-boot-starter-data-jpa',
+            'org.springframework.batch:spring-batch-integration',
             'org.springframework.boot:spring-boot-starter-jooq',
-            'org.springframework:spring-oxm:5.3.7',
-            'javax.xml.bind:jaxb-api:2.3.1',
-            'com.sun.xml.bind:jaxb-impl:3.0.1',
-            'com.sun.istack:istack-commons-runtime:4.0.1',
+            "io.dsub.discogs:discogs-common:${discogsCommonVersion}",
+            "org.springframework:spring-oxm:${springOxmVersion}",
+            "javax.xml.bind:jaxb-api:${jaxbApiVersion}",
+            "com.sun.xml.bind:jaxb-impl:${jaxbImplVersion}",
+            "com.sun.istack:istack-commons-runtime:${istackCommonsRuntimeVersion}",
+            "io.github.classgraph:classgraph:${classGraphVersion}",
+            "me.tongfei:progressbar:${pbVersion}",
             'mysql:mysql-connector-java',
             'org.postgresql:postgresql',
-            'me.tongfei:progressbar:0.9.1',
             'org.projectlombok:lombok',
-            'org.apache.commons:commons-lang3',
-            'org.reflections:reflections:0.9.12',
-            'net.ttddyy:datasource-proxy:1.7',
-//            'org.flywaydb:flyway-core'
+            'org.apache.commons:commons-lang3'
     )
     testImplementation (
             'com.h2database:h2',
@@ -59,6 +78,7 @@ dependencies {
             'org.mockito:mockito-inline:3.11.1',
             'org.testcontainers:testcontainers',
             'org.testcontainers:postgresql',
+            'org.testcontainers:mysql',
             'org.testcontainers:junit-jupiter'
     )
     annotationProcessor (

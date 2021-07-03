@@ -1,5 +1,6 @@
 package io.dsub.discogs.batch.dump;
 
+import static io.dsub.discogs.batch.TestArguments.getRandomDump;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForClassTypes.catchThrowable;
@@ -10,6 +11,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import io.dsub.discogs.batch.TestArguments;
 import io.dsub.discogs.batch.argument.ArgType;
 import io.dsub.discogs.batch.dump.service.DiscogsDumpService;
 import io.dsub.discogs.batch.exception.DumpNotFoundException;
@@ -56,12 +58,10 @@ class DumpDependencyResolverUnitTest {
   void whenDumpServiceFailedToFetchDumpByTypeYearMonth__ThenShouldThrowDumpNotFoundException()
       throws InvalidArgumentException, DumpNotFoundException {
     String typeName = rand.nextBoolean() ? "release" : "master";
-    DiscogsDump fakeDump = getFakeDump();
-    fakeDump.setType(EntityType.of(typeName));
-    fakeDump.setCreatedAt(LocalDate.now().minusDays(rand.nextInt(500)));
-    LocalDate createdAt = fakeDump.getCreatedAt();
-    int year = createdAt.getYear();
-    int month = createdAt.getMonthValue();
+    DiscogsDump fakeDump = TestArguments.getRandomDumpWithType(EntityType.of(typeName));
+    LocalDate lastModifiedAt = fakeDump.getLastModifiedAt();
+    int year = lastModifiedAt.getYear();
+    int month = lastModifiedAt.getMonthValue();
 
     List<EntityType> dependencies = new ArrayList<>(fakeDump.getType().getDependencies());
     dependencies.remove(fakeDump.getType());
@@ -87,11 +87,10 @@ class DumpDependencyResolverUnitTest {
   @Test
   void whenETagsContainDifferentDifferentCreatedAt__ThenShouldThrowInvalidArgumentException()
       throws InvalidArgumentException, DumpNotFoundException {
-    DiscogsDump fakeDump = getFakeDump();
+    DiscogsDump fakeDump = getRandomDump();
     when(dumpService.getDiscogsDump("a")).thenReturn(fakeDump);
     when(dumpService.getDiscogsDump("b"))
-        .thenReturn(
-            DiscogsDump.builder().createdAt(fakeDump.getCreatedAt().minusMonths(1)).build());
+        .thenReturn(TestArguments.getRandomDumpWithLastModifiedAt(fakeDump.getLastModifiedAt().minusMonths(1)));
     List<String> eTags = List.of("a", "b");
 
     // when
@@ -277,27 +276,14 @@ class DumpDependencyResolverUnitTest {
     assertThat(parsed).isEqualTo(expected);
   }
 
-  DiscogsDump getFakeDump() {
-    return getFakeDumpByType(EntityType.values()[rand.nextInt(4)]);
-  }
-
-  DiscogsDump getFakeDumpByType(EntityType type) {
-    return DiscogsDump.builder()
-        .createdAt(LocalDate.now())
-        .registeredAt(LocalDateTime.now())
-        .type(type)
-        .eTag(RandomString.make())
-        .uriString(RandomString.make())
-        .build();
-  }
 
   @Test
   void whenResolveWithETag__ThenShouldReturnAsExpected()
       throws InvalidArgumentException, DumpNotFoundException {
     // preparing
     String arg = "--" + ArgType.ETAG.getGlobalName() + "=test";
-    DiscogsDump fakeDump = getFakeDump();
-    int year = fakeDump.getCreatedAt().getYear(), month = fakeDump.getCreatedAt().getMonthValue();
+    DiscogsDump fakeDump = getRandomDump();
+    int year = fakeDump.getLastModifiedAt().getYear(), month = fakeDump.getLastModifiedAt().getMonthValue();
 
     List<DiscogsDump> expected = new ArrayList<>(List.of(fakeDump));
     List<EntityType> typesToCheck = new ArrayList<>();
@@ -305,7 +291,7 @@ class DumpDependencyResolverUnitTest {
     fakeDump.getType().getDependencies().stream()
         .filter(type -> !type.equals(fakeDump.getType()))
         .peek(typesToCheck::add)
-        .map(this::getFakeDumpByType)
+        .map(TestArguments::getRandomDumpWithType)
         .peek(expected::add)
         .forEach(
             dump ->
@@ -337,7 +323,7 @@ class DumpDependencyResolverUnitTest {
     // preparing
     LocalDate targetDate = LocalDate.now().minusDays(1000 + rand.nextInt(1000));
     EntityType targetType = EntityType.values()[rand.nextInt(4)];
-    Collection<DiscogsDump> expected = List.of(getFakeDump());
+    Collection<DiscogsDump> expected = List.of(getRandomDump());
 
     String typeArg = "--type=" + targetType;
     String yearMonthArg = "--yearMonth=" + targetDate.getYear() + "-" + targetDate.getMonthValue();

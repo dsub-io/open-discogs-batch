@@ -58,6 +58,13 @@ public enum ArgType {
                     .synonyms("y")
                     .supportedType(Long.class)
                     .build()),
+    DRIVER_CLASS_NAME(
+            ArgumentProperty.builder()
+                    .globalName("driverClassName")
+                    .synonyms("driverclassname", "driver_class_name")
+                    .required(false)
+                    .supportedType(String.class)
+                    .build()),
     YEAR_MONTH(ArgumentProperty.builder().globalName("yearMonth").synonyms("ym").build());
 
     // properties mapped to each enum instance.

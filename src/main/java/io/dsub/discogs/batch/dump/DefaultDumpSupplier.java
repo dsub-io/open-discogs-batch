@@ -1,6 +1,8 @@
 package io.dsub.discogs.batch.dump;
 
 import io.dsub.discogs.batch.exception.InvalidArgumentException;
+import io.dsub.discogs.batch.util.FileUtil;
+import io.dsub.discogs.batch.util.SimpleFileUtil;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -13,14 +15,17 @@ import org.xml.sax.SAXException;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.file.CopyOption;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -45,21 +50,23 @@ public class DefaultDumpSupplier implements DumpSupplier {
 
     private static final Pattern XML_GZ_PATTERN =
             Pattern.compile("^[\\w/_-]+.xml.gz$", Pattern.CASE_INSENSITIVE);
-    private static final Pattern ARTIST = Pattern.compile(".*artists.*", Pattern.CASE_INSENSITIVE);
+    private static final Pattern ARTIST =
+            Pattern.compile(".*artists.*", Pattern.CASE_INSENSITIVE);
     private static final Pattern RELEASE_ITEM =
             Pattern.compile(".*releases.*", Pattern.CASE_INSENSITIVE);
-    private static final Pattern MASTER = Pattern.compile(".*masters.*", Pattern.CASE_INSENSITIVE);
-    private static final Pattern LABEL = Pattern.compile(".*labels.*", Pattern.CASE_INSENSITIVE);
+    private static final Pattern MASTER =
+            Pattern.compile(".*masters.*", Pattern.CASE_INSENSITIVE);
+    private static final Pattern LABEL =
+            Pattern.compile(".*labels.*", Pattern.CASE_INSENSITIVE);
     private static final Pattern BUCKET_VAR_DECLARATION_PATTERN =
             Pattern.compile(".*bucket_url.*", Pattern.CASE_INSENSITIVE);
 
     private static final String CONTENTS_TAG_NAME = "Contents";
     private static final String KEY = "Key";
-    private static final String LAST_MODIFIED = "LastModified";
     private static final String ETAG = "ETag";
     private static final String SIZE = "Size";
 
-    private static final List<String> KNOWN_NODE_TYPES = List.of(KEY, LAST_MODIFIED, ETAG, SIZE);
+    private static final List<String> KNOWN_NODE_TYPES = List.of(KEY, ETAG, SIZE);
 
     private static final String DISCOGS_DATA_URL = "http://data.discogs.com/";
     private String lastKnownBucketUrl = "https://discogs-data.s3-us-west-2.amazonaws.com";
@@ -72,7 +79,6 @@ public class DefaultDumpSupplier implements DumpSupplier {
      */
     @Override
     public List<DiscogsDump> get() {
-
         List<DiscogsDump> parsedList = parseDumpList(getLastKnownBucketUrl()); // initial parse
         if (parsedList == null || parsedList.isEmpty()) { // if failed...
 
@@ -87,6 +93,13 @@ public class DefaultDumpSupplier implements DumpSupplier {
         return parsedList.stream()
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList()); // this may be null or actual parse result.
+    }
+
+    @Override
+    public List<DiscogsDump> get(File file) {
+        return parseDumpList(file).stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
     }
 
     /**
@@ -151,7 +164,23 @@ public class DefaultDumpSupplier implements DumpSupplier {
      * @return parse result, or null if anything goes wrong.
      */
     protected List<DiscogsDump> parseDumpList(String urlString) {
-        try (InputStream in = openStream(urlString)) {
+        List<DiscogsDump> list = new ArrayList<>();
+        try(InputStream inputStream = openStream(urlString)) {
+            Path temporaryPath = Files.createTempFile(null, null);
+            Files.copy(inputStream, temporaryPath, StandardCopyOption.REPLACE_EXISTING);
+            list = parseDumpList(temporaryPath.toFile());
+            Files.deleteIfExists(temporaryPath);
+        } catch (Exception e) {
+            log.error(e.getMessage());
+        }
+        return list;
+    }
+
+    protected List<DiscogsDump> parseDumpList(File file) {
+        if (file == null) {
+            return new ArrayList<>();
+        }
+        try (InputStream in = new FileInputStream(file)) {
             DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newDefaultInstance();
             DocumentBuilder builder = builderFactory.newDocumentBuilder();
 
@@ -169,20 +198,24 @@ public class DefaultDumpSupplier implements DumpSupplier {
                 }
             }
             return parseResult.stream().filter(Objects::nonNull).collect(Collectors.toList());
-        } catch (MalformedURLException e) {
-            log.error("malformed url string: {" + urlString + "}");
-        } catch (IOException e) {
-            log.error("found IOException for {" + e.getMessage() + "}");
-        } catch (ParserConfigurationException e) {
-            log.error("parser config has error: {" + e.getMessage() + "}");
-        } catch (SAXException e) {
-            log.error("found SAXException for {" + e.getMessage() + "}");
+        } catch (SAXException | ParserConfigurationException | IOException e) {
+            e.printStackTrace();
         }
         return null;
     }
 
-    protected InputStream openStream(String url) throws IOException {
-        return new URL(url).openStream();
+    protected InputStream openStream(String urlString) throws IOException {
+        try {
+            return new URL(urlString).openStream();
+        } catch (IOException e) {
+            String msg;
+            if (urlString.isBlank()) {
+                msg = "urlString cannot be blank";
+            } else {
+                msg = "malformed url string: " + urlString;
+            }
+            throw new InvalidArgumentException(msg);
+        }
     }
 
     /**
@@ -211,10 +244,9 @@ public class DefaultDumpSupplier implements DumpSupplier {
         // set object references for each required entries.
         EntityType type = null;
         String uri = null;
-        LocalDateTime lastModified = null;
+        LocalDate lastModified = null;
         String etag = null;
         Long size = null;
-        LocalDate createdAt = null;
         URL url = null;
 
         try {
@@ -225,44 +257,23 @@ public class DefaultDumpSupplier implements DumpSupplier {
                     return null;
                 }
                 switch (node.getNodeName()) {
-                    case KEY:
+                    case KEY -> {
                         uri = content; // formatted as 'data/{year}/{file_name}'
                         url = new URL(lastKnownBucketUrl + "/" + uri);
                         type = getType(node); // parse the last part of the uri.
-                        createdAt = parseCreatedAt(content);
-                        break;
-                    case ETAG:
-                        etag = node.getTextContent().replace("\"", "");
-                        break;
-                    case SIZE:
-                        size = getSize(node);
-                        break;
-                    case LAST_MODIFIED:
-                        lastModified = getUTCLastModified(node);
-                        break;
+                        lastModified = parseLastModifiedAt(uri);
+                    }
+                    case ETAG -> etag = node.getTextContent().replace("\"", "");
+                    case SIZE -> size = getSize(node);
                 }
             }
         } catch (InvalidArgumentException | MalformedURLException e) { // anything goes wrong...
             log.error("failed to parse DiscogsDump. reason: " + e.getMessage());
         }
-
-        // but won't actually occur.
-        if (lastModified == null) {
-            return null;
-        }
-
-        return DiscogsDump.builder()
-                .uriString(uri)
-                .url(url)
-                .size(size)
-                .registeredAt(lastModified)
-                .eTag(etag)
-                .type(type)
-                .createdAt(createdAt)
-                .build();
+        return new DiscogsDump(etag, type, uri, size, lastModified, url);
     }
 
-    private LocalDate parseCreatedAt(String content) {
+    private LocalDate parseLastModifiedAt(String content) {
         String[] parts = content.split("_");
         if (parts.length < 2) {
             return null;
@@ -324,7 +335,9 @@ public class DefaultDumpSupplier implements DumpSupplier {
      * @throws InvalidArgumentException thrown if we failed to recognize the type that node indicates.
      */
     protected EntityType getType(Node node) throws InvalidArgumentException {
+
         String content = node.getTextContent();
+
         if (ARTIST.matcher(content).matches()) {
             return EntityType.ARTIST;
         } else if (RELEASE_ITEM.matcher(content).matches()) {

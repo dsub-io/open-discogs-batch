@@ -1,16 +1,15 @@
 package io.dsub.discogs.batch.job.listener;
 
-import io.dsub.discogs.batch.domain.artist.ArtistCommand;
-import io.dsub.discogs.batch.domain.label.LabelCommand;
-import io.dsub.discogs.batch.domain.master.MasterCommand;
+import io.dsub.discogs.batch.domain.artist.ArtistXML;
+import io.dsub.discogs.batch.domain.label.LabelXML;
+import io.dsub.discogs.batch.domain.master.MasterXML;
+import io.dsub.discogs.batch.domain.release.ReleaseItemXML;
 import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.ItemProcessListener;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicLong;
 
 import static io.dsub.discogs.batch.job.registry.EntityIdRegistry.Type.*;
 
@@ -30,33 +29,26 @@ public class IdCachingItemProcessListener implements ItemProcessListener<Object,
         if (result == null) {
             return;
         }
-        if (pulled instanceof ArtistCommand) {
-            cacheArtistId((ArtistCommand) pulled);
-        } else if (pulled instanceof LabelCommand) {
-            cacheArtistId((LabelCommand) pulled);
-        } else if (pulled instanceof MasterCommand) {
-            cacheMasterId((MasterCommand) pulled);
-        }
-    }
-
-
-    private void cacheArtistId(ArtistCommand artist) {
-        if (artist != null && artist.getId() != null) {
-            idRegistry.put(ARTIST, artist.getId());
-        }
-    }
-
-    private void cacheArtistId(LabelCommand label) {
-        if (label != null && label.getId() != null) {
-            idRegistry.put(LABEL, label.getId());
-        }
-    }
-
-    private void cacheMasterId(MasterCommand master) {
-        if (master != null && master.getId() != null) {
-            idRegistry.put(MASTER, master.getId());
-            cacheStringTypedItems(STYLE, master.getStyles());
-            cacheStringTypedItems(GENRE, master.getGenres());
+        if (pulled instanceof ArtistXML artist) {
+            if (artist.getId() != null) {
+                idRegistry.put(ARTIST, artist.getId());
+            }
+        } else if (pulled instanceof LabelXML label) {
+            if (label.getId() != null) {
+                idRegistry.put(LABEL, label.getId());
+            }
+        } else if (pulled instanceof MasterXML master) {
+            if (master.getId() != null) {
+                idRegistry.put(MASTER, master.getId());
+                cacheStringTypedItems(STYLE, master.getStyles());
+                cacheStringTypedItems(GENRE, master.getGenres());
+            }
+        } else if (pulled instanceof ReleaseItemXML releaseItem) {
+            if (releaseItem.getId() != null) {
+                idRegistry.put(RELEASE, releaseItem.getId());
+                cacheStringTypedItems(GENRE, releaseItem.getGenres());
+                cacheStringTypedItems(STYLE, releaseItem.getStyles());
+            }
         }
     }
 

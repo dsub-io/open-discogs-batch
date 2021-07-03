@@ -1,82 +1,67 @@
 package io.dsub.discogs.batch.job.processor;
 
-import io.dsub.discogs.batch.domain.label.LabelSubItemsCommand;
-import io.dsub.discogs.batch.domain.label.LabelSubItemsCommand.SubLabel;
+import io.dsub.discogs.batch.domain.BaseXML;
+import io.dsub.discogs.batch.domain.label.LabelSubItemsXML;
 import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
 import io.dsub.discogs.batch.util.ReflectionUtil;
-import io.dsub.discogs.common.entity.BaseEntity;
-import io.dsub.discogs.common.label.entity.Label;
-import io.dsub.discogs.common.label.entity.LabelSubLabel;
-import io.dsub.discogs.common.label.entity.LabelUrl;
+import io.dsub.discogs.common.jooq.postgres.tables.records.LabelUrlRecord;
 import lombok.RequiredArgsConstructor;
+import org.jooq.UpdatableRecord;
 import org.springframework.batch.item.ItemProcessor;
 
+import java.time.Clock;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Objects;
-import java.util.stream.Collectors;
 
 import static io.dsub.discogs.batch.job.registry.EntityIdRegistry.Type.LABEL;
 
 @RequiredArgsConstructor
-public class LabelSubItemsProcessor implements ItemProcessor<LabelSubItemsCommand, Collection<BaseEntity>> {
+public class LabelSubItemsProcessor implements ItemProcessor<LabelSubItemsXML, Collection<UpdatableRecord<?>>> {
 
     private final EntityIdRegistry idRegistry;
 
     @Override
-    public Collection<BaseEntity> process(LabelSubItemsCommand command) {
-        if (command.getId() == null || command.getId() < 1) {
+    public Collection<UpdatableRecord<?>> process(LabelSubItemsXML item) {
+        if (item.getId() == null || item.getId() < 1) {
             return null;
         }
-        ReflectionUtil.normalizeStringFields(command);
 
-        List<BaseEntity> items = new LinkedList<>();
-        Long coreLabelId = command.getId();
+        ReflectionUtil.normalizeStringFields(item);
 
-        if (command.getUrls() != null) {
+        List<UpdatableRecord<?>> records = new ArrayList<>();
 
-            command.getUrls().stream()
-                    .filter(Objects::nonNull)
+        Integer labelId = item.getId();
+
+        if (item.getLabelSubLabels() != null) {
+            item.getLabelSubLabels().stream()
+                    .filter(subLabel -> isExistingLabel(subLabel.getSubLabelId()))
+                    .map(xml -> xml.getRecord(labelId))
+                    .forEach(records::add);
+        }
+
+        if (item.getUrls() != null) {
+            item.getUrls().stream()
                     .filter(url -> !url.isBlank())
                     .distinct()
-                    .map(url -> getLabelUrl(coreLabelId, url))
-                    .forEach(items::add);
+                    .map(url -> getLabelUrlRecord(labelId, url))
+                    .forEach(records::add);
         }
 
-        if (command.getSubLabels() != null) {
-            command.getSubLabels().stream()
-                    .filter(Objects::nonNull)
-                    .map(SubLabel::getId)
-                    .filter(this::isExistingLabel)
-                    .distinct()
-                    .map(subLabelId -> getSubLabel(coreLabelId, subLabelId))
-                    .forEach(items::add);
-        }
-
-        return items.stream().filter(Objects::nonNull).collect(Collectors.toList());
+        return records;
     }
 
-    private boolean isExistingLabel(Long labelId) {
+    private LabelUrlRecord getLabelUrlRecord(Integer labelId, String url) {
+        return new LabelUrlRecord()
+                .setLabelId(labelId)
+                .setUrl(url)
+                .setHash(url.hashCode())
+                .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()))
+                .setCreatedAt(LocalDateTime.now(Clock.systemUTC()));
+    }
+
+    private boolean isExistingLabel(Integer labelId) {
         return idRegistry.exists(LABEL, labelId);
     }
-
-    private LabelUrl getLabelUrl(Long coreLabelId, String url) {
-        return LabelUrl.builder()
-                .label(getLabel(coreLabelId))
-                .url(url)
-                .build();
-    }
-
-    private LabelSubLabel getSubLabel(Long coreLabelId, Long subLabelId) {
-        return LabelSubLabel.builder()
-                .parent(getLabel(coreLabelId))
-                .subLabel(getLabel(subLabelId))
-                .build();
-    }
-
-    private Label getLabel(Long coreLabelId) {
-        return Label.builder().id(coreLabelId).build();
-    }
-
 }

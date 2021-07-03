@@ -11,7 +11,6 @@ public interface DiscogsDumpService {
 
     void updateDB();
 
-    // todo: implement test
     boolean exists(String eTag);
 
     DiscogsDump getDiscogsDump(String eTag) throws DumpNotFoundException;
@@ -20,8 +19,7 @@ public interface DiscogsDumpService {
 
     DiscogsDump getMostRecentDiscogsDumpByTypeYearMonth(EntityType type, int year, int month);
 
-    Collection<DiscogsDump> getAllByTypeYearMonth(List<EntityType> types, int year, int month)
-            throws DumpNotFoundException;
+    Collection<DiscogsDump> getAllByTypeYearMonth(List<EntityType> types, int year, int month) throws DumpNotFoundException;
 
     List<DiscogsDump> getDumpByTypeInRange(EntityType type, int year, int month);
 

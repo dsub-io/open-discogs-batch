@@ -1,21 +1,16 @@
 package io.dsub.discogs.batch.job.processor;
 
-import io.dsub.discogs.batch.domain.release.ReleaseItemSubItemsCommand;
-import io.dsub.discogs.batch.domain.release.ReleaseItemSubItemsCommand.AlbumArtist;
-import io.dsub.discogs.batch.domain.release.ReleaseItemSubItemsCommand.Format;
+import io.dsub.discogs.batch.domain.release.ReleaseItemSubItemsXML;
 import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
 import io.dsub.discogs.batch.util.ReflectionUtil;
-import io.dsub.discogs.common.artist.entity.Artist;
-import io.dsub.discogs.common.entity.BaseEntity;
-import io.dsub.discogs.common.genre.entity.Genre;
-import io.dsub.discogs.common.label.entity.Label;
-import io.dsub.discogs.common.label.entity.LabelRelease;
-import io.dsub.discogs.common.master.entity.Master;
-import io.dsub.discogs.common.release.entity.*;
-import io.dsub.discogs.common.style.entity.Style;
+import io.dsub.discogs.common.jooq.postgres.tables.records.ReleaseItemGenreRecord;
+import io.dsub.discogs.common.jooq.postgres.tables.records.ReleaseItemStyleRecord;
 import lombok.RequiredArgsConstructor;
+import org.jooq.UpdatableRecord;
 import org.springframework.batch.item.ItemProcessor;
 
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -24,181 +19,128 @@ import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 public class ReleaseItemSubItemsProcessor
-        implements ItemProcessor<ReleaseItemSubItemsCommand, Collection<BaseEntity>> {
+        implements ItemProcessor<ReleaseItemSubItemsXML, Collection<UpdatableRecord<?>>> {
 
     private final EntityIdRegistry idRegistry;
 
     @Override
-    public Collection<BaseEntity> process(ReleaseItemSubItemsCommand command) {
-        if (command.getId() == null || command.getId() < 1) {
+    public Collection<UpdatableRecord<?>> process(ReleaseItemSubItemsXML item) {
+        if (item.getId() == null || item.getId() < 1) {
             return null;
         }
-        ReflectionUtil.normalizeStringFields(command);
-        List<BaseEntity> items = new ArrayList<>();
-        long releaseItemId = command.getId();
-        ReleaseItem releaseItem = getReleaseItem(releaseItemId);
+        ReflectionUtil.normalizeStringFields(item);
+        List<UpdatableRecord<?>> items = new ArrayList<>();
+        int releaseItemId = item.getId();
 
-        if (command.getMaster() != null) {
-            Long masterId = command.getMaster().getMasterId();
-            if (isExistingMaster(masterId)) {
-                items.add(ReleaseItemMaster.builder()
-                        .releaseItem(releaseItem)
-                        .master(getMaster(masterId))
-                        .build());
-            }
-        }
-
-        if (command.getAlbumArtists() != null) {
-            command.getAlbumArtists().stream()
+        if (item.getReleaseAlbumArtists() != null) {
+            item.getReleaseAlbumArtists().stream()
                     .filter(Objects::nonNull)
-                    .map(AlbumArtist::getId)
+                    .filter(albumArtist -> isExistingArtist(albumArtist.getArtistId()))
                     .distinct()
-                    .filter(this::isExistingArtist)
-                    .map(albumArtistId -> ReleaseItemArtist.builder()
-                            .artist(getArtist(albumArtistId))
-                            .releaseItem(releaseItem)
-                            .build())
-                    .distinct()
+                    .map(xml -> xml.getRecord(releaseItemId))
                     .forEach(items::add);
         }
-        if (command.getCompanies() != null) {
-            command.getCompanies().stream()
+        if (item.getCompanies() != null) {
+            item.getCompanies().stream()
                     .filter(Objects::nonNull)
                     .filter(work -> isExistingLabel(work.getId()))
-                    .map(work ->
-                            ReleaseItemWork.builder()
-                                    .label(getLabel(work.getId()))
-                                    .releaseItem(releaseItem)
-                                    .work(work.getWork())
-                                    .build())
                     .distinct()
+                    .map(xml -> xml.getRecord(releaseItemId))
                     .forEach(items::add);
         }
-        if (command.getCreditedArtists() != null) {
-            command.getCreditedArtists().stream()
+        if (item.getReleaseCreditedArtists() != null) {
+            item.getReleaseCreditedArtists().stream()
                     .filter(Objects::nonNull)
-                    .filter(creditedArtist -> isExistingArtist(creditedArtist.getId()))
-                    .map(creditedArtist ->
-                            ReleaseItemCreditedArtist.builder()
-                                    .role(creditedArtist.getRole())
-                                    .artist(getArtist(creditedArtist.getId()))
-                                    .releaseItem(releaseItem)
-                                    .build())
+                    .filter(creditedArtist -> isExistingArtist(creditedArtist.getArtistId()))
                     .distinct()
+                    .map(xml -> xml.getRecord(releaseItemId))
                     .forEach(items::add);
         }
-        if (command.getFormats() != null) {
-            command.getFormats().stream()
+        if (item.getReleaseFormats() != null) {
+            item.getReleaseFormats().stream()
                     .filter(Objects::nonNull)
-                    .map(format -> ReleaseItemFormat.builder()
-                            .releaseItem(releaseItem)
-                            .quantity(format.getQty())
-                            .text(format.getText().trim())
-                            .name(format.getName().trim())
-                            .description(getFormatDescription(format))
-                            .build())
                     .distinct()
+                    .map(xml -> xml.getRecord(releaseItemId))
                     .forEach(items::add);
         }
 
-        if (command.getGenres() != null) {
-            command.getGenres().stream()
+        if (item.getGenres() != null) {
+            item.getGenres().stream()
                     .filter(Objects::nonNull)
                     .map(String::trim)
                     .filter(this::isExistingGenre)
                     .distinct()
-                    .map(genre -> ReleaseItemGenre.builder().releaseItem(releaseItem).genre(getGenre(genre)).build())
+                    .map(genre -> new ReleaseItemGenreRecord()
+                            .setReleaseItemId(releaseItemId)
+                            .setGenre(genre)
+                            .setCreatedAt(LocalDateTime.now(Clock.systemUTC()))
+                            .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC())))
                     .forEach(items::add);
         }
 
-        if (command.getStyles() != null) {
-            command.getStyles().stream()
+        if (item.getStyles() != null) {
+            item.getStyles().stream()
                     .filter(Objects::nonNull)
                     .map(String::trim)
                     .filter(this::isExistingStyle)
                     .distinct()
-                    .map(style -> ReleaseItemStyle.builder()
-                            .releaseItem(releaseItem)
-                            .style(getStyle(style))
-                            .build())
+                    .map(style -> new ReleaseItemStyleRecord()
+                            .setReleaseItemId(releaseItemId)
+                            .setStyle(style)
+                            .setCreatedAt(LocalDateTime.now(Clock.systemUTC()))
+                            .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC())))
                     .forEach(items::add);
         }
 
-        if (command.getIdentifiers() != null) {
-            command.getIdentifiers().stream()
+        if (item.getReleaseIdentifiers() != null) {
+            item.getReleaseIdentifiers().stream()
                     .filter(Objects::nonNull)
-                    .map(identifier -> ReleaseItemIdentifier.builder()
-                            .releaseItem(releaseItem)
-                            .description(identifier.getDescription())
-                            .type(identifier.getType())
-                            .value(identifier.getValue())
-                            .build())
                     .distinct()
+                    .map(xml -> xml.getRecord(releaseItemId))
                     .forEach(items::add);
         }
 
-        if (command.getLabels() != null) {
-            command.getLabels().stream()
+        if (item.getLabelReleaseLabels() != null) {
+            item.getLabelReleaseLabels().stream()
                     .filter(Objects::nonNull)
-                    .filter(label -> isExistingLabel(label.getId()))
-                    .map(label -> LabelRelease.builder()
-                            .categoryNotation(label.getCatno())
-                            .label(getLabel(label.getId()))
-                            .releaseItem(releaseItem)
-                            .build())
+                    .filter(label -> isExistingLabel(label.getLabelId()))
                     .distinct()
+                    .map(xml -> xml.getRecord(releaseItemId))
                     .forEach(items::add);
         }
 
-        if (command.getTracks() != null) {
-            command.getTracks().stream()
+        if (item.getReleaseTracks() != null) {
+            item.getReleaseTracks().stream()
                     .filter(Objects::nonNull)
-                    .map(track -> ReleaseItemTrack.builder()
-                            .duration(track.getDuration())
-                            .position(track.getPosition())
-                            .title(track.getTitle())
-                            .releaseItem(releaseItem)
-                            .build())
                     .distinct()
+                    .map(xml -> xml.getRecord(releaseItemId))
                     .forEach(items::add);
         }
 
-        if (command.getVideos() != null) {
-            command.getVideos().stream()
+        if (item.getReleaseVideos() != null) {
+            item.getReleaseVideos().stream()
                     .filter(Objects::nonNull)
                     .filter(vid -> vid.getUrl() != null && !vid.getUrl().isBlank())
-                    .map(video -> ReleaseItemVideo.builder()
-                            .title(video.getTitle())
-                            .description(video.getDescription())
-                            .url(video.getUrl())
-                            .releaseItem(releaseItem)
-                            .build())
                     .distinct()
+                    .map(xml -> xml.getRecord(releaseItemId))
                     .forEach(items::add);
         }
 
         return items.stream().filter(Objects::nonNull).collect(Collectors.toList());
     }
 
-    private boolean isExistingArtist(Long id) {
+    private boolean isExistingArtist(Integer id) {
         if (id == null || id < 1) {
             return false;
         }
         return idRegistry.exists(EntityIdRegistry.Type.ARTIST, id);
     }
 
-    private boolean isExistingLabel(Long id) {
+    private boolean isExistingLabel(Integer id) {
         if (id == null || id < 1) {
             return false;
         }
         return idRegistry.exists(EntityIdRegistry.Type.LABEL, id);
-    }
-
-    private boolean isExistingMaster(Long id) {
-        if (id == null || id < 1) {
-            return false;
-        }
-        return idRegistry.exists(EntityIdRegistry.Type.MASTER, id);
     }
 
     private boolean isExistingGenre(String genre) {
@@ -213,51 +155,5 @@ public class ReleaseItemSubItemsProcessor
             return false;
         }
         return idRegistry.exists(EntityIdRegistry.Type.STYLE, style);
-    }
-
-    private Artist getArtist(long artistId) {
-        return Artist.builder().id(artistId).build();
-    }
-
-    private Master getMaster(long masterId) {
-        return Master.builder().id(masterId).build();
-    }
-
-    private Label getLabel(long labelId) {
-        return Label.builder().id(labelId).build();
-    }
-
-    private Genre getGenre(String genre) {
-        return Genre.builder().name(genre).build();
-    }
-
-    private Style getStyle(String style) {
-        return Style.builder().name(style).build();
-    }
-
-    private ReleaseItem getReleaseItem(long id) {
-        return ReleaseItem.builder()
-                .id(id)
-                .build();
-    }
-
-    private String getFormatDescription(Format format) {
-        if (format.getDescription() == null) {
-            return null;
-        }
-
-        List<String> descriptions = format.getDescription().stream()
-                .filter(Objects::nonNull)
-                .map(String::trim)
-                .filter(desc -> !desc.isBlank())
-                .collect(Collectors.toList());
-
-        if (descriptions.isEmpty()) {
-            return null;
-        }
-
-        return descriptions.stream()
-                .map(desc -> "[d:" + desc + "]")
-                .collect(Collectors.joining(","));
     }
 }

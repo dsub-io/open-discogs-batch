@@ -1,29 +1,21 @@
 package io.dsub.discogs.batch.job.processor;
 
-import io.dsub.discogs.batch.domain.artist.ArtistCommand;
+import io.dsub.discogs.batch.domain.artist.ArtistXML;
 import io.dsub.discogs.batch.util.ReflectionUtil;
-import io.dsub.discogs.common.artist.entity.Artist;
-import io.dsub.discogs.common.entity.BaseEntity;
+import io.dsub.discogs.common.jooq.postgres.tables.records.ArtistRecord;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.item.ItemProcessor;
 
-@RequiredArgsConstructor
-public class ArtistCoreProcessor implements ItemProcessor<ArtistCommand, BaseEntity> {
+import java.time.LocalDateTime;
 
+@RequiredArgsConstructor
+public class ArtistCoreProcessor implements ItemProcessor<ArtistXML, ArtistRecord> {
     @Override
-    public Artist process(ArtistCommand command) {
-        if (command.getId() == null || command.getId() < 1) {
+    public ArtistRecord process(ArtistXML item) {
+        if (item.getId() == null || item.getId() < 1) {
             return null;
         }
-
-        ReflectionUtil.normalizeStringFields(command);
-
-        return Artist.builder()
-                .id(command.getId())
-                .name(command.getName())
-                .realName(command.getRealName())
-                .profile(command.getProfile())
-                .dataQuality(command.getDataQuality())
-                .build();
+        ReflectionUtil.normalizeStringFields(item);
+        return item.buildRecord();
     }
 }

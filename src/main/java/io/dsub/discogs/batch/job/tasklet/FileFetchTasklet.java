@@ -23,6 +23,8 @@ import java.io.InputStream;
  * then fetch again. Note that each phase will trigger update to {@link
  * StepContribution#setExitStatus(ExitStatus)}.
  */
+
+// TODO: test!
 @Slf4j
 @RequiredArgsConstructor
 public class FileFetchTasklet implements Tasklet {

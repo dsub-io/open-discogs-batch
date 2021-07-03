@@ -11,8 +11,7 @@ import java.time.temporal.ChronoUnit;
 public class ProgressBarUtil {
 
     // prevent initialize
-    private ProgressBarUtil() {
-    }
+    private ProgressBarUtil() {}
 
     public static ProgressBar get(String taskName, long initialMax) {
         return get(taskName, initialMax, new ConsoleProgressBarConsumer(System.err, 150));

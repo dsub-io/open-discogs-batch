@@ -34,10 +34,8 @@ public class JobLaunchingRunner implements ApplicationRunner {
     public void run(ApplicationArguments args) throws Exception {
         JobExecution jobExecution = jobLauncher.run(job, discogsJobParameters);
         log.info("main thread started job execution. awaiting for completion...");
-
         countDownLatch.await();
-
-        log.info("job execution completed. dropping temporary tables...");
+        log.info("job execution completed. exiting...");
         SpringApplication.exit(ctx, getExitCodeGenerator(jobExecution));
     }
 

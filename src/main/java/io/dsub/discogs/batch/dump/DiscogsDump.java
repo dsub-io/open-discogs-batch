@@ -1,11 +1,8 @@
 package io.dsub.discogs.batch.dump;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 
-import javax.persistence.*;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -14,37 +11,14 @@ import java.time.LocalDateTime;
 import java.util.Objects;
 
 @Data
-@Entity
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-@Table(name = "discogs_dump")
-public class DiscogsDump implements Comparable<DiscogsDump>, Cloneable {
-
-    @Id
-    @Column(name = "etag")
-    private String eTag;
-
-    @Column(name = "type")
-    @Enumerated(EnumType.STRING)
-    private EntityType type;
-
-    @Column(name = "uri_string")
-    private String uriString;
-
-    @Column(name = "size")
-    private Long size;
-
-    // date when registered to aws
-    @Column(name = "registered_at")
-    private LocalDateTime registeredAt;
-
-    // date when we persisted to db...
-    @Column(name = "created_at")
-    private LocalDate createdAt;
-
-    @Column(name = "url")
-    private URL url;
+@RequiredArgsConstructor
+public class DiscogsDump implements Comparable<DiscogsDump>  {
+    private final String eTag;
+    private final EntityType type;
+    private final String uriString;
+    private final Long size;
+    private final LocalDate lastModifiedAt;
+    private final URL url;
 
     public InputStream getInputStream() throws IOException {
         if (this.url == null) {
@@ -63,7 +37,19 @@ public class DiscogsDump implements Comparable<DiscogsDump>, Cloneable {
 
     @Override
     public int compareTo(DiscogsDump that) {
-        return this.createdAt.compareTo(that.createdAt);
+        int res = this.lastModifiedAt.compareTo(that.lastModifiedAt);
+        if (res != 0) {
+            return res;
+        }
+        res = this.type.compareTo(that.getType());
+        if (res != 0) {
+            return res;
+        }
+        res = this.eTag.compareTo(that.getETag());
+        if (res != 0) {
+            return res;
+        }
+        return this.size.compareTo(that.getSize());
     }
 
     /**
@@ -74,12 +60,8 @@ public class DiscogsDump implements Comparable<DiscogsDump>, Cloneable {
      */
     @Override
     public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
         DiscogsDump that = (DiscogsDump) o;
         return eTag.equals(that.eTag);
     }
@@ -87,13 +69,5 @@ public class DiscogsDump implements Comparable<DiscogsDump>, Cloneable {
     @Override
     public int hashCode() {
         return Objects.hash(eTag);
-    }
-
-    public DiscogsDump getClone() {
-        try {
-            return (DiscogsDump) this.clone();
-        } catch (CloneNotSupportedException ignored) {
-            return null;
-        }
     }
 }

@@ -8,6 +8,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import io.dsub.discogs.batch.TestArguments;
 import io.dsub.discogs.batch.argument.ArgType;
 import io.dsub.discogs.batch.dump.DiscogsDump;
 import io.dsub.discogs.batch.dump.DumpDependencyResolver;
@@ -86,11 +87,9 @@ class DefaultJobParameterResolverTest {
   @Test
   void whenResolve__ShouldCallDumpResolverOnlyOnce()
       throws InvalidArgumentException, DumpNotFoundException {
-    DiscogsDump dump =
-        DiscogsDump.builder()
-            .eTag("testEtag")
-            .type(EntityType.values()[new Random().nextInt(4)])
-            .build();
+
+    DiscogsDump dump = TestArguments.getRandomDump();
+
     ApplicationArguments targetArg = new DefaultApplicationArguments();
     ArgumentCaptor<ApplicationArguments> argCaptor =
         ArgumentCaptor.forClass(ApplicationArguments.class);
@@ -106,19 +105,21 @@ class DefaultJobParameterResolverTest {
   @Test
   void whenResolve__ShouldReturnAsExpected()
       throws io.dsub.discogs.batch.exception.InvalidArgumentException, DumpNotFoundException {
-    DiscogsDump dump =
-        DiscogsDump.builder()
-            .eTag("testEtag")
-            .type(EntityType.values()[new Random().nextInt(4)])
-            .build();
+
+
+    EntityType type = TestArguments.getRandomType();
+    DiscogsDump dump = TestArguments.getRandomDumpWithType(type);
+
     when(dependencyResolver.resolve(any())).thenReturn(List.of(dump));
 
     // when
     Properties resultProps = jobParameterResolver.resolve(new DefaultApplicationArguments());
 
+    System.out.println(resultProps);
+
     // then
     assertThat(resultProps.size()).isEqualTo(2);
-    assertThat(resultProps.get(dump.getType().toString())).isEqualTo(dump.getETag());
+    assertThat(resultProps.get(type.toString())).isEqualTo(dump.getETag());
     assertThat(resultProps.get(ArgType.CHUNK_SIZE.getGlobalName()))
         .isEqualTo(String.valueOf(DEFAULT_CHUNK_SIZE));
   }

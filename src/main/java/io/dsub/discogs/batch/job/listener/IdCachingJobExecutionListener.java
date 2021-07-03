@@ -2,20 +2,19 @@ package io.dsub.discogs.batch.job.listener;
 
 import io.dsub.discogs.batch.argument.ArgType;
 import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
-import io.dsub.discogs.common.artist.repository.ArtistRepository;
-import io.dsub.discogs.common.entity.view.LongIdView;
-import io.dsub.discogs.common.label.repository.LabelRepository;
-import io.dsub.discogs.common.master.repository.MasterRepository;
+import io.dsub.discogs.common.jooq.postgres.tables.Artist;
+import io.dsub.discogs.common.jooq.postgres.tables.Label;
+import io.dsub.discogs.common.jooq.postgres.tables.Master;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jooq.DSLContext;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobExecutionListener;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.CountDownLatch;
-import java.util.stream.Collectors;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -28,9 +27,7 @@ public class IdCachingJobExecutionListener implements JobExecutionListener {
     protected static final String STRICT = ArgType.STRICT.getGlobalName();
 
     private final EntityIdRegistry idRegistry;
-    private final ArtistRepository artistRepository;
-    private final LabelRepository labelRepository;
-    private final MasterRepository masterRepository;
+    private final DSLContext context;
 
     @Override
     public void beforeJob(JobExecution jobExecution) {
@@ -48,71 +45,73 @@ public class IdCachingJobExecutionListener implements JobExecutionListener {
 
         if (doMaster && !doRelease) {
             if (!doArtist) {
-                cacheArtistIds();
+                preCacheArtistIds();
             }
         } else if (!doMaster && doRelease) {
             if (!doArtist) {
-                cacheArtistIds();
+                preCacheArtistIds();
             }
             if (!doLabel) {
-                cacheLabelIds();
+                preCacheLabelIds();
             }
-            cacheMasterIds();
+            preCacheMasterIds();
         } else if (doMaster) { // doMaster && doRelease
             if (!doArtist) {
-                cacheArtistIds();
+                preCacheArtistIds();
             }
             if (!doLabel) {
-                cacheLabelIds();
+                preCacheLabelIds();
             }
         }
     }
 
-    private void cacheMasterIds() {
-        cacheThenInvert(getMasterIdentifiers(), EntityIdRegistry.Type.MASTER);
+    private void preCacheMasterIds() {
+        cacheThenInvert(fetchMasterIdentifiers(), EntityIdRegistry.Type.MASTER);
     }
 
-    private void cacheLabelIds() {
-        cacheThenInvert(getLabelIdentifiers(), EntityIdRegistry.Type.LABEL);
+    private void preCacheLabelIds() {
+        cacheThenInvert(fetchLabelIdentifiers(), EntityIdRegistry.Type.LABEL);
     }
 
-    private void cacheArtistIds() {
-        cacheThenInvert(getArtistIdentifiers(), EntityIdRegistry.Type.ARTIST);
+    private void preCacheArtistIds() {
+        cacheThenInvert(fetchArtistIdentifiers(), EntityIdRegistry.Type.ARTIST);
     }
 
-    private void cacheThenInvert(List<Long> idList, EntityIdRegistry.Type type) {
+    private void cacheThenInvert(List<Integer> idList, EntityIdRegistry.Type type) {
         cache(idList, type);
         invert(type);
     }
 
     private void invert(EntityIdRegistry.Type type) {
-        log.info("inverting {} cache", type.name().toLowerCase());
         idRegistry.invert(type);
     }
 
-    private void cache(List<Long> idList, EntityIdRegistry.Type type) {
+    private void cache(List<Integer> idList, EntityIdRegistry.Type type) {
         log.info("caching {} identifiers", type.name().toLowerCase());
         idList.stream()
                 .filter(Objects::nonNull)
                 .forEach(id -> idRegistry.put(type, id));
     }
 
-    private List<Long> getArtistIdentifiers() {
-        return artistRepository.findIdsBy().stream()
-                .map(LongIdView::getId)
-                .collect(Collectors.toList());
+    private List<Integer> fetchArtistIdentifiers() {
+        log.info("fetching artist identifiers");
+        List<Integer> list = new ArrayList<>(context.select(Artist.ARTIST.ID).from(Artist.ARTIST).fetch(Artist.ARTIST.ID));
+        log.info("fetched artists ids. count: {}", list.size());
+        return list;
     }
 
-    private List<Long> getLabelIdentifiers() {
-        return labelRepository.findIdsBy().stream()
-                .map(LongIdView::getId)
-                .collect(Collectors.toList());
+    private List<Integer> fetchLabelIdentifiers() {
+        log.info("fetching label identifiers");
+        List<Integer> list = new ArrayList<>(context.select(Label.LABEL.ID).from(Label.LABEL).fetch(Label.LABEL.ID));
+        log.info("fetched label ids. count: {}", list.size());
+        return list;
     }
 
-    private List<Long> getMasterIdentifiers() {
-        return masterRepository.findIdsBy().stream()
-                .map(LongIdView::getId)
-                .collect(Collectors.toList());
+    private List<Integer> fetchMasterIdentifiers() {
+        log.info("fetching master identifiers");
+        List<Integer> list = new ArrayList<>(context.select(Master.MASTER.ID).from(Master.MASTER).fetch(Master.MASTER.ID));
+        log.info("fetched master ids. count: {}", list.size());
+        return list;
     }
 
     @Override

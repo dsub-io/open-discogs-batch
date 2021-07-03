@@ -23,15 +23,13 @@ import java.util.stream.Collectors;
  */
 public class DataSourceArgumentValidator implements ArgumentValidator {
 
-    public static final String CHARACTERS = "[\\w!@#$%^&*.-]+";
-    public static final String QUERY_PART = "[\\w!@#$%^*]+";
-    public static final String PORT_RANGE = "[1-9][0-9]{0,4}";
-    public static final String REPEATING_QUERY = "(&" + QUERY_PART + "=" + QUERY_PART + ")*)?$";
     public static final List<ArgType> REQUIRED_TYPES = List.of(ArgType.URL, ArgType.USERNAME, ArgType.PASSWORD);
-    public static final String JDBC_PREFIX = "^jdbc:";
-
     public static final Pattern URL_PATTERN = Pattern.compile(
-            "(?<jdbcGrp>(?<jdbcHead>jdbc)(?<jdbcTail>:))(?<typeGrp>(?<type>\\w+)(?<typeTail>://))(?<addr>[\\w.]+)(?<addrTail>:)(?<port>[1-9]\\d{0,4})(?<schemaGrp>(?<schemaHead>/)(?<schema>\\w+))([?&]\\w+=\\w+)*");
+            "(?<jdbcGrp>(?<jdbcHead>jdbc)(?<jdbcTail>:))" +
+                    "(?<typeGrp>(?<type>\\w+)(?<typeTail>://))" +
+                    "(?<addr>[\\w.]+)(?<addrTail>:)" +
+                    "(?<port>[1-9]\\d{0,4})" +
+                    "(?<schemaGrp>(?<schemaHead>/)(?<schema>\\w+))([?&]\\w+=\\w+)*");
 
     /**
      * Validation for {@link ApplicationArguments} if necessary arguments do exist.
@@ -81,6 +79,9 @@ public class DataSourceArgumentValidator implements ArgumentValidator {
     }
 
     private boolean isValidConnURL(String url) {
+        if (url == null || url.isBlank()) {
+            return false;
+        }
         Matcher matcher = URL_PATTERN.matcher(url);
         return matcher.matches();
     }

@@ -1,10 +1,12 @@
 package io.dsub.discogs.batch.job.listener;
 
 import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
+import io.dsub.discogs.batch.util.FileUtil;
 import io.dsub.discogs.common.artist.repository.ArtistRepository;
 import io.dsub.discogs.common.label.repository.LabelRepository;
 import io.dsub.discogs.common.master.repository.MasterRepository;
 import lombok.RequiredArgsConstructor;
+import org.jooq.DSLContext;
 import org.springframework.batch.core.ItemProcessListener;
 import org.springframework.batch.core.ItemReadListener;
 import org.springframework.batch.core.JobExecutionListener;
@@ -18,12 +20,6 @@ import java.util.concurrent.atomic.AtomicLong;
 @Configuration
 @RequiredArgsConstructor
 public class BatchListenerConfig {
-
-    private final CountDownLatch exitLatch;
-    private final ArtistRepository artistRepository;
-    private final LabelRepository labelRepository;
-    private final MasterRepository masterRepository;
-
     @Bean
     public EntityIdRegistry entityIdRegistry() {
         return new EntityIdRegistry();
@@ -60,15 +56,15 @@ public class BatchListenerConfig {
     }
 
     @Bean
-    public ExitSignalJobExecutionListener exitSignalJobExecutionListener() {
+    public ExitSignalJobExecutionListener exitSignalJobExecutionListener(CountDownLatch exitLatch) {
         return new ExitSignalJobExecutionListener(exitLatch);
     }
     @Bean
-    public IdCachingJobExecutionListener idCachingJobExecutionListener() {
-        return new IdCachingJobExecutionListener(
-                entityIdRegistry(),
-                artistRepository,
-                labelRepository,
-                masterRepository);
+    public IdCachingJobExecutionListener idCachingJobExecutionListener(DSLContext context) {
+        return new IdCachingJobExecutionListener(entityIdRegistry(), context);
+    }
+    @Bean
+    public ClearanceJobExecutionListener clearanceJobExecutionListener(FileUtil fileUtil) {
+        return new ClearanceJobExecutionListener(entityIdRegistry(), fileUtil);
     }
 }

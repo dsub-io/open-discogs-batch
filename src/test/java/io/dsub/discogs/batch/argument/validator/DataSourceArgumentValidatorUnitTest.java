@@ -38,8 +38,7 @@ class DataSourceArgumentValidatorUnitTest {
 
   @Test
   void shouldReportMalformedJdbcUrl() {
-    String response =
-        "invalid url format. expected: jdbc:[mysql, postgresql]://{address}:{port}/schema_name{?option=value}";
+    String response = "invalid url format. expected: jdbc:[postgresql, mysql, mariadb]://{address}:{port}/schema_name{?option=value}";
     String jdbcUrl = "url=jdbc:mysql://localhost:3306/discogs_data?option=false&discogs=false&";
 
     innerTestMalformedJdbcUrl(jdbcUrl, response);

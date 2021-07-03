@@ -15,6 +15,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
+import javax.sql.DataSource;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 
@@ -26,14 +27,17 @@ public class JobPreparationRunner implements ApplicationRunner {
 
     private final JobParameterResolver jobParameterResolver;
     private final JobParametersConverter jobParametersConverter;
-    private final HikariDataSource dataSource;
+    private final DataSource dataSource;
     private final ThreadPoolTaskExecutor taskExecutor;
 
     @Override
     public void run(ApplicationArguments args) {
         int poolSize = taskExecutor.getMaxPoolSize() + 3;
-        log.info("setting db connection pool size to " + poolSize);
-        dataSource.setMaximumPoolSize(poolSize);
+
+        if (dataSource instanceof HikariDataSource) {
+            log.info("setting db connection pool size to " + poolSize);
+            ((HikariDataSource) dataSource).setMaximumPoolSize(poolSize);
+        }
     }
 
     @Bean

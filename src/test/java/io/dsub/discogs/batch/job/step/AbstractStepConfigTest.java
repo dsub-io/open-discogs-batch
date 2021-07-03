@@ -2,6 +2,7 @@ package io.dsub.discogs.batch.job.step;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
 
 import ch.qos.logback.classic.Level;
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mockito;
+import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobParameter;
 import org.springframework.batch.core.JobParameters;
@@ -37,12 +39,20 @@ class AbstractStepConfigTest {
   @ValueSource(strings = {"artist", "release", "master", "label"})
   void whenGetOnKeyExecutionDecider__ShouldReturnValidExecutionDecider(String param)
       throws InvalidArgumentException {
+
     JobExecutionDecider jobExecutionDecider = stepConfig.executionDecider(param);
+
     JobExecution jobExecution = Mockito.mock(JobExecution.class);
     JobParameters jobParameters = Mockito.mock(JobParameters.class);
+
     Map<String, JobParameter> falsyMap = new HashMap<>();
     Map<String, JobParameter> truthyMap = new HashMap<>();
     truthyMap.put(param, new JobParameter("hello"));
+
+    ExitStatus exitStatus = Mockito.mock(ExitStatus.class);
+    doReturn("COMPLETED").when(exitStatus).getExitCode();
+    doReturn(exitStatus).when(jobExecution).getExitStatus();
+
     when(jobExecution.getJobParameters()).thenReturn(jobParameters);
     when(jobParameters.getParameters()).thenReturn(falsyMap);
 

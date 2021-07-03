@@ -1,7 +1,7 @@
 package io.dsub.discogs.batch.job.step.core;
 
-import io.dsub.discogs.batch.domain.master.MasterCommand;
-import io.dsub.discogs.batch.domain.master.MasterSubItemsCommand;
+import io.dsub.discogs.batch.domain.master.MasterSubItemsXML;
+import io.dsub.discogs.batch.domain.master.MasterXML;
 import io.dsub.discogs.batch.dump.DiscogsDump;
 import io.dsub.discogs.batch.exception.DumpNotFoundException;
 import io.dsub.discogs.batch.exception.InvalidArgumentException;
@@ -9,14 +9,14 @@ import io.dsub.discogs.batch.job.listener.*;
 import io.dsub.discogs.batch.job.step.AbstractStepConfig;
 import io.dsub.discogs.batch.job.tasklet.FileClearTasklet;
 import io.dsub.discogs.batch.job.tasklet.FileFetchTasklet;
+import io.dsub.discogs.batch.job.tasklet.GenreStyleInsertionTasklet;
 import io.dsub.discogs.batch.util.FileUtil;
-import io.dsub.discogs.common.entity.BaseEntity;
+import io.dsub.discogs.common.jooq.postgres.tables.records.LabelRecord;
+import io.dsub.discogs.common.jooq.postgres.tables.records.MasterRecord;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.batch.core.ItemProcessListener;
-import org.springframework.batch.core.ItemReadListener;
+import org.jooq.UpdatableRecord;
 import org.springframework.batch.core.Step;
-import org.springframework.batch.core.StepExecutionListener;
 import org.springframework.batch.core.configuration.annotation.JobScope;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.core.job.builder.FlowBuilder;
@@ -27,14 +27,11 @@ import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.support.SynchronizedItemStreamReader;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.dao.DeadlockLoserDataAccessException;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
-import org.springframework.transaction.PlatformTransactionManager;
 
 import java.util.Collection;
 
@@ -49,33 +46,28 @@ public class MasterStepConfig extends AbstractStepConfig {
     public static final String MASTER_SUB_ITEMS_INSERTION_STEP = "master sub items insertion step";
     public static final String MASTER_FILE_FETCH_STEP = "master file fetch step";
     public static final String MASTER_FILE_CLEAR_STEP = "master file clear step";
+    public static final String MASTER_GENRE_STYLE_INSERTION_STEP = "master genre style insertion step";
 
-    private final SynchronizedItemStreamReader<MasterCommand> masterStreamReader;
-    private final SynchronizedItemStreamReader<MasterSubItemsCommand> masterSubItemsStreamReader;
-    private final ItemProcessor<MasterCommand, BaseEntity> masterCoreProcessor;
-    private final ItemProcessor<MasterSubItemsCommand, Collection<BaseEntity>> masterSubItemsProcessor;
-    private final ItemWriter<Collection<BaseEntity>> collectionItemWriter;
-    private final ItemWriter<BaseEntity> entityItemWriter;
+    private final SynchronizedItemStreamReader<MasterXML> masterStreamReader;
+    private final SynchronizedItemStreamReader<MasterSubItemsXML> masterSubItemsStreamReader;
+    private final ItemProcessor<MasterXML, MasterRecord> masterCoreProcessor;
+    private final ItemProcessor<MasterSubItemsXML, Collection<UpdatableRecord<?>>> masterSubItemsProcessor;
+    private final ItemWriter<Collection<UpdatableRecord<?>>> collectionItemWriter;
+    private final ItemWriter<UpdatableRecord<?>> entityItemWriter;
     private final DiscogsDump masterDump;
 
     private final StepBuilderFactory sbf;
     private final ThreadPoolTaskExecutor taskExecutor;
     private final JobRepository jobRepository;
     private final FileUtil fileUtil;
+    private final GenreStyleInsertionTasklet genreStyleInsertionTasklet;
 
     private final StopWatchStepExecutionListener stopWatchStepExecutionListener;
     private final CacheInversionStepExecutionListener cacheInversionStepExecutionListener;
     private final StringNormalizingItemReadListener stringNormalizingItemReadListener;
     private final IdCachingItemProcessListener idCachingItemProcessListener;
     private final ItemCountingItemProcessListener itemCountingItemProcessListener;
-
-    private PlatformTransactionManager transactionManager;
-
-    @Autowired
-    public void setStepTransactionManager(@Qualifier(value = "stepTransactionManager") PlatformTransactionManager transactionManager) {
-        this.transactionManager = transactionManager;
-    }
-
+    
     @Bean
     @JobScope
     public Step masterStep(@Value(CHUNK) Integer chunkSize) throws InvalidArgumentException, DumpNotFoundException {
@@ -87,29 +79,28 @@ public class MasterStepConfig extends AbstractStepConfig {
                         // from execution decider
                         .from(executionDecider(MASTER))
                                 .on(SKIPPED).end()
-                        .from(executionDecider(MASTER))
                                 .on(ANY).to(masterFileFetchStep())
 
                         // from fetch
                         .from(masterFileFetchStep())
-                                .on(FAILED)
-                                .to(masterFileClearStep())
+                                .on(FAILED).end()
                         .from(masterFileFetchStep())
-                                .on(ANY)
-                                .to(masterCoreInsertionStep(chunkSize))
+                                .on(ANY).to(masterCoreInsertionStep(chunkSize))
 
                         // from core insertion
                         .from(masterCoreInsertionStep(chunkSize))
-                                .on(FAILED).to(masterFileClearStep())
+                                .on(FAILED).end()
                         .from(masterCoreInsertionStep(chunkSize))
+                                .on(ANY).to(masterGenreStyleInsertionStep())
+
+                        // from master genre style insertion step
+                        .from(masterGenreStyleInsertionStep())
+                                .on(FAILED).end()
+                        .from(masterGenreStyleInsertionStep())
                                 .on(ANY).to(masterSubItemsInsertionStep(chunkSize))
 
                         // from sub items insertion
                         .from(masterSubItemsInsertionStep(chunkSize))
-                                .on(ANY).to(masterFileClearStep())
-
-                        // from file clear
-                        .from(masterFileClearStep())
                                 .on(ANY).end()
 
                         // conclude
@@ -134,15 +125,9 @@ public class MasterStepConfig extends AbstractStepConfig {
 
     @Bean
     @JobScope
-    public Step masterFileClearStep() {
-        return sbf.get(MASTER_FILE_CLEAR_STEP).tasklet(new FileClearTasklet(fileUtil)).build();
-    }
-
-    @Bean
-    @JobScope
     public Step masterCoreInsertionStep(@Value(CHUNK) Integer chunkSize) {
         return sbf.get(MASTER_CORE_INSERTION_STEP)
-                .<MasterCommand, BaseEntity>chunk(chunkSize)
+                .<MasterXML, UpdatableRecord<?>>chunk(chunkSize)
                 .reader(masterStreamReader)
                 .processor(masterCoreProcessor)
                 .writer(entityItemWriter)
@@ -155,7 +140,6 @@ public class MasterStepConfig extends AbstractStepConfig {
                 .listener(itemCountingItemProcessListener)
                 .listener(cacheInversionStepExecutionListener)
                 .taskExecutor(taskExecutor)
-                .transactionManager(transactionManager)
                 .throttleLimit(taskExecutor.getMaxPoolSize())
                 .build();
     }
@@ -164,7 +148,7 @@ public class MasterStepConfig extends AbstractStepConfig {
     @JobScope
     public Step masterSubItemsInsertionStep(@Value(CHUNK) Integer chunkSize) {
         return sbf.get(MASTER_SUB_ITEMS_INSERTION_STEP)
-                .<MasterSubItemsCommand, Collection<BaseEntity>>chunk(chunkSize)
+                .<MasterSubItemsXML, Collection<UpdatableRecord<?>>>chunk(chunkSize)
                 .reader(masterSubItemsStreamReader)
                 .processor(masterSubItemsProcessor)
                 .writer(collectionItemWriter)
@@ -175,8 +159,13 @@ public class MasterStepConfig extends AbstractStepConfig {
                 .listener(stopWatchStepExecutionListener)
                 .listener(itemCountingItemProcessListener)
                 .taskExecutor(taskExecutor)
-                .transactionManager(transactionManager)
                 .throttleLimit(taskExecutor.getMaxPoolSize())
                 .build();
+    }
+
+    @Bean
+    @JobScope
+    public Step masterGenreStyleInsertionStep() {
+        return sbf.get(MASTER_GENRE_STYLE_INSERTION_STEP).tasklet(genreStyleInsertionTasklet).build();
     }
 }

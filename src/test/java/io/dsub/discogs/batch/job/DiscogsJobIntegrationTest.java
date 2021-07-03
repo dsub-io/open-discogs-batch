@@ -1,28 +1,24 @@
 package io.dsub.discogs.batch.job;
 
 import ch.qos.logback.classic.Level;
+import io.dsub.discogs.batch.TestDumpGenerator;
 import io.dsub.discogs.batch.config.BatchConfig;
+import io.dsub.discogs.batch.container.PostgreSQLContainerBaseTest;
 import io.dsub.discogs.batch.dump.DiscogsDump;
 import io.dsub.discogs.batch.dump.EntityType;
+import io.dsub.discogs.batch.dump.service.DiscogsDumpService;
 import io.dsub.discogs.batch.exception.FileException;
-import io.dsub.discogs.batch.exception.InvalidArgumentException;
+import io.dsub.discogs.batch.job.reader.DiscogsDumpItemReaderBuilder;
 import io.dsub.discogs.batch.testutil.LogSpy;
 import io.dsub.discogs.batch.util.FileUtil;
 import io.dsub.discogs.batch.util.SimpleFileUtil;
-import io.dsub.discogs.common.artist.entity.Artist;
-import io.dsub.discogs.common.entity.BaseEntity;
-import io.dsub.discogs.common.genre.entity.Genre;
-import io.dsub.discogs.common.label.entity.Label;
-import io.dsub.discogs.common.master.entity.Master;
-import io.dsub.discogs.common.release.entity.ReleaseItem;
-import io.dsub.discogs.common.style.entity.Style;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.reflections.Reflections;
+import org.mockito.Mockito;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobParameters;
@@ -34,65 +30,60 @@ import org.springframework.batch.test.JobLauncherTestUtils;
 import org.springframework.batch.test.JobRepositoryTestUtils;
 import org.springframework.batch.test.context.SpringBatchTest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationContext;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.repository.CrudRepository;
-import org.springframework.data.repository.support.Repositories;
-import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.DefaultApplicationArguments;
+import org.springframework.context.annotation.Bean;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.transaction.PlatformTransactionManager;
 
 import javax.sql.DataSource;
-import java.lang.reflect.Modifier;
+import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
-import java.util.stream.Collectors;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 @Slf4j
 @SpringBatchTest
 @ContextConfiguration(classes = {
         BatchConfig.class,
-        DiscogsJobIntegrationTestConfig.class,
-        BatchInfrastructureConfig.class}
+        BatchInfrastructureConfig.class,
+        DiscogsJobIntegrationTestConfig.class}
 )
-public class DiscogsJobIntegrationTest {
+public class DiscogsJobIntegrationTest extends PostgreSQLContainerBaseTest {
+
     @Autowired
-    private JobLauncherTestUtils jobLauncherTestUtils;
+    JobLauncherTestUtils jobLauncherTestUtils;
+
     @Autowired
-    private JobRepositoryTestUtils jobRepositoryTestUtils;
+    JobRepositoryTestUtils jobRepositoryTestUtils;
+
     @Autowired
-    private FileUtil fileUtil;
-    @Autowired
-    private CountDownLatch exitLatch;
+    FileUtil fileUtil;
+
     @Autowired
     private PlatformTransactionManager transactionManager;
-    @Autowired
-    private ApplicationContext context;
+
     @Autowired
     private Map<EntityType, DiscogsDump> dumpMap;
+
     @Autowired
-    private DataSource dataSource;
+    Map<EntityType, File> dumpFiles;
+
+    @Autowired
+    CountDownLatch exitLatch;
 
     @RegisterExtension
     LogSpy logSpy = new LogSpy();
-    Reflections reflections = new Reflections("io.dsub.discogs.common");
-    Repositories repositories;
-    List<Class<? extends BaseEntity>> entityClasses =
-            reflections.getSubTypesOf(BaseEntity.class).stream()
-                    .filter(clazz -> !Modifier.isAbstract(clazz.getModifiers())
-                            && !Modifier.isInterface(clazz.getModifiers()))
-                    .collect(Collectors.toList());
 
     @BeforeEach
     void setUp() throws Exception {
@@ -109,10 +100,11 @@ public class DiscogsJobIntegrationTest {
     }
 
     @AfterEach
-    public void cleanUp() {
+    public void cleanUp() throws FileException, IOException {
         jobRepositoryTestUtils.removeJobExecutions();
         dumpMap.clear();
-//        clearTables(repositories);
+        dumpFiles = new TestDumpGenerator(fileUtil.getAppDirectory(true)).createDiscogsDumpFiles();
+        exitLatch = spy(new CountDownLatch(1));
     }
 
     @AfterAll
@@ -120,6 +112,11 @@ public class DiscogsJobIntegrationTest {
         FileUtil fileUtil =
                 SimpleFileUtil.builder().appDirectory("discogs-data-batch-test").isTemporary(false).build();
         fileUtil.clearAll();
+    }
+
+    @Bean
+    public ApplicationArguments applicationArguments() {
+        return new DefaultApplicationArguments(jdbcUrl, username, password);
     }
 
     private JobParameters defaultJobParameters() {
@@ -130,17 +127,6 @@ public class DiscogsJobIntegrationTest {
         paramsBuilder.addString("release", "release");
         paramsBuilder.addString("chunkSize", "1000");
         return paramsBuilder.toJobParameters();
-    }
-
-    @Test
-    void save(@Autowired final DataSource dataSource) {
-        JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
-        List<Map<String, Object>> queryResult = jdbcTemplate.queryForList("SELECT table_name FROM information_schema.tables");
-        for (Map<String, Object> map : queryResult) {
-            for (Map.Entry<String, Object> entry : map.entrySet()) {
-                System.out.println(entry.getKey() + " >> " + entry.getValue().toString());
-            }
-        }
     }
 
     @Test
@@ -159,17 +145,10 @@ public class DiscogsJobIntegrationTest {
         assertThat(exitStatus.getExitCode(), is("COMPLETED"));
         assertThat(dumpMap.size(), is(4));
 
-        repositories = new Repositories(context);
-
         for (DiscogsDump dump : dumpMap.values()) {
             Path filePath = fileUtil.getFilePath(dump.getFileName(), false);
             assertThat(Files.exists(filePath), is(true));
         }
-
-        assertThat(getRepositoryFor(Artist.class, repositories).count(), is(3L));
-        assertThat(getRepositoryFor(Label.class, repositories).count(), is(2L));
-        assertThat(getRepositoryFor(Master.class, repositories).count(), is(3L));
-        assertThat(getRepositoryFor(ReleaseItem.class, repositories).count(), is(3L));
 
         //     check every single entities have at least one entry.
 //        getRepositories(entityClasses, repositories)
@@ -191,7 +170,6 @@ public class DiscogsJobIntegrationTest {
         JobExecution jobExecution = jobLauncherTestUtils.launchJob(params);
         ExitStatus exitStatus = jobExecution.getExitStatus();
 
-        repositories = new Repositories(context);
         List<String> logs = logSpy.getLogsByExactLevelAsString(Level.INFO, true, "io.dsub.discogs");
 
         assertThat(exitStatus.getExitCode(), is("COMPLETED"));
@@ -202,38 +180,5 @@ public class DiscogsJobIntegrationTest {
                 "master eTag not found. skipping master step.",
                 "release eTag not found. skipping release step."
         ));
-    }
-
-    private void clearTables(Repositories repositories) {
-        List<Class<? extends BaseEntity>> coreEntities =
-                List.of(Artist.class, Master.class, Label.class, ReleaseItem.class, Style.class, Genre.class);
-
-        List<Class<? extends BaseEntity>> subEntities = entityClasses.stream()
-                .filter(entityClass -> !coreEntities.contains(entityClass))
-                .collect(Collectors.toList());
-
-        getRepositories(subEntities, repositories)
-                .forEach(CrudRepository::deleteAll);
-
-        getRepositories(coreEntities, repositories)
-                .forEach(CrudRepository::deleteAll);
-    }
-
-    private List<JpaRepository<?, ?>> getRepositories(List<Class<? extends BaseEntity>> entityClasses, Repositories repositories) {
-        return entityClasses.stream()
-                .map(repositories::getRepositoryFor)
-                .map(optional -> optional.orElse(null))
-                .filter(Objects::nonNull)
-                .map(repo -> (JpaRepository<?, ?>) repo)
-                .collect(Collectors.toList());
-    }
-
-    @SuppressWarnings("unchecked")
-    private <T extends BaseEntity> JpaRepository<T, ?> getRepositoryFor(Class<T> entityClass, Repositories repositories) {
-        Object repoObj = repositories.getRepositoryFor(entityClass).orElse(null);
-        if (repoObj == null) {
-            throw new InvalidArgumentException("repository for " + entityClass.getSimpleName() + " does not exists");
-        }
-        return (JpaRepository<T, ?>) repoObj;
     }
 }

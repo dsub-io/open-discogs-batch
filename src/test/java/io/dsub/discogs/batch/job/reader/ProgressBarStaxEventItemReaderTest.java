@@ -1,7 +1,13 @@
 package io.dsub.discogs.batch.job.reader;
 
 import io.dsub.discogs.batch.TestArguments;
-import io.dsub.discogs.batch.domain.artist.ArtistSubItemsCommand;
+import io.dsub.discogs.batch.domain.artist.ArtistSubItemsXML;
+import io.dsub.discogs.batch.job.processor.ArtistSubItemsProcessor;
+import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -11,11 +17,17 @@ import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.xml.StaxEventItemReader;
 
+import javax.xml.bind.annotation.*;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.lang.reflect.Field;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.IntStream;
 
+import static io.dsub.discogs.batch.job.registry.EntityIdRegistry.Type.ARTIST;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -82,7 +94,7 @@ class ProgressBarStaxEventItemReaderTest {
     void whenFilePathIsNull__ShouldThrow() {
         // when
         Throwable t =
-                catchThrowable(() -> new ProgressBarStaxEventItemReader<>(ArtistSubItemsCommand.class, null, ""));
+                catchThrowable(() -> new ProgressBarStaxEventItemReader<>(ArtistSubItemsXML.class, null, ""));
 
         // then
         assertThat(t)
@@ -94,7 +106,7 @@ class ProgressBarStaxEventItemReaderTest {
     void whenFragmentRootElementsIsNull__ShouldThrow() {
         // when
         Throwable t =
-                catchThrowable(() -> new ProgressBarStaxEventItemReader<>(ArtistSubItemsCommand.class, Path.of(TestArguments.BASE_XML_PATH, "artist.xml.gz"), ""));
+                catchThrowable(() -> new ProgressBarStaxEventItemReader<>(ArtistSubItemsXML.class, Path.of(TestArguments.BASE_XML_PATH, "artist.xml.gz"), ""));
 
         // then
         assertThat(t)
@@ -103,13 +115,35 @@ class ProgressBarStaxEventItemReaderTest {
     }
 
     @Test
+    void whenRead__ShouldReturnValidItems() throws Exception {
+
+        ProgressBarStaxEventItemReader<ArtistSubItemsXML> reader =
+                new ProgressBarStaxEventItemReader<>(ArtistSubItemsXML.class, Path.of(TestArguments.BASE_XML_PATH, "artist.xml.gz"), "artist");
+
+        EntityIdRegistry registry = new EntityIdRegistry();
+
+        ArtistSubItemsProcessor processor = new ArtistSubItemsProcessor(registry);
+        IntStream.range(1, 1000).forEach(i -> registry.put(ARTIST, i));
+
+        reader.open(new ExecutionContext());
+
+        // when
+        ArtistSubItemsXML item = reader.read();
+        while (item != null) {
+            Objects.requireNonNull(processor.process(item)).forEach(System.out::println);
+            item = reader.read();
+        }
+        reader.close();
+    }
+
+    @Test
     @SuppressWarnings("unchecked")
     void whenOpenCalled__ShouldDelegateOpenCall() throws Exception {
 
-        Class<ArtistSubItemsCommand> mappedClass = ArtistSubItemsCommand.class;
+        Class<ArtistSubItemsXML> mappedClass = ArtistSubItemsXML.class;
         Path path = Path.of(TestArguments.BASE_XML_PATH, "artist.xml.gz");
 
-        ProgressBarStaxEventItemReader<ArtistSubItemsCommand> reader =
+        ProgressBarStaxEventItemReader<ArtistSubItemsXML> reader =
                 new ProgressBarStaxEventItemReader<>(mappedClass, path, "artist");
 
         ExecutionContext ctx = new ExecutionContext();
@@ -117,8 +151,8 @@ class ProgressBarStaxEventItemReaderTest {
         Field delegateField = reader.getClass().getDeclaredField("nestedReader");
         delegateField.setAccessible(true);
 
-        StaxEventItemReader<ArtistSubItemsCommand> delegate =
-                (StaxEventItemReader<ArtistSubItemsCommand>) delegateField.get(reader);
+        StaxEventItemReader<ArtistSubItemsXML> delegate =
+                (StaxEventItemReader<ArtistSubItemsXML>) delegateField.get(reader);
 
         delegate = Mockito.spy(delegate);
         delegateField.set(reader, delegate);
@@ -143,9 +177,9 @@ class ProgressBarStaxEventItemReaderTest {
     @Test
     @SuppressWarnings("unchecked")
     void whenAfterPropertiesSet__ShouldCallDelegate() throws Exception {
-        ProgressBarStaxEventItemReader<ArtistSubItemsCommand> reader = null;
+        ProgressBarStaxEventItemReader<ArtistSubItemsXML> reader = null;
         try {
-            Class<ArtistSubItemsCommand> mappedClass = ArtistSubItemsCommand.class;
+            Class<ArtistSubItemsXML> mappedClass = ArtistSubItemsXML.class;
             Path path = Path.of(TestArguments.BASE_XML_PATH, "artist.xml.gz");
 
             reader =
@@ -154,8 +188,8 @@ class ProgressBarStaxEventItemReaderTest {
             Field delegateField = reader.getClass().getDeclaredField("nestedReader");
             delegateField.setAccessible(true);
 
-            StaxEventItemReader<ArtistSubItemsCommand> delegate =
-                    (StaxEventItemReader<ArtistSubItemsCommand>) delegateField.get(reader);
+            StaxEventItemReader<ArtistSubItemsXML> delegate =
+                    (StaxEventItemReader<ArtistSubItemsXML>) delegateField.get(reader);
 
             delegate = Mockito.spy(delegate);
             delegateField.set(reader, delegate);

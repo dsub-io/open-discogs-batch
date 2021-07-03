@@ -1,5 +1,7 @@
 package io.dsub.discogs.batch.argument.validator;
 
+import lombok.ToString;
+
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -7,6 +9,7 @@ import java.util.stream.Collectors;
  * An immutable implementation for the {@link ValidationResult}. The issues will only be accumulated
  * during each validation step. The content and the instance will be virtually immutable.
  */
+@ToString
 public class DefaultValidationResult implements ValidationResult {
 
     /**

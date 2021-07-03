@@ -12,7 +12,7 @@ import java.nio.file.Path;
 /**
  * Utility class that provides single static method {@link #build(Class, DiscogsDump)}.
  */
-@Component
+
 @RequiredArgsConstructor
 public class DiscogsDumpItemReaderBuilder {
 
@@ -26,8 +26,7 @@ public class DiscogsDumpItemReaderBuilder {
         Path filePath = fileUtil.getFilePath(dump.getFileName());
 
         ProgressBarStaxEventItemReader<T> delegate;
-        delegate =
-                new ProgressBarStaxEventItemReader<>(mappedClass, filePath, dump.getType().toString());
+        delegate = new ProgressBarStaxEventItemReader<>(mappedClass, filePath, dump.getType().toString());
         delegate.afterPropertiesSet();
 
         SynchronizedItemStreamReader<T> reader = new SynchronizedItemStreamReader<>();

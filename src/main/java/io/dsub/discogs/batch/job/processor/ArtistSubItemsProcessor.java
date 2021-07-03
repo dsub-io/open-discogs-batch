@@ -1,133 +1,114 @@
 package io.dsub.discogs.batch.job.processor;
 
-import io.dsub.discogs.batch.domain.artist.ArtistSubItemsCommand;
-import io.dsub.discogs.batch.domain.artist.ArtistSubItemsCommand.Alias;
-import io.dsub.discogs.batch.domain.artist.ArtistSubItemsCommand.Group;
-import io.dsub.discogs.batch.domain.artist.ArtistSubItemsCommand.Member;
+import io.dsub.discogs.batch.domain.artist.ArtistSubItemsXML;
 import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
 import io.dsub.discogs.batch.util.ReflectionUtil;
-import io.dsub.discogs.common.artist.entity.*;
-import io.dsub.discogs.common.entity.BaseEntity;
+import io.dsub.discogs.common.jooq.postgres.tables.records.*;
 import lombok.RequiredArgsConstructor;
+import org.jooq.UpdatableRecord;
 import org.springframework.batch.item.ItemProcessor;
 
-import java.util.Collection;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Objects;
+import java.time.Clock;
+import java.time.LocalDateTime;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static io.dsub.discogs.batch.job.registry.EntityIdRegistry.Type.ARTIST;
 
 @RequiredArgsConstructor
-public class ArtistSubItemsProcessor
-        implements ItemProcessor<ArtistSubItemsCommand, Collection<BaseEntity>> {
+public class ArtistSubItemsProcessor implements ItemProcessor<ArtistSubItemsXML, Collection<UpdatableRecord<?>>> {
 
     private final EntityIdRegistry idRegistry;
 
     @Override
-    public Collection<BaseEntity> process(ArtistSubItemsCommand command) {
+    public Collection<UpdatableRecord<?>> process(ArtistSubItemsXML item) {
 
-        if (command.getId() == null || command.getId() < 1) {
+        if (item.getId() == null || item.getId() < 1) {
             return null;
         }
 
-        ReflectionUtil.normalizeStringFields(command);
+        ReflectionUtil.normalizeStringFields(item);
 
-        List<BaseEntity> items = new LinkedList<>();
+        List<UpdatableRecord<?>> items = new ArrayList<>();
 
-        long coreArtistId = command.getId();
+        items.addAll(getArtistAliasRecords(item));
+        items.addAll(getArtistGroupRecords(item));
+        items.addAll(getArtistMemberRecords(item));
+        items.addAll(getArtistUrlRecords(item));
+        items.addAll(getArtistNameVariationRecords(item));
 
-        if (command.getAliases() != null) {
-            command.getAliases().stream()
-                    .filter(Objects::nonNull)
-                    .map(Alias::getId)
-                    .filter(this::isExistingArtist)
-                    .distinct()
-                    .map(aliasId -> getArtistAlias(coreArtistId, aliasId))
-                    .forEach(items::add);
+        return items;
+    }
+
+    private List<ArtistNameVariationRecord> getArtistNameVariationRecords(ArtistSubItemsXML item) {
+        if (item.getNameVariations() == null || item.getNameVariations().isEmpty()) {
+            return Collections.emptyList();
         }
+        return item.getNameVariations().stream()
+                .filter(Objects::nonNull)
+                .filter(nameVar -> !nameVar.isBlank())
+                .distinct()
+                .map(nameVar -> makeArtistNameVariationRecord(item.getId(), nameVar))
+                .collect(Collectors.toList());
+    }
 
-        if (command.getGroups() != null) {
-            command.getGroups().stream()
-                    .filter(Objects::nonNull)
-                    .map(Group::getId)
-                    .filter(this::isExistingArtist)
-                    .distinct()
-                    .map(groupId -> getArtistGroup(coreArtistId, groupId))
-                    .forEach(items::add);
+    private List<ArtistUrlRecord> getArtistUrlRecords(ArtistSubItemsXML item) {
+        if (item.getUrls() == null || item.getUrls().isEmpty()) {
+            return Collections.emptyList();
         }
+        return item.getUrls().stream()
+                .filter(Objects::nonNull)
+                .filter(url -> !url.isBlank())
+                .distinct()
+                .map(url -> makeArtistUrlRecord(item.getId(), url))
+                .collect(Collectors.toList());
+    }
 
-        if (command.getMembers() != null) {
-            command.getMembers().stream()
-                    .filter(Objects::nonNull)
-                    .map(Member::getId)
-                    .filter(this::isExistingArtist)
-                    .map(memberId -> getArtistMember(coreArtistId, memberId))
-                    .forEach(items::add);
+    private List<ArtistMemberRecord> getArtistMemberRecords(ArtistSubItemsXML item) {
+        if (item.getMembers() == null || item.getMembers().isEmpty()) {
+            return Collections.emptyList();
         }
+        return item.getMembers().stream()
+                .filter(member -> idRegistry.exists(ARTIST, member.getMemberId()))
+                .map(xml -> xml.getRecord(item.getId()))
+                .collect(Collectors.toList());
+    }
 
-        if (command.getUrls() != null) {
-            command.getUrls().stream()
-                    .filter(Objects::nonNull)
-                    .filter(url -> !url.isBlank())
-                    .distinct()
-                    .map(url -> getArtistUrl(coreArtistId, url))
-                    .forEach(items::add);
+    private List<ArtistGroupRecord> getArtistGroupRecords(ArtistSubItemsXML item) {
+        if (item.getGroups() == null || item.getGroups().isEmpty()) {
+            return Collections.emptyList();
         }
+        return item.getGroups().stream()
+                .filter(group -> idRegistry.exists(ARTIST, group.getGroupId()))
+                .map(xml -> xml.getRecord(item.getId()))
+                .collect(Collectors.toList());
+    }
 
-        if (command.getNameVariations() != null) {
-            command.getNameVariations().stream()
-                    .filter(Objects::nonNull)
-                    .filter(name -> !name.isBlank())
-                    .distinct()
-                    .map(nameVariation -> getArtistNameVariation(coreArtistId, nameVariation))
-                    .forEach(items::add);
+    private List<ArtistAliasRecord> getArtistAliasRecords(ArtistSubItemsXML item) {
+        if (item.getAliases() == null || item.getAliases().isEmpty()) {
+            return Collections.emptyList();
         }
-
-        return items.stream().filter(Objects::nonNull).collect(Collectors.toList());
+        return item.getAliases().stream()
+                .filter(alias -> idRegistry.exists(ARTIST, alias.getAliasId()))
+                .map(xml -> xml.getRecord(item.getId()))
+                .collect(Collectors.toList());
     }
 
-    private boolean isExistingArtist(long artistId) {
-        return idRegistry.exists(ARTIST, artistId);
+    private ArtistNameVariationRecord makeArtistNameVariationRecord(Integer artistId, String nameVar) {
+        ArtistNameVariationRecord record = new ArtistNameVariationRecord();
+        return record.setArtistId(artistId)
+                .setNameVariation(nameVar)
+                .setHash(nameVar.hashCode())
+                .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()))
+                .setCreatedAt(LocalDateTime.now(Clock.systemUTC()));
     }
 
-    private ArtistAlias getArtistAlias(Long coreArtistId, Long aliasId) {
-        return ArtistAlias.builder()
-                .artist(getArtist(coreArtistId))
-                .alias(getArtist(aliasId))
-                .build();
-    }
-
-    private ArtistGroup getArtistGroup(Long coreArtistId, Long groupId) {
-        return ArtistGroup.builder()
-                .artist(getArtist(coreArtistId))
-                .group(getArtist(groupId))
-                .build();
-    }
-
-    private ArtistMember getArtistMember(Long coreArtistId, Long memberId) {
-        return ArtistMember.builder()
-                .artist(getArtist(coreArtistId))
-                .member(getArtist(memberId))
-                .build();
-    }
-
-    private ArtistUrl getArtistUrl(Long coreArtistId, String url) {
-        return ArtistUrl.builder()
-                .artist(getArtist(coreArtistId))
-                .url(url)
-                .build();
-    }
-
-    private ArtistNameVariation getArtistNameVariation(Long coreArtistId, String nameVariation) {
-        return ArtistNameVariation.builder()
-                .artist(getArtist(coreArtistId))
-                .name(nameVariation)
-                .build();
-    }
-
-    private Artist getArtist(Long id) {
-        return Artist.builder().id(id).build();
+    private ArtistUrlRecord makeArtistUrlRecord(Integer artistId, String url) {
+        ArtistUrlRecord record = new ArtistUrlRecord();
+        return record.setUrl(url)
+                .setArtistId(artistId)
+                .setCreatedAt(LocalDateTime.now(Clock.systemUTC()))
+                .setHash(url.hashCode())
+                .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()));
     }
 }
