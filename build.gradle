@@ -7,7 +7,7 @@ plugins {
 }
 
 group 'io.dsub.discogs'
-version '0.1.2'
+version '0.1.4'
 sourceCompatibility = 16
 targetCompatibility = 16
 
@@ -130,7 +130,7 @@ publishing {
     }
 }
 bootBuildImage {
-    setImageName('sehy0121/discogs-batch-0.1.2')
+    setImageName('sehy0121/discogs-batch-0.1.4')
 }
 // disable caching
 configurations.each {
