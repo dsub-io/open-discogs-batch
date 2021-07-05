@@ -10,17 +10,18 @@ from [data.discogs.com](https://data.discogs.com).
 
 In summary, the batch operates as following:
 
-    - Currently, supporting PostgresQL, MySQL. Will implement or to be merged for other dbs (incl. mongo)
+    - Currently only supports postgresql for higher stability and maintainability
     - One shot process with validations before firing jobs
+    - Idempotent actions; may run several times for same source without issue
     - Supports dockerize, docker run with predefined batch commands
 
 ### Built With
 
-[Spring-Boot starter](https://spring.io/projects/spring-boot)
-
 [Spring-Batch](https://spring.io/projects/spring-batch)
 
-[Spring-Data](https://spring.io/projects/spring-data)
+[Liquibase](https://www.liquibase.org)
+
+[JOOQ](https://www.jooq.org)
 
 [ProgressBar](https://github.com/ctongfei/progressbar)
 
@@ -32,14 +33,14 @@ any duplicated arguments.
 
 i.e. --m will work, as well as -m, m will.
 
-Brief summary for the commands are given as below...
+Brief summary for the commands are as below...
 
 |    NAME    | SYNONYM  |      REQUIRED         | MIN | MAX | FORMAT    | DEFAULT |  NOTE |
 |------------|----------|-----------------------|-----|-----|-----------|---------|-------|
 | username   | user, u  | :heavy_check_mark:    | 1   | 1   | STRING    | NULL                                |
 | password   | pass, p  | :heavy_check_mark:    | 1   | 1   | STRING    | NULL                                |
-| url        |          | :heavy_check_mark:    | 1   | 1   | addr:port | mysql://localhost:3306/discogs_data |
-| type       | t        | :black_square_button: | 1   | 4   | a,b,...   | EVERY TYPE                          |
+| url        |          | :heavy_check_mark:    | 1   | 1   | addr:port | jdbc:postgresql://localhost:5432/discogs |
+| type       | t        | :black_square_button: | 1   | 4   | a,b,...   | ARTIST, MEMBER, LABEL, RELEASE_ITEM                     |
 | chunk_size | chunk, c | :black_square_button: | 1   | 1   | 0 < N     | 3000    |
 | core_count | core     | :black_square_button: | 1   | 1   | 0 < N     | 80% of core from runtime |
 | year       | y        | :black_square_button: | 1   | 1   | yyyy      | CURRENT | this or year_month.
@@ -66,29 +67,16 @@ Password for the username given. This will automatically be encoded to UTF-8.
 URL for the target database. The expected releaseFormat for the url would be...
 
 ```text
---url={db_type://}{server_address}:{port}/{target_database}
+--url=jdbc://postgresql://{server_address}:{port}/{target_database}
 ```
 
-Default for db_type, server_address, port, target_database are as following:
+If you prefer to use specific database, please make sure to set it to the db prior to run batch,
+otherwise the process will fail with messages.
 
-- db_type=mysql
-- server_address=localhost
-- port=3306
-- target_database=discogs_data
-
-By defining any of above will be set as-is. Plus, it is OK to prepend Jdbc: to the url value (but
-will work just the same.)
-
-If you present your own schema or database, please make sure to set it to the db prior to run batch,
-otherwise the process will fail with appropriate log messages.
-
-Therefore, even if you run the batch with most default setting will still require a schema or
-database to be present.
-
-The default value 'discogs_data', however, feel free to change it to fit your needs.
+if target_database is missing, will be set to discogs as default.
 
 It is important to note that if given schema or database is empty, this batch will automatically
-create tables via sql.
+create tables via liquibase and sql.
 
 ### Year, Year Month, Type and ETag.
 
@@ -106,7 +94,7 @@ dump INCLUDING the dependant dump.
 
 ### Dependencies
 
-Dump dependency for other type are described as following:
+Dump dependency for other type are can be described as following:
 
 |    TYPE   |       REQUIRES        |
 |-----------|-----------------------|
