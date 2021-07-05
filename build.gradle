@@ -131,7 +131,7 @@ publishing {
     }
 }
 bootBuildImage {
-    setImageName('sehy0121/discogs-batch-0.1.4')
+    setImageName('sehy0121/discogs-batch-0.1.5')
 }
 // disable caching
 configurations.each {
