@@ -57,9 +57,8 @@ class CompositeArgumentValidatorUnitTest {
 
     result = this.compositeArgumentValidator.validate(new DefaultApplicationArguments());
     assertThat(result.isValid()).isFalse();
-    assertThat(result.getIssues().size()).isEqualTo(2);
+    assertThat(result.getIssues().size()).isEqualTo(1);
     assertThat(result.getIssues().get(0)).isEqualTo("hello");
-    assertThat(result.getIssues().get(1)).isEqualTo("world");
   }
 
   @Test

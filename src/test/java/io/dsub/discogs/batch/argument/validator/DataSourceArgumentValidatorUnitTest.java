@@ -1,6 +1,6 @@
 package io.dsub.discogs.batch.argument.validator;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -83,7 +83,9 @@ class DataSourceArgumentValidatorUnitTest {
     String[] arg =
         new String[]{"--user=hello", "--pass=pass", "--url=jdbc:mysql://localhost:3306/something"};
     ValidationResult result = validator.validate(new DefaultApplicationArguments(arg));
-    assertThat(result).returns(true, ValidationResult::isValid);
-    assertThat(result.getIssues().size()).isEqualTo(0);
+    assertThat(result).returns(false, ValidationResult::isValid);
+    assertThat(result.getIssues())
+        .hasSize(1)
+        .contains("database product \"mysql\" is not supported");
   }
 }

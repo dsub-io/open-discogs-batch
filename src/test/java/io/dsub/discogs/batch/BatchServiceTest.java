@@ -65,7 +65,7 @@ class BatchServiceTest {
 
     // then
     assertAll(
-        () -> verify(argumentHandler, times(1)).resolve(argCaptor.capture()),
+        () -> verify(argumentHandler, times(2)).resolve(argCaptor.capture()),
         () -> assertThat(argCaptor.getValue()).isEqualTo(args)
     );
   }
