@@ -5,11 +5,11 @@ package io.dsub.discogs.batch.argument.formatter;
  */
 public interface ArgumentFormatter {
 
-    /**
-     * Single method that performs formatting.
-     *
-     * @param arg argument to be evaluated.
-     * @return result that is either being formatted, or ignored to be formatted.
-     */
-    String format(String arg);
+  /**
+   * Single method that performs formatting.
+   *
+   * @param args arguments to be evaluated.
+   * @return result that is either being formatted, or ignored to be formatted.
+   */
+  String[] format(String[] args);
 }

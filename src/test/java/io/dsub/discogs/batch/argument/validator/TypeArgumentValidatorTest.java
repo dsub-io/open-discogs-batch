@@ -14,7 +14,8 @@ class TypeArgumentValidatorTest {
   final TypeArgumentValidator validator = new TypeArgumentValidator();
 
   @BeforeEach
-  void setUp() {}
+  void setUp() {
+  }
 
   @Test
   void whenDuplicatedTypeArgExists__ThenShouldIncludeAllOfThemInReport() {

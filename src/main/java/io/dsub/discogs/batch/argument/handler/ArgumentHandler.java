@@ -8,12 +8,12 @@ import io.dsub.discogs.batch.exception.InvalidArgumentException;
  */
 public interface ArgumentHandler {
 
-    /**
-     * single method to resolve if argument requirements are met.
-     *
-     * @param args given arguments.
-     * @return resolved arguments, or corrected arguments.
-     * @throws InvalidArgumentException thrown if argument requirements are not met.
-     */
-    String[] resolve(String[] args) throws InvalidArgumentException;
+  /**
+   * single method to resolve if argument requirements are met.
+   *
+   * @param args given arguments.
+   * @return resolved arguments, or corrected arguments.
+   * @throws InvalidArgumentException thrown if argument requirements are not met.
+   */
+  String[] resolve(String[] args) throws InvalidArgumentException;
 }

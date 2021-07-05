@@ -14,6 +14,8 @@ import io.dsub.discogs.batch.job.tasklet.GenreStyleInsertionTasklet;
 import io.dsub.discogs.batch.job.writer.ItemWriterConfig;
 import io.dsub.discogs.batch.util.FileUtil;
 import io.dsub.discogs.batch.util.SimpleFileUtil;
+import java.util.HashMap;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
@@ -21,52 +23,52 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 
-import java.util.HashMap;
-import java.util.Map;
-
 @Slf4j
 @Configuration
-@Import(value = {
+@Import(
+    value = {
         GlobalStepConfig.class,
         ItemReaderConfig.class,
         ItemProcessorConfig.class,
         ItemWriterConfig.class,
         BatchListenerConfig.class,
-        GenreStyleInsertionTasklet.class})
+        GenreStyleInsertionTasklet.class
+    })
 public class BatchInfrastructureConfig {
 
-    private ApplicationArguments args;
+  private ApplicationArguments args;
 
-    @Autowired
-    public void setArgs(ApplicationArguments args) {
-        this.args = args;
-    }
+  @Autowired
+  public void setArgs(ApplicationArguments args) {
+    this.args = args;
+  }
 
-    @Bean
-    public Map<EntityType, DiscogsDump> dumpMap() {
-        return new HashMap<>();
-    }
+  @Bean
+  public Map<EntityType, DiscogsDump> dumpMap() {
+    return new HashMap<>();
+  }
 
-    @Bean
-    public MasterMainReleaseStepJobExecutionDecider masterMainReleaseStepJobExecutionDecider(EntityIdRegistry registry) {
-        return new MasterMainReleaseStepJobExecutionDecider(registry);
-    }
+  @Bean
+  public MasterMainReleaseStepJobExecutionDecider masterMainReleaseStepJobExecutionDecider(
+      EntityIdRegistry registry) {
+    return new MasterMainReleaseStepJobExecutionDecider(registry);
+  }
 
-    // TODO: test!
-    @Bean
-    public FileUtil fileUtil() {
-        boolean keepFile = args.containsOption(ArgType.MOUNT.getGlobalName());
-        FileUtil fileUtil = SimpleFileUtil.builder().isTemporary(!keepFile).build();
-        if (keepFile) {
-            log.info("detected mount option. keeping file...");
-        } else {
-            log.info("mount option not set. files will be removed after the job.");
-        }
-        return fileUtil;
+  // TODO: test!
+  @Bean
+  public FileUtil fileUtil() {
+    boolean keepFile = args.containsOption(ArgType.MOUNT.getGlobalName());
+    FileUtil fileUtil = SimpleFileUtil.builder().isTemporary(!keepFile).build();
+    if (keepFile) {
+      log.info("detected mount option. keeping file...");
+    } else {
+      log.info("mount option not set. files will be removed after the job.");
     }
+    return fileUtil;
+  }
 
-    @Bean
-    public DiscogsDumpItemReaderBuilder discogsDumpItemReaderBuilder() {
-        return new DiscogsDumpItemReaderBuilder(fileUtil());
-    }
+  @Bean
+  public DiscogsDumpItemReaderBuilder discogsDumpItemReaderBuilder() {
+    return new DiscogsDumpItemReaderBuilder(fileUtil());
+  }
 }

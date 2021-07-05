@@ -1,13 +1,11 @@
 package io.dsub.discogs.batch.datasource;
 
-import io.dsub.discogs.batch.argument.DBType;
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-
-import java.util.List;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 class DBTypeTest {
 
@@ -19,8 +17,8 @@ class DBTypeTest {
 
     // then
     assertThat(driverClassName)
-            .isNotNull()
-            .isNotBlank();
+        .isNotNull()
+        .isNotBlank();
   }
 
   @Test

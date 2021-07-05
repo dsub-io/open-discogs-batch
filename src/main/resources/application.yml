@@ -6,6 +6,7 @@ spring:
     hikari:
       data-source-properties:
         rewriteBatchedStatements: true
+      auto-commit: false
     url: ${url}
     username: ${username}
     password: ${password}
@@ -40,6 +41,7 @@ spring:
     init:
       mode: always
       schema-locations: db/{database}/schema.sql
+
 logging:
   file:
     path: ./log

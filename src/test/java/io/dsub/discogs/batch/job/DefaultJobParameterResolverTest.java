@@ -18,7 +18,6 @@ import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import io.dsub.discogs.batch.testutil.LogSpy;
 import java.util.List;
 import java.util.Properties;
-import java.util.Random;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -31,11 +30,14 @@ import org.springframework.boot.DefaultApplicationArguments;
 
 class DefaultJobParameterResolverTest {
 
-  @RegisterExtension LogSpy logSpy = new LogSpy();
+  @RegisterExtension
+  LogSpy logSpy = new LogSpy();
 
-  @Mock DumpDependencyResolver dependencyResolver;
+  @Mock
+  DumpDependencyResolver dependencyResolver;
 
-  @InjectMocks DefaultJobParameterResolver jobParameterResolver;
+  @InjectMocks
+  DefaultJobParameterResolver jobParameterResolver;
 
   @BeforeEach
   void setUp() {
@@ -105,7 +107,6 @@ class DefaultJobParameterResolverTest {
   @Test
   void whenResolve__ShouldReturnAsExpected()
       throws io.dsub.discogs.batch.exception.InvalidArgumentException, DumpNotFoundException {
-
 
     EntityType type = TestArguments.getRandomType();
     DiscogsDump dump = TestArguments.getRandomDumpWithType(type);

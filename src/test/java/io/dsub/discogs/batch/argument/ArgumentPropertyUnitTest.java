@@ -94,7 +94,8 @@ class ArgumentPropertyUnitTest {
   }
 
   @Test
-  void isRequired() {}
+  void isRequired() {
+  }
 
   @ParameterizedTest
   @ValueSource(ints = {1, 53, 673, 12, 55, 3})

@@ -10,7 +10,6 @@ import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import io.dsub.discogs.batch.testutil.LogSpy;
 import java.util.HashMap;
 import java.util.Map;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -27,7 +26,8 @@ class AbstractStepConfigTest {
 
   AbstractStepConfig stepConfig;
 
-  @RegisterExtension LogSpy logSpy = new LogSpy();
+  @RegisterExtension
+  LogSpy logSpy = new LogSpy();
 
   @BeforeEach
   void setUp() throws InvalidArgumentException {

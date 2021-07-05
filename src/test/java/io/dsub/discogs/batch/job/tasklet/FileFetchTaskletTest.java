@@ -38,25 +38,34 @@ import org.springframework.batch.repeat.RepeatStatus;
 @Slf4j
 class FileFetchTaskletTest {
 
-  @Mock ChunkContext chunkContext;
+  @Mock
+  ChunkContext chunkContext;
 
-  @Mock StepContribution stepContribution;
+  @Mock
+  StepContribution stepContribution;
 
-  @Mock DiscogsDump dump;
+  @Mock
+  DiscogsDump dump;
 
-  @Mock FileUtil fileUtil;
+  @Mock
+  FileUtil fileUtil;
 
   InputStream inputStream;
 
-  @InjectMocks FileFetchTasklet fileFetchTasklet;
+  @InjectMocks
+  FileFetchTasklet fileFetchTasklet;
 
-  @RegisterExtension LogSpy logSpy = new LogSpy();
+  @RegisterExtension
+  LogSpy logSpy = new LogSpy();
 
-  @Captor ArgumentCaptor<String> nameCaptor;
+  @Captor
+  ArgumentCaptor<String> nameCaptor;
 
-  @Captor ArgumentCaptor<String> msgCaptor;
+  @Captor
+  ArgumentCaptor<String> msgCaptor;
 
-  @Captor ArgumentCaptor<InputStream> inCaptor;
+  @Captor
+  ArgumentCaptor<InputStream> inCaptor;
 
   private AutoCloseable closeable;
 

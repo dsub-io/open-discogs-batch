@@ -36,20 +36,29 @@ import org.springframework.context.ConfigurableApplicationContext;
 
 class JobLaunchingRunnerTest {
 
-  @Mock Job job;
-  @Mock JobParameters discogsJobParameters;
-  @Mock JobLauncher jobLauncher;
-  @Mock ApplicationArguments args;
-  @Mock JobExecution jobExecution;
-  @Mock ExitStatus exitStatus;
-  @Mock ConfigurableApplicationContext context;
-  @Mock CountDownLatch countDownLatch;
-  @InjectMocks JobLaunchingRunner runner;
+  @Mock
+  Job job;
+  @Mock
+  JobParameters discogsJobParameters;
+  @Mock
+  JobLauncher jobLauncher;
+  @Mock
+  ApplicationArguments args;
+  @Mock
+  JobExecution jobExecution;
+  @Mock
+  ExitStatus exitStatus;
+  @Mock
+  ConfigurableApplicationContext context;
+  @Mock
+  CountDownLatch countDownLatch;
+  @InjectMocks
+  JobLaunchingRunner runner;
 
   @BeforeEach
   void setUp()
       throws JobInstanceAlreadyCompleteException, JobExecutionAlreadyRunningException,
-          JobParametersInvalidException, JobRestartException {
+      JobParametersInvalidException, JobRestartException {
     MockitoAnnotations.openMocks(this);
     doReturn(jobExecution).when(jobLauncher).run(job, discogsJobParameters);
     doReturn(false).when(exitStatus).isRunning();
@@ -94,7 +103,8 @@ class JobLaunchingRunnerTest {
 
   @ParameterizedTest
   @ValueSource(ints = {0, 1})
-  void givenJobExecutionHasFailureExceptions__WhenExitCodeGeneratorGetExitCode__ShouldReturnProperExitCode(int errorsCnt) {
+  void givenJobExecutionHasFailureExceptions__WhenExitCodeGeneratorGetExitCode__ShouldReturnProperExitCode(
+      int errorsCnt) {
     // given
     List<Throwable> mockList = spy(new ArrayList<>());
     doReturn(errorsCnt).when(mockList).size();

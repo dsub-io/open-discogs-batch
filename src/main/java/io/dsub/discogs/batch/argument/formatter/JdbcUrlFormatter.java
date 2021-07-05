@@ -1,159 +1,119 @@
 package io.dsub.discogs.batch.argument.formatter;
 
-import io.dsub.discogs.batch.argument.DBType;
-
+import io.dsub.discogs.batch.datasource.DBType;
+import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import lombok.extern.slf4j.Slf4j;
 
 /**
- * Implementation of {@link ArgumentFormatter} that formats url entry into Jdbc connection string.
+ * A convenience class that performs jdbc url formatter. Will remain deprecated until need arises
+ * again, or tbd to be removed.
  */
+@Slf4j
 public class JdbcUrlFormatter implements ArgumentFormatter {
 
-    private static final String DB_NAMES = "(" + String.join("|", DBType.getNames()) + ")";
+  private static final Pattern JDBC_URL_PATTERN = Pattern.compile(
+      "jdbc:(\\w+)://[.\\w]+:[\\d]+(/\\w+)?.*"
+  );
 
-    /*
-     * options for connection url
-     */
-    private static final String TIME_ZONE_UTC_OPT = "serverTimeZone=UTC";
-    private static final String CACHE_PREP_STMT_OPT = "cachePrepStmts=true";
-    private static final String USE_SERVER_PREP_STMTS_OPT = "useServerPrepStmts=true";
-    private static final String REWRITE_BATCHED_STMTS_OPT = "rewriteBatchedStatements=true";
-    private static final String NO_LEGACY_DATE_TIME_CODE = "useLegacyDatetimeCode=false";
+  private static final Pattern JDBC_OPTION_PATTERN = Pattern.compile(".*(\\?).*");
 
-    public static final Pattern URL_PATTERN = Pattern.compile(
-            "(?<jdbcGrp>(?<jdbcHead>jdbc)?(?<jdbcTail>:)?)?" +
-                    "(?<type>\\w+://)?" +
-                    "(?<addr>\\w+)?" +
-                    "(?<port>:[1-9]\\d{0,4})?" +
-                    "(?<schemaGrp>(?<schemaHead>/)?(?<schema>\\w+)?)?" +
-                    "(?<optGrp>(?<initOptHead>\\?)(?<initOpt>\\w+=\\w+)((?<optionHead>&)(?<option>\\w+=\\w+))*)?");
+  /* JDBC CONNECTION OPTIONS  */
+  private static final String TIME_ZONE_UTC_OPT = "serverTimeZone=UTC";
+  private static final String CACHE_PREP_STMT_OPT = "cachePrepStmts=true";
+  private static final String USE_SERVER_PREP_STMTS_OPT = "useServerPrepStmts=true";
+  private static final String REWRITE_BATCHED_STMTS_OPT = "rewriteBatchedStatements=true";
+  private static final String NO_LEGACY_DATE_TIME_CODE_OPT = "useLegacyDatetimeCode=false";
+  private static final String USE_UNICODE_OPT = "useUnicode=true";
+  private static final String CHAR_ENCODING_UTF8_OPT = "characterEncoding=utf8";
+  private static final String DISABLE_MARIA_DB_DRIVER = "disableMariaDbDriver";
 
-    public static final Pattern KNOWN_DB_PATTERN = Pattern.compile(".*" + DB_NAMES + ".*");
+  /* HEADER */
+  private static final String URL_HEADER = "url=";
 
-    public static final Pattern ADDRESS_PATTERN = Pattern.compile(
-            "^(localhost|\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|\\w+(\\.[^.]+)*)$", Pattern.CASE_INSENSITIVE);
+  @Override
+  public String[] format(String[] args) {
+    if (args == null || args.length == 0) {
+      return args;
+    }
+    return Arrays.stream(args)
+        .map(arg -> arg.startsWith(URL_HEADER) ? doFormat(arg) : arg)
+        .toArray(String[]::new);
+  }
 
-    public static final Pattern EQUALS = Pattern.compile("^url=.*", Pattern.CASE_INSENSITIVE);
-
-    /**
-     * Formats argument to be proper jdbc connection string if marked as url entry.
-     *
-     * @param arg argument to be evaluated.
-     * @return as a jdbc connection string if arg is marked as a url entry. If not, it will simply
-     * return the input argument as-is.
-     */
-    @Override
-    public String format(String arg) {
-
-        if (!EQUALS.matcher(arg).matches()) {
-            return arg;
-        }
-
-        int eqIdx = arg.indexOf('=');
-        String urlValue = arg.substring(eqIdx + 1);
-        int bIdx = urlValue.indexOf(' ');
-        urlValue = urlValue.substring(0, bIdx < 0 ? urlValue.length() : bIdx);
-
-        Matcher matcher = URL_PATTERN.matcher(urlValue);
-        if (!matcher.matches()) {
-            return arg;
-        }
-
-        String typeInput = getType(matcher);
-        String url = "jdbc:";
-        String type = isKnownType(typeInput) ? typeInput : "mysql";
-        String address = getAddress(matcher.group("addr"));
-        String port = getPort(matcher.group("port"), type);
-        String schema = getSchema(matcher.group("schema"));
-        String compiled = url + type + "://" + address + ":" + port + "/" + schema;
-
-        return "url=" + appendOptionsTo(compiled, matcher);
+  private String doFormat(String url) {
+    if (url == null || url.isBlank()) {
+      return null;
     }
 
-    private String getType(Matcher matcher) {
-        String type = matcher.group("type");
-        if (type == null) {
-            return null;
-        }
-        return type.replaceAll("://", "");
+    url = url.replace(URL_HEADER, ""); // removes header
+
+    Matcher m = JDBC_URL_PATTERN.matcher(url);
+
+    boolean patternMatches = m.matches();
+
+    if (patternMatches && (m.group(2) == null || m.group(2).isBlank())) {
+      log.info(
+          "default database or schema missing. appending default schema \"discogs\" to jdbc url");
+
+      String[] parts = url.split("\\?");
+
+      url = parts[0] + "/discogs";
+
+      if (parts.length > 1) {
+        url = url + "?" + parts[1];
+      }
     }
 
-    private String getAddress(String address) {
-        if (address != null && ADDRESS_PATTERN.matcher(address).matches()) {
-            return address;
-        }
-        return "localhost";
+    if (patternMatches) {
+      String databaseProductName = m.group(1);
+      DBType type = DBType.getTypeOf(databaseProductName);
+      if (type == null) {
+        return URL_HEADER + url;
+      }
     }
 
-    private String getPort(String port, String type) {
-        if (port != null && !port.isBlank()) {
-            return port.replaceAll(":", "");
-        }
-        return switch (type) {
-            case "mysql", "mariadb" -> "3306";
-            case "postgresql" -> "5432";
-            default -> "8080";
-        };
+    return URL_HEADER + appendOptions(url);
+  }
+
+  private boolean isOptionPresent(String url) {
+    return JDBC_OPTION_PATTERN.matcher(url).matches();
+  }
+
+  private String appendOptions(String url) {
+    String amp = "&";
+    String q = "?";
+    String header = isOptionPresent(url) ? amp : q;
+
+    if (!url.matches(".*(?i)serverTimezone.*")) {
+      url += header + TIME_ZONE_UTC_OPT;
+      header = amp;
+    }
+    if (!url.matches(".*(?i)(cachePrepStmts).*")) {
+      url += header + CACHE_PREP_STMT_OPT;
+      header = amp;
+    }
+    if (!url.matches(".*(?i)rewriteBatchedStatements.*")) {
+      url += header + REWRITE_BATCHED_STMTS_OPT;
+      header = amp;
+    }
+    if (!url.matches(".*(?i)(useServerPrepStmts).*")) {
+      url += header + USE_SERVER_PREP_STMTS_OPT;
+      header = amp;
+    }
+    if (!url.matches(".*(?i)(useLegacyDatetimeCode).*")) {
+      url += header + NO_LEGACY_DATE_TIME_CODE_OPT;
+      header = amp;
+    }
+    if (!url.matches(".*(?i)(useUnicode).*")) {
+      url += header + USE_UNICODE_OPT;
+      header = amp;
+    }
+    if (!url.matches(".*(?i)(characterEncoding).*")) {
+      url += header + CHAR_ENCODING_UTF8_OPT;
     }
 
-    private String getSchema(String schema) {
-        if (schema != null && !schema.isBlank()) {
-            return schema;
-        }
-        return "discogs_data";
-    }
-
-    private boolean isKnownType(String type) {
-        if (type == null || type.isBlank()) {
-            return false;
-        }
-        return KNOWN_DB_PATTERN.matcher(type).matches();
-    }
-
-    /**
-     * Appends required arguments for batch processing.
-     *
-     * <p>The options include timezone, cache statements, server statements and rewrite batch
-     * statements.
-     *
-     * @param originalUrl given url that may or may not contain any of those options.
-     * @return url that has all required options.
-     */
-    protected String appendOptionsTo(String originalUrl, Matcher matcher) {
-
-        String optHead = matcher.group("initOptHead");
-        String optGrp = matcher.group("optGrp");
-        // check if options are missing
-        if ((optGrp == null || optGrp.isBlank()) && optHead == null || optHead.isBlank()) {
-            // append entire options
-            return originalUrl
-                    .concat("?")
-                    .concat(String.join(
-                            "&",
-                            TIME_ZONE_UTC_OPT,
-                            CACHE_PREP_STMT_OPT,
-                            USE_SERVER_PREP_STMTS_OPT,
-                            REWRITE_BATCHED_STMTS_OPT,
-                            NO_LEGACY_DATE_TIME_CODE));
-        }
-
-        // option already exists. additional options accordingly.
-        if (!originalUrl.contains("serverTimezone=")) {
-            originalUrl += "&" + TIME_ZONE_UTC_OPT;
-        }
-        if (!originalUrl.contains("cachePrepStmts")) {
-            originalUrl += "&" + CACHE_PREP_STMT_OPT;
-        }
-        if (!originalUrl.contains("rewriteBatchedStatements")) {
-            originalUrl += "&" + REWRITE_BATCHED_STMTS_OPT;
-        }
-        if (!originalUrl.contains("useServerPrepStmts")) {
-            originalUrl += "&" + USE_SERVER_PREP_STMTS_OPT;
-        }
-        if (!originalUrl.contains("useLegacyDatetimeCode")) {
-            originalUrl += "&" + NO_LEGACY_DATE_TIME_CODE;
-        }
-        return originalUrl;
-    }
+    return url;
+  }
 }

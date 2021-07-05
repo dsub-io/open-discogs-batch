@@ -6,18 +6,18 @@ import org.springframework.lang.NonNull;
 
 public class StringNormalizingItemReadListener implements ItemReadListener<Object> {
 
-    /* No Op */
-    @Override
-    public void beforeRead() {
-    }
+  /* No Op */
+  @Override
+  public void beforeRead() {
+  }
 
-    @Override
-    public void afterRead(@NonNull Object item) {
-        ReflectionUtil.normalizeStringFields(item);
-    }
+  @Override
+  public void afterRead(@NonNull Object item) {
+    ReflectionUtil.normalizeStringFields(item);
+  }
 
-    /* No Op */
-    @Override
-    public void onReadError(@NonNull Exception ex) {
-    }
+  /* No Op */
+  @Override
+  public void onReadError(@NonNull Exception ex) {
+  }
 }

@@ -8,23 +8,23 @@ import java.util.List;
  */
 public class CompositeArgumentFormatter implements ArgumentFormatter {
 
-    private final List<ArgumentFormatter> delegates;
+  private final List<ArgumentFormatter> delegates;
 
-    public CompositeArgumentFormatter() {
-        this.delegates = new ArrayList<>();
-    }
+  public CompositeArgumentFormatter() {
+    this.delegates = new ArrayList<>();
+  }
 
-    public CompositeArgumentFormatter addFormatter(ArgumentFormatter additionalFormatter) {
-        this.delegates.add(additionalFormatter);
-        return this;
-    }
+  public CompositeArgumentFormatter addFormatter(ArgumentFormatter additionalFormatter) {
+    this.delegates.add(additionalFormatter);
+    return this;
+  }
 
-    @Override
-    public String format(String arg) {
-        String formatted = arg;
-        for (ArgumentFormatter delegate : delegates) {
-            formatted = delegate.format(formatted);
-        }
-        return formatted;
+  @Override
+  public String[] format(String[] args) {
+    String[] formatted = args;
+    for (ArgumentFormatter delegate : delegates) {
+      formatted = delegate.format(formatted);
     }
+    return formatted;
+  }
 }
