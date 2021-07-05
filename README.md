@@ -141,7 +141,4 @@ core count to default(80%).
 
 ### Chunk Size
 
-The default chunk-size is 3000, however, in average environment, I would recommend to set to 300~
-
-500. This is totally up to the I/O spec of the running client and database server, so feel free to
-     experiment with it.
+The default chunk-size is 500, however, in average environment, I would recommend to set to 100~200. This is totally up to the I/O spec and postgres settings of the running client and database server, so feel free to experiment with it.
