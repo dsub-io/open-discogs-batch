@@ -21,26 +21,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 class ReflectionUtilTest {
-  @RegisterExtension LogSpy logSpy = new LogSpy();
 
-  private static class ExceptionThrowingTestClass {
-    public ExceptionThrowingTestClass() {
-      throw new RuntimeException("test");
-    }
-  }
-
-  private static class TestParent {
-    String firstVal;
-    String secondVal;
-    List<TestChild> subItems;
-    TestChild testChild;
-  }
-
-  private static class TestChild {
-    List<String> list;
-    String firstVal;
-    String secondVal;
-  }
+  @RegisterExtension
+  LogSpy logSpy = new LogSpy();
 
   @ParameterizedTest
   @MethodSource("io.dsub.discogs.batch.TestArguments#entities")
@@ -58,7 +41,8 @@ class ReflectionUtilTest {
   @Test
   void givenClassDoesNotHaveNoArgConstructor__WhenInvokeNoArgConstructor_ShouldThrow() {
     class TestClass {
-      int value;
+
+      final int value;
 
       public TestClass(int value) {
         this.value = value;
@@ -75,7 +59,7 @@ class ReflectionUtilTest {
 
   @Test
   void
-      givenConstructorThrowsIllegalAccessException__WhenInvokeNoArgConstructor_LogThenReturnNull() {
+  givenConstructorThrowsIllegalAccessException__WhenInvokeNoArgConstructor_LogThenReturnNull() {
     // when
     Object o = ReflectionUtil.invokeNoArgConstructor(ExceptionThrowingTestClass.class);
 
@@ -274,5 +258,27 @@ class ReflectionUtilTest {
           assertThat(child.secondVal).isEqualTo("world");
           assertThat(child.list).isNull();
         });
+  }
+
+  private static class ExceptionThrowingTestClass {
+
+    public ExceptionThrowingTestClass() {
+      throw new RuntimeException("test");
+    }
+  }
+
+  private static class TestParent {
+
+    String firstVal;
+    String secondVal;
+    List<TestChild> subItems;
+    TestChild testChild;
+  }
+
+  private static class TestChild {
+
+    List<String> list;
+    String firstVal;
+    String secondVal;
   }
 }

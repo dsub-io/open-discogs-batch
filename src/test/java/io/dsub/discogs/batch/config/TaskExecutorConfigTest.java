@@ -14,9 +14,11 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 class TaskExecutorConfigTest {
+
   ApplicationContextRunner ctx;
 
-  @RegisterExtension LogSpy logSpy = new LogSpy();
+  @RegisterExtension
+  LogSpy logSpy = new LogSpy();
 
   int maxCore = Runtime.getRuntime().availableProcessors();
   int defaultCoreSize = maxCore > 2 ? (int) (maxCore * 0.8) : 1;

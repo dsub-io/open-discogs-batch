@@ -18,26 +18,26 @@ import org.springframework.batch.repeat.RepeatStatus;
 @RequiredArgsConstructor
 public class FileClearTasklet implements Tasklet {
 
-    private final FileUtil fileUtil;
+  private final FileUtil fileUtil;
 
-    /**
-     * Deletes given file from targetDump.
-     *
-     * @param contribution will report {@link ExitStatus#FAILED} if failed to delete the file.
-     * @param chunkContext required for implementation but will not interact.
-     * @return {@link RepeatStatus#FINISHED} even if failed to delete the given file.
-     */
-    @Override
-    public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) {
-        if (fileUtil.isTemporary()) {
-            try {
-                fileUtil.clearAll();
-            } catch (FileException e) {
-                log.error("failed to clear application directory.", e);
-            }
-        }
-        contribution.setExitStatus(ExitStatus.COMPLETED);
-        chunkContext.setComplete();
-        return RepeatStatus.FINISHED;
+  /**
+   * Deletes given file from targetDump.
+   *
+   * @param contribution will report {@link ExitStatus#FAILED} if failed to delete the file.
+   * @param chunkContext required for implementation but will not interact.
+   * @return {@link RepeatStatus#FINISHED} even if failed to delete the given file.
+   */
+  @Override
+  public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) {
+    if (fileUtil.isTemporary()) {
+      try {
+        fileUtil.clearAll();
+      } catch (FileException e) {
+        log.error("failed to clear application directory.", e);
+      }
     }
+    contribution.setExitStatus(ExitStatus.COMPLETED);
+    chunkContext.setComplete();
+    return RepeatStatus.FINISHED;
+  }
 }

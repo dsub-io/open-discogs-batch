@@ -37,7 +37,7 @@ class CompositeArgumentValidatorUnitTest {
     assertThat(this.compositeArgumentValidator.addValidators(helloValidator, worldValidator))
         .isEqualTo(this.compositeArgumentValidator);
     assertThat(
-            this.compositeArgumentValidator.addValidators(List.of(helloValidator, worldValidator)))
+        this.compositeArgumentValidator.addValidators(List.of(helloValidator, worldValidator)))
         .isEqualTo(this.compositeArgumentValidator);
     List<ArgumentValidator> argumentValidators = null;
     assertThat(this.compositeArgumentValidator.addValidators(argumentValidators))

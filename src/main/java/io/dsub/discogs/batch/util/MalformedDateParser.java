@@ -4,11 +4,11 @@ import java.time.LocalDate;
 
 public interface MalformedDateParser {
 
-    boolean isMonthValid(String date);
+  boolean isMonthValid(String date);
 
-    boolean isYearValid(String date);
+  boolean isYearValid(String date);
 
-    boolean isDayValid(String date);
+  boolean isDayValid(String date);
 
-    LocalDate parse(String date);
+  LocalDate parse(String date);
 }

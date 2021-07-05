@@ -24,12 +24,8 @@ class MappedValueValidatorUnitTest {
   @ParameterizedTest
   @EnumSource(ArgType.class)
   void shouldReportForNullValue(ArgType argType) {
-    StringBuilder argBuilder = new StringBuilder();
-    if (!argType.isRequired()) {
-      argBuilder.append("--");
-    }
-    argBuilder.append(argType.getGlobalName()).append("=");
-    ApplicationArguments args = new DefaultApplicationArguments(argBuilder.toString());
+    ApplicationArguments args = new DefaultApplicationArguments(
+        "--" + argType.getGlobalName() + "=");
     ValidationResult result = validator.validate(args);
 
     if (argType.getMinValuesCount() == 0) {
@@ -45,11 +41,7 @@ class MappedValueValidatorUnitTest {
   @EnumSource(ArgType.class)
   void shouldReportNonSupportedMultipleValues(ArgType argType) {
     Class<?> supportedType = argType.getSupportedType();
-    StringBuilder argBuilder = new StringBuilder();
-    if (argType.isRequired()) {
-      argBuilder.append("--");
-    }
-    argBuilder.append(argType.getGlobalName()).append("=");
+    StringBuilder argBuilder = new StringBuilder("--").append(argType.getGlobalName()).append("=");
 
     if (supportedType.equals(String.class)) {
       argBuilder.append("hello,world,something");
@@ -87,10 +79,8 @@ class MappedValueValidatorUnitTest {
       return;
     }
 
-    StringBuilder argBuilder = new StringBuilder();
-    if (argType.isRequired()) {
-      argBuilder.append("--");
-    }
+    StringBuilder argBuilder = new StringBuilder()
+        .append("--");
 
     int requiredCount = argType.getMinValuesCount();
 

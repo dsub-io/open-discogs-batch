@@ -1,20 +1,11 @@
 spring:
   datasource:
-    username: sa
-    password:
-    url: jdbc:h2:mem:testdb;MODE=POSTGRESQL;DATABASE_TO_UPPER=FALSE;
-    driver-class-name: org.h2.Driver
     hikari:
       data-source-properties:
         rewriteBatchedStatements: true # JDBC BATCH
-    tomcat:
-      test-while-idle: true
-      validation-query: SELECT 1
   batch:
     job:
       enabled: false
-    jdbc:
-      initialize-schema: ALWAYS
   jpa:
     properties:
       hibernate:

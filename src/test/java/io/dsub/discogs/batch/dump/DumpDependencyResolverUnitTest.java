@@ -17,7 +17,6 @@ import io.dsub.discogs.batch.dump.service.DiscogsDumpService;
 import io.dsub.discogs.batch.exception.DumpNotFoundException;
 import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -43,11 +42,16 @@ import org.springframework.boot.DefaultApplicationArguments;
 class DumpDependencyResolverUnitTest {
 
   final Random rand = new Random();
-  @Mock DiscogsDumpService dumpService;
-  @InjectMocks DefaultDumpDependencyResolver resolver;
-  @Captor ArgumentCaptor<List<EntityType>> dumpTypeCaptor;
-  @Captor ArgumentCaptor<Integer> yearCaptor;
-  @Captor ArgumentCaptor<Integer> monthCaptor;
+  @Mock
+  DiscogsDumpService dumpService;
+  @InjectMocks
+  DefaultDumpDependencyResolver resolver;
+  @Captor
+  ArgumentCaptor<List<EntityType>> dumpTypeCaptor;
+  @Captor
+  ArgumentCaptor<Integer> yearCaptor;
+  @Captor
+  ArgumentCaptor<Integer> monthCaptor;
 
   @BeforeEach
   void setUp() {
@@ -90,7 +94,8 @@ class DumpDependencyResolverUnitTest {
     DiscogsDump fakeDump = getRandomDump();
     when(dumpService.getDiscogsDump("a")).thenReturn(fakeDump);
     when(dumpService.getDiscogsDump("b"))
-        .thenReturn(TestArguments.getRandomDumpWithLastModifiedAt(fakeDump.getLastModifiedAt().minusMonths(1)));
+        .thenReturn(TestArguments
+            .getRandomDumpWithLastModifiedAt(fakeDump.getLastModifiedAt().minusMonths(1)));
     List<String> eTags = List.of("a", "b");
 
     // when
@@ -157,16 +162,16 @@ class DumpDependencyResolverUnitTest {
   @ParameterizedTest
   @ValueSource(
       strings = {
-        "artist,artist",
-        "release,release",
-        "master,master",
-        "label,label,master",
-        "artist,master,master",
-        "artist,label,artist",
-        "label,master,label",
-        "master,release,master",
-        "artist,master,release,master",
-        "label,release,release,release"
+          "artist,artist",
+          "release,release",
+          "master,master",
+          "label,label,master",
+          "artist,master,master",
+          "artist,label,artist",
+          "label,master,label",
+          "master,release,master",
+          "artist,master,release,master",
+          "label,release,release,release"
       })
   void whenDuplicatedTypesFound__ShouldParseCorrectly(String type) throws InvalidArgumentException {
     ApplicationArguments args =
@@ -196,16 +201,16 @@ class DumpDependencyResolverUnitTest {
   @ParameterizedTest
   @ValueSource(
       strings = {
-        "artist",
-        "release",
-        "master",
-        "label",
-        "artist,master",
-        "artist,label",
-        "label,master",
-        "master,release",
-        "artist,master,release",
-        "label,release"
+          "artist",
+          "release",
+          "master",
+          "label",
+          "artist,master",
+          "artist,label",
+          "label,master",
+          "master,release",
+          "artist,master,release",
+          "label,release"
       })
   void whenTypeArgPresent__ThenShouldProvideAllDependencies(String type)
       throws InvalidArgumentException {
@@ -283,7 +288,8 @@ class DumpDependencyResolverUnitTest {
     // preparing
     String arg = "--" + ArgType.ETAG.getGlobalName() + "=test";
     DiscogsDump fakeDump = getRandomDump();
-    int year = fakeDump.getLastModifiedAt().getYear(), month = fakeDump.getLastModifiedAt().getMonthValue();
+    int year = fakeDump.getLastModifiedAt().getYear(), month = fakeDump.getLastModifiedAt()
+        .getMonthValue();
 
     List<DiscogsDump> expected = new ArrayList<>(List.of(fakeDump));
     List<EntityType> typesToCheck = new ArrayList<>();
@@ -296,7 +302,7 @@ class DumpDependencyResolverUnitTest {
         .forEach(
             dump ->
                 when(dumpService.getMostRecentDiscogsDumpByTypeYearMonth(
-                        dump.getType(), year, month))
+                    dump.getType(), year, month))
                     .thenReturn(dump));
 
     when(dumpService.getDiscogsDump("test")).thenReturn(fakeDump);
@@ -328,7 +334,7 @@ class DumpDependencyResolverUnitTest {
     String typeArg = "--type=" + targetType;
     String yearMonthArg = "--yearMonth=" + targetDate.getYear() + "-" + targetDate.getMonthValue();
     when(dumpService.getAllByTypeYearMonth(
-            dumpTypeCaptor.capture(), yearCaptor.capture(), monthCaptor.capture()))
+        dumpTypeCaptor.capture(), yearCaptor.capture(), monthCaptor.capture()))
         .thenReturn(expected);
     // when
     Collection<DiscogsDump> result =
@@ -344,16 +350,16 @@ class DumpDependencyResolverUnitTest {
   @ParameterizedTest
   @ValueSource(
       strings = {
-        "artist",
-        "release",
-        "master",
-        "label",
-        "artist,master",
-        "artist,label",
-        "label,master",
-        "master,release",
-        "artist,master,release",
-        "label,release"
+          "artist",
+          "release",
+          "master",
+          "label",
+          "artist,master",
+          "artist,label",
+          "label,master",
+          "master,release",
+          "artist,master,release",
+          "label,release"
       })
   void whenTypeArgPresent__AndIsSetToStrict__ThenShouldOnlyContainGivenDumps(String type)
       throws InvalidArgumentException {

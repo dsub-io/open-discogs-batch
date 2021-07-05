@@ -1,44 +1,44 @@
 package io.dsub.discogs.batch.domain.label;
 
 import io.dsub.discogs.batch.domain.BaseXML;
-import io.dsub.discogs.common.jooq.postgres.tables.records.LabelRecord;
-import lombok.Data;
-
+import io.dsub.discogs.common.jooq.tables.records.LabelRecord;
+import java.time.Clock;
+import java.time.LocalDateTime;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
-import java.time.Clock;
-import java.time.LocalDateTime;
+import lombok.Data;
 
 @Data
 @XmlRootElement(name = "label")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class LabelXML implements BaseXML<LabelRecord> {
-    @XmlElement(name = "id")
-    private Integer id;
 
-    @XmlElement(name = "name")
-    private String name;
+  @XmlElement(name = "id")
+  private Integer id;
 
-    @XmlElement(name = "contactinfo")
-    private String contactInfo;
+  @XmlElement(name = "name")
+  private String name;
 
-    @XmlElement(name = "profile")
-    private String profile;
+  @XmlElement(name = "contactinfo")
+  private String contactInfo;
 
-    @XmlElement(name = "data_quality")
-    private String dataQuality;
+  @XmlElement(name = "profile")
+  private String profile;
 
-    @Override
-    public LabelRecord buildRecord() {
-        return new LabelRecord()
-                .setId(id)
-                .setName(name)
-                .setContactInfo(contactInfo)
-                .setProfile(profile)
-                .setDataQuality(dataQuality)
-                .setCreatedAt(LocalDateTime.now(Clock.systemUTC()))
-                .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()));
-    }
+  @XmlElement(name = "data_quality")
+  private String dataQuality;
+
+  @Override
+  public LabelRecord buildRecord() {
+    return new LabelRecord()
+        .setId(id)
+        .setName(name)
+        .setContactInfo(contactInfo)
+        .setProfile(profile)
+        .setDataQuality(dataQuality)
+        .setCreatedAt(LocalDateTime.now(Clock.systemUTC()))
+        .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()));
+  }
 }

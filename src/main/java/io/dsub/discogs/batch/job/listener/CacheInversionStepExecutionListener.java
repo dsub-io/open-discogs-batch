@@ -15,46 +15,45 @@ import org.springframework.batch.core.StepExecutionListener;
 @RequiredArgsConstructor
 public class CacheInversionStepExecutionListener implements StepExecutionListener {
 
-    private final EntityIdRegistry idRegistry;
-    private static final String INVERT_CACHE_MSG = "inverting {} id cache";
-    private static final String ARTIST = "artist";
-    private static final String LABEL = "label";
-    private static final String MASTER = "master";
-    private static final String RELEASE_ITEM = "release item";
+  private static final String INVERT_CACHE_MSG = "inverting {} id cache";
+  private static final String ARTIST = "artist";
+  private static final String LABEL = "label";
+  private static final String MASTER = "master";
+  private static final String RELEASE_ITEM = "release item";
+  private final EntityIdRegistry idRegistry;
 
-    @Override
-    public void beforeStep(StepExecution stepExecution) {
+  @Override
+  public void beforeStep(StepExecution stepExecution) {
+  }
 
+  @Override
+  public ExitStatus afterStep(StepExecution stepExecution) {
+    boolean doMaster = stepExecution.getJobParameters().getParameters().containsKey(MASTER);
+    boolean doRelease = stepExecution.getJobParameters().getParameters().containsKey(RELEASE_ITEM);
+
+    // current
+    String stepName = stepExecution.getStepName();
+
+    if (stepName.equals(ArtistStepConfig.ARTIST_CORE_INSERTION_STEP) && (doMaster || doRelease)) {
+      log.info(INVERT_CACHE_MSG, ARTIST);
+      idRegistry.invert(EntityIdRegistry.Type.ARTIST);
     }
 
-    @Override
-    public ExitStatus afterStep(StepExecution stepExecution) {
-        boolean doMaster = stepExecution.getJobParameters().getParameters().containsKey(MASTER);
-        boolean doRelease = stepExecution.getJobParameters().getParameters().containsKey(RELEASE_ITEM);
-
-        // current
-        String stepName = stepExecution.getStepName();
-
-        if (stepName.equals(ArtistStepConfig.ARTIST_CORE_INSERTION_STEP) && (doMaster || doRelease)) {
-            log.info(INVERT_CACHE_MSG, ARTIST);
-            idRegistry.invert(EntityIdRegistry.Type.ARTIST);
-        }
-
-        if (stepName.equals(LabelStepConfig.LABEL_CORE_INSERTION_STEP) && (doMaster || doRelease)) {
-            log.info(INVERT_CACHE_MSG, LABEL);
-            idRegistry.invert(EntityIdRegistry.Type.LABEL);
-        }
-
-        if (stepName.equals(MasterStepConfig.MASTER_CORE_INSERTION_STEP) && doRelease) {
-            log.info(INVERT_CACHE_MSG, MASTER);
-            idRegistry.invert(EntityIdRegistry.Type.MASTER);
-        }
-
-        if (stepName.equals(ReleaseItemStepConfig.RELEASE_ITEM_CORE_INSERTION_STEP) && (doMaster)) {
-            log.info(INVERT_CACHE_MSG, RELEASE_ITEM);
-            idRegistry.invert(EntityIdRegistry.Type.RELEASE);
-        }
-
-        return stepExecution.getExitStatus();
+    if (stepName.equals(LabelStepConfig.LABEL_CORE_INSERTION_STEP) && (doMaster || doRelease)) {
+      log.info(INVERT_CACHE_MSG, LABEL);
+      idRegistry.invert(EntityIdRegistry.Type.LABEL);
     }
+
+    if (stepName.equals(MasterStepConfig.MASTER_CORE_INSERTION_STEP) && doRelease) {
+      log.info(INVERT_CACHE_MSG, MASTER);
+      idRegistry.invert(EntityIdRegistry.Type.MASTER);
+    }
+
+    if (stepName.equals(ReleaseItemStepConfig.RELEASE_ITEM_CORE_INSERTION_STEP) && (doMaster)) {
+      log.info(INVERT_CACHE_MSG, RELEASE_ITEM);
+      idRegistry.invert(EntityIdRegistry.Type.RELEASE);
+    }
+
+    return stepExecution.getExitStatus();
+  }
 }

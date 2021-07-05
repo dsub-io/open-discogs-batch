@@ -1,5 +1,6 @@
 package io.dsub.discogs.batch;
 
+import java.util.concurrent.CountDownLatch;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
@@ -15,8 +16,6 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
-import java.util.concurrent.CountDownLatch;
-
 @Slf4j
 @Order(10)
 @Profile("!test")
@@ -24,22 +23,22 @@ import java.util.concurrent.CountDownLatch;
 @RequiredArgsConstructor
 public class JobLaunchingRunner implements ApplicationRunner {
 
-    private final Job job;
-    private final JobParameters discogsJobParameters;
-    private final JobLauncher jobLauncher;
-    private final ConfigurableApplicationContext ctx;
-    private final CountDownLatch countDownLatch;
+  private final Job job;
+  private final JobParameters discogsJobParameters;
+  private final JobLauncher jobLauncher;
+  private final ConfigurableApplicationContext ctx;
+  private final CountDownLatch countDownLatch;
 
-    @Override
-    public void run(ApplicationArguments args) throws Exception {
-        JobExecution jobExecution = jobLauncher.run(job, discogsJobParameters);
-        log.info("main thread started job execution. awaiting for completion...");
-        countDownLatch.await();
-        log.info("job execution completed. exiting...");
-        SpringApplication.exit(ctx, getExitCodeGenerator(jobExecution));
-    }
+  @Override
+  public void run(ApplicationArguments args) throws Exception {
+    JobExecution jobExecution = jobLauncher.run(job, discogsJobParameters);
+    log.info("main thread started job execution. awaiting for completion...");
+    countDownLatch.await();
+    log.info("job execution completed. exiting...");
+    SpringApplication.exit(ctx, getExitCodeGenerator(jobExecution));
+  }
 
-    public ExitCodeGenerator getExitCodeGenerator(JobExecution jobExecution) {
-        return () -> jobExecution.getFailureExceptions().size() > 0 ? 1 : 0;
-    }
+  public ExitCodeGenerator getExitCodeGenerator(JobExecution jobExecution) {
+    return () -> jobExecution.getFailureExceptions().size() > 0 ? 1 : 0;
+  }
 }

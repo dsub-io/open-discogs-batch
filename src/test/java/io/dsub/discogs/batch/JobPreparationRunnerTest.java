@@ -1,9 +1,20 @@
 package io.dsub.discogs.batch;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.mockito.BDDMockito.willReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import com.zaxxer.hikari.HikariDataSource;
 import io.dsub.discogs.batch.dump.DumpDependencyResolver;
 import io.dsub.discogs.batch.job.JobParameterResolver;
 import io.dsub.discogs.batch.testutil.LogSpy;
+import java.util.Properties;
+import java.util.concurrent.CountDownLatch;
+import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -18,23 +29,20 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
-import javax.sql.DataSource;
-import java.util.Properties;
-import java.util.concurrent.CountDownLatch;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertAll;
-import static org.mockito.BDDMockito.willReturn;
-import static org.mockito.Mockito.*;
-
 class JobPreparationRunnerTest {
 
-  @Mock ApplicationArguments args;
-  @Mock JobParameterResolver jobParameterResolver;
-  @Mock JobParametersConverter jobParametersConverter;
-  @Mock HikariDataSource dataSource;
-  @Mock ThreadPoolTaskExecutor taskExecutor;
-  @InjectMocks JobPreparationRunner runner;
+  @Mock
+  ApplicationArguments args;
+  @Mock
+  JobParameterResolver jobParameterResolver;
+  @Mock
+  JobParametersConverter jobParametersConverter;
+  @Mock
+  HikariDataSource dataSource;
+  @Mock
+  ThreadPoolTaskExecutor taskExecutor;
+  @InjectMocks
+  JobPreparationRunner runner;
 
   @RegisterExtension
   LogSpy logSpy = new LogSpy();
@@ -92,12 +100,12 @@ class JobPreparationRunnerTest {
       jobParametersConverter = Mockito.mock(JobParametersConverter.class);
       dataSource = Mockito.mock(DataSource.class);
       ctx = new ApplicationContextRunner()
-              .withUserConfiguration(JobPreparationRunner.class)
-              .withBean(JobParameterResolver.class, () -> jobParameterResolver)
-              .withBean(DumpDependencyResolver.class, () -> dumpDependencyResolver)
-              .withBean(JobParametersConverter.class, () -> jobParametersConverter)
-              .withBean(ApplicationArguments.class, () -> arguments)
-              .withBean(ThreadPoolTaskExecutor.class, () -> taskExecutor);
+          .withUserConfiguration(JobPreparationRunner.class)
+          .withBean(JobParameterResolver.class, () -> jobParameterResolver)
+          .withBean(DumpDependencyResolver.class, () -> dumpDependencyResolver)
+          .withBean(JobParametersConverter.class, () -> jobParametersConverter)
+          .withBean(ApplicationArguments.class, () -> arguments)
+          .withBean(ThreadPoolTaskExecutor.class, () -> taskExecutor);
     }
 
     @Test
@@ -106,8 +114,8 @@ class JobPreparationRunnerTest {
 
       // when
       ctx.run(it -> assertThat(it)
-              .hasSingleBean(JobParameters.class)
-              .hasSingleBean(CountDownLatch.class));
+          .hasSingleBean(JobParameters.class)
+          .hasSingleBean(CountDownLatch.class));
     }
   }
 }
