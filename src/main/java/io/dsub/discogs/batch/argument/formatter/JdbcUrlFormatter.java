@@ -25,9 +25,6 @@ public class JdbcUrlFormatter implements ArgumentFormatter {
   private static final String USE_SERVER_PREP_STMTS_OPT = "useServerPrepStmts=true";
   private static final String REWRITE_BATCHED_STMTS_OPT = "rewriteBatchedStatements=true";
   private static final String NO_LEGACY_DATE_TIME_CODE_OPT = "useLegacyDatetimeCode=false";
-  private static final String USE_UNICODE_OPT = "useUnicode=true";
-  private static final String CHAR_ENCODING_UTF8_OPT = "characterEncoding=utf8";
-  private static final String DISABLE_MARIA_DB_DRIVER = "disableMariaDbDriver";
 
   /* HEADER */
   private static final String URL_HEADER = "url=";
@@ -104,14 +101,6 @@ public class JdbcUrlFormatter implements ArgumentFormatter {
     }
     if (!url.matches(".*(?i)(useLegacyDatetimeCode).*")) {
       url += header + NO_LEGACY_DATE_TIME_CODE_OPT;
-      header = amp;
-    }
-    if (!url.matches(".*(?i)(useUnicode).*")) {
-      url += header + USE_UNICODE_OPT;
-      header = amp;
-    }
-    if (!url.matches(".*(?i)(characterEncoding).*")) {
-      url += header + CHAR_ENCODING_UTF8_OPT;
     }
 
     return url;

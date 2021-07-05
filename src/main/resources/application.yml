@@ -6,15 +6,12 @@ spring:
     hikari:
       data-source-properties:
         rewriteBatchedStatements: true
-      auto-commit: false
     url: ${url}
     username: ${username}
     password: ${password}
   batch:
     job:
       enabled: false
-    jdbc:
-      initialize-schema: ALWAYS
   jpa:
     properties:
       hibernate:
@@ -27,27 +24,17 @@ spring:
         format_sql: true
     hibernate:
       ddl-auto: update
-  data:
-    jpa:
-      repositories:
-        bootstrap-mode: default
   jmx:
     enabled: false
-
 logging:
   file:
     path: ./log
   level:
+    liquibase: ERROR
     io.dsub: INFO
     org:
       reflections: ERROR
-      springframework:
-        batch:
-          core:
-            listener: ERROR
-            step:
-              builder: ERROR
-              item: ERROR
+      springframework: ERROR
       hibernate: ERROR
     com.zaxxer.hikari: ERROR
 server:
