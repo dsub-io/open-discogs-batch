@@ -6,15 +6,12 @@ spring:
     hikari:
       data-source-properties:
         rewriteBatchedStatements: true
-      auto-commit: false
     url: ${url}
     username: ${username}
     password: ${password}
   batch:
     job:
       enabled: false
-    jdbc:
-      initialize-schema: ALWAYS
   jpa:
     properties:
       hibernate:
@@ -27,35 +24,17 @@ spring:
         format_sql: true
     hibernate:
       ddl-auto: update
-  data:
-    jpa:
-      repositories:
-        # this is mandate as of initialization of JPA repositories
-        # may live under the process EVEN AFTER the batch job is finished.
-        # this is also can be a potential reason of spring batch not being exited
-        # immediately after the job is done.
-        bootstrap-mode: default
   jmx:
     enabled: false
-  sql:
-    init:
-      mode: always
-      schema-locations: db/{database}/schema.sql
-
 logging:
   file:
     path: ./log
   level:
+    liquibase: ERROR
     io.dsub: INFO
     org:
       reflections: ERROR
-      springframework:
-        batch:
-          core:
-            listener: ERROR
-            step:
-              builder: ERROR
-              item: ERROR
+      springframework: ERROR
       hibernate: ERROR
     com.zaxxer.hikari: ERROR
 server:

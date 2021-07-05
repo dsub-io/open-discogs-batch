@@ -9,7 +9,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import ch.qos.logback.classic.Level;
-import io.dsub.discogs.batch.DataSourceInitializerConfig;
 import io.dsub.discogs.batch.LiquibaseConfig;
 import io.dsub.discogs.batch.TestDumpGenerator;
 import io.dsub.discogs.batch.config.BatchConfig;
@@ -63,8 +62,7 @@ import org.springframework.transaction.PlatformTransactionManager;
         BatchConfig.class,
         BatchInfrastructureConfig.class,
         LiquibaseConfig.class,
-        DiscogsJobIntegrationTestConfig.class,
-        DataSourceInitializerConfig.class
+        DiscogsJobIntegrationTestConfig.class
     })
 public abstract class DiscogsJobIntegrationTest {
 

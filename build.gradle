@@ -7,7 +7,7 @@ plugins {
 }
 
 group 'io.dsub.discogs'
-version '0.1.5'
+version '0.1.6'
 sourceCompatibility = JavaVersion.VERSION_16
 targetCompatibility = JavaVersion.VERSION_16
 
@@ -25,7 +25,7 @@ ext {
     set('istackCommonsRuntimeVersion', "4.0.1")
     set('classGraphVersion', "4.8.108")
     set('pbVersion', "0.9.1")
-    set('discogsCommonVersion', "0.0.2.15")
+    set('discogsCommonVersion', "0.0.2.16")
     set('liquibaseVersion', "4.4.0")
 }
 
@@ -73,7 +73,6 @@ dependencies {
             'org.apache.commons:commons-lang3'
     )
     testImplementation (
-            'com.h2database:h2',
             'org.junit.jupiter:junit-jupiter:5.7.2',
             'org.springframework.boot:spring-boot-starter-test',
             'org.springframework.batch:spring-batch-test',
@@ -131,7 +130,7 @@ publishing {
     }
 }
 bootBuildImage {
-    setImageName('sehy0121/discogs-batch-0.1.5')
+    setImageName('sehy0121/discogs-batch-0.1.6')
 }
 // disable caching
 configurations.each {
