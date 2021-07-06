@@ -5,7 +5,7 @@ import static io.dsub.discogs.batch.job.registry.EntityIdRegistry.Type.LABEL;
 import io.dsub.discogs.batch.domain.label.LabelSubItemsXML;
 import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
 import io.dsub.discogs.batch.util.ReflectionUtil;
-import io.dsub.discogs.common.jooq.tables.records.LabelUrlRecord;
+import io.dsub.discogs.jooq.tables.records.LabelUrlRecord;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.ArrayList;

@@ -1,7 +1,7 @@
 package io.dsub.discogs.batch.job.writer;
 
-import io.dsub.discogs.common.jooq.tables.Master;
-import io.dsub.discogs.common.jooq.tables.records.MasterRecord;
+import io.dsub.discogs.jooq.tables.Master;
+import io.dsub.discogs.jooq.tables.records.MasterRecord;
 import java.util.LinkedList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;

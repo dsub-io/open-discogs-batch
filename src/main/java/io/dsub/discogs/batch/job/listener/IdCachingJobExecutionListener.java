@@ -2,9 +2,9 @@ package io.dsub.discogs.batch.job.listener;
 
 import io.dsub.discogs.batch.argument.ArgType;
 import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
-import io.dsub.discogs.common.jooq.tables.Artist;
-import io.dsub.discogs.common.jooq.tables.Label;
-import io.dsub.discogs.common.jooq.tables.Master;
+import io.dsub.discogs.jooq.tables.Artist;
+import io.dsub.discogs.jooq.tables.Label;
+import io.dsub.discogs.jooq.tables.Master;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;

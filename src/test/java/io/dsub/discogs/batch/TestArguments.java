@@ -10,8 +10,8 @@ import io.dsub.discogs.batch.domain.release.ReleaseItemSubItemsXML;
 import io.dsub.discogs.batch.domain.release.ReleaseItemXML;
 import io.dsub.discogs.batch.dump.DiscogsDump;
 import io.dsub.discogs.batch.dump.EntityType;
-import io.dsub.discogs.common.entity.BaseEntity;
 import io.github.classgraph.ClassGraph;
+import io.github.classgraph.ClassInfo;
 import io.github.classgraph.ScanResult;
 import java.nio.file.Path;
 import java.time.Clock;
@@ -22,34 +22,36 @@ import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import net.bytebuddy.utility.RandomString;
 
+@Slf4j
 public class TestArguments {
 
-  public static final String ENTITY_PKG = "io.dsub.discogs.common";
+  public static final String DOMAIN_PKG = "io.dsub.discogs.batch.domain";
   public static final String BASE_XML_PATH = "src/test/resources/test/reader";
   public static final String ARTIST = "artist";
   public static final String LABEL = "label";
   public static final String MASTER = "master";
   public static final String RELEASE = "release";
-  public static final List<Class<? extends BaseEntity>> ENTITIES;
-  public static final Random random = new Random();
+  public static final Random RAND = new Random();
+
+  public static final List<Class<?>> XML_CLASSES;
 
   static {
     try (ScanResult scanResult = new ClassGraph()
         .enableAllInfo()
-        .acceptPackages(ENTITY_PKG)
+        .acceptPackages(DOMAIN_PKG)
         .scan()) {
-
-      ENTITIES = scanResult.getSubclasses(BaseEntity.class.getName()).stream()
+      XML_CLASSES = scanResult.getAllClasses().stream()
           .filter(classInfo -> !classInfo.isAbstract())
-          .map(classInfo -> classInfo.loadClass(BaseEntity.class))
+          .map(ClassInfo::loadClass)
           .collect(Collectors.toList());
     }
   }
 
-  public static Stream<Class<? extends BaseEntity>> entities() {
-    return ENTITIES.stream();
+  public static Stream<Class<?>> getXmlClasses() {
+    return XML_CLASSES.stream();
   }
 
   public static Stream<String> coreEntityNames() {
@@ -82,15 +84,15 @@ public class TestArguments {
 
   public static DiscogsDump getRandomDumpWithType(EntityType type) {
     LocalDate lastModifiedAt = LocalDate.now(Clock.systemUTC())
-        .minusYears(random.nextInt(10))
-        .minusDays(random.nextInt(10))
-        .minusMonths(random.nextInt(19));
+        .minusYears(RAND.nextInt(10))
+        .minusDays(RAND.nextInt(10))
+        .minusMonths(RAND.nextInt(19));
     return getRandomDumpWithType(type, lastModifiedAt);
   }
 
   public static DiscogsDump getRandomDumpWithLastModifiedAt(LocalDate lastModifiedAt) {
     String etag = RandomString.make(19);
-    long size = random.nextLong();
+    long size = RAND.nextLong();
     String uriString = RandomString.make(30);
     EntityType type = getRandomType();
     return new DiscogsDump(etag, type, uriString, size, lastModifiedAt, null);
@@ -98,7 +100,7 @@ public class TestArguments {
 
   public static DiscogsDump getRandomDumpWithType(EntityType type, LocalDate lastModifiedAt) {
     String etag = RandomString.make(19);
-    long size = random.nextLong();
+    long size = RAND.nextLong();
     String uriString = RandomString.make(30);
     return new DiscogsDump(etag, type, uriString, size, lastModifiedAt, null);
   }
@@ -114,7 +116,7 @@ public class TestArguments {
   }
 
   public static EntityType getRandomType() {
-    return EntityType.values()[random.nextInt(4)];
+    return EntityType.values()[RAND.nextInt(4)];
   }
 
   @Data
