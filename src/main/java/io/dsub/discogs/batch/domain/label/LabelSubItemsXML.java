@@ -1,7 +1,7 @@
 package io.dsub.discogs.batch.domain.label;
 
 import io.dsub.discogs.batch.domain.SubItemXML;
-import io.dsub.discogs.common.jooq.tables.records.LabelSubLabelRecord;
+import io.dsub.discogs.jooq.tables.records.LabelSubLabelRecord;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.ArrayList;

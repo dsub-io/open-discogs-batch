@@ -14,7 +14,7 @@ import io.dsub.discogs.batch.job.step.AbstractStepConfig;
 import io.dsub.discogs.batch.job.tasklet.FileFetchTasklet;
 import io.dsub.discogs.batch.job.tasklet.GenreStyleInsertionTasklet;
 import io.dsub.discogs.batch.util.FileUtil;
-import io.dsub.discogs.common.jooq.tables.records.MasterRecord;
+import io.dsub.discogs.jooq.tables.records.MasterRecord;
 import java.util.Collection;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

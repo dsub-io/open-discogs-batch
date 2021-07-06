@@ -14,27 +14,27 @@ import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import lombok.extern.slf4j.Slf4j;
 import net.bytebuddy.utility.RandomString;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
+@Slf4j
 class ReflectionUtilTest {
 
   @RegisterExtension
   LogSpy logSpy = new LogSpy();
 
   @ParameterizedTest
-  @MethodSource("io.dsub.discogs.batch.TestArguments#entities")
-  void givenEntityClass__WhenInvokeNoArgConstructor_ShouldSuccessfullyGenerate(
-      Class<?> entityClass) {
+  @MethodSource("io.dsub.discogs.batch.TestArguments#getXmlClasses")
+  void givenXmlClass__WhenInvokeNoArgConstructor_ShouldSuccessfullyGenerate(Class<?> xmlClass) {
     // when
-    Object instance = ReflectionUtil.invokeNoArgConstructor(entityClass);
+    Object instance = ReflectionUtil.invokeNoArgConstructor(xmlClass);
 
     // then
-    assertThat(instance).isNotNull().isExactlyInstanceOf(entityClass);
-
+    assertThat(instance).isNotNull().isExactlyInstanceOf(xmlClass);
     assertThat(logSpy.getLogsByExactLevelAsString(Level.ERROR, true)).isEmpty();
   }
 
@@ -73,11 +73,11 @@ class ReflectionUtilTest {
   }
 
   @ParameterizedTest
-  @MethodSource("io.dsub.discogs.batch.TestArguments#entities")
-  void givenEntityClass__WhenGetDeclaredFields_ShouldReturnAfterSetAccessibleToTrue(
-      Class<?> entityClass) {
+  @MethodSource("io.dsub.discogs.batch.TestArguments#getXmlClasses")
+  void givenXmlClass__WhenGetDeclaredFields_ShouldReturnAfterSetAccessibleToTrue(
+      Class<?> xmlClass) {
 
-    Object instance = ReflectionUtil.invokeNoArgConstructor(entityClass);
+    Object instance = ReflectionUtil.invokeNoArgConstructor(xmlClass);
     assertThat(instance).isNotNull();
 
     // when
@@ -90,11 +90,11 @@ class ReflectionUtilTest {
   }
 
   @ParameterizedTest
-  @MethodSource("io.dsub.discogs.batch.TestArguments#entities")
-  void givenEntityClass__WhenGetDeclaredFields_ShouldNotReturnStaticOrFinalFields(
-      Class<?> entityClass) {
+  @MethodSource("io.dsub.discogs.batch.TestArguments#getXmlClasses")
+  void givenXmlClass__WhenGetDeclaredFields_ShouldNotReturnStaticOrFinalFields(
+      Class<?> xmlClass) {
 
-    Object instance = ReflectionUtil.invokeNoArgConstructor(entityClass);
+    Object instance = ReflectionUtil.invokeNoArgConstructor(xmlClass);
     assertThat(instance).isNotNull();
 
     // when
@@ -108,9 +108,9 @@ class ReflectionUtilTest {
   }
 
   @ParameterizedTest
-  @MethodSource("io.dsub.discogs.batch.TestArguments#entities")
-  void givenEntityClass__WhenGetFields__ShouldReturnStringFields(Class<?> entityClass) {
-    Object instance = ReflectionUtil.invokeNoArgConstructor(entityClass);
+  @MethodSource("io.dsub.discogs.batch.TestArguments#getXmlClasses")
+  void givenXmlClass__WhenGetFields__ShouldReturnStringFields(Class<?> xmlClass) {
+    Object instance = ReflectionUtil.invokeNoArgConstructor(xmlClass);
     assertThat(instance).isNotNull();
 
     // when
@@ -124,9 +124,9 @@ class ReflectionUtilTest {
   }
 
   @ParameterizedTest
-  @MethodSource("io.dsub.discogs.batch.TestArguments#entities")
-  void givenFieldDoesNotMatchValueType__WhenSetFieldValue__ShouldThrow(Class<?> entityClass) {
-    Object instance = ReflectionUtil.invokeNoArgConstructor(entityClass);
+  @MethodSource("io.dsub.discogs.batch.TestArguments#getXmlClasses")
+  void givenFieldDoesNotMatchValueType__WhenSetFieldValue__ShouldThrow(Class<?> xmlClass) {
+    Object instance = ReflectionUtil.invokeNoArgConstructor(xmlClass);
     assertThat(instance).isNotNull();
 
     // when
@@ -148,9 +148,9 @@ class ReflectionUtilTest {
   }
 
   @ParameterizedTest
-  @MethodSource("io.dsub.discogs.batch.TestArguments#entities")
-  void givenFieldOrInstanceIsNull__WhenSetFieldValue__ShouldThrow(Class<?> entityClass) {
-    Object instance = ReflectionUtil.invokeNoArgConstructor(entityClass);
+  @MethodSource("io.dsub.discogs.batch.TestArguments#getXmlClasses")
+  void givenFieldOrInstanceIsNull__WhenSetFieldValue__ShouldThrow(Class<?> xmlClass) {
+    Object instance = ReflectionUtil.invokeNoArgConstructor(xmlClass);
     assertThat(instance).isNotNull();
 
     // given
@@ -173,10 +173,10 @@ class ReflectionUtilTest {
   }
 
   @ParameterizedTest
-  @MethodSource("io.dsub.discogs.batch.TestArguments#entities")
-  void givenFieldOrInstanceIsNull__GetValue__ShouldThrow(Class<?> entityClass) {
+  @MethodSource("io.dsub.discogs.batch.TestArguments#getXmlClasses")
+  void givenFieldOrInstanceIsNull__GetValue__ShouldThrow(Class<?> xmlClass) {
     // given
-    Object instance = ReflectionUtil.invokeNoArgConstructor(entityClass);
+    Object instance = ReflectionUtil.invokeNoArgConstructor(xmlClass);
     assertThat(instance).isNotNull();
     Field field = ReflectionUtil.getDeclaredFields(instance).get(0);
 
@@ -197,10 +197,10 @@ class ReflectionUtilTest {
   }
 
   @ParameterizedTest
-  @MethodSource("io.dsub.discogs.batch.TestArguments#entities")
-  void givenInstanceHasValues__GetValue__ShouldReturnAsIs(Class<?> entityClass) {
+  @MethodSource("io.dsub.discogs.batch.TestArguments#getXmlClasses")
+  void givenInstanceHasValues__GetValue__ShouldReturnAsIs(Class<?> xmlClass) {
     // given
-    Object instance = ReflectionUtil.invokeNoArgConstructor(entityClass);
+    Object instance = ReflectionUtil.invokeNoArgConstructor(xmlClass);
     assertThat(instance).isNotNull();
     List<Field> stringFields =
         ReflectionUtil.getDeclaredFields(instance, field -> field.getType().equals(String.class));

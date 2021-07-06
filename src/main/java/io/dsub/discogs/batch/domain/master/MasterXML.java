@@ -1,7 +1,7 @@
 package io.dsub.discogs.batch.domain.master;
 
 import io.dsub.discogs.batch.domain.BaseXML;
-import io.dsub.discogs.common.jooq.tables.records.MasterRecord;
+import io.dsub.discogs.jooq.tables.records.MasterRecord;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;

@@ -5,7 +5,7 @@ import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
 import io.dsub.discogs.batch.util.DefaultMalformedDateParser;
 import io.dsub.discogs.batch.util.MalformedDateParser;
 import io.dsub.discogs.batch.util.ReflectionUtil;
-import io.dsub.discogs.common.jooq.tables.records.ReleaseItemRecord;
+import io.dsub.discogs.jooq.tables.records.ReleaseItemRecord;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;

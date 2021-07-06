@@ -2,7 +2,7 @@ package io.dsub.discogs.batch.job.processor;
 
 import io.dsub.discogs.batch.domain.label.LabelXML;
 import io.dsub.discogs.batch.util.ReflectionUtil;
-import io.dsub.discogs.common.jooq.tables.records.LabelRecord;
+import io.dsub.discogs.jooq.tables.records.LabelRecord;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.item.ItemProcessor;
 

@@ -1,7 +1,7 @@
 package io.dsub.discogs.batch.domain.label;
 
 import io.dsub.discogs.batch.domain.BaseXML;
-import io.dsub.discogs.common.jooq.tables.records.LabelRecord;
+import io.dsub.discogs.jooq.tables.records.LabelRecord;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import javax.xml.bind.annotation.XmlAccessType;

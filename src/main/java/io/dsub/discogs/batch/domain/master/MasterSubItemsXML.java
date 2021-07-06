@@ -2,8 +2,8 @@ package io.dsub.discogs.batch.domain.master;
 
 import io.dsub.discogs.batch.domain.HashXML;
 import io.dsub.discogs.batch.domain.SubItemXML;
-import io.dsub.discogs.common.jooq.tables.records.MasterArtistRecord;
-import io.dsub.discogs.common.jooq.tables.records.MasterVideoRecord;
+import io.dsub.discogs.jooq.tables.records.MasterArtistRecord;
+import io.dsub.discogs.jooq.tables.records.MasterVideoRecord;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;

@@ -1,9 +1,9 @@
 package io.dsub.discogs.batch.domain.artist;
 
 import io.dsub.discogs.batch.domain.SubItemXML;
-import io.dsub.discogs.common.jooq.tables.records.ArtistAliasRecord;
-import io.dsub.discogs.common.jooq.tables.records.ArtistGroupRecord;
-import io.dsub.discogs.common.jooq.tables.records.ArtistMemberRecord;
+import io.dsub.discogs.jooq.tables.records.ArtistAliasRecord;
+import io.dsub.discogs.jooq.tables.records.ArtistGroupRecord;
+import io.dsub.discogs.jooq.tables.records.ArtistMemberRecord;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;

@@ -1,6 +1,6 @@
 package io.dsub.discogs.batch.job.writer;
 
-import io.dsub.discogs.common.jooq.tables.records.MasterRecord;
+import io.dsub.discogs.jooq.tables.records.MasterRecord;
 import java.util.Collection;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

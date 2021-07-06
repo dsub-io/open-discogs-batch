@@ -1,8 +1,8 @@
 package io.dsub.discogs.batch.job.tasklet;
 
 import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
-import io.dsub.discogs.common.jooq.tables.records.GenreRecord;
-import io.dsub.discogs.common.jooq.tables.records.StyleRecord;
+import io.dsub.discogs.jooq.tables.records.GenreRecord;
+import io.dsub.discogs.jooq.tables.records.StyleRecord;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.jooq.UpdatableRecord;
