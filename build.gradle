@@ -27,8 +27,6 @@ ext {
     set('pbVersion', "0.9.1")
     set('discogsJooqVersion', "0.0.3")
     set('liquibaseVersion', "4.4.0")
-    set('readOnlyPackageToken', "REMOVED_GITHUB_TOKEN")
-    set('readOnlyPackageUser', "state303")
 }
 
 def props = new Properties()
@@ -39,12 +37,17 @@ if (file(".env").exists()) {
 repositories {
     mavenCentral()
     maven {
+        name = "github-public"
+        // Adapt the URL for your remote repository
+        url = uri("https://maven.pkg.github.com/state303/discogs-common")
+        credentials {
+            username = "token"
+            password = "REMOVED_GITHUB_TOKEN"
+        }
+    }
+    maven {
         name = "GitHubPackages"
         url = uri("https://maven.pkg.github.com/state303/discogs-batch")
-        credentials {
-            username = "${readOnlyPackageUser}"
-            password = "${readOnlyPackageToken}"
-        }
     }
 }
 
