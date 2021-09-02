@@ -10,6 +10,9 @@ import org.jooq.impl.DSL;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * Infrastructure support for JOOQ configuration, providing the {@link DSLContext} bean.
+ */
 @Slf4j
 @Configuration
 @RequiredArgsConstructor

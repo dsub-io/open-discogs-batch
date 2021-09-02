@@ -1,5 +1,6 @@
 package io.dsub.discogs.batch.job.tasklet;
 
+import io.dsub.discogs.batch.job.registry.DefaultEntityIdRegistry;
 import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
 import io.dsub.discogs.jooq.tables.records.GenreRecord;
 import io.dsub.discogs.jooq.tables.records.StyleRecord;
@@ -26,11 +27,11 @@ public class GenreStyleInsertionTasklet implements Tasklet {
       throws Exception {
     contribution.setExitStatus(ExitStatus.EXECUTING);
     jooqItemWriter.write(
-        registry.getStringIdSetByType(EntityIdRegistry.Type.GENRE).stream()
+        registry.getStringIdSetByType(DefaultEntityIdRegistry.Type.GENRE).stream()
             .map(genre -> new GenreRecord().setName(genre))
             .collect(Collectors.toList()));
     jooqItemWriter.write(
-        registry.getStringIdSetByType(EntityIdRegistry.Type.STYLE).stream()
+        registry.getStringIdSetByType(DefaultEntityIdRegistry.Type.STYLE).stream()
             .map(style -> new StyleRecord().setName(style))
             .collect(Collectors.toList()));
     contribution.setExitStatus(ExitStatus.COMPLETED);

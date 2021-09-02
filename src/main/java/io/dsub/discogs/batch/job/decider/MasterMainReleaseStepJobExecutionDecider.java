@@ -1,5 +1,6 @@
 package io.dsub.discogs.batch.job.decider;
 
+import io.dsub.discogs.batch.job.registry.DefaultEntityIdRegistry;
 import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,7 +33,7 @@ public class MasterMainReleaseStepJobExecutionDecider implements JobExecutionDec
     } else if (!jobExecution.getJobParameters().getParameters().containsKey(RELEASE_ITEM)) {
       log.info("release item eTag missing. " + SKIP_MSG);
     } else if (idRegistry
-        .getLongIdCache(EntityIdRegistry.Type.RELEASE)
+        .getLongIdCache(DefaultEntityIdRegistry.Type.RELEASE)
         .getConcurrentSkipListSet()
         .isEmpty()) {
       log.info("release item identity cache is missing. " + SKIP_MSG);

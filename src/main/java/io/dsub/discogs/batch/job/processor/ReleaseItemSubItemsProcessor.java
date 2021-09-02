@@ -1,6 +1,7 @@
 package io.dsub.discogs.batch.job.processor;
 
 import io.dsub.discogs.batch.domain.release.ReleaseItemSubItemsXML;
+import io.dsub.discogs.batch.job.registry.DefaultEntityIdRegistry;
 import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
 import io.dsub.discogs.batch.util.ReflectionUtil;
 import io.dsub.discogs.jooq.tables.records.ReleaseItemGenreRecord;
@@ -136,27 +137,27 @@ public class ReleaseItemSubItemsProcessor
     if (id == null || id < 1) {
       return false;
     }
-    return idRegistry.exists(EntityIdRegistry.Type.ARTIST, id);
+    return idRegistry.exists(DefaultEntityIdRegistry.Type.ARTIST, id);
   }
 
   private boolean isExistingLabel(Integer id) {
     if (id == null || id < 1) {
       return false;
     }
-    return idRegistry.exists(EntityIdRegistry.Type.LABEL, id);
+    return idRegistry.exists(DefaultEntityIdRegistry.Type.LABEL, id);
   }
 
   private boolean isExistingGenre(String genre) {
     if (genre == null || genre.isBlank()) {
       return false;
     }
-    return idRegistry.exists(EntityIdRegistry.Type.GENRE, genre);
+    return idRegistry.exists(DefaultEntityIdRegistry.Type.GENRE, genre);
   }
 
   private boolean isExistingStyle(String style) {
     if (style == null || style.isBlank()) {
       return false;
     }
-    return idRegistry.exists(EntityIdRegistry.Type.STYLE, style);
+    return idRegistry.exists(DefaultEntityIdRegistry.Type.STYLE, style);
   }
 }

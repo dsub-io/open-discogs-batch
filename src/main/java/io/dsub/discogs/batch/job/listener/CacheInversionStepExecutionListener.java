@@ -1,5 +1,6 @@
 package io.dsub.discogs.batch.job.listener;
 
+import io.dsub.discogs.batch.job.registry.DefaultEntityIdRegistry;
 import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
 import io.dsub.discogs.batch.job.step.core.ArtistStepConfig;
 import io.dsub.discogs.batch.job.step.core.LabelStepConfig;
@@ -36,22 +37,22 @@ public class CacheInversionStepExecutionListener implements StepExecutionListene
 
     if (stepName.equals(ArtistStepConfig.ARTIST_CORE_INSERTION_STEP) && (doMaster || doRelease)) {
       log.info(INVERT_CACHE_MSG, ARTIST);
-      idRegistry.invert(EntityIdRegistry.Type.ARTIST);
+      idRegistry.invert(DefaultEntityIdRegistry.Type.ARTIST);
     }
 
     if (stepName.equals(LabelStepConfig.LABEL_CORE_INSERTION_STEP) && (doMaster || doRelease)) {
       log.info(INVERT_CACHE_MSG, LABEL);
-      idRegistry.invert(EntityIdRegistry.Type.LABEL);
+      idRegistry.invert(DefaultEntityIdRegistry.Type.LABEL);
     }
 
     if (stepName.equals(MasterStepConfig.MASTER_CORE_INSERTION_STEP) && doRelease) {
       log.info(INVERT_CACHE_MSG, MASTER);
-      idRegistry.invert(EntityIdRegistry.Type.MASTER);
+      idRegistry.invert(DefaultEntityIdRegistry.Type.MASTER);
     }
 
     if (stepName.equals(ReleaseItemStepConfig.RELEASE_ITEM_CORE_INSERTION_STEP) && (doMaster)) {
       log.info(INVERT_CACHE_MSG, RELEASE_ITEM);
-      idRegistry.invert(EntityIdRegistry.Type.RELEASE);
+      idRegistry.invert(DefaultEntityIdRegistry.Type.RELEASE);
     }
 
     return stepExecution.getExitStatus();

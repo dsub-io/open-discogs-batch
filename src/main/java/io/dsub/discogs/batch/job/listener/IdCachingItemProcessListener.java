@@ -11,6 +11,7 @@ import io.dsub.discogs.batch.domain.artist.ArtistXML;
 import io.dsub.discogs.batch.domain.label.LabelXML;
 import io.dsub.discogs.batch.domain.master.MasterXML;
 import io.dsub.discogs.batch.domain.release.ReleaseItemXML;
+import io.dsub.discogs.batch.job.registry.DefaultEntityIdRegistry;
 import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
 import java.util.List;
 import java.util.Objects;
@@ -56,7 +57,7 @@ public class IdCachingItemProcessListener implements ItemProcessListener<Object,
     }
   }
 
-  private void cacheStringTypedItems(EntityIdRegistry.Type type, List<String> values) {
+  private void cacheStringTypedItems(DefaultEntityIdRegistry.Type type, List<String> values) {
     if (values == null || values.isEmpty()) {
       return;
     }

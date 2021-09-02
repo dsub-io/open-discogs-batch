@@ -8,7 +8,7 @@ import io.dsub.discogs.batch.job.listener.BatchListenerConfig;
 import io.dsub.discogs.batch.job.processor.ItemProcessorConfig;
 import io.dsub.discogs.batch.job.reader.DiscogsDumpItemReaderBuilder;
 import io.dsub.discogs.batch.job.reader.ItemReaderConfig;
-import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
+import io.dsub.discogs.batch.job.registry.DefaultEntityIdRegistry;
 import io.dsub.discogs.batch.job.step.GlobalStepConfig;
 import io.dsub.discogs.batch.job.tasklet.GenreStyleInsertionTasklet;
 import io.dsub.discogs.batch.job.writer.ItemWriterConfig;
@@ -50,7 +50,7 @@ public class BatchInfrastructureConfig {
 
   @Bean
   public MasterMainReleaseStepJobExecutionDecider masterMainReleaseStepJobExecutionDecider(
-      EntityIdRegistry registry) {
+      DefaultEntityIdRegistry registry) {
     return new MasterMainReleaseStepJobExecutionDecider(registry);
   }
 

@@ -1,6 +1,6 @@
 package io.dsub.discogs.batch.job.listener;
 
-import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
+import io.dsub.discogs.batch.job.registry.DefaultEntityIdRegistry;
 import io.dsub.discogs.batch.util.FileUtil;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicLong;
@@ -14,8 +14,8 @@ import org.springframework.context.annotation.Configuration;
 public class BatchListenerConfig {
 
   @Bean
-  public EntityIdRegistry entityIdRegistry() {
-    return new EntityIdRegistry();
+  public DefaultEntityIdRegistry entityIdRegistry() {
+    return new DefaultEntityIdRegistry();
   }
 
   @Bean

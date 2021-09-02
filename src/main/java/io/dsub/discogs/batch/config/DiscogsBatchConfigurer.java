@@ -14,6 +14,9 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
 
+/**
+ * Default batch configuration implementation of {@link BatchConfigurer}.
+ */
 @Component
 @RequiredArgsConstructor
 public class DiscogsBatchConfigurer implements BatchConfigurer {
