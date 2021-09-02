@@ -10,7 +10,7 @@ import static org.mockito.Mockito.verify;
 import io.dsub.discogs.batch.TestArguments;
 import io.dsub.discogs.batch.domain.artist.ArtistSubItemsXML;
 import io.dsub.discogs.batch.job.processor.ArtistSubItemsProcessor;
-import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
+import io.dsub.discogs.batch.job.registry.DefaultEntityIdRegistry;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.lang.reflect.Field;
@@ -118,7 +118,7 @@ class ProgressBarStaxEventItemReaderTest {
         new ProgressBarStaxEventItemReader<>(ArtistSubItemsXML.class,
             Path.of(TestArguments.BASE_XML_PATH, "artist.xml.gz"), "artist");
 
-    EntityIdRegistry registry = new EntityIdRegistry();
+    DefaultEntityIdRegistry registry = new DefaultEntityIdRegistry();
 
     ArtistSubItemsProcessor processor = new ArtistSubItemsProcessor(registry);
     IntStream.range(1, 1000).forEach(i -> registry.put(ARTIST, i));

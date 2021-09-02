@@ -10,13 +10,13 @@ import lombok.Getter;
 public class IdCache {
 
   @Getter
-  private final EntityIdRegistry.Type type;
+  private final DefaultEntityIdRegistry.Type type;
   @Getter
   private final ConcurrentSkipListSet<Integer> concurrentSkipListSet;
   private boolean inverted = false;
   private AtomicInteger lastMax = null;
 
-  public IdCache(EntityIdRegistry.Type type) {
+  public IdCache(DefaultEntityIdRegistry.Type type) {
     this.type = type;
     this.concurrentSkipListSet = new ConcurrentSkipListSet<>();
   }

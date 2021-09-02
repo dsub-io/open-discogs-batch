@@ -9,7 +9,7 @@ import io.dsub.discogs.batch.domain.master.MasterSubItemsXML;
 import io.dsub.discogs.batch.domain.master.MasterXML;
 import io.dsub.discogs.batch.domain.release.ReleaseItemSubItemsXML;
 import io.dsub.discogs.batch.domain.release.ReleaseItemXML;
-import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
+import io.dsub.discogs.batch.job.registry.DefaultEntityIdRegistry;
 import io.dsub.discogs.jooq.tables.records.ArtistRecord;
 import io.dsub.discogs.jooq.tables.records.LabelRecord;
 import io.dsub.discogs.jooq.tables.records.MasterRecord;
@@ -26,7 +26,7 @@ import org.springframework.context.annotation.Configuration;
 @RequiredArgsConstructor
 public class ItemProcessorConfig {
 
-  private final EntityIdRegistry entityIdRegistry;
+  private final DefaultEntityIdRegistry entityIdRegistry;
 
   @Bean
   @StepScope

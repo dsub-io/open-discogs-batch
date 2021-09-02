@@ -27,6 +27,7 @@ ext {
     set('pbVersion', "0.9.1")
     set('discogsJooqVersion', "0.0.3")
     set('liquibaseVersion', "4.4.0")
+    set('oshiVersion', "5.8.1")
 }
 
 def props = new Properties()
@@ -72,6 +73,7 @@ dependencies {
             "io.github.classgraph:classgraph:${classGraphVersion}",
             "me.tongfei:progressbar:${pbVersion}",
             "org.liquibase:liquibase-core:${liquibaseVersion}",
+            "com.github.oshi:oshi-core:${oshiVersion}",
             'mysql:mysql-connector-java',
             'org.postgresql:postgresql',
             'org.projectlombok:lombok',

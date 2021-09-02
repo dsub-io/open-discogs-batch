@@ -1,6 +1,7 @@
 package io.dsub.discogs.batch.job.processor;
 
 import io.dsub.discogs.batch.domain.release.ReleaseItemXML;
+import io.dsub.discogs.batch.job.registry.DefaultEntityIdRegistry;
 import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
 import io.dsub.discogs.batch.util.DefaultMalformedDateParser;
 import io.dsub.discogs.batch.util.MalformedDateParser;
@@ -30,7 +31,7 @@ public class ReleaseItemCoreProcessor implements ItemProcessor<ReleaseItemXML, R
 
     if (release.getMaster() != null && release.getMaster().getMasterId() != null) {
       Integer id = release.getMaster().getMasterId();
-      if (idRegistry.exists(EntityIdRegistry.Type.MASTER, id)) {
+      if (idRegistry.exists(DefaultEntityIdRegistry.Type.MASTER, id)) {
         masterId = id;
       }
     }

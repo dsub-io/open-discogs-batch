@@ -1,6 +1,7 @@
 package io.dsub.discogs.batch.job.listener;
 
 import io.dsub.discogs.batch.argument.ArgType;
+import io.dsub.discogs.batch.job.registry.DefaultEntityIdRegistry;
 import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
 import io.dsub.discogs.jooq.tables.Artist;
 import io.dsub.discogs.jooq.tables.Label;
@@ -65,27 +66,27 @@ public class IdCachingJobExecutionListener implements JobExecutionListener {
   }
 
   private void preCacheMasterIds() {
-    cacheThenInvert(fetchMasterIdentifiers(), EntityIdRegistry.Type.MASTER);
+    cacheThenInvert(fetchMasterIdentifiers(), DefaultEntityIdRegistry.Type.MASTER);
   }
 
   private void preCacheLabelIds() {
-    cacheThenInvert(fetchLabelIdentifiers(), EntityIdRegistry.Type.LABEL);
+    cacheThenInvert(fetchLabelIdentifiers(), DefaultEntityIdRegistry.Type.LABEL);
   }
 
   private void preCacheArtistIds() {
-    cacheThenInvert(fetchArtistIdentifiers(), EntityIdRegistry.Type.ARTIST);
+    cacheThenInvert(fetchArtistIdentifiers(), DefaultEntityIdRegistry.Type.ARTIST);
   }
 
-  private void cacheThenInvert(List<Integer> idList, EntityIdRegistry.Type type) {
+  private void cacheThenInvert(List<Integer> idList, DefaultEntityIdRegistry.Type type) {
     cache(idList, type);
     invert(type);
   }
 
-  private void invert(EntityIdRegistry.Type type) {
+  private void invert(DefaultEntityIdRegistry.Type type) {
     idRegistry.invert(type);
   }
 
-  private void cache(List<Integer> idList, EntityIdRegistry.Type type) {
+  private void cache(List<Integer> idList, DefaultEntityIdRegistry.Type type) {
     log.info("caching {} identifiers", type.name().toLowerCase());
     idList.stream().filter(Objects::nonNull).forEach(id -> idRegistry.put(type, id));
   }
