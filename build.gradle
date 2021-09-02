@@ -7,7 +7,7 @@ plugins {
 }
 
 group 'io.dsub.discogs'
-version '0.1.7'
+version '0.1.8'
 sourceCompatibility = JavaVersion.VERSION_16
 targetCompatibility = JavaVersion.VERSION_16
 
@@ -137,7 +137,7 @@ publishing {
     }
 }
 bootBuildImage {
-    setImageName('sehy0121/discogs-batch-0.1.7')
+    setImageName('sehy0121/discogs-batch-0.1.8')
 }
 // disable caching
 configurations.each {
