@@ -3,6 +3,15 @@
 [![codecov](https://codecov.io/gh/state303/discogs-batch/branch/master/graph/badge.svg?token=REMOVED_CODECOV_TOKEN)](https://codecov.io/gh/state303/discogs-batch)
 [![Build Status](https://www.travis-ci.com/state303/discogs-batch.svg?branch=master)](https://www.travis-ci.com/state303/discogs-batch)
 
+
+### ANNOUNCEMENT ⛑
+Major reconstruction incoming.
+
+- Separated, concise API codebase to address current `Reusability` issue that literally negates CI/CD, MSA atm 😂
+- We will not use Spring Batch from next update.
+- Considering MongoDB support (will gladly accept any idea upon this).
+- Again, code separation for smaller modules to simplify the entire process.
+
 ### ABOUT THIS PROJECT
 
 The aim of the project is to replicate the entire dump data set given
