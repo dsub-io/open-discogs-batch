@@ -7,10 +7,7 @@
 ### ANNOUNCEMENT ⛑
 Major reconstruction incoming.
 
-- Separated, concise API codebase to address current `Reusability` issue that literally negates CI/CD, MSA atm 😂
-- We will not use Spring Batch from next update.
-- Considering MongoDB support (will gladly accept any idea upon this).
-- Again, code separation for smaller modules to simplify the entire process.
+Updated ERD: [Click Here](https://dbdocs.io/state303/OpenDiscogs)
 
 ### ABOUT THIS PROJECT
 
