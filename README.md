@@ -5,7 +5,10 @@
 
 
 ### ANNOUNCEMENT ⛑
-Major reconstruction incoming.
+It has been 4 years passed and yet I am too occupied.
+All PRs are welcome, and I hope I will revisit this repository very soon.
+
+If there's any issue, or some enhancements or flavours to be present in this software, raise an issue :)
 
 Updated ERD: [Click Here](https://dbdocs.io/state303/OpenDiscogs)
 
