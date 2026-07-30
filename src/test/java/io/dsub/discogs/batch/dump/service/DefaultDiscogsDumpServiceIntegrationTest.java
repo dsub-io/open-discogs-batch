@@ -12,7 +12,6 @@ import io.dsub.discogs.batch.dump.repository.DiscogsDumpRepository;
 import io.dsub.discogs.batch.dump.repository.MapDiscogsDumpRepository;
 import io.dsub.discogs.batch.exception.DumpNotFoundException;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -112,14 +111,19 @@ public class DefaultDiscogsDumpServiceIntegrationTest {
         throws DumpNotFoundException {
       List<DiscogsDump> recentDumps =
           sampleDumpList.stream()
-              .collect(
-                  Collectors.groupingBy(
-                      DiscogsDump::getType, Collectors.reducing(this::reduceAsRecent)))
-              .values()
+              .collect(Collectors.groupingBy(DiscogsDump::getLastModifiedAt))
+              .entrySet()
               .stream()
-              .filter(Optional::isPresent)
-              .map(Optional::get)
-              .collect(Collectors.toList());
+              .filter(
+                  entry ->
+                      entry.getValue().stream()
+                              .map(DiscogsDump::getType)
+                              .distinct()
+                              .count()
+                          == EntityType.values().length)
+              .max(java.util.Map.Entry.comparingByKey())
+              .orElseThrow()
+              .getValue();
 
       // when
       List<DiscogsDump> result = dumpService.getLatestCompleteDumpSet();
@@ -141,15 +145,6 @@ public class DefaultDiscogsDumpServiceIntegrationTest {
         List<DiscogsDump> results = dumpService.getDumpByTypeInRange(type, year, month);
         // then
         assertThat(expectedDump).isIn(results);
-      }
-    }
-
-    private DiscogsDump reduceAsRecent(DiscogsDump a, DiscogsDump b) {
-      int n = a.compareTo(b);
-      if (n > 0) {
-        return a;
-      } else {
-        return b;
       }
     }
   }

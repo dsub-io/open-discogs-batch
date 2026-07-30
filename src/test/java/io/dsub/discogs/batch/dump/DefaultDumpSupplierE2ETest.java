@@ -2,43 +2,43 @@ package io.dsub.discogs.batch.dump;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.dsub.discogs.batch.condition.RequiresDiscogsDataConnection;
+import io.dsub.discogs.batch.testutil.DiscogsDumpE2EFixture;
+import java.time.LocalDate;
 import java.util.List;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 @Tag("e2e")
-@ExtendWith(RequiresDiscogsDataConnection.class)
 class DefaultDumpSupplierE2ETest {
-
-  DefaultDumpSupplier dumpSupplier;
-
-  @BeforeEach
-  void setUp() {
-    dumpSupplier = new DefaultDumpSupplier();
-  }
 
   @Test
   void whenGet__ThenReturnsNotEmptyListOfValidDiscogsDumps() {
-    List<DiscogsDump> foundList = dumpSupplier.get();
+    List<DiscogsDump> foundList = DiscogsDumpE2EFixture.getDumps();
 
     assertThat(foundList).isNotNull().isNotEmpty();
+    assertThat(foundList)
+        .extracting(DiscogsDump::getLastModifiedAt)
+        .anyMatch(date -> date.getYear() == 2008)
+        .anyMatch(date -> date.getYear() == LocalDate.now().getYear());
     foundList.forEach(
         item ->
             assertThat(item)
                 .satisfies(dump -> assertThat(dump.getETag()).isNotNull().isNotBlank())
                 .satisfies(dump -> assertThat(dump.getSize()).isNotNull().isGreaterThan(0))
                 .satisfies(dump -> assertThat(dump.getUriString()).isNotNull().isNotBlank())
-                .satisfies(dump -> assertThat(dump.getFileName()).matches("^[\\w_]+.xml.gz$"))
+                .satisfies(dump -> assertThat(dump.getFileName()).matches("^[\\w_]+\\.xml\\.gz$"))
+                .satisfies(dump -> assertThat(dump.getChecksumUrl()).isNotNull())
                 .satisfies(dump -> assertThat(dump.getType()).isNotNull()));
   }
 
   @Test
-  void whenGetBucketURL__ReturnsValidURL() {
-    String url = dumpSupplier.getBucketURL();
+  void whenGetLatestDump__ThenItsChecksumManifestContainsTheFile() throws Exception {
+    DiscogsDump latestDump =
+        DiscogsDumpE2EFixture.getDumps().stream()
+            .max(DiscogsDump::compareTo)
+            .orElseThrow();
 
-    assertThat(url).isNotNull().isNotBlank().matches("^https://[\\w_.-]+[\\w_-].com$");
+    assertThat(new DiscogsDumpVerifier().getChecksums(latestDump.getChecksumUrl()))
+        .containsKey(latestDump.getFileName());
   }
 }

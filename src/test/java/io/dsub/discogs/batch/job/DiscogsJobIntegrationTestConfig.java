@@ -4,6 +4,7 @@ import static org.mockito.Mockito.spy;
 
 import io.dsub.discogs.batch.TestDumpGenerator;
 import io.dsub.discogs.batch.dump.DiscogsDump;
+import io.dsub.discogs.batch.dump.DiscogsDumpVerifier;
 import io.dsub.discogs.batch.dump.EntityType;
 import io.dsub.discogs.batch.dump.service.DiscogsDumpService;
 import io.dsub.discogs.batch.exception.DumpNotFoundException;
@@ -57,6 +58,11 @@ public class DiscogsJobIntegrationTestConfig {
         .appDirectory("discogs-data-batch-test")
         .isTemporary(false)
         .build();
+  }
+
+  @Bean
+  public DiscogsDumpVerifier dumpVerifier() {
+    return new DiscogsDumpVerifier();
   }
 
   @Bean

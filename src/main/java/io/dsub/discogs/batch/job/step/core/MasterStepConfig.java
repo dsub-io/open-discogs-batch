@@ -3,6 +3,7 @@ package io.dsub.discogs.batch.job.step.core;
 import io.dsub.discogs.batch.domain.master.MasterSubItemsXML;
 import io.dsub.discogs.batch.domain.master.MasterXML;
 import io.dsub.discogs.batch.dump.DiscogsDump;
+import io.dsub.discogs.batch.dump.DiscogsDumpVerifier;
 import io.dsub.discogs.batch.exception.DumpNotFoundException;
 import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import io.dsub.discogs.batch.job.listener.CacheInversionStepExecutionListener;
@@ -63,6 +64,7 @@ public class MasterStepConfig extends AbstractStepConfig {
   private final ThreadPoolTaskExecutor taskExecutor;
   private final JobRepository jobRepository;
   private final FileUtil fileUtil;
+  private final DiscogsDumpVerifier dumpVerifier;
   private final GenreStyleInsertionTasklet genreStyleInsertionTasklet;
 
   private final StopWatchStepExecutionListener stopWatchStepExecutionListener;
@@ -132,7 +134,7 @@ public class MasterStepConfig extends AbstractStepConfig {
   @JobScope
   public Step masterFileFetchStep() throws DumpNotFoundException {
     return sbf.get(MASTER_FILE_FETCH_STEP)
-        .tasklet(new FileFetchTasklet(masterDump, fileUtil))
+        .tasklet(new FileFetchTasklet(masterDump, fileUtil, dumpVerifier))
         .build();
   }
 

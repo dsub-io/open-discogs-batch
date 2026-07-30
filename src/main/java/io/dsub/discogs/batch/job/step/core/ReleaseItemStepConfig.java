@@ -4,6 +4,7 @@ import io.dsub.discogs.batch.domain.master.MasterMainReleaseXML;
 import io.dsub.discogs.batch.domain.release.ReleaseItemSubItemsXML;
 import io.dsub.discogs.batch.domain.release.ReleaseItemXML;
 import io.dsub.discogs.batch.dump.DiscogsDump;
+import io.dsub.discogs.batch.dump.DiscogsDumpVerifier;
 import io.dsub.discogs.batch.exception.DumpNotFoundException;
 import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import io.dsub.discogs.batch.job.decider.MasterMainReleaseStepJobExecutionDecider;
@@ -74,6 +75,7 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
   private final ThreadPoolTaskExecutor taskExecutor;
   private final JobRepository jobRepository;
   private final FileUtil fileUtil;
+  private final DiscogsDumpVerifier dumpVerifier;
   private final GenreStyleInsertionTasklet genreStyleInsertionTasklet;
 
   private final StopWatchStepExecutionListener stopWatchStepExecutionListener;
@@ -199,7 +201,7 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
   @JobScope
   public Step releaseFileFetchStep() throws DumpNotFoundException {
     return sbf.get(RELEASE_FILE_FETCH_STEP)
-        .tasklet(new FileFetchTasklet(releaseItemDump, fileUtil))
+        .tasklet(new FileFetchTasklet(releaseItemDump, fileUtil, dumpVerifier))
         .build();
   }
 

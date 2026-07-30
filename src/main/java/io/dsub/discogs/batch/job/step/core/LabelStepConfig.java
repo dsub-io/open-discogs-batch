@@ -3,6 +3,7 @@ package io.dsub.discogs.batch.job.step.core;
 import io.dsub.discogs.batch.domain.label.LabelSubItemsXML;
 import io.dsub.discogs.batch.domain.label.LabelXML;
 import io.dsub.discogs.batch.dump.DiscogsDump;
+import io.dsub.discogs.batch.dump.DiscogsDumpVerifier;
 import io.dsub.discogs.batch.exception.DumpNotFoundException;
 import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import io.dsub.discogs.batch.job.listener.CacheInversionStepExecutionListener;
@@ -61,6 +62,7 @@ public class LabelStepConfig extends AbstractStepConfig {
   private final ThreadPoolTaskExecutor taskExecutor;
   private final JobRepository jobRepository;
   private final FileUtil fileUtil;
+  private final DiscogsDumpVerifier dumpVerifier;
 
   private final StopWatchStepExecutionListener stopWatchStepExecutionListener;
   private final CacheInversionStepExecutionListener cacheInversionStepExecutionListener;
@@ -160,7 +162,7 @@ public class LabelStepConfig extends AbstractStepConfig {
   @JobScope
   public Step labelFileFetchStep() throws DumpNotFoundException {
     return sbf.get(LABEL_FILE_FETCH_STEP)
-        .tasklet(new FileFetchTasklet(labelDump, fileUtil))
+        .tasklet(new FileFetchTasklet(labelDump, fileUtil, dumpVerifier))
         .build();
   }
 }

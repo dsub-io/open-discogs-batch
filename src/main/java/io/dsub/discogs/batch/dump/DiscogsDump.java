@@ -6,10 +6,8 @@ import java.net.URL;
 import java.time.LocalDate;
 import java.util.Objects;
 import lombok.Data;
-import lombok.RequiredArgsConstructor;
 
 @Data
-@RequiredArgsConstructor
 public class DiscogsDump implements Comparable<DiscogsDump> {
 
   private final String eTag;
@@ -18,6 +16,34 @@ public class DiscogsDump implements Comparable<DiscogsDump> {
   private final Long size;
   private final LocalDate lastModifiedAt;
   private final URL url;
+  private final URL checksumUrl;
+
+  public DiscogsDump(
+      String eTag,
+      EntityType type,
+      String uriString,
+      Long size,
+      LocalDate lastModifiedAt,
+      URL url) {
+    this(eTag, type, uriString, size, lastModifiedAt, url, null);
+  }
+
+  public DiscogsDump(
+      String eTag,
+      EntityType type,
+      String uriString,
+      Long size,
+      LocalDate lastModifiedAt,
+      URL url,
+      URL checksumUrl) {
+    this.eTag = eTag;
+    this.type = type;
+    this.uriString = uriString;
+    this.size = size;
+    this.lastModifiedAt = lastModifiedAt;
+    this.url = url;
+    this.checksumUrl = checksumUrl;
+  }
 
   public InputStream getInputStream() throws IOException {
     if (this.url == null) {
@@ -52,11 +78,8 @@ public class DiscogsDump implements Comparable<DiscogsDump> {
   }
 
   /**
-   * Compare only equals with ETag value as it is the single most definite identification of a
-   * dump.
-   *
-   * @param o any object, or another instance of dump to be evaluated being equal.
-   * @return the result of the equals method.
+   * Compares the stable dump identifier stored in the legacy {@code eTag} field. Current HTML
+   * indexes no longer expose an object ETag, so their versioned dump path is used instead.
    */
   @Override
   public boolean equals(Object o) {

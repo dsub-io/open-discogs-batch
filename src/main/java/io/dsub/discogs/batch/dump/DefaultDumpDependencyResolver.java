@@ -131,12 +131,12 @@ public class DefaultDumpDependencyResolver implements DumpDependencyResolver {
     for (String eTag : eTags.stream().distinct().collect(Collectors.toList())) {
 
       DiscogsDump dump = getDumpByETag(eTag);
-      LocalDate dumpYearMonth = dump.getLastModifiedAt().withDayOfMonth(1);
+      LocalDate dumpDate = dump.getLastModifiedAt();
 
       if (foundDate == null) {
-        foundDate = dumpYearMonth;
-      } else if (!foundDate.equals(dumpYearMonth)) { // not the same year and month.
-        throw new InvalidArgumentException("eTags must be from the same year and month");
+        foundDate = dumpDate;
+      } else if (!foundDate.equals(dumpDate)) {
+        throw new InvalidArgumentException("eTags must be from the same dump date");
       }
       requiredTypes.addAll(dump.getType().getDependencies());
       foundDumps.put(dump.getType(), dump);
@@ -144,6 +144,7 @@ public class DefaultDumpDependencyResolver implements DumpDependencyResolver {
 
     assert foundDate != null; // ignore
 
+    LocalDate dependencyDate = foundDate;
     int year = foundDate.getYear();
     int month = foundDate.getMonthValue();
 
@@ -151,13 +152,15 @@ public class DefaultDumpDependencyResolver implements DumpDependencyResolver {
       if (foundDumps.containsKey(requiredType)) { // already found, so skip.
         continue;
       }
-      // we have required type, year and month. proceeding to save them into map!
       DiscogsDump dump =
-          dumpService.getMostRecentDiscogsDumpByTypeYearMonth(requiredType, year, month);
+          dumpService.getDumpByTypeInRange(requiredType, year, month).stream()
+              .filter(candidate -> candidate.getLastModifiedAt().equals(dependencyDate))
+              .max(DiscogsDump::compareTo)
+              .orElse(null);
       if (dump == null) {
         throw new DumpNotFoundException(
             String.format(
-                "discogs dump with type %s under %d-%d not found", requiredType, year, month));
+                "discogs dump with type %s on %s not found", requiredType, foundDate));
       }
       foundDumps.put(requiredType, dump);
     }

@@ -11,6 +11,7 @@ import static org.mockito.Mockito.atMostOnce;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import ch.qos.logback.classic.spi.ILoggingEvent;
@@ -181,7 +182,7 @@ class DefaultDiscogsDumpServiceUnitTest {
         .thenReturn(List.of(fakeDump));
 
     LocalDate startDate = fakeDump.getLastModifiedAt().withDayOfMonth(1);
-    LocalDate endDate = startDate.plusMonths(1).minusDays(1);
+    LocalDate endDate = startDate.plusMonths(1);
     int year = startDate.getYear();
     int month = startDate.getMonthValue();
 
@@ -198,49 +199,41 @@ class DefaultDiscogsDumpServiceUnitTest {
   @Test
   void whenGetLatestCompleteDumpSet__ThenShouldRetryWithPreviousMonths__IfCountIsLowerThan4()
       throws io.dsub.discogs.batch.exception.DumpNotFoundException {
-    LocalDate existingDate = LocalDate.now(Clock.systemUTC()).minusMonths(2);
+    LocalDate firstStartDate = LocalDate.now(Clock.systemUTC()).withDayOfMonth(1);
+    LocalDate firstEndDate = firstStartDate.plusMonths(1);
+
+    LocalDate secondStartDate = firstStartDate.minusMonths(1);
+    LocalDate secondEndDate = firstEndDate.minusMonths(1);
+    LocalDate existingDate = secondStartDate.plusDays(1);
 
     List<DiscogsDump> fakeDumps =
         IntStream.range(0, 4)
             .mapToObj(n -> getRandomDumpWithType(EntityType.values()[n], existingDate))
             .collect(Collectors.toList());
 
-    LocalDate firstStartDate = LocalDate.now(Clock.systemUTC()).withDayOfMonth(1);
-    LocalDate firstEndDate = firstStartDate.plusMonths(1);
-
-    LocalDate secondStartDate = firstStartDate.minusMonths(1);
-    LocalDate secondEndDate = firstEndDate.minusMonths(1);
-
-    when(repository.countItemsBetween(firstStartDate, firstEndDate)).thenReturn(2);
-    when(repository.countItemsBetween(secondStartDate, secondEndDate)).thenReturn(4);
+    when(repository.findAllByLastModifiedAtIsBetween(firstStartDate, firstEndDate))
+        .thenReturn(fakeDumps.subList(0, 2));
     when(repository.findAllByLastModifiedAtIsBetween(secondStartDate, secondEndDate))
         .thenReturn(fakeDumps);
 
     List<DiscogsDump> result = dumpService.getLatestCompleteDumpSet();
 
-    verify(repository, times(1)).countItemsBetween(firstStartDate, firstEndDate);
-    verify(repository, times(0)).findAllByLastModifiedAtIsBetween(firstStartDate, firstEndDate);
-    verify(repository, times(1)).countItemsBetween(secondStartDate, secondEndDate);
+    verify(repository, times(1)).findAllByLastModifiedAtIsBetween(firstStartDate, firstEndDate);
     verify(repository, times(1)).findAllByLastModifiedAtIsBetween(secondStartDate, secondEndDate);
 
-    assertThat(result).isEqualTo(fakeDumps);
+    assertThat(result.size()).isEqualTo(fakeDumps.size());
+    result.forEach(item -> assertThat(item).isIn(fakeDumps));
   }
 
   @Test
-  void whenAfterPropertiesSet__ThenShouldCallUpdatedDBMethod() {
-    when(repository.countItemsAfter(any())).thenReturn(4);
-
-    // when
+  void whenAfterPropertiesSet__ThenShouldOnlyValidateDependencies() {
     assertDoesNotThrow(() -> dumpService.afterPropertiesSet());
-    verify(repository, times(1)).countItemsAfter(any());
+    verifyNoInteractions(repository, dumpSupplier);
   }
 
   @Test
   void whenGetLatestCompleteDumpSet__ThenShouldThrowDumpNotFoundException() {
-    for (int i = 0; i < 4; i++) {
-      when(repository.countItemsBetween(any(), any())).thenReturn(i);
-      assertThrows(DumpNotFoundException.class, () -> dumpService.getLatestCompleteDumpSet());
-    }
+    assertThrows(DumpNotFoundException.class, () -> dumpService.getLatestCompleteDumpSet());
   }
 
   @Test
@@ -263,7 +256,7 @@ class DefaultDiscogsDumpServiceUnitTest {
     DiscogsDump expectedDump = getRandomDump();
 
     LocalDate startDate = LocalDate.now().minusDays(1000 + random.nextInt(1000)).withDayOfMonth(1);
-    LocalDate endDate = startDate.plusMonths(1).minusDays(1);
+    LocalDate endDate = startDate.plusMonths(1);
 
     when(repository.findTopByTypeAndLastModifiedAtBetween(
         dumpTypeArgumentCaptor.capture(), startDateCaptor.capture(), endDateCaptor.capture()))
@@ -309,8 +302,8 @@ class DefaultDiscogsDumpServiceUnitTest {
   @Test
   void whenGetAllByTypeYearMonth__WithDuplicatedType__ShouldNotThrow() {
     EntityType type = EntityType.values()[random.nextInt(4)];
-    when(repository.findTopByTypeAndLastModifiedAtBetween(any(), any(), ArgumentMatchers.any()))
-        .thenReturn(getRandomDumpWithType(type));
+    when(repository.findAllByLastModifiedAtIsBetween(any(), ArgumentMatchers.any()))
+        .thenReturn(List.of(getRandomDumpWithType(type, LocalDate.of(1, 1, 2))));
 
     // when
     Assertions.assertDoesNotThrow(
@@ -319,8 +312,8 @@ class DefaultDiscogsDumpServiceUnitTest {
 
   @Test
   void whenGetAllByTypeYearMonth__ShouldThrowIfRepositoryReturnsNull() {
-    when(repository.findTopByTypeAndLastModifiedAtBetween(any(), any(), ArgumentMatchers.any()))
-        .thenReturn(null);
+    when(repository.findAllByLastModifiedAtIsBetween(any(), ArgumentMatchers.any()))
+        .thenReturn(List.of());
     EntityType type = EntityType.values()[random.nextInt(4)];
     Throwable t = catchThrowable(() -> dumpService.getAllByTypeYearMonth(List.of(type), 1, 1));
     assertThat(t)
@@ -332,9 +325,11 @@ class DefaultDiscogsDumpServiceUnitTest {
   @EnumSource(EntityType.class)
   void whenGetAllByTypeYearMonth__ShouldReturnProperValue(EntityType type)
       throws io.dsub.discogs.batch.exception.DumpNotFoundException {
-    Collection<DiscogsDump> expected = List.of(getRandomDumpWithType(type));
-    when(repository.findTopByTypeAndLastModifiedAtBetween(any(), any(), ArgumentMatchers.any()))
-        .thenReturn(expected.iterator().next());
+    DiscogsDump expectedDump =
+        getRandomDumpWithType(type, LocalDate.of(1, 1, 2));
+    Collection<DiscogsDump> expected = List.of(expectedDump);
+    when(repository.findAllByLastModifiedAtIsBetween(any(), ArgumentMatchers.any()))
+        .thenReturn(List.of(expectedDump));
 
     // when
     Collection<DiscogsDump> result = dumpService.getAllByTypeYearMonth(List.of(type), 1, 1);
@@ -343,7 +338,49 @@ class DefaultDiscogsDumpServiceUnitTest {
     assertThat(result.size()).isEqualTo(expected.size());
     assertThat(result.iterator().next()).isEqualTo(expected.iterator().next());
     verify(repository, times(1))
-        .findTopByTypeAndLastModifiedAtBetween(any(), ArgumentMatchers.any(), any());
+        .findAllByLastModifiedAtIsBetween(any(), ArgumentMatchers.any());
+  }
+
+  @Test
+  void whenNewestDateIsIncomplete__ThenReturnsPreviousCoherentDate() throws Exception {
+    LocalDate coherentDate = LocalDate.of(2024, 1, 1);
+    LocalDate incompleteDate = LocalDate.of(2024, 1, 15);
+    List<DiscogsDump> coherentSet =
+        IntStream.range(0, EntityType.values().length)
+            .mapToObj(
+                index -> getRandomDumpWithType(EntityType.values()[index], coherentDate))
+            .collect(Collectors.toList());
+    List<DiscogsDump> incompleteSet =
+        IntStream.range(0, EntityType.values().length - 1)
+            .mapToObj(
+                index -> getRandomDumpWithType(EntityType.values()[index], incompleteDate))
+            .collect(Collectors.toList());
+    List<DiscogsDump> candidates = new ArrayList<>(coherentSet);
+    candidates.addAll(incompleteSet);
+    when(repository.findAllByLastModifiedAtIsBetween(any(), any())).thenReturn(candidates);
+
+    Collection<DiscogsDump> result =
+        dumpService.getAllByTypeYearMonth(List.of(EntityType.values()), 2024, 1);
+
+    assertThat(result.size()).isEqualTo(EntityType.values().length);
+    result.forEach(dump -> assertThat(dump.getLastModifiedAt()).isEqualTo(coherentDate));
+  }
+
+  @Test
+  void whenUnrequestedDomainsAreMissing__ThenReturnsLatestRequestedDomain() throws Exception {
+    LocalDate olderDate = LocalDate.of(2024, 1, 1);
+    LocalDate latestDate = LocalDate.of(2024, 1, 15);
+    DiscogsDump olderArtist = getRandomDumpWithType(EntityType.ARTIST, olderDate);
+    DiscogsDump latestArtist = getRandomDumpWithType(EntityType.ARTIST, latestDate);
+    DiscogsDump olderLabel = getRandomDumpWithType(EntityType.LABEL, olderDate);
+    when(repository.findAllByLastModifiedAtIsBetween(any(), any()))
+        .thenReturn(List.of(olderArtist, olderLabel, latestArtist));
+
+    Collection<DiscogsDump> result =
+        dumpService.getAllByTypeYearMonth(List.of(EntityType.ARTIST), 2024, 1);
+
+    assertThat(result.size()).isEqualTo(1);
+    assertThat(result.iterator().next()).isEqualTo(latestArtist);
   }
 
   @Test

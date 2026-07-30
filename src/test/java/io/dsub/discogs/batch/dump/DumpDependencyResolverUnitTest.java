@@ -73,13 +73,15 @@ class DumpDependencyResolverUnitTest {
 
     when(dumpService.getDiscogsDump(any())).thenReturn(fakeDump);
     for (EntityType type : dependencies) {
-      DiscogsDump toReturn = type.equals(toBeNull) ? null : fakeDump;
-      when(dumpService.getMostRecentDiscogsDumpByTypeYearMonth(type, year, month))
-          .thenReturn(toReturn);
+      List<DiscogsDump> toReturn =
+          type.equals(toBeNull)
+              ? List.of()
+              : List.of(TestArguments.getRandomDumpWithType(type, lastModifiedAt));
+      when(dumpService.getDumpByTypeInRange(type, year, month)).thenReturn(toReturn);
     }
 
-    String msgFormat = "discogs dump with type %s under %d-%d not found";
-    String msg = String.format(msgFormat, toBeNull, year, month);
+    String msg = String.format("discogs dump with type %s on %s not found", toBeNull,
+        lastModifiedAt);
 
     // when
     Throwable thrown = catchThrowable(() -> resolver.resolveByETagEntries(List.of("a")));
@@ -104,7 +106,7 @@ class DumpDependencyResolverUnitTest {
     // then
     assertThat(thrown)
         .isNotNull()
-        .hasMessage("eTags must be from the same year and month")
+        .hasMessage("eTags must be from the same dump date")
         .isInstanceOf(InvalidArgumentException.class);
   }
 
@@ -297,13 +299,12 @@ class DumpDependencyResolverUnitTest {
     fakeDump.getType().getDependencies().stream()
         .filter(type -> !type.equals(fakeDump.getType()))
         .peek(typesToCheck::add)
-        .map(TestArguments::getRandomDumpWithType)
+        .map(type -> TestArguments.getRandomDumpWithType(type, fakeDump.getLastModifiedAt()))
         .peek(expected::add)
         .forEach(
             dump ->
-                when(dumpService.getMostRecentDiscogsDumpByTypeYearMonth(
-                    dump.getType(), year, month))
-                    .thenReturn(dump));
+                when(dumpService.getDumpByTypeInRange(dump.getType(), year, month))
+                    .thenReturn(List.of(dump)));
 
     when(dumpService.getDiscogsDump("test")).thenReturn(fakeDump);
 
@@ -317,10 +318,10 @@ class DumpDependencyResolverUnitTest {
     typesToCheck.forEach(
         typeToCheck -> {
           verify(dumpService, times(1))
-              .getMostRecentDiscogsDumpByTypeYearMonth(typeToCheck, year, month);
+              .getDumpByTypeInRange(typeToCheck, year, month);
         });
     verify(dumpService, never())
-        .getMostRecentDiscogsDumpByTypeYearMonth(fakeDump.getType(), year, month);
+        .getDumpByTypeInRange(fakeDump.getType(), year, month);
   }
 
   @RepeatedTest(10)

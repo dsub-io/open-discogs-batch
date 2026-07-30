@@ -13,11 +13,13 @@ import static org.mockito.Mockito.when;
 
 import ch.qos.logback.classic.Level;
 import io.dsub.discogs.batch.dump.DiscogsDump;
+import io.dsub.discogs.batch.dump.DiscogsDumpVerifier;
 import io.dsub.discogs.batch.exception.FileException;
 import io.dsub.discogs.batch.testutil.LogSpy;
 import io.dsub.discogs.batch.util.FileUtil;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Path;
 import lombok.extern.slf4j.Slf4j;
 import net.bytebuddy.utility.RandomString;
 import org.junit.jupiter.api.AfterEach;
@@ -50,7 +52,12 @@ class FileFetchTaskletUnitTest {
   @Mock
   FileUtil fileUtil;
 
+  @Mock
+  DiscogsDumpVerifier dumpVerifier;
+
   InputStream inputStream;
+  Path dumpPath;
+  String dumpFileName;
 
   @InjectMocks
   FileFetchTasklet fileFetchTasklet;
@@ -70,12 +77,16 @@ class FileFetchTaskletUnitTest {
   private AutoCloseable closeable;
 
   @BeforeEach
-  void setUp() throws IOException {
+  void setUp() throws IOException, FileException {
     closeable = MockitoAnnotations.openMocks(this);
     fileFetchTasklet = Mockito.spy(fileFetchTasklet);
 
-    doReturn(RandomString.make()).when(dump).getFileName();
+    dumpFileName = RandomString.make();
+    doReturn(dumpFileName).when(dump).getFileName();
     doReturn(1000L).when(dump).getSize();
+    dumpPath = Path.of(dumpFileName);
+    doReturn(dumpPath).when(fileUtil).getFilePath(dumpFileName);
+    doReturn(true).when(dumpVerifier).isValid(dump, dumpPath);
 
     inputStream = mock(InputStream.class);
 
@@ -96,7 +107,6 @@ class FileFetchTaskletUnitTest {
     // given
     doNothing().when(fileUtil).deleteFile(nameCaptor.capture());
     doNothing().when(fileUtil).copy(inCaptor.capture(), nameCaptor.capture());
-    doReturn(null).when(fileUtil).getFilePath(nameCaptor.capture(), anyBoolean());
     when(fileUtil.getSize(nameCaptor.capture())).thenReturn(-1L);
     doReturn(inputStream)
         .when(fileFetchTasklet)
@@ -108,9 +118,10 @@ class FileFetchTaskletUnitTest {
     // then
     assertThat(nameCaptor.getAllValues()).contains(dump.getFileName());
     assertThat(inCaptor.getAllValues().size()).isEqualTo(2);
-    verify(fileUtil, never()).getFilePath(any(), anyBoolean());
     verify(fileUtil, times(1)).getSize(dump.getFileName());
+    verify(fileUtil, times(1)).getFilePath(dump.getFileName());
     verify(fileUtil, times(1)).copy(inputStream, dump.getFileName());
+    verify(dumpVerifier, times(1)).isValid(dump, dumpPath);
 
     // check batch
     assertThat(repeatStatus).isEqualTo(RepeatStatus.FINISHED);
@@ -128,6 +139,7 @@ class FileFetchTaskletUnitTest {
       throws IOException, FileException {
     // given
     when(fileUtil.getSize(nameCaptor.capture())).thenReturn(100L);
+    doReturn(false, true).when(dumpVerifier).isValid(dump, dumpPath);
     doReturn(inputStream)
         .when(fileFetchTasklet)
         .wrapInputStream(inCaptor.capture(), msgCaptor.capture());
@@ -149,13 +161,44 @@ class FileFetchTaskletUnitTest {
     assertThat(logSpy.getLogsByLevel(Level.ERROR).size()).isZero();
 
     assertThat(logSpy.getLogsAsString(true))
-        .contains("found duplicated file: " + dump.getFileName() + ". checking size...");
+        .contains("found existing file: " + dump.getFileName() + ". verifying integrity...");
 
     assertThat(logSpy.getEvents().get(1).getMessage())
-        .isEqualTo("incomplete size. deleting current file...");
+        .isEqualTo("file failed integrity verification. deleting current file...");
 
     assertThat(logSpy.getEvents().get(2).getMessage())
         .isEqualTo("fetching " + dump.getFileName() + "...");
+  }
+
+  @Test
+  void givenVerifiedFileExists__WhenExecuteTask__ShouldReuseFile()
+      throws IOException, FileException {
+    when(fileUtil.getSize(dump.getFileName())).thenReturn(1000L);
+
+    RepeatStatus repeatStatus = fileFetchTasklet.execute(stepContribution, chunkContext);
+
+    assertThat(repeatStatus).isEqualTo(RepeatStatus.FINISHED);
+    verify(dumpVerifier).isValid(dump, dumpPath);
+    verify(fileUtil, never()).copy(any(), any());
+    verify(fileUtil, never()).deleteFile(any());
+    verify(stepContribution).setExitStatus(ExitStatus.COMPLETED);
+    verify(chunkContext).setComplete();
+  }
+
+  @Test
+  void givenDownloadedFileFailsVerification__WhenExecuteTask__ShouldDeleteAndFail()
+      throws IOException, FileException {
+    when(fileUtil.getSize(dump.getFileName())).thenReturn(-1L);
+    doReturn(false).when(dumpVerifier).isValid(dump, dumpPath);
+    doReturn(inputStream).when(fileFetchTasklet).wrapInputStream(any(), any());
+
+    RepeatStatus repeatStatus = fileFetchTasklet.execute(stepContribution, chunkContext);
+
+    assertThat(repeatStatus).isEqualTo(RepeatStatus.FINISHED);
+    verify(fileUtil).copy(inputStream, dump.getFileName());
+    verify(fileUtil).deleteFile(dump.getFileName());
+    verify(stepContribution).setExitStatus(ExitStatus.FAILED);
+    verify(chunkContext).setComplete();
   }
 
   //  @Test

@@ -3,21 +3,19 @@ package io.dsub.discogs.batch.dump.repository;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertAll;
 
-import io.dsub.discogs.batch.condition.RequiresDiscogsDataConnection;
-import io.dsub.discogs.batch.dump.DefaultDumpSupplier;
 import io.dsub.discogs.batch.dump.DiscogsDump;
 import io.dsub.discogs.batch.dump.DumpSupplier;
 import io.dsub.discogs.batch.dump.EntityType;
+import io.dsub.discogs.batch.testutil.DiscogsDumpE2EFixture;
 import java.util.List;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.mockito.Mockito;
 
 @Tag("e2e")
-@ExtendWith(RequiresDiscogsDataConnection.class)
 class DiscogsDumpRepositoryE2ETest {
 
   static DumpSupplier dumpSupplier;
@@ -25,7 +23,8 @@ class DiscogsDumpRepositoryE2ETest {
 
   @BeforeAll
   static void beforeAll() throws Exception {
-    dumpSupplier = new DefaultDumpSupplier();
+    dumpSupplier = Mockito.mock(DumpSupplier.class);
+    Mockito.when(dumpSupplier.get()).thenReturn(DiscogsDumpE2EFixture.getDumps());
     MapDiscogsDumpRepository mapDiscogsDumpRepository = new MapDiscogsDumpRepository(dumpSupplier);
     mapDiscogsDumpRepository.afterPropertiesSet();
     repository = mapDiscogsDumpRepository;
@@ -54,7 +53,7 @@ class DiscogsDumpRepositoryE2ETest {
         () -> assertThat(dump.getUriString()).isNotNull(),
         () -> assertThat(dump.getFileName()).isNotNull(),
         () -> assertThat(dump.getType()).isNotNull(),
-        () -> assertThat(dump.getUrl()).isNotNull()
-    );
+        () -> assertThat(dump.getUrl()).isNotNull(),
+        () -> assertThat(dump.getChecksumUrl()).isNotNull());
   }
 }

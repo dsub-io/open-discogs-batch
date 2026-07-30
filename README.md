@@ -11,6 +11,7 @@ Discogs. The Discogs name is used only to identify the public data source.
 ## What it does
 
 - Downloads a selected dump, or resolves the most recent available dump.
+- Verifies downloaded dumps against the matching Discogs SHA-256 manifest.
 - Creates and updates the PostgreSQL schema through Liquibase.
 - Imports artist, label, master, and release data in dependency order.
 - Uses idempotent writes so a dump can be processed again.
@@ -24,6 +25,12 @@ artist -> label -> master -> release
 
 Selecting `master` also selects artist and label dependencies. Selecting
 `release` selects all four entity types unless `strict` is enabled.
+
+Files are selected as a coherent dump-date set. A full import requires all four
+types from the same date. A targeted import only requires the selected type and
+its dependencies, so a missing label dump does not prevent an artist-only
+import. If the required set is incomplete for a month, automatic selection
+moves to the previous month.
 
 The current schema is documented in the
 [OpenDiscogs ERD](https://dbdocs.io/state303/OpenDiscogs).
@@ -67,6 +74,10 @@ suite and can be run explicitly:
 ./gradlew e2eTest
 ```
 
+The same E2E suite runs weekly, can be started manually, and runs on a pull
+request when the `e2e` label is present. It is intentionally not a required
+pull-request check because it depends on an external service.
+
 Executable test classes use one of three suffixes:
 
 - `*UnitTest` for isolated tests.
@@ -107,7 +118,7 @@ values are expanded into individual option values.
 | `type` | `t` | no | `artist`, `label`, `master`, or `release` |
 | `year` | `y` | no | Dump year |
 | `yearMonth` | `ym` | no | Dump month in `yyyy-MM` form |
-| `eTag` | `e` | no | Exact dump ETag; overrides year, month, and type selection |
+| `eTag` | `e` | no | Stable dump ID; overrides year, month, and type selection |
 | `chunkSize` | `chunk`, `c` | no | Spring Batch chunk size; defaults to `500` |
 | `coreCount` | `core` | no | Worker count; defaults to 80% of physical cores |
 | `mount` | `m` | no | Keep downloaded dump files |
@@ -117,6 +128,15 @@ values are expanded into individual option values.
 Do not provide both `year` and `yearMonth`. When none of `eTag`, `year`,
 `yearMonth`, or `type` is supplied, the most recent complete set of dumps is
 selected.
+
+The current Discogs HTML index no longer exposes object ETags. For those
+entries, the versioned path such as
+`data/2026/discogs_20260701_releases.xml.gz` is used as the stable dump ID.
+Each dump is paired with the same date's
+`discogs_20260701_CHECKSUM.txt`. The displayed HTML file size is only an
+estimate for progress reporting; existing and newly downloaded files are
+accepted only after their SHA-256 value matches the manifest. One manifest is
+fetched and cached per selected dump date.
 
 The application currently receives the database password as a process
 argument. On a shared host, command-line arguments may be visible to other
