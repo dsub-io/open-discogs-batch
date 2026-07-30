@@ -1,6 +1,5 @@
 plugins {
     id 'java'
-    id 'maven-publish'
     id 'jacoco'
     id 'org.springframework.boot' version '2.5.2'
     id 'io.spring.dependency-management' version '1.0.11.RELEASE'
@@ -18,14 +17,14 @@ configurations {
 }
 
 ext {
-    set('testcontainersVersion', "1.15.3")
+    set('testcontainersVersion', "1.21.4")
     set('springOxmVersion', "5.3.8")
     set('jaxbApiVersion', "2.3.1")
     set('jaxbImplVersion', "3.0.1")
     set('istackCommonsRuntimeVersion', "4.0.1")
     set('classGraphVersion', "4.8.108")
     set('pbVersion', "0.9.1")
-    set('discogsJooqVersion', "0.0.3")
+    set('openDiscogsJooqVersion', "0.0.4")
     set('liquibaseVersion', "4.4.0")
     set('oshiVersion', "5.8.1")
 }
@@ -37,19 +36,6 @@ if (file(".env").exists()) {
 
 repositories {
     mavenCentral()
-    maven {
-        name = "github-public"
-        // Adapt the URL for your remote repository
-        url = uri("https://maven.pkg.github.com/state303/discogs-common")
-        credentials {
-            username = "token"
-            password = "REMOVED_GITHUB_TOKEN"
-        }
-    }
-    maven {
-        name = "GitHubPackages"
-        url = uri("https://maven.pkg.github.com/state303/discogs-batch")
-    }
 }
 
 dependencyManagement {
@@ -65,7 +51,7 @@ dependencies {
             'org.springframework.boot:spring-boot-starter-data-jpa',
             'org.springframework.batch:spring-batch-integration',
             'org.springframework.boot:spring-boot-starter-jooq',
-            "io.dsub.discogs:discogs-jooq:${discogsJooqVersion}",
+            "io.dsub.opendiscogs:open-discogs-jooq:${openDiscogsJooqVersion}",
             "org.springframework:spring-oxm:${springOxmVersion}",
             "javax.xml.bind:jaxb-api:${jaxbApiVersion}",
             "com.sun.xml.bind:jaxb-impl:${jaxbImplVersion}",
@@ -109,33 +95,6 @@ jacocoTestReport {
     }
 }
 
-// publish
-publishing {
-    repositories {
-        maven {
-            name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/state303/discogs-batch")
-            credentials {
-                username = System.getenv('USERNAME')
-                password = System.getenv('PKG_TOKEN')
-            }
-        }
-    }
-    publications {
-        gpr(MavenPublication) {
-            artifactId = 'discogs-batch'
-            from components.java
-            versionMapping {
-                usage('java-api') {
-                    fromResolutionOf('runtimeClasspath')
-                }
-                usage('java-runtime') {
-                    fromResolutionResult()
-                }
-            }
-        }
-    }
-}
 bootBuildImage {
     setImageName('sehy0121/discogs-batch-0.1.8')
 }

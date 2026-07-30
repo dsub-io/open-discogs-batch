@@ -1,9 +1,9 @@
 package io.dsub.discogs.batch.job.writer;
 
-import io.dsub.discogs.jooq.tables.Artist;
-import io.dsub.discogs.jooq.tables.Label;
-import io.dsub.discogs.jooq.tables.Master;
-import io.dsub.discogs.jooq.tables.ReleaseItem;
+import io.dsub.opendiscogs.jooq.tables.Artist;
+import io.dsub.opendiscogs.jooq.tables.Label;
+import io.dsub.opendiscogs.jooq.tables.Master;
+import io.dsub.opendiscogs.jooq.tables.ReleaseItem;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
