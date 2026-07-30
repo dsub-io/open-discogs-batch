@@ -8,6 +8,7 @@ import io.dsub.discogs.batch.dump.DumpSupplier;
 import io.dsub.discogs.batch.dump.EntityType;
 import io.dsub.discogs.batch.testutil.DiscogsDumpE2EFixture;
 import java.util.List;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -28,6 +29,11 @@ class DiscogsDumpRepositoryE2ETest {
     MapDiscogsDumpRepository mapDiscogsDumpRepository = new MapDiscogsDumpRepository(dumpSupplier);
     mapDiscogsDumpRepository.afterPropertiesSet();
     repository = mapDiscogsDumpRepository;
+  }
+
+  @AfterAll
+  static void afterAll() {
+    DiscogsDumpE2EFixture.shutdown();
   }
 
   @Test

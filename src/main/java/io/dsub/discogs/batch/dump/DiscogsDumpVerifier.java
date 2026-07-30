@@ -99,7 +99,7 @@ public class DiscogsDumpVerifier {
     }
   }
 
-  protected Map<String, String> parseChecksums(String source) {
+  static Map<String, String> parseChecksums(String source) {
     if (source == null || source.isBlank()) {
       return Map.of();
     }

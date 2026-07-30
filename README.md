@@ -77,18 +77,26 @@ and enforce the coverage gate:
 ```
 
 Integration tests start PostgreSQL through Testcontainers and therefore require
-Docker. Tests that access `data.discogs.com` are kept outside the deterministic
-suite and can be run explicitly:
+Docker. End-to-end tests run the real HTTP discovery, download, checksum,
+repository, and latest-set selection code against a loopback Discogs
+distribution fixture and can be run explicitly:
 
 ```bash
 ./gradlew e2eTest
 ```
 
-The same E2E suite runs on every pull request, weekly, and on manual dispatch.
-It runs on a GitHub-hosted Ubuntu runner and is a required pull-request check.
-The test makes one root-index request, one latest-year-index request, and one
-checksum request. It fails with the upstream HTTP error when Discogs cannot be
-reached or returns no usable complete dump set.
+The same E2E suite runs on every pull request and on manual dispatch. It runs on
+a GitHub-hosted Ubuntu runner and is a required pull-request check. The fixture
+serves a root index, year index, four compressed dumps, and their shared
+SHA-256 manifest over a real loopback HTTP server. The test discovers and
+downloads all four domains, verifies their hashes, and resolves the coherent
+same-date set without skipping any case.
+
+Discogs currently returns HTTP 403 to GitHub-hosted runner addresses for both
+directory and direct-download requests. Live upstream availability therefore
+cannot be a reliable GitHub pull-request gate; the E2E gate owns application
+behavior, while real deployments still fail explicitly if Discogs is
+unreachable.
 
 Executable test classes use one of three suffixes:
 
@@ -149,6 +157,13 @@ Each dump is paired with the same date's
 estimate for progress reporting; existing and newly downloaded files are
 accepted only after their SHA-256 value matches the manifest. One manifest is
 fetched and cached per selected dump date.
+
+If the directory index is unavailable, automatic selection falls back to the
+monthly checksum manifests and resolves the newest complete set. Missing or
+incomplete months are skipped, while access errors stop immediately instead of
+causing repeated failing requests. File size is unknown on this fallback path,
+so download progress is shown without a fixed total and integrity is still
+decided by SHA-256.
 
 The application currently receives the database password as a process
 argument. On a shared host, command-line arguments may be visible to other

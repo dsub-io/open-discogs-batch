@@ -7,13 +7,21 @@ import static org.mockito.Mockito.when;
 import io.dsub.discogs.batch.dump.repository.MapDiscogsDumpRepository;
 import io.dsub.discogs.batch.dump.service.DefaultDiscogsDumpService;
 import io.dsub.discogs.batch.testutil.DiscogsDumpE2EFixture;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
-import java.util.Map;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 @Tag("e2e")
 class DefaultDumpSupplierE2ETest {
+
+  @AfterAll
+  static void afterAll() {
+    DiscogsDumpE2EFixture.shutdown();
+  }
 
   @Test
   void whenGet__ThenReturnsNotEmptyListOfValidDiscogsDumps() throws Exception {
@@ -32,7 +40,7 @@ class DefaultDumpSupplierE2ETest {
         item ->
             assertThat(item)
                 .satisfies(dump -> assertThat(dump.getETag()).isNotNull().isNotBlank())
-                .satisfies(dump -> assertThat(dump.getSize()).isNotNull().isGreaterThan(0))
+                .satisfies(dump -> assertThat(dump.getSize()).isPositive())
                 .satisfies(dump -> assertThat(dump.getUriString()).isNotNull().isNotBlank())
                 .satisfies(dump -> assertThat(dump.getFileName()).matches("^[\\w_]+\\.xml\\.gz$"))
                 .satisfies(dump -> assertThat(dump.getChecksumUrl()).isNotNull())
@@ -40,7 +48,8 @@ class DefaultDumpSupplierE2ETest {
   }
 
   @Test
-  void whenGetLatestCompleteDumpSet__ThenChecksumManifestContainsEveryFile() throws Exception {
+  void whenGetLatestCompleteDumpSet__ThenDownloadsVerifyAgainstSharedManifest(
+      @TempDir Path tempDir) throws Exception {
     List<DiscogsDump> latestCompleteDumpSet =
         getLatestCompleteDumpSet(DiscogsDumpE2EFixture.getDumps());
     DiscogsDump firstDump = latestCompleteDumpSet.getFirst();
@@ -48,14 +57,18 @@ class DefaultDumpSupplierE2ETest {
     assertThat(latestCompleteDumpSet)
         .extracting(DiscogsDump::getChecksumUrl)
         .containsOnly(firstDump.getChecksumUrl());
-    Map<String, String> checksums =
-        new DiscogsDumpVerifier().getChecksums(firstDump.getChecksumUrl());
-    String[] fileNames =
-        latestCompleteDumpSet.stream()
-            .map(DiscogsDump::getFileName)
-            .toArray(String[]::new);
+    assertThat(latestCompleteDumpSet)
+        .extracting(DiscogsDump::getLastModifiedAt)
+        .containsOnly(firstDump.getLastModifiedAt());
 
-    assertThat(checksums).containsKeys(fileNames);
+    DiscogsDumpVerifier verifier = new DiscogsDumpVerifier();
+    for (DiscogsDump dump : latestCompleteDumpSet) {
+      Path downloadedFile = tempDir.resolve(dump.getFileName());
+      try (var input = dump.getInputStream()) {
+        Files.copy(input, downloadedFile);
+      }
+      assertThat(verifier.isValid(dump, downloadedFile)).isTrue();
+    }
   }
 
   private List<DiscogsDump> getLatestCompleteDumpSet(List<DiscogsDump> dumps) throws Exception {

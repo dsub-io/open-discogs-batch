@@ -56,16 +56,14 @@ class DiscogsDumpVerifierUnitTest {
 
   @Test
   void whenManifestUsesPaths__ThenParserKeepsOnlyTheFileName() {
-    DiscogsDumpVerifier verifier = new DiscogsDumpVerifier();
-
     assertThat(
-            verifier.parseChecksums(
+            DiscogsDumpVerifier.parseChecksums(
                 SHA_256
                     + "  data/2026/discogs_20260701_releases.xml.gz\n"
                     + "invalid line\n"))
         .isEqualTo(Map.of("discogs_20260701_releases.xml.gz", SHA_256));
-    assertThat(verifier.parseChecksums("")).isEmpty();
-    assertThat(verifier.parseChecksums(null)).isEmpty();
+    assertThat(DiscogsDumpVerifier.parseChecksums("")).isEmpty();
+    assertThat(DiscogsDumpVerifier.parseChecksums(null)).isEmpty();
   }
 
   @Test
