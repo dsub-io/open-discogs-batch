@@ -1,8 +1,8 @@
 package io.dsub.discogs.batch.job.listener;
 
 import io.dsub.discogs.batch.util.ReflectionUtil;
-import org.springframework.batch.core.ItemReadListener;
-import org.springframework.lang.NonNull;
+import org.jspecify.annotations.NonNull;
+import org.springframework.batch.core.listener.ItemReadListener;
 
 public class StringNormalizingItemReadListener implements ItemReadListener<Object> {
 

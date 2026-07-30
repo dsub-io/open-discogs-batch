@@ -20,25 +20,37 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
-import org.springframework.batch.test.JobLauncherTestUtils;
+import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
+import org.springframework.batch.core.launch.JobOperator;
+import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.test.JobOperatorTestUtils;
 import org.springframework.batch.test.JobRepositoryTestUtils;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.transaction.PlatformTransactionManager;
 
 @Configuration
+@EnableBatchProcessing
 @PropertySource("classpath:application-test.yml")
 public class DiscogsJobIntegrationTestConfig {
 
   @Bean
-  public JobLauncherTestUtils getJobLauncherTestUtils() {
-    return new JobLauncherTestUtils();
+  public JobOperatorTestUtils getJobOperatorTestUtils(
+      JobOperator jobOperator, JobRepository jobRepository) {
+    return new JobOperatorTestUtils(jobOperator, jobRepository);
   }
 
   @Bean
-  public JobRepositoryTestUtils getJobRepositoryTestUtils() {
-    return new JobRepositoryTestUtils();
+  public JobRepositoryTestUtils getJobRepositoryTestUtils(JobRepository jobRepository) {
+    return new JobRepositoryTestUtils(jobRepository);
+  }
+
+  @Bean
+  public PlatformTransactionManager transactionManager(javax.sql.DataSource dataSource) {
+    return new DataSourceTransactionManager(dataSource);
   }
 
   @Bean

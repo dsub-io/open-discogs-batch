@@ -6,7 +6,7 @@ on:
     - cron: '17 3 * * 1'
   pull_request:
     types:
-      - labeled
+      - opened
       - reopened
       - synchronize
 
@@ -19,7 +19,6 @@ concurrency:
 
 jobs:
   discogs:
-    if: github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'e2e')
     name: Discogs data E2E
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -28,7 +27,7 @@ jobs:
       - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5
         with:
           distribution: temurin
-          java-version: 16
+          java-version: 21
           cache: gradle
       - name: Run Discogs data end-to-end tests
-        run: ./gradlew e2eTest --no-daemon
+        run: ./gradlew e2eTest --no-daemon --warning-mode=fail

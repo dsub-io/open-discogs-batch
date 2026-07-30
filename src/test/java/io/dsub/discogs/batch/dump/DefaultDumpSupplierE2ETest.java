@@ -1,10 +1,14 @@
 package io.dsub.discogs.batch.dump;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+import io.dsub.discogs.batch.dump.repository.MapDiscogsDumpRepository;
+import io.dsub.discogs.batch.dump.service.DefaultDiscogsDumpService;
 import io.dsub.discogs.batch.testutil.DiscogsDumpE2EFixture;
-import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
@@ -12,14 +16,18 @@ import org.junit.jupiter.api.Test;
 class DefaultDumpSupplierE2ETest {
 
   @Test
-  void whenGet__ThenReturnsNotEmptyListOfValidDiscogsDumps() {
+  void whenGet__ThenReturnsNotEmptyListOfValidDiscogsDumps() throws Exception {
     List<DiscogsDump> foundList = DiscogsDumpE2EFixture.getDumps();
+    List<DiscogsDump> latestCompleteDumpSet = getLatestCompleteDumpSet(foundList);
 
     assertThat(foundList).isNotNull().isNotEmpty();
-    assertThat(foundList)
+    assertThat(latestCompleteDumpSet)
+        .hasSize(EntityType.values().length)
+        .extracting(DiscogsDump::getType)
+        .containsExactlyInAnyOrder(EntityType.values());
+    assertThat(latestCompleteDumpSet)
         .extracting(DiscogsDump::getLastModifiedAt)
-        .anyMatch(date -> date.getYear() == 2008)
-        .anyMatch(date -> date.getYear() == LocalDate.now().getYear());
+        .containsOnly(latestCompleteDumpSet.getFirst().getLastModifiedAt());
     foundList.forEach(
         item ->
             assertThat(item)
@@ -32,13 +40,29 @@ class DefaultDumpSupplierE2ETest {
   }
 
   @Test
-  void whenGetLatestDump__ThenItsChecksumManifestContainsTheFile() throws Exception {
-    DiscogsDump latestDump =
-        DiscogsDumpE2EFixture.getDumps().stream()
-            .max(DiscogsDump::compareTo)
-            .orElseThrow();
+  void whenGetLatestCompleteDumpSet__ThenChecksumManifestContainsEveryFile() throws Exception {
+    List<DiscogsDump> latestCompleteDumpSet =
+        getLatestCompleteDumpSet(DiscogsDumpE2EFixture.getDumps());
+    DiscogsDump firstDump = latestCompleteDumpSet.getFirst();
 
-    assertThat(new DiscogsDumpVerifier().getChecksums(latestDump.getChecksumUrl()))
-        .containsKey(latestDump.getFileName());
+    assertThat(latestCompleteDumpSet)
+        .extracting(DiscogsDump::getChecksumUrl)
+        .containsOnly(firstDump.getChecksumUrl());
+    Map<String, String> checksums =
+        new DiscogsDumpVerifier().getChecksums(firstDump.getChecksumUrl());
+    String[] fileNames =
+        latestCompleteDumpSet.stream()
+            .map(DiscogsDump::getFileName)
+            .toArray(String[]::new);
+
+    assertThat(checksums).containsKeys(fileNames);
+  }
+
+  private List<DiscogsDump> getLatestCompleteDumpSet(List<DiscogsDump> dumps) throws Exception {
+    DumpSupplier dumpSupplier = mock(DumpSupplier.class);
+    when(dumpSupplier.get()).thenReturn(dumps);
+    MapDiscogsDumpRepository repository = new MapDiscogsDumpRepository(dumpSupplier);
+    repository.afterPropertiesSet();
+    return new DefaultDiscogsDumpService(repository, dumpSupplier).getLatestCompleteDumpSet();
   }
 }

@@ -7,12 +7,12 @@ import java.util.List;
 import java.util.Properties;
 import lombok.Getter;
 import lombok.Setter;
-import org.springframework.batch.core.JobParameters;
+import org.springframework.batch.core.job.parameters.JobParameters;
+import org.springframework.batch.core.job.parameters.JobParametersBuilder;
 import org.springframework.batch.core.converter.DefaultJobParametersConverter;
 import org.springframework.batch.core.converter.JobParametersConverter;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.boot.ApplicationArguments;
-import org.springframework.integration.support.PropertiesBuilder;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -42,7 +42,7 @@ public class DiscogsJobParametersConverter implements JobParametersConverter, In
    * @return parsed result.
    */
   public JobParameters getJobParameters(ApplicationArguments args) throws InvalidArgumentException {
-    PropertiesBuilder builder = new PropertiesBuilder();
+    JobParametersBuilder builder = new JobParametersBuilder();
 
     for (String optionName : args.getOptionNames()) { // option arguments for the beginning...
 
@@ -58,9 +58,7 @@ public class DiscogsJobParametersConverter implements JobParametersConverter, In
       // procedures to set appropriate type bracket
       optionName = argType.getGlobalName();
       Class<?> supportedType = ArgType.getTypeOf(optionName).getSupportedType();
-      optionName = appendTypeBracket(optionName, supportedType);
-      // conclusion
-      builder.put(optionName, options);
+      addParameter(builder, optionName, options, supportedType);
     }
     for (String nonOptionArg : args.getNonOptionArgs()) {
       // find the first index of the given delimiter.
@@ -94,13 +92,21 @@ public class DiscogsJobParametersConverter implements JobParametersConverter, In
       } else {
         value = nonOptionArg.substring(idx + 1); // parse value as usual (key=value) pair.
       }
-      // append bracket to the name of the argument.
-      name = appendTypeBracket(name, supportedType);
-      builder.put(name, value);
+      addParameter(builder, name, value, supportedType);
     }
 
-    // finalize the procedure by delegation.
-    return delegate.getJobParameters(builder.get());
+    return builder.toJobParameters();
+  }
+
+  private void addParameter(
+      JobParametersBuilder builder, String name, String value, Class<?> supportedType) {
+    if (supportedType.equals(Long.class)) {
+      builder.addLong(name, Long.valueOf(value));
+    } else if (supportedType.equals(Double.class)) {
+      builder.addDouble(name, Double.valueOf(value));
+    } else {
+      builder.addString(name, value);
+    }
   }
 
   /**

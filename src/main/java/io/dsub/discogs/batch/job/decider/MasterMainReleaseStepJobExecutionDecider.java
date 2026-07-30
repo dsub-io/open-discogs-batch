@@ -5,8 +5,8 @@ import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.ExitStatus;
-import org.springframework.batch.core.JobExecution;
-import org.springframework.batch.core.StepExecution;
+import org.springframework.batch.core.job.JobExecution;
+import org.springframework.batch.core.step.StepExecution;
 import org.springframework.batch.core.job.flow.FlowExecutionStatus;
 import org.springframework.batch.core.job.flow.JobExecutionDecider;
 
@@ -28,9 +28,9 @@ public class MasterMainReleaseStepJobExecutionDecider implements JobExecutionDec
       log.info("job execution marked as failed. " + SKIP_MSG);
     } else if (stepExecution.getExitStatus().equals(ExitStatus.FAILED)) {
       log.info("step execution marked as failed. " + SKIP_MSG);
-    } else if (!jobExecution.getJobParameters().getParameters().containsKey(MASTER)) {
+    } else if (jobExecution.getJobParameters().getParameter(MASTER) == null) {
       log.info("master eTag missing. " + SKIP_MSG);
-    } else if (!jobExecution.getJobParameters().getParameters().containsKey(RELEASE_ITEM)) {
+    } else if (jobExecution.getJobParameters().getParameter(RELEASE_ITEM) == null) {
       log.info("release item eTag missing. " + SKIP_MSG);
     } else if (idRegistry
         .getLongIdCache(DefaultEntityIdRegistry.Type.RELEASE)

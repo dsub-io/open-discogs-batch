@@ -16,7 +16,7 @@ import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
-import org.springframework.batch.core.ItemProcessListener;
+import org.springframework.batch.core.listener.ItemProcessListener;
 
 @RequiredArgsConstructor
 public class IdCachingItemProcessListener implements ItemProcessListener<Object, Object> {

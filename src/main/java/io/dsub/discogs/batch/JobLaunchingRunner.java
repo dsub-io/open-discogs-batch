@@ -3,10 +3,10 @@ package io.dsub.discogs.batch;
 import java.util.concurrent.CountDownLatch;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.batch.core.Job;
-import org.springframework.batch.core.JobExecution;
-import org.springframework.batch.core.JobParameters;
-import org.springframework.batch.core.launch.JobLauncher;
+import org.springframework.batch.core.job.Job;
+import org.springframework.batch.core.job.JobExecution;
+import org.springframework.batch.core.job.parameters.JobParameters;
+import org.springframework.batch.core.launch.JobOperator;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.ExitCodeGenerator;
@@ -25,13 +25,13 @@ public class JobLaunchingRunner implements ApplicationRunner {
 
   private final Job job;
   private final JobParameters discogsJobParameters;
-  private final JobLauncher jobLauncher;
+  private final JobOperator jobOperator;
   private final ConfigurableApplicationContext ctx;
   private final CountDownLatch countDownLatch;
 
   @Override
   public void run(ApplicationArguments args) throws Exception {
-    JobExecution jobExecution = jobLauncher.run(job, discogsJobParameters);
+    JobExecution jobExecution = jobOperator.start(job, discogsJobParameters);
     log.info("main thread started job execution. awaiting for completion...");
     countDownLatch.await();
     log.info("job execution completed. exiting...");

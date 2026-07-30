@@ -9,6 +9,7 @@ import org.jooq.DSLContext;
 import org.jooq.Field;
 import org.jooq.Query;
 import org.jooq.UpdatableRecord;
+import org.springframework.batch.infrastructure.item.Chunk;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -17,11 +18,11 @@ public class DefaultLJooqItemWriter<T extends UpdatableRecord<?>> extends Abstra
   private final DSLContext context;
 
   @Override
-  public void write(List<? extends T> items) {
+  public void write(Chunk<? extends T> items) {
     if (items.isEmpty()) {
       return;
     }
-    Query q = this.getQuery(items.get(0));
+    Query q = this.getQuery(items.getItems().getFirst());
     BatchBindStep batch = context.batch(q);
 
     items.forEach(record -> batch.bind(mapValues(record)));

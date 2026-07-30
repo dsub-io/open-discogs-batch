@@ -29,6 +29,7 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_HEAD_REF: ${{ github.head_ref }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           PUSH_BEFORE_SHA: ${{ github.event.before }}
@@ -51,6 +52,11 @@ jobs:
 
           if [[ "$EVENT_NAME" == "pull_request" ]]; then
             validate_subject "Pull request title" "$PR_TITLE" || failed=1
+            normalized_head_ref="${PR_HEAD_REF,,}"
+            if [[ "$normalized_head_ref" =~ ^(agent|codex|claude)(/|$) ]]; then
+              echo "::error::Forbidden pull request branch name: $PR_HEAD_REF"
+              failed=1
+            fi
             range="$PR_BASE_SHA..$PR_HEAD_SHA"
           elif [[ "$PUSH_BEFORE_SHA" != "0000000000000000000000000000000000000000" ]] &&
             git cat-file -e "$PUSH_BEFORE_SHA^{commit}" 2>/dev/null &&

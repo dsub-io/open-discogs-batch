@@ -7,6 +7,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.net.CookieManager;
+import java.net.CookiePolicy;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
@@ -93,7 +95,17 @@ public class DefaultDumpSupplier implements DumpSupplier {
   private static final long TEBIBYTE = GIBIBYTE * 1024L;
 
   private final HttpClient httpClient =
-      HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
+      HttpClient.newBuilder()
+          .connectTimeout(Duration.ofSeconds(5))
+          .followRedirects(HttpClient.Redirect.NORMAL)
+          .cookieHandler(createCookieManager())
+          .build();
+
+  private static CookieManager createCookieManager() {
+    CookieManager cookieManager = new CookieManager();
+    cookieManager.setCookiePolicy(CookiePolicy.ACCEPT_ORIGINAL_SERVER);
+    return cookieManager;
+  }
 
   /** Supplies every dump exposed by the year indexes at {@code data.discogs.com}. */
   @Override
@@ -182,7 +194,7 @@ public class DefaultDumpSupplier implements DumpSupplier {
                 uri,
                 parseDisplaySize(matcher.group(1), matcher.group(2)),
                 dumpDate,
-                new URL(new URL(DISCOGS_DATA_URL), matcher.group(3)),
+                URI.create(DISCOGS_DATA_URL).resolve(matcher.group(3)).toURL(),
                 checksumUrl));
       } catch (InvalidArgumentException | IllegalArgumentException | MalformedURLException e) {
         log.warn("skipping malformed Discogs dump entry {}", fileName, e);
@@ -206,7 +218,7 @@ public class DefaultDumpSupplier implements DumpSupplier {
         }
         checksumUrls.put(
             parseLastModifiedAt(fileName),
-            new URL(new URL(DISCOGS_DATA_URL), matcher.group(1)));
+            URI.create(DISCOGS_DATA_URL).resolve(matcher.group(1)).toURL());
       } catch (InvalidArgumentException | IllegalArgumentException | MalformedURLException e) {
         log.warn("skipping malformed Discogs checksum entry {}", fileName, e);
       }
@@ -303,7 +315,7 @@ public class DefaultDumpSupplier implements DumpSupplier {
         switch (node.getNodeName()) {
           case KEY -> {
             uri = content; // formatted as 'data/{year}/{file_name}'
-            url = new URL(LEGACY_BUCKET_URL + "/" + uri);
+            url = URI.create(LEGACY_BUCKET_URL + "/" + uri).toURL();
             type = getType(content);
             lastModified = parseLastModifiedAt(uri);
           }
@@ -311,7 +323,7 @@ public class DefaultDumpSupplier implements DumpSupplier {
           case SIZE -> size = getSize(node);
         }
       }
-    } catch (InvalidArgumentException | MalformedURLException e) { // anything goes wrong...
+    } catch (InvalidArgumentException | IllegalArgumentException | MalformedURLException e) {
       log.error("failed to parse DiscogsDump. reason: " + e.getMessage());
     }
     return new DiscogsDump(etag, type, uri, size, lastModified, url);

@@ -10,7 +10,7 @@ import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemRecord;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
-import org.springframework.batch.item.ItemProcessor;
+import org.springframework.batch.infrastructure.item.ItemProcessor;
 
 @RequiredArgsConstructor
 public class ReleaseItemCoreProcessor implements ItemProcessor<ReleaseItemXML, ReleaseItemRecord> {

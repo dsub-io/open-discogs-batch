@@ -19,22 +19,23 @@ import java.util.Collection;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jooq.UpdatableRecord;
-import org.springframework.batch.core.Step;
+import org.springframework.batch.core.step.Step;
 import org.springframework.batch.core.configuration.annotation.JobScope;
-import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
+import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.core.job.builder.FlowBuilder;
 import org.springframework.batch.core.job.flow.Flow;
 import org.springframework.batch.core.job.flow.FlowStep;
 import org.springframework.batch.core.job.flow.support.SimpleFlow;
 import org.springframework.batch.core.repository.JobRepository;
-import org.springframework.batch.item.ItemProcessor;
-import org.springframework.batch.item.ItemWriter;
-import org.springframework.batch.item.support.SynchronizedItemStreamReader;
+import org.springframework.batch.infrastructure.item.ItemProcessor;
+import org.springframework.batch.infrastructure.item.ItemWriter;
+import org.springframework.batch.infrastructure.item.support.SynchronizedItemStreamReader;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.dao.DeadlockLoserDataAccessException;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.transaction.PlatformTransactionManager;
 
 @Slf4j
 @Configuration
@@ -56,9 +57,9 @@ public class ArtistStepConfig extends AbstractStepConfig {
   private final ItemWriter<UpdatableRecord<?>> entityItemWriter;
   private final ItemWriter<Collection<UpdatableRecord<?>>> CollectionItemWriter;
   private final DiscogsDump artistDump;
-  private final StepBuilderFactory sbf;
   private final ThreadPoolTaskExecutor taskExecutor;
   private final JobRepository jobRepository;
+  private final PlatformTransactionManager transactionManager;
   private final FileUtil fileUtil;
   private final DiscogsDumpVerifier dumpVerifier;
 
@@ -108,8 +109,7 @@ public class ArtistStepConfig extends AbstractStepConfig {
             .build();
     // @formatter:on
 
-    FlowStep artistFlowStep = new FlowStep();
-    artistFlowStep.setJobRepository(jobRepository);
+    FlowStep artistFlowStep = new FlowStep(jobRepository);
     artistFlowStep.setName(ARTIST_FLOW_STEP);
     artistFlowStep.setStartLimit(Integer.MAX_VALUE);
     artistFlowStep.setFlow(artistStepFlow);
@@ -119,21 +119,21 @@ public class ArtistStepConfig extends AbstractStepConfig {
   @Bean
   @JobScope
   public Step artistCoreInsertionStep(@Value(CHUNK) Integer chunkSize) {
-    return sbf.get(ARTIST_CORE_INSERTION_STEP)
+    return new StepBuilder(ARTIST_CORE_INSERTION_STEP, jobRepository)
         .<ArtistXML, UpdatableRecord<?>>chunk(chunkSize)
+        .transactionManager(transactionManager)
         .reader(artistStreamReader)
         .processor(artistCoreProcessor)
         .writer(entityItemWriter)
         .faultTolerant()
         .retryLimit(100)
-        .retry(DeadlockLoserDataAccessException.class)
+        .retry(PessimisticLockingFailureException.class)
         .listener(stopWatchStepExecutionListener)
         .listener(stringNormalizingItemReadListener)
         .listener(idCachingItemProcessListener)
         .listener(itemCountingItemProcessListener)
         .listener(cacheInversionStepExecutionListener)
         .taskExecutor(taskExecutor)
-        .throttleLimit(taskExecutor.getMaxPoolSize())
         .allowStartIfComplete(true)
         .build();
   }
@@ -141,19 +141,19 @@ public class ArtistStepConfig extends AbstractStepConfig {
   @Bean
   @JobScope
   public Step artistSubItemsInsertionStep(@Value(CHUNK) Integer chunkSize) {
-    return sbf.get(ARTIST_SUB_ITEMS_INSERTION_STEP)
+    return new StepBuilder(ARTIST_SUB_ITEMS_INSERTION_STEP, jobRepository)
         .<ArtistSubItemsXML, Collection<UpdatableRecord<?>>>chunk(chunkSize)
+        .transactionManager(transactionManager)
         .reader(artistSubItemsStreamReader)
         .processor(artistSubItemsProcessor)
         .writer(CollectionItemWriter)
         .faultTolerant()
         .retryLimit(100)
-        .retry(DeadlockLoserDataAccessException.class)
+        .retry(PessimisticLockingFailureException.class)
         .listener(stringNormalizingItemReadListener)
         .listener(stopWatchStepExecutionListener)
         .listener(itemCountingItemProcessListener)
         .taskExecutor(taskExecutor)
-        .throttleLimit(taskExecutor.getMaxPoolSize())
         .allowStartIfComplete(true)
         .build();
   }
@@ -161,8 +161,9 @@ public class ArtistStepConfig extends AbstractStepConfig {
   @Bean
   @JobScope
   public Step artistFileFetchStep() throws DumpNotFoundException {
-    return sbf.get(ARTIST_FILE_FETCH_STEP)
-        .tasklet(new FileFetchTasklet(artistDump, fileUtil, dumpVerifier))
+    return new StepBuilder(ARTIST_FILE_FETCH_STEP, jobRepository)
+        .tasklet(
+            new FileFetchTasklet(artistDump, fileUtil, dumpVerifier), transactionManager)
         .build();
   }
 }

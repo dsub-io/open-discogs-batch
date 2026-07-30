@@ -12,6 +12,7 @@ import ch.qos.logback.classic.Level;
 import io.dsub.discogs.batch.LiquibaseConfig;
 import io.dsub.discogs.batch.TestDumpGenerator;
 import io.dsub.discogs.batch.config.BatchConfig;
+import io.dsub.discogs.batch.config.JooqConfig;
 import io.dsub.discogs.batch.dump.DiscogsDump;
 import io.dsub.discogs.batch.dump.EntityType;
 import io.dsub.discogs.batch.exception.FileException;
@@ -29,22 +30,18 @@ import javax.sql.DataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.springframework.batch.core.ExitStatus;
-import org.springframework.batch.core.JobExecution;
-import org.springframework.batch.core.JobParameters;
-import org.springframework.batch.core.JobParametersBuilder;
-import org.springframework.batch.core.launch.support.SimpleJobLauncher;
-import org.springframework.batch.core.repository.JobRepository;
-import org.springframework.batch.core.repository.support.JobRepositoryFactoryBean;
-import org.springframework.batch.test.JobLauncherTestUtils;
+import org.springframework.batch.core.job.JobExecution;
+import org.springframework.batch.core.job.parameters.JobParameters;
+import org.springframework.batch.core.job.parameters.JobParametersBuilder;
+import org.springframework.batch.core.launch.JobOperator;
+import org.springframework.batch.test.JobOperatorTestUtils;
 import org.springframework.batch.test.JobRepositoryTestUtils;
 import org.springframework.batch.test.context.SpringBatchTest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.transaction.PlatformTransactionManager;
 
 /**
  * Base, Abstract test class for tests based on each types. An inherited integration test for each
@@ -61,13 +58,17 @@ import org.springframework.transaction.PlatformTransactionManager;
     classes = {
         BatchConfig.class,
         BatchInfrastructureConfig.class,
+        JooqConfig.class,
         LiquibaseConfig.class,
         DiscogsJobIntegrationTestConfig.class
     })
 public abstract class DiscogsJobIntegrationTest {
 
   @Autowired
-  JobLauncherTestUtils jobLauncherTestUtils;
+  JobOperatorTestUtils jobOperatorTestUtils;
+
+  @Autowired
+  JobOperator jobOperator;
 
   @Autowired
   JobRepositoryTestUtils jobRepositoryTestUtils;
@@ -75,15 +76,11 @@ public abstract class DiscogsJobIntegrationTest {
   @Autowired
   FileUtil fileUtil;
   @Autowired
-  DataSource dataSource;
-  @Autowired
   Map<EntityType, File> dumpFiles;
   @Autowired
   CountDownLatch exitLatch;
   @RegisterExtension
   LogSpy logSpy = new LogSpy();
-  @Autowired
-  private PlatformTransactionManager transactionManager;
   @Autowired
   private Map<EntityType, DiscogsDump> dumpMap;
 
@@ -92,20 +89,6 @@ public abstract class DiscogsJobIntegrationTest {
     FileUtil fileUtil =
         SimpleFileUtil.builder().appDirectory("discogs-data-batch-test").isTemporary(false).build();
     fileUtil.clearAll();
-  }
-
-  @BeforeEach
-  void setUp() throws Exception {
-    JobRepositoryFactoryBean jobRepositoryFactoryBean = new JobRepositoryFactoryBean();
-    jobRepositoryFactoryBean.setDataSource(dataSource);
-    jobRepositoryFactoryBean.setTransactionManager(transactionManager);
-    jobRepositoryFactoryBean.afterPropertiesSet();
-    JobRepository jobRepository = jobRepositoryFactoryBean.getObject();
-    assertNotNull(jobRepository);
-    SimpleJobLauncher jobLauncher = new SimpleJobLauncher();
-    jobLauncher.setJobRepository(jobRepository);
-    jobLauncher.afterPropertiesSet();
-    jobLauncherTestUtils.setJobLauncher(jobLauncher);
   }
 
   @AfterEach
@@ -129,12 +112,12 @@ public abstract class DiscogsJobIntegrationTest {
   @Test
   void whenAllTypesProvided__ShouldNotSkipAnyType() throws Exception {
     JobParameters params =
-        jobLauncherTestUtils
+        jobOperatorTestUtils
             .getUniqueJobParametersBuilder()
             .addJobParameters(defaultJobParameters())
             .toJobParameters();
 
-    JobExecution jobExecution = jobLauncherTestUtils.launchJob(params);
+    JobExecution jobExecution = jobOperator.start(jobOperatorTestUtils.getJob(), params);
     ExitStatus exitStatus = jobExecution.getExitStatus();
 
     verify(exitLatch, times(1)).countDown();
@@ -155,12 +138,12 @@ public abstract class DiscogsJobIntegrationTest {
     builder.addString("label", "label");
     builder.addString("chunkSize", "1000");
     JobParameters params =
-        jobLauncherTestUtils
+        jobOperatorTestUtils
             .getUniqueJobParametersBuilder()
             .addJobParameters(builder.toJobParameters())
             .toJobParameters();
 
-    JobExecution jobExecution = jobLauncherTestUtils.launchJob(params);
+    JobExecution jobExecution = jobOperator.start(jobOperatorTestUtils.getJob(), params);
     ExitStatus exitStatus = jobExecution.getExitStatus();
 
     List<String> logs = logSpy.getLogsByExactLevelAsString(Level.INFO, true, "io.dsub.discogs");

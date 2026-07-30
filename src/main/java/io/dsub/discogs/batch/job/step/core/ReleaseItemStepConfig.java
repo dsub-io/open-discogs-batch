@@ -23,22 +23,23 @@ import java.util.Collection;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jooq.UpdatableRecord;
-import org.springframework.batch.core.Step;
+import org.springframework.batch.core.step.Step;
 import org.springframework.batch.core.configuration.annotation.JobScope;
-import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
+import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.core.job.builder.FlowBuilder;
 import org.springframework.batch.core.job.flow.Flow;
 import org.springframework.batch.core.job.flow.FlowStep;
 import org.springframework.batch.core.job.flow.support.SimpleFlow;
 import org.springframework.batch.core.repository.JobRepository;
-import org.springframework.batch.item.ItemProcessor;
-import org.springframework.batch.item.ItemWriter;
-import org.springframework.batch.item.support.SynchronizedItemStreamReader;
+import org.springframework.batch.infrastructure.item.ItemProcessor;
+import org.springframework.batch.infrastructure.item.ItemWriter;
+import org.springframework.batch.infrastructure.item.support.SynchronizedItemStreamReader;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.dao.DeadlockLoserDataAccessException;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.transaction.PlatformTransactionManager;
 
 @Slf4j
 @Configuration
@@ -71,9 +72,9 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
 
   private final DiscogsDump releaseItemDump;
 
-  private final StepBuilderFactory sbf;
   private final ThreadPoolTaskExecutor taskExecutor;
   private final JobRepository jobRepository;
+  private final PlatformTransactionManager transactionManager;
   private final FileUtil fileUtil;
   private final DiscogsDumpVerifier dumpVerifier;
   private final GenreStyleInsertionTasklet genreStyleInsertionTasklet;
@@ -148,8 +149,7 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
             .build();
     // @formatter:on
 
-    FlowStep artistFlowStep = new FlowStep();
-    artistFlowStep.setJobRepository(jobRepository);
+    FlowStep artistFlowStep = new FlowStep(jobRepository);
     artistFlowStep.setName(RELEASE_FLOW_STEP);
     artistFlowStep.setStartLimit(Integer.MAX_VALUE);
     artistFlowStep.setFlow(artistStepFlow);
@@ -159,70 +159,73 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
   @Bean
   @JobScope
   public Step releaseItemCoreInsertionStep(@Value(CHUNK) Integer chunkSize) {
-    return sbf.get(RELEASE_ITEM_CORE_INSERTION_STEP)
+    return new StepBuilder(RELEASE_ITEM_CORE_INSERTION_STEP, jobRepository)
         .<ReleaseItemXML, UpdatableRecord<?>>chunk(chunkSize)
+        .transactionManager(transactionManager)
         .reader(releaseItemStreamReader)
         .processor(releaseItemCoreProcessor)
         .writer(entityItemWriter)
         .faultTolerant()
         .retryLimit(100)
-        .retry(DeadlockLoserDataAccessException.class)
+        .retry(PessimisticLockingFailureException.class)
         .listener(stopWatchStepExecutionListener)
         .listener(stringNormalizingItemReadListener)
         .listener(itemCountingItemProcessListener)
         .listener(idCachingItemProcessListener)
         .listener(cacheInversionStepExecutionListener)
         .taskExecutor(taskExecutor)
-        .throttleLimit(taskExecutor.getMaxPoolSize())
         .build();
   }
 
   @Bean
   @JobScope
   public Step releaseItemSubItemsInsertionStep(@Value(CHUNK) Integer chunkSize) {
-    return sbf.get(RELEASE_ITEM_SUB_ITEMS_INSERTION_STEP)
+    return new StepBuilder(RELEASE_ITEM_SUB_ITEMS_INSERTION_STEP, jobRepository)
         .<ReleaseItemSubItemsXML, Collection<UpdatableRecord<?>>>chunk(
             Integer.divideUnsigned(chunkSize, 2)) // due to memory consumptions
+        .transactionManager(transactionManager)
         .reader(releaseItemSubItemsStreamReader)
         .processor(releaseItemSubItemsProcessor)
         .writer(collectionItemWriter)
         .faultTolerant()
         .retryLimit(100)
-        .retry(DeadlockLoserDataAccessException.class)
+        .retry(PessimisticLockingFailureException.class)
         .listener(stringNormalizingItemReadListener)
         .listener(stopWatchStepExecutionListener)
         .listener(itemCountingItemProcessListener)
         .taskExecutor(taskExecutor)
-        .throttleLimit(taskExecutor.getMaxPoolSize())
         .build();
   }
 
   @Bean
   @JobScope
   public Step releaseFileFetchStep() throws DumpNotFoundException {
-    return sbf.get(RELEASE_FILE_FETCH_STEP)
-        .tasklet(new FileFetchTasklet(releaseItemDump, fileUtil, dumpVerifier))
+    return new StepBuilder(RELEASE_FILE_FETCH_STEP, jobRepository)
+        .tasklet(
+            new FileFetchTasklet(releaseItemDump, fileUtil, dumpVerifier), transactionManager)
         .build();
   }
 
   @Bean
   @JobScope
   public Step masterMainReleaseUpdateStep(@Value(CHUNK) Integer chunkSize) {
-    return sbf.get(MASTER_MAIN_RELEASE_UPDATE_STEP)
+    return new StepBuilder(MASTER_MAIN_RELEASE_UPDATE_STEP, jobRepository)
         .<MasterMainReleaseXML, MasterRecord>chunk(chunkSize)
+        .transactionManager(transactionManager)
         .reader(masterMainReleaseStreamReader)
         .processor(masterMainReleaseItemProcessor)
         .writer(postgresJooqMasterMainReleaseItemWriter)
         .listener(stopWatchStepExecutionListener)
         .listener(itemCountingItemProcessListener)
         .taskExecutor(taskExecutor)
-        .throttleLimit(taskExecutor.getMaxPoolSize())
         .build();
   }
 
   @Bean
   @JobScope
   public Step releaseGenreStyleInsertionStep() {
-    return sbf.get(RELEASE_GENRE_STYLE_INSERTION_STEP).tasklet(genreStyleInsertionTasklet).build();
+    return new StepBuilder(RELEASE_GENRE_STYLE_INSERTION_STEP, jobRepository)
+        .tasklet(genreStyleInsertionTasklet, transactionManager)
+        .build();
   }
 }

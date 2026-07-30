@@ -4,8 +4,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.ExitStatus;
-import org.springframework.batch.core.StepExecution;
-import org.springframework.batch.core.StepExecutionListener;
+import org.springframework.batch.core.step.StepExecution;
+import org.springframework.batch.core.listener.StepExecutionListener;
 import org.springframework.util.NumberUtils;
 import org.springframework.util.StopWatch;
 
@@ -57,7 +57,7 @@ public class StopWatchStepExecutionListener implements StepExecutionListener {
 
     String timeTookSeconds = String.valueOf(seconds);
     String itemsProcPerSec = itemsPerSecond + "/s";
-    String taskName = getStopWatch().getLastTaskName();
+    String taskName = getStopWatch().lastTaskInfo().getTaskName();
 
     log.info(
         "task {} took {} seconds and updated {} items. processed items per second: {}",

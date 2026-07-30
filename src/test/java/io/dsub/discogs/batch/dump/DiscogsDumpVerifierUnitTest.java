@@ -28,7 +28,7 @@ class DiscogsDumpVerifierUnitTest {
   @Test
   void whenChecksumMatches__ThenFileIsValidAndManifestIsCached() throws Exception {
     Path file = Files.writeString(tempDir.resolve("discogs_20260701_releases.xml.gz"), CONTENT);
-    URL checksumUrl = new URL("https://example.test/discogs_20260701_CHECKSUM.txt");
+    URL checksumUrl = URI.create("https://example.test/discogs_20260701_CHECKSUM.txt").toURL();
     URI checksumUri = checksumUrl.toURI();
     DiscogsDump dump = dump(file, checksumUrl);
     DiscogsDumpVerifier verifier = spy(new DiscogsDumpVerifier());
@@ -44,7 +44,7 @@ class DiscogsDumpVerifierUnitTest {
   @Test
   void whenChecksumDoesNotMatch__ThenFileIsInvalid() throws Exception {
     Path file = Files.writeString(tempDir.resolve("discogs_20260701_releases.xml.gz"), CONTENT);
-    URL checksumUrl = new URL("https://example.test/discogs_20260701_CHECKSUM.txt");
+    URL checksumUrl = URI.create("https://example.test/discogs_20260701_CHECKSUM.txt").toURL();
     DiscogsDump dump = dump(file, checksumUrl);
     DiscogsDumpVerifier verifier = spy(new DiscogsDumpVerifier());
     doReturn("0".repeat(64) + " *" + file.getFileName())
@@ -71,7 +71,7 @@ class DiscogsDumpVerifierUnitTest {
   @Test
   void whenManifestDoesNotContainDump__ThenVerificationFails() throws Exception {
     Path file = Files.writeString(tempDir.resolve("discogs_20260701_releases.xml.gz"), CONTENT);
-    URL checksumUrl = new URL("https://example.test/discogs_20260701_CHECKSUM.txt");
+    URL checksumUrl = URI.create("https://example.test/discogs_20260701_CHECKSUM.txt").toURL();
     DiscogsDumpVerifier verifier = spy(new DiscogsDumpVerifier());
     doReturn(SHA_256 + "  discogs_20260701_artists.xml.gz")
         .when(verifier)
@@ -85,7 +85,7 @@ class DiscogsDumpVerifierUnitTest {
   @Test
   void whenManifestHasNoValidEntries__ThenVerificationFails() throws Exception {
     Path file = Files.writeString(tempDir.resolve("discogs_20260701_releases.xml.gz"), CONTENT);
-    URL checksumUrl = new URL("https://example.test/discogs_20260701_CHECKSUM.txt");
+    URL checksumUrl = URI.create("https://example.test/discogs_20260701_CHECKSUM.txt").toURL();
     DiscogsDumpVerifier verifier = spy(new DiscogsDumpVerifier());
     doReturn("not a checksum").when(verifier).getChecksumSource(checksumUrl.toURI());
 

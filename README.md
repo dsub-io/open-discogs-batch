@@ -37,16 +37,26 @@ The current schema is documented in the
 
 ## Requirements
 
-- JDK 16
+- JDK 21
 - A reachable PostgreSQL database
 - Network access to `data.discogs.com`
 - Docker for the Testcontainers-based integration tests
+
+The repository includes an `.sdkmanrc` pinned to Temurin 21.0.11. With SDKMAN
+installed, activate it with:
+
+```bash
+sdk env
+```
+
+The Gradle wrapper uses Gradle 9.6.1. The application is built on Spring Boot
+4.1 and Spring Batch 6.
 
 Dependencies resolve from Maven Central. The generated schema library is
 published as:
 
 ```text
-io.dsub.opendiscogs:open-discogs-jooq:0.0.4
+io.dsub.opendiscogs:open-discogs-jooq:0.0.5
 ```
 
 No GitHub token is required to build or run this project.
@@ -74,9 +84,11 @@ suite and can be run explicitly:
 ./gradlew e2eTest
 ```
 
-The same E2E suite runs weekly, can be started manually, and runs on a pull
-request when the `e2e` label is present. It is intentionally not a required
-pull-request check because it depends on an external service.
+The same E2E suite runs on every pull request, weekly, and on manual dispatch.
+It runs on a GitHub-hosted Ubuntu runner and is a required pull-request check.
+The test makes one root-index request, one latest-year-index request, and one
+checksum request. It fails with the upstream HTTP error when Discogs cannot be
+reached or returns no usable complete dump set.
 
 Executable test classes use one of three suffixes:
 
@@ -85,8 +97,8 @@ Executable test classes use one of three suffixes:
 - `*E2ETest` for opt-in end-to-end checks against external services.
 
 The build rejects other executable test class names. Pull requests must pass
-the deterministic suite and maintain at least 85% line coverage and 40% branch
-coverage.
+the deterministic suite, the live Discogs E2E suite, and maintain at least 85%
+line coverage and 40% branch coverage.
 
 The executable is written to:
 
@@ -156,4 +168,5 @@ docs: clarify PostgreSQL setup
 
 Allowed types are `build`, `chore`, `ci`, `docs`, `feat`, `fix`, `perf`,
 `refactor`, `revert`, `style`, and `test`. GitHub Actions rejects pull requests
-and new commits that do not follow this format.
+and new commits that do not follow this format. Pull-request branches must also
+not use the reserved `agent/`, `codex/`, or `claude/` prefixes.

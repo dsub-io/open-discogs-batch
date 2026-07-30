@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
 import javax.sql.DataSource;
@@ -19,7 +20,7 @@ import javax.sql.DataSource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jline.utils.InputStreamReader;
-import org.springframework.batch.core.JobParameters;
+import org.springframework.batch.core.job.parameters.JobParameters;
 import org.springframework.batch.core.converter.JobParametersConverter;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -62,6 +63,7 @@ public class JobPreparationRunner implements ApplicationRunner {
       throws InvalidArgumentException, DumpNotFoundException {
     log.info("resolving given job parameters");
     Properties props = jobParameterResolver.resolve(args);
+    props.put("run.id", UUID.randomUUID().toString());
     return jobParametersConverter.getJobParameters(props);
   }
 }

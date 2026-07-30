@@ -13,10 +13,10 @@ import lombok.extern.slf4j.Slf4j;
 import me.tongfei.progressbar.ProgressBar;
 import me.tongfei.progressbar.wrapped.ProgressBarWrappedInputStream;
 import org.springframework.batch.core.ExitStatus;
-import org.springframework.batch.core.StepContribution;
+import org.springframework.batch.core.step.StepContribution;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.tasklet.Tasklet;
-import org.springframework.batch.repeat.RepeatStatus;
+import org.springframework.batch.infrastructure.repeat.RepeatStatus;
 
 /**
  * A basic implementation of {@link Tasklet} to perform file fetch. If a file exists, it verifies

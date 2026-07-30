@@ -4,7 +4,7 @@ import java.util.Collection;
 import java.util.concurrent.atomic.AtomicLong;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.batch.core.ItemProcessListener;
+import org.springframework.batch.core.listener.ItemProcessListener;
 
 @Slf4j
 @RequiredArgsConstructor

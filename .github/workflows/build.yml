@@ -27,7 +27,7 @@ jobs:
       - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5
         with:
           distribution: temurin
-          java-version: 16
+          java-version: 21
           cache: gradle
-      - name: Run deterministic tests and coverage gate
-        run: ./gradlew clean check --no-daemon
+      - name: Build, test, and enforce coverage
+        run: ./gradlew clean build --no-daemon --warning-mode=fail

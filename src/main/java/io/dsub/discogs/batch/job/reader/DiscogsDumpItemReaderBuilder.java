@@ -4,7 +4,7 @@ import io.dsub.discogs.batch.dump.DiscogsDump;
 import io.dsub.discogs.batch.util.FileUtil;
 import java.nio.file.Path;
 import lombok.RequiredArgsConstructor;
-import org.springframework.batch.item.support.SynchronizedItemStreamReader;
+import org.springframework.batch.infrastructure.item.support.SynchronizedItemStreamReader;
 import org.springframework.util.Assert;
 
 /**
@@ -27,9 +27,6 @@ public class DiscogsDumpItemReaderBuilder {
         new ProgressBarStaxEventItemReader<>(mappedClass, filePath, dump.getType().toString());
     delegate.afterPropertiesSet();
 
-    SynchronizedItemStreamReader<T> reader = new SynchronizedItemStreamReader<>();
-    reader.setDelegate(delegate);
-    reader.afterPropertiesSet(); // this won't trigger that of delegate's.
-    return reader;
+    return new SynchronizedItemStreamReader<>(delegate);
   }
 }

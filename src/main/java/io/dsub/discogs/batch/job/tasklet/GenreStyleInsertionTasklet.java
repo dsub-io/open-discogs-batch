@@ -8,11 +8,12 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.jooq.UpdatableRecord;
 import org.springframework.batch.core.ExitStatus;
-import org.springframework.batch.core.StepContribution;
+import org.springframework.batch.core.step.StepContribution;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.tasklet.Tasklet;
-import org.springframework.batch.item.ItemWriter;
-import org.springframework.batch.repeat.RepeatStatus;
+import org.springframework.batch.infrastructure.item.Chunk;
+import org.springframework.batch.infrastructure.item.ItemWriter;
+import org.springframework.batch.infrastructure.repeat.RepeatStatus;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -27,13 +28,15 @@ public class GenreStyleInsertionTasklet implements Tasklet {
       throws Exception {
     contribution.setExitStatus(ExitStatus.EXECUTING);
     jooqItemWriter.write(
-        registry.getStringIdSetByType(DefaultEntityIdRegistry.Type.GENRE).stream()
-            .map(genre -> new GenreRecord().setName(genre))
-            .collect(Collectors.toList()));
+        new Chunk<>(
+            registry.getStringIdSetByType(DefaultEntityIdRegistry.Type.GENRE).stream()
+                .map(genre -> new GenreRecord().setName(genre))
+                .collect(Collectors.toList())));
     jooqItemWriter.write(
-        registry.getStringIdSetByType(DefaultEntityIdRegistry.Type.STYLE).stream()
-            .map(style -> new StyleRecord().setName(style))
-            .collect(Collectors.toList()));
+        new Chunk<>(
+            registry.getStringIdSetByType(DefaultEntityIdRegistry.Type.STYLE).stream()
+                .map(style -> new StyleRecord().setName(style))
+                .collect(Collectors.toList())));
     contribution.setExitStatus(ExitStatus.COMPLETED);
     chunkContext.setComplete();
     return RepeatStatus.FINISHED;
