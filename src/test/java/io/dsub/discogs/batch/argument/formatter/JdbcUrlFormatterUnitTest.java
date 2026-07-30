@@ -9,7 +9,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-public class JdbcUrlFormatterTest {
+public class JdbcUrlFormatterUnitTest {
 
   JdbcUrlFormatter formatter = new JdbcUrlFormatter();
 

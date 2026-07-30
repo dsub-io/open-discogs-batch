@@ -6,13 +6,5 @@ spring:
   batch:
     job:
       enabled: false
-  jpa:
-    properties:
-      hibernate:
-        jdbc:
-          # JPA_HIBERNATE_BATCH_PROPS
-          batch_size: 30 # GREATER THAN 0
-          order_inserts: true # IMPROVES RELATIONAL INSERT
-          order_updates: true # IMPROVES UPDATE RELATIONAL ENTITIES
   main:
     banner-mode: OFF

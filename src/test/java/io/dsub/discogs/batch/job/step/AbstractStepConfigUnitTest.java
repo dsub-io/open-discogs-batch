@@ -22,7 +22,7 @@ import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.job.flow.FlowExecutionStatus;
 import org.springframework.batch.core.job.flow.JobExecutionDecider;
 
-class AbstractStepConfigTest {
+class AbstractStepConfigUnitTest {
 
   AbstractStepConfig stepConfig;
 

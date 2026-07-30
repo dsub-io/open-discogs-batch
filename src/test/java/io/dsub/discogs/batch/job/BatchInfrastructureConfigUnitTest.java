@@ -18,7 +18,7 @@ import org.springframework.boot.DefaultApplicationArguments;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
-public class BatchInfrastructureConfigTest {
+public class BatchInfrastructureConfigUnitTest {
 
   ApplicationContextRunner ctx;
 

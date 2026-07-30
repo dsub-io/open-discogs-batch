@@ -34,20 +34,27 @@ import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-class SimpleFileUtilTest {
+class SimpleFileUtilUnitTest {
 
   SimpleFileUtil fileUtil;
 
   @RegisterExtension
   LogSpy logSpy = new LogSpy();
 
+  @TempDir
+  Path tempDirectory;
+
+  String previousUserHome;
+
   @BeforeEach
   void prepare() {
+    previousUserHome = System.getProperty("user.home");
+    System.setProperty("user.home", tempDirectory.toString());
     fileUtil = spy(SimpleFileUtil.builder().appDirectory(RandomString.make()).build());
   }
 
@@ -76,6 +83,13 @@ class SimpleFileUtilTest {
       fail(e);
     } catch (NullPointerException e) {
       return;
+    } finally {
+      if (previousUserHome == null) {
+        System.clearProperty("user.home");
+      } else {
+        System.setProperty("user.home", previousUserHome);
+      }
+      fileUtil = null;
     }
   }
 
@@ -262,9 +276,7 @@ class SimpleFileUtilTest {
   }
 
   File getTemporaryFile(byte[] bytes) throws IOException {
-    TemporaryFolder folder = new TemporaryFolder();
-    folder.create();
-    File file = folder.newFile();
+    File file = Files.createTempFile(tempDirectory, "source-", ".tmp").toFile();
     if (bytes == null) {
       return file;
     }

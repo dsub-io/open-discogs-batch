@@ -26,7 +26,7 @@ import org.springframework.batch.item.ExecutionContext;
 import org.springframework.batch.item.ItemStreamException;
 import org.springframework.batch.item.xml.StaxEventItemReader;
 
-class ProgressBarStaxEventItemReaderTest {
+class ProgressBarStaxEventItemReaderUnitTest {
 
   private final PrintStream stdout = System.out;
   private ByteArrayOutputStream outCaptor;

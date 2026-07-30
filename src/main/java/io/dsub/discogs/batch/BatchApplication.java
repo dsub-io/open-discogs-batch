@@ -2,12 +2,11 @@ package io.dsub.discogs.batch;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 
 @Slf4j
-@SpringBootApplication(exclude = {HibernateJpaAutoConfiguration.class})
+@SpringBootApplication
 public class BatchApplication {
 
   private static ConfigurableApplicationContext APP_CONTEXT;

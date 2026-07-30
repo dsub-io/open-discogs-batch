@@ -36,7 +36,7 @@ import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.repeat.RepeatStatus;
 
 @Slf4j
-class FileFetchTaskletTest {
+class FileFetchTaskletUnitTest {
 
   @Mock
   ChunkContext chunkContext;

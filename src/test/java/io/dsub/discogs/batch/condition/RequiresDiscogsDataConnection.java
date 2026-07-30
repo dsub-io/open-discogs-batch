@@ -21,6 +21,8 @@ public class RequiresDiscogsDataConnection implements ExecutionCondition {
     try {
       final URL url = new URL(DISCOGS_DATA_URL);
       final URLConnection conn = url.openConnection();
+      conn.setConnectTimeout(5000);
+      conn.setReadTimeout(5000);
       conn.connect();
       in = conn.getInputStream();
     } catch (MalformedURLException e) {

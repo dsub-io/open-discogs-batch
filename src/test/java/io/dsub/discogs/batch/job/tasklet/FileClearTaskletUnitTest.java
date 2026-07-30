@@ -21,7 +21,7 @@ import org.springframework.batch.core.StepExecution;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.scope.context.StepContext;
 
-class FileClearTaskletTest {
+class FileClearTaskletUnitTest {
 
   final StepExecution stepExecution = new StepExecution("step", new JobExecution(1L));
   final ChunkContext chunkContext = new ChunkContext(new StepContext(stepExecution));

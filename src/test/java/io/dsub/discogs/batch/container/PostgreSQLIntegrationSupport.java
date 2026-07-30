@@ -7,13 +7,13 @@ import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.testcontainers.containers.PostgreSQLContainer;
 
-public abstract class PostgreSQLContainerBaseTest {
+public abstract class PostgreSQLIntegrationSupport {
 
   protected static final PostgreSQLContainer CONTAINER;
   protected static final DataSource dataSource;
 
   static {
-    CONTAINER = new PostgreSQLContainer("postgres:latest")
+    CONTAINER = new PostgreSQLContainer("postgres:16.13-alpine")
         .withDatabaseName("databaseName")
         .withPassword("password")
         .withUsername("username");
