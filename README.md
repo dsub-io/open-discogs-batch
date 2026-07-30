@@ -1,153 +1,124 @@
-# Discogs Batch
+# OpenDiscogs Batch
 
-[![codecov](https://codecov.io/gh/state303/discogs-batch/branch/master/graph/badge.svg?token=REMOVED_CODECOV_TOKEN)](https://codecov.io/gh/state303/discogs-batch)
-[![Build Status](https://www.travis-ci.com/state303/discogs-batch.svg?branch=master)](https://www.travis-ci.com/state303/discogs-batch)
+OpenDiscogs Batch imports the public monthly data dumps from
+[data.discogs.com](https://data.discogs.com) into PostgreSQL. It uses Spring
+Batch for orchestration, Liquibase for schema setup, and jOOQ for database
+writes.
 
+This is an independent DSUB project. It is not affiliated with or endorsed by
+Discogs. The Discogs name is used only to identify the public data source.
 
-### ANNOUNCEMENT ⛑
-It has been 4 years passed and yet I am too occupied.
-All PRs are welcome, and I hope I will revisit this repository very soon.
+## What it does
 
-If there's any issue, or some enhancements or flavours to be present in this software, raise an issue :)
+- Downloads a selected dump, or resolves the most recent available dump.
+- Creates and updates the PostgreSQL schema through Liquibase.
+- Imports artist, label, master, and release data in dependency order.
+- Uses idempotent writes so a dump can be processed again.
+- Can retain downloaded dump files when `mount` is enabled.
 
-Updated ERD: [Click Here](https://dbdocs.io/state303/OpenDiscogs)
-
-### ABOUT THIS PROJECT
-
-The aim of the project is to replicate the entire dump data set given
-from [data.discogs.com](https://data.discogs.com).
-
-In summary, the batch operates as following:
-
-    - Currently only supports postgresql for higher stability and maintainability
-    - One shot process with validations before firing jobs
-    - Idempotent actions; may run several times for same source without issue
-    - Supports dockerize, docker run with predefined batch commands
-
-### Built With
-
-[Spring-Batch](https://spring.io/projects/spring-batch)
-
-[Liquibase](https://www.liquibase.org)
-
-[JOOQ](https://www.jooq.org)
-
-[ProgressBar](https://github.com/ctongfei/progressbar)
-
-## Batch Commands
-
-Commands will be accepted regardless of -- mark <b>ONLY IF</b> gets arguments directly from jar
-file. Also, there is no impact from giving arguments in certain order. However, it will NOT accept
-any duplicated arguments.
-
-i.e. --m will work, as well as -m, m will.
-
-Brief summary for the commands are as below...
-
-|    NAME    | SYNONYM  |      REQUIRED         | MIN | MAX | FORMAT    | DEFAULT |  NOTE |
-|------------|----------|-----------------------|-----|-----|-----------|---------|-------|
-| username   | user, u  | :heavy_check_mark:    | 1   | 1   | STRING    | NULL                                |
-| password   | pass, p  | :heavy_check_mark:    | 1   | 1   | STRING    | NULL                                |
-| url        |          | :heavy_check_mark:    | 1   | 1   | addr:port | jdbc:postgresql://localhost:5432/discogs |
-| type       | t        | :black_square_button: | 1   | 4   | a,b,...   | ARTIST, MEMBER, LABEL, RELEASE_ITEM                     |
-| chunk_size | chunk, c | :black_square_button: | 1   | 1   | 0 < N     | 3000    |
-| core_count | core     | :black_square_button: | 1   | 1   | 0 < N     | 80% of core from runtime |
-| year       | y        | :black_square_button: | 1   | 1   | yyyy      | CURRENT | this or year_month.
-| year_month | ym       | :black_square_button: | 1   | 1   | yyyy-mm   | CURRENT | this or year.
-| etag       | e        | :black_square_button: | 1   | 4   | a,b,...   | MOST_RECENT | overrides type, date.
-| mount      | m        | :black_square_button: | 0   | 0   | NONE      | -       | keep dump file
-| strict     | s        | :black_square_button: | 0   | 0   | NONE      | -       | only perform specified type or ETag
-
-### Required Arguments
-
-It is important to note that there are three required arguments.
-
-##### username
-
-Username of the target database server. This will automatically be encoded to UTF-8. The user must
-have sufficient permissions to create and modify the given schema or database.
-
-##### password
-
-Password for the username given. This will automatically be encoded to UTF-8.
-
-##### url
-
-URL for the target database. The expected releaseFormat for the url would be...
+The current entity order is:
 
 ```text
---url=jdbc://postgresql://{server_address}:{port}/{target_database}
+artist -> label -> master -> release
 ```
 
-If you prefer to use specific database, please make sure to set it to the db prior to run batch,
-otherwise the process will fail with messages.
+Selecting `master` also selects artist and label dependencies. Selecting
+`release` selects all four entity types unless `strict` is enabled.
 
-if target_database is missing, will be set to discogs as default.
+The current schema is documented in the
+[OpenDiscogs ERD](https://dbdocs.io/state303/OpenDiscogs).
 
-It is important to note that if given schema or database is empty, this batch will automatically
-create tables via liquibase and sql.
+## Requirements
 
-### Year, Year Month, Type and ETag.
+- JDK 16
+- A reachable PostgreSQL database
+- Network access to `data.discogs.com`
+- Docker for the Testcontainers-based integration tests
 
-First and foremost, by specifying the ETag, any arguments given for year, year-month, type will be
-ignored. This is intended behavior as each dump relies on other dump types in specified year and
-month.
-
-Other than ETag, it is important to note that providing both year and year-month at the same time is
-not supported.
-
-Finally, types cannot be duplicated.
-
-If you specify a year and a type for example, batch will automatically fetch and process the target
-dump INCLUDING the dependant dump.
-
-### Dependencies
-
-Dump dependency for other type are can be described as following:
-
-|    TYPE   |       REQUIRES        |
-|-----------|-----------------------|
-| ARTIST    | -                     |
-| LABEL     | -                     |
-| MASTER    | ARTIST, LABEL         |
-| RELEASE   | ARTIST, LABEL, MASTER |
-
-The job will always be executed by order as following:
+Dependencies resolve from Maven Central. The generated schema library is
+published as:
 
 ```text
-ARTIST > LABEL > MASTER > RELEASE
+io.dsub.opendiscogs:open-discogs-jooq:0.0.4
 ```
 
-If you run the batch with following arguments:
-> url=[?] user=[?] pass=[?] year-month=2021-3 type=release
+No GitHub token is required to build or run this project.
 
-Batch will be executed with artist, label, master, release dumps from 2021, March.
+## Build and test
 
-If you do not specify any options, but simply call the batch by username, password and url, then
-batch will be executed with most recent artist, label, master, release dumps.
+Build the executable JAR:
 
-### Mount and Strict
+```bash
+./gradlew clean assemble
+```
 
-##### Mount
+Run the complete test suite:
 
-If mount option is specified, the downloaded file from the discogs data will not be removed. This
-maybe useful if you need to keep the downloaded dump.
+```bash
+./gradlew clean test
+```
 
-##### Strict
+Some integration tests start PostgreSQL through Testcontainers, and some
+exercise the live dump index at `data.discogs.com`. They therefore require
+Docker and external network access.
 
-This option will not resolve any dependency, but to simply execute with given etag or type.
+The executable is written to:
 
-### Concurrency
+```text
+build/libs/discogs-batch-0.1.8.jar
+```
 
-The application will automatically resolve the current core size of running system (currently 80%).
-If core count argument will override the default setting, and validate the value accordingly.
+## Run
 
-The core count cannot exceed 80% of full core size of given machine, thus setting the value above
-will simply be ignored.
+The database URL, username, and password are required. For example:
 
-Also, setting core count as negative value will also ignore the setting, which will simply set the
-core count to default(80%).
+```bash
+java -jar build/libs/discogs-batch-0.1.8.jar \
+  --url=jdbc:postgresql://localhost:5432/discogs \
+  --username=<database-user> \
+  --password=<database-password> \
+  --yearMonth=2021-03 \
+  --type=release
+```
 
-### Chunk Size
+Options may be written with `--`, `-`, or no leading hyphen. Comma-separated
+values are expanded into individual option values.
 
-The default chunk-size is 500, however, in average environment, I would recommend to set to 100~200. This is totally up to the I/O spec and postgres settings of the running client and database server, so feel free to experiment with it.
+| Option | Aliases | Required | Purpose |
+| --- | --- | --- | --- |
+| `url` | — | yes | PostgreSQL JDBC URL |
+| `username` | `user`, `u` | yes | Database user |
+| `password` | `pass`, `p` | yes | Database password |
+| `type` | `t` | no | `artist`, `label`, `master`, or `release` |
+| `year` | `y` | no | Dump year |
+| `yearMonth` | `ym` | no | Dump month in `yyyy-MM` form |
+| `eTag` | `e` | no | Exact dump ETag; overrides year, month, and type selection |
+| `chunkSize` | `chunk`, `c` | no | Spring Batch chunk size; defaults to `500` |
+| `coreCount` | `core` | no | Worker count; defaults to 80% of physical cores |
+| `mount` | `m` | no | Keep downloaded dump files |
+| `strict` | `s` | no | Do not add entity dependencies |
+| `driverClassName` | `driverclassname`, `driver_class_name` | no | JDBC driver override; normally inferred |
+
+Do not provide both `year` and `yearMonth`. When none of `eTag`, `year`,
+`yearMonth`, or `type` is supplied, the most recent complete set of dumps is
+selected.
+
+The application currently receives the database password as a process
+argument. On a shared host, command-line arguments may be visible to other
+users, so run it in an appropriately isolated environment and never commit
+real credentials to scripts or configuration files.
+
+## Contributing
+
+Pull request titles and commit subjects must follow
+[Conventional Commits](https://www.conventionalcommits.org/), for example:
+
+```text
+feat: add resumable dump downloads
+fix(parser): handle an empty release identifier
+docs: clarify PostgreSQL setup
+```
+
+Allowed types are `build`, `chore`, `ci`, `docs`, `feat`, `fix`, `perf`,
+`refactor`, `revert`, `style`, and `test`. GitHub Actions rejects pull requests
+and new commits that do not follow this format.

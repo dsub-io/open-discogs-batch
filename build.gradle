@@ -85,7 +85,7 @@ test {
     useJUnitPlatform()
 }
 
-// codecov
+// coverage
 check.dependsOn jacocoTestReport
 
 jacocoTestReport {
