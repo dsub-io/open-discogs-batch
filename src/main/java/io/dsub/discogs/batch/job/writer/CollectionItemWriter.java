@@ -7,7 +7,8 @@ import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.batch.item.ItemWriter;
+import org.springframework.batch.infrastructure.item.Chunk;
+import org.springframework.batch.infrastructure.item.ItemWriter;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -16,7 +17,7 @@ public class CollectionItemWriter<T> implements ItemWriter<Collection<T>> {
   private final ItemWriter<T> delegate;
 
   @Override
-  public void write(List<? extends Collection<T>> items) throws Exception {
+  public void write(Chunk<? extends Collection<T>> items) throws Exception {
     Map<Class<?>, List<T>> consolidatedMap = new HashMap<>();
 
     for (Collection<? extends T> subItems : items) {
@@ -30,7 +31,7 @@ public class CollectionItemWriter<T> implements ItemWriter<Collection<T>> {
     }
 
     for (List<T> subItems : consolidatedMap.values()) {
-      delegate.write(subItems);
+      delegate.write(new Chunk<>(subItems));
       subItems.clear();
     }
   }

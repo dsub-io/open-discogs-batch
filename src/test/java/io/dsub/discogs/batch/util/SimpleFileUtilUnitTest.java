@@ -12,6 +12,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
 import io.dsub.discogs.batch.exception.FileDeleteException;
 import io.dsub.discogs.batch.exception.FileException;
 import io.dsub.discogs.batch.testutil.LogSpy;
@@ -37,6 +38,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
+import org.slf4j.LoggerFactory;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class SimpleFileUtilUnitTest {
@@ -50,11 +52,15 @@ class SimpleFileUtilUnitTest {
   Path tempDirectory;
 
   String previousUserHome;
+  Level previousLogLevel;
 
   @BeforeEach
   void prepare() {
     previousUserHome = System.getProperty("user.home");
     System.setProperty("user.home", tempDirectory.toString());
+    Logger logger = (Logger) LoggerFactory.getLogger(SimpleFileUtil.class);
+    previousLogLevel = logger.getLevel();
+    logger.setLevel(Level.DEBUG);
     fileUtil = spy(SimpleFileUtil.builder().appDirectory(RandomString.make()).build());
   }
 
@@ -89,6 +95,7 @@ class SimpleFileUtilUnitTest {
       } else {
         System.setProperty("user.home", previousUserHome);
       }
+      ((Logger) LoggerFactory.getLogger(SimpleFileUtil.class)).setLevel(previousLogLevel);
       fileUtil = null;
     }
   }
@@ -120,6 +127,9 @@ class SimpleFileUtilUnitTest {
 
   @Test
   void givenAppDirectoryDoesNotExists__WhenClearCalled__ShouldLogMessage() throws FileException {
+    fileUtil.clearAll();
+    logSpy.clear();
+
     // when
     fileUtil.clearAll();
 

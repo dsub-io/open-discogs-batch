@@ -9,10 +9,14 @@ import io.dsub.discogs.batch.exception.InitializationFailureException;
 import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import java.time.Clock;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.Collection;
+import java.util.EnumMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
@@ -107,16 +111,15 @@ public class DefaultDiscogsDumpService implements DiscogsDumpService, Initializi
   public DiscogsDump getMostRecentDiscogsDumpByTypeYearMonth(EntityType type, int year, int month) {
     LocalDate start = LocalDate.of(year, month, 1);
     return repository.findTopByTypeAndLastModifiedAtBetween(
-        type, start, start.plusMonths(1).minusDays(1));
+        type, start, start.plusMonths(1));
   }
 
   /**
    * Fetches collection of {@link DiscogsDump} from given type, year and month. The types must be
-   * unique and each types of given year and month must be present in db (otherwise throws)
+   * unique and each type must be present for the same dump date (otherwise throws).
    *
-   * <p>It is important to note that if there is more than one match for given type, year and
-   * month,
-   * it will only return the most recent one among them.
+   * <p>If a month contains multiple releases, this returns the newest date that has a coherent set
+   * of all requested types. It never combines files from different dump dates.
    *
    * @param types target {@link EntityType}(s). throws {@link InvalidArgumentException} if null or
    *              blank.
@@ -129,27 +132,37 @@ public class DefaultDiscogsDumpService implements DiscogsDumpService, Initializi
   @Override
   public Collection<DiscogsDump> getAllByTypeYearMonth(List<EntityType> types, int year, int month)
       throws DumpNotFoundException {
-    List<DiscogsDump> dumpList = new ArrayList<>();
-    for (EntityType type : types.stream().distinct().collect(Collectors.toList())) {
-      LocalDate targetDate = LocalDate.of(year, month, 1);
-      DiscogsDump dump =
-          repository.findTopByTypeAndLastModifiedAtBetween(
-              type, targetDate, targetDate.plusMonths(1).minusDays(1));
-      if (dump == null) {
-
-        LocalDate now = LocalDate.now();
-
-        if (now.getYear() == year && now.getMonthValue() == month) {
-          throw new DumpNotFoundException(
-              "dump for current month seems to be missing from distribution.");
-        }
-
-        throw new DumpNotFoundException(
-            "dump of type " + type + " from " + year + "-" + month + " not found");
-      }
-      dumpList.add(dump);
+    Set<EntityType> requiredTypes = new LinkedHashSet<>(types);
+    LocalDate targetDate = LocalDate.of(year, month, 1);
+    List<DiscogsDump> dumpList =
+        findLatestCoherentSet(requiredTypes, targetDate, targetDate.plusMonths(1));
+    if (!dumpList.isEmpty()) {
+      return dumpList;
     }
-    return dumpList;
+
+    LocalDate now = LocalDate.now();
+    if (now.getYear() == year && now.getMonthValue() == month) {
+      throw new DumpNotFoundException(
+          "dump for current month seems to be missing from distribution.");
+    }
+    if (requiredTypes.size() == 1) {
+      throw new DumpNotFoundException(
+          "dump of type "
+              + requiredTypes.iterator().next()
+              + " from "
+              + year
+              + "-"
+              + month
+              + " not found");
+    }
+    throw new DumpNotFoundException(
+        "complete dump set of types "
+            + requiredTypes
+            + " from "
+            + year
+            + "-"
+            + month
+            + " not found");
   }
 
   /**
@@ -163,13 +176,13 @@ public class DefaultDiscogsDumpService implements DiscogsDumpService, Initializi
   @Override
   public List<DiscogsDump> getDumpByTypeInRange(EntityType type, int year, int month) {
     LocalDate start = LocalDate.of(year, month, 1);
-    LocalDate end = start.plusMonths(1).minusDays(1);
+    LocalDate end = start.plusMonths(1);
     return repository.findByTypeAndLastModifiedAtBetween(type, start, end);
   }
 
   /**
-   * Fetch latest complete dump that contains all four {@link EntityType} from the same year and
-   * month. It is extremely important to note that the current year and month must be the same from
+   * Fetch latest complete dump that contains all four {@link EntityType} from the exact same dump
+   * date. It is extremely important to note that the current year and month must be the same from
    * those of UTC.
    *
    * @return latest complete dump set.
@@ -185,20 +198,13 @@ public class DefaultDiscogsDumpService implements DiscogsDumpService, Initializi
 
     // limit condition to first known year and month.
     while (start.isAfter(FIRST_DUMP_YEAR_MONTH)) {
-      // first.. count the existing rows between the start and end date.
-      int count = repository.countItemsBetween(start, end);
-
-      // count < 4 means that if we have a missing piece... i.e. artist is missing.
-      if (count < 4) {
-        start = start.minusMonths(1);
-        end = end.minusMonths(1);
-        continue;
+      List<DiscogsDump> completeSet =
+          findLatestCoherentSet(Set.of(EntityType.values()), start, end);
+      if (!completeSet.isEmpty()) {
+        return completeSet;
       }
-
-      return repository.findAllByLastModifiedAtIsBetween(start, end).stream()
-          .sorted(DiscogsDump::compareTo)
-          .limit(4)
-          .collect(Collectors.toList());
+      start = start.minusMonths(1);
+      end = end.minusMonths(1);
     }
 
     throw new DumpNotFoundException("failed to locate the complete dump set...");
@@ -214,6 +220,39 @@ public class DefaultDiscogsDumpService implements DiscogsDumpService, Initializi
     return repository.findAll();
   }
 
+  private List<DiscogsDump> findLatestCoherentSet(
+      Set<EntityType> requiredTypes, LocalDate start, LocalDate end) {
+    if (requiredTypes.isEmpty()) {
+      return List.of();
+    }
+
+    Map<LocalDate, Map<EntityType, DiscogsDump>> dumpsByDate =
+        new TreeMap<>(java.util.Comparator.reverseOrder());
+    repository.findAllByLastModifiedAtIsBetween(start, end).stream()
+        .filter(Objects::nonNull)
+        .filter(dump -> requiredTypes.contains(dump.getType()))
+        .forEach(
+            dump ->
+                dumpsByDate
+                    .computeIfAbsent(
+                        dump.getLastModifiedAt(), ignored -> new EnumMap<>(EntityType.class))
+                    .merge(
+                        dump.getType(),
+                        dump,
+                        (left, right) -> left.compareTo(right) >= 0 ? left : right));
+
+    return dumpsByDate.values().stream()
+        .filter(dumps -> dumps.keySet().containsAll(requiredTypes))
+        .findFirst()
+        .map(
+            dumps ->
+                requiredTypes.stream()
+                    .map(dumps::get)
+                    .sorted(DiscogsDump::compareTo)
+                    .collect(Collectors.toList()))
+        .orElseGet(List::of);
+  }
+
   /**
    * Implementation of {@link InitializingBean} interface.
    *
@@ -227,6 +266,5 @@ public class DefaultDiscogsDumpService implements DiscogsDumpService, Initializi
     if (this.dumpSupplier == null) {
       throw new InitializationFailureException("dumpSupplier cannot be null");
     }
-    updateDB();
   }
 }

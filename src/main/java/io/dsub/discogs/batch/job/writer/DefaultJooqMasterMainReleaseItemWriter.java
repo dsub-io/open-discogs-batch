@@ -7,6 +7,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.jooq.DSLContext;
 import org.jooq.Query;
+import org.springframework.batch.infrastructure.item.Chunk;
 
 @RequiredArgsConstructor
 public class DefaultJooqMasterMainReleaseItemWriter implements JooqItemWriter<MasterRecord> {
@@ -14,7 +15,7 @@ public class DefaultJooqMasterMainReleaseItemWriter implements JooqItemWriter<Ma
   private final DSLContext context;
 
   @Override
-  public void write(List<? extends MasterRecord> items) {
+  public void write(Chunk<? extends MasterRecord> items) {
 
     if (items.isEmpty()) {
       return;

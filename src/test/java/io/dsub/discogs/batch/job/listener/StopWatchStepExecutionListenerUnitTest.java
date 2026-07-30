@@ -20,7 +20,7 @@ import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.ExitStatus;
-import org.springframework.batch.core.StepExecution;
+import org.springframework.batch.core.step.StepExecution;
 import org.springframework.util.StopWatch;
 
 class StopWatchStepExecutionListenerUnitTest {
@@ -33,6 +33,7 @@ class StopWatchStepExecutionListenerUnitTest {
 
   StepExecution stepExecution;
   StopWatch stopWatch;
+  StopWatch.TaskInfo taskInfo;
 
   @RegisterExtension
   LogSpy logSpy = new LogSpy();
@@ -43,11 +44,13 @@ class StopWatchStepExecutionListenerUnitTest {
     stepExecution = Mockito.mock(StepExecution.class);
     listener = Mockito.spy(listener);
     stopWatch = mock(StopWatch.class);
+    taskInfo = mock(StopWatch.TaskInfo.class);
 
     doReturn(stopWatch).when(listener).getStopWatch();
     doReturn(0L).when(itemsCounter).get();
-    doReturn(500).when(stepExecution).getWriteCount();
-    doReturn("testStep").when(stopWatch).getLastTaskName();
+    doReturn(500L).when(stepExecution).getWriteCount();
+    doReturn(taskInfo).when(stopWatch).lastTaskInfo();
+    doReturn("testStep").when(taskInfo).getTaskName();
     doReturn(10.0).when(stopWatch).getTotalTimeSeconds();
     doReturn(true).when(stopWatch).isRunning();
     reset(itemsCounter);

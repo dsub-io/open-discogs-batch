@@ -9,8 +9,8 @@ import io.dsub.discogs.batch.job.step.core.ReleaseItemStepConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.ExitStatus;
-import org.springframework.batch.core.StepExecution;
-import org.springframework.batch.core.StepExecutionListener;
+import org.springframework.batch.core.step.StepExecution;
+import org.springframework.batch.core.listener.StepExecutionListener;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -29,8 +29,8 @@ public class CacheInversionStepExecutionListener implements StepExecutionListene
 
   @Override
   public ExitStatus afterStep(StepExecution stepExecution) {
-    boolean doMaster = stepExecution.getJobParameters().getParameters().containsKey(MASTER);
-    boolean doRelease = stepExecution.getJobParameters().getParameters().containsKey(RELEASE_ITEM);
+    boolean doMaster = stepExecution.getJobParameters().getParameter(MASTER) != null;
+    boolean doRelease = stepExecution.getJobParameters().getParameter(RELEASE_ITEM) != null;
 
     // current
     String stepName = stepExecution.getStepName();

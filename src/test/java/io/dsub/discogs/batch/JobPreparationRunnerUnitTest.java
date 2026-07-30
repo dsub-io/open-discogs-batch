@@ -23,7 +23,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
-import org.springframework.batch.core.JobParameters;
+import org.springframework.batch.core.job.parameters.JobParameters;
 import org.springframework.batch.core.converter.JobParametersConverter;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -93,12 +93,17 @@ class JobPreparationRunnerUnitTest {
     DataSource dataSource;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
       jobParameterResolver = Mockito.mock(JobParameterResolver.class);
       arguments = Mockito.mock(ApplicationArguments.class);
       dumpDependencyResolver = Mockito.mock(DumpDependencyResolver.class);
       jobParametersConverter = Mockito.mock(JobParametersConverter.class);
       dataSource = Mockito.mock(DataSource.class);
+      Properties properties = new Properties();
+      willReturn(properties).given(jobParameterResolver).resolve(arguments);
+      willReturn(new JobParameters())
+          .given(jobParametersConverter)
+          .getJobParameters(properties);
       ctx = new ApplicationContextRunner()
           .withUserConfiguration(JobPreparationRunner.class)
           .withBean(JobParameterResolver.class, () -> jobParameterResolver)

@@ -3,6 +3,7 @@ package io.dsub.discogs.batch.job.step.core;
 import io.dsub.discogs.batch.domain.label.LabelSubItemsXML;
 import io.dsub.discogs.batch.domain.label.LabelXML;
 import io.dsub.discogs.batch.dump.DiscogsDump;
+import io.dsub.discogs.batch.dump.DiscogsDumpVerifier;
 import io.dsub.discogs.batch.exception.DumpNotFoundException;
 import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import io.dsub.discogs.batch.job.listener.CacheInversionStepExecutionListener;
@@ -18,22 +19,23 @@ import java.util.Collection;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jooq.UpdatableRecord;
-import org.springframework.batch.core.Step;
+import org.springframework.batch.core.step.Step;
 import org.springframework.batch.core.configuration.annotation.JobScope;
-import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
+import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.core.job.builder.FlowBuilder;
 import org.springframework.batch.core.job.flow.Flow;
 import org.springframework.batch.core.job.flow.FlowStep;
 import org.springframework.batch.core.job.flow.support.SimpleFlow;
 import org.springframework.batch.core.repository.JobRepository;
-import org.springframework.batch.item.ItemProcessor;
-import org.springframework.batch.item.ItemWriter;
-import org.springframework.batch.item.support.SynchronizedItemStreamReader;
+import org.springframework.batch.infrastructure.item.ItemProcessor;
+import org.springframework.batch.infrastructure.item.ItemWriter;
+import org.springframework.batch.infrastructure.item.support.SynchronizedItemStreamReader;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.dao.DeadlockLoserDataAccessException;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.transaction.PlatformTransactionManager;
 
 @Slf4j
 @Configuration
@@ -57,10 +59,11 @@ public class LabelStepConfig extends AbstractStepConfig {
   private final ItemWriter<UpdatableRecord<?>> entityItemWriter;
   private final DiscogsDump labelDump;
 
-  private final StepBuilderFactory sbf;
   private final ThreadPoolTaskExecutor taskExecutor;
   private final JobRepository jobRepository;
+  private final PlatformTransactionManager transactionManager;
   private final FileUtil fileUtil;
+  private final DiscogsDumpVerifier dumpVerifier;
 
   private final StopWatchStepExecutionListener stopWatchStepExecutionListener;
   private final CacheInversionStepExecutionListener cacheInversionStepExecutionListener;
@@ -108,8 +111,7 @@ public class LabelStepConfig extends AbstractStepConfig {
             .build();
     // @formatter:on
 
-    FlowStep labelFlowStep = new FlowStep();
-    labelFlowStep.setJobRepository(jobRepository);
+    FlowStep labelFlowStep = new FlowStep(jobRepository);
     labelFlowStep.setName(LABEL_FLOW_STEP);
     labelFlowStep.setStartLimit(Integer.MAX_VALUE);
     labelFlowStep.setFlow(labelStepFlow);
@@ -119,48 +121,49 @@ public class LabelStepConfig extends AbstractStepConfig {
   @Bean
   @JobScope
   public Step labelCoreInsertionStep(@Value(CHUNK) Integer chunkSize) {
-    return sbf.get(LABEL_CORE_INSERTION_STEP)
+    return new StepBuilder(LABEL_CORE_INSERTION_STEP, jobRepository)
         .<LabelXML, UpdatableRecord<?>>chunk(chunkSize)
+        .transactionManager(transactionManager)
         .reader(labelStreamReader)
         .processor(labelCoreProcessor)
         .writer(entityItemWriter)
         .faultTolerant()
         .retryLimit(10)
-        .retry(DeadlockLoserDataAccessException.class)
+        .retry(PessimisticLockingFailureException.class)
         .listener(stopWatchStepExecutionListener)
         .listener(stringNormalizingItemReadListener)
         .listener(idCachingItemProcessListener)
         .listener(itemCountingItemProcessListener)
         .listener(cacheInversionStepExecutionListener)
         .taskExecutor(taskExecutor)
-        .throttleLimit(taskExecutor.getMaxPoolSize())
         .build();
   }
 
   @Bean
   @JobScope
   public Step labelSubItemsInsertionStep(@Value(CHUNK) Integer chunkSize) {
-    return sbf.get(LABEL_SUB_ITEMS_INSERTION_STEP)
+    return new StepBuilder(LABEL_SUB_ITEMS_INSERTION_STEP, jobRepository)
         .<LabelSubItemsXML, Collection<UpdatableRecord<?>>>chunk(chunkSize)
+        .transactionManager(transactionManager)
         .reader(labelSubItemsStreamReader)
         .processor(labelSubItemsProcessor)
         .writer(collectionItemWriter)
         .faultTolerant()
         .retryLimit(10)
-        .retry(DeadlockLoserDataAccessException.class)
+        .retry(PessimisticLockingFailureException.class)
         .listener(stringNormalizingItemReadListener)
         .listener(stopWatchStepExecutionListener)
         .listener(itemCountingItemProcessListener)
         .taskExecutor(taskExecutor)
-        .throttleLimit(taskExecutor.getMaxPoolSize())
         .build();
   }
 
   @Bean
   @JobScope
   public Step labelFileFetchStep() throws DumpNotFoundException {
-    return sbf.get(LABEL_FILE_FETCH_STEP)
-        .tasklet(new FileFetchTasklet(labelDump, fileUtil))
+    return new StepBuilder(LABEL_FILE_FETCH_STEP, jobRepository)
+        .tasklet(
+            new FileFetchTasklet(labelDump, fileUtil, dumpVerifier), transactionManager)
         .build();
   }
 }

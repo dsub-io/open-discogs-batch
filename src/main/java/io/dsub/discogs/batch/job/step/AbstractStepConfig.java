@@ -22,7 +22,7 @@ public abstract class AbstractStepConfig {
         log.info("job execution marked as failed. skipping {} step", etagKey);
         return new FlowExecutionStatus(SKIPPED);
       }
-      if (jobExecution.getJobParameters().getParameters().containsKey(etagKey)) {
+      if (jobExecution.getJobParameters().getParameter(etagKey) != null) {
         log.info("{} eTag found. executing {} step.", etagKey, etagKey);
         return FlowExecutionStatus.COMPLETED;
       }

@@ -11,6 +11,7 @@ Discogs. The Discogs name is used only to identify the public data source.
 ## What it does
 
 - Downloads a selected dump, or resolves the most recent available dump.
+- Verifies downloaded dumps against the matching Discogs SHA-256 manifest.
 - Creates and updates the PostgreSQL schema through Liquibase.
 - Imports artist, label, master, and release data in dependency order.
 - Uses idempotent writes so a dump can be processed again.
@@ -25,21 +26,37 @@ artist -> label -> master -> release
 Selecting `master` also selects artist and label dependencies. Selecting
 `release` selects all four entity types unless `strict` is enabled.
 
+Files are selected as a coherent dump-date set. A full import requires all four
+types from the same date. A targeted import only requires the selected type and
+its dependencies, so a missing label dump does not prevent an artist-only
+import. If the required set is incomplete for a month, automatic selection
+moves to the previous month.
+
 The current schema is documented in the
 [OpenDiscogs ERD](https://dbdocs.io/state303/OpenDiscogs).
 
 ## Requirements
 
-- JDK 16
+- JDK 21
 - A reachable PostgreSQL database
 - Network access to `data.discogs.com`
 - Docker for the Testcontainers-based integration tests
+
+The repository includes an `.sdkmanrc` pinned to Temurin 21.0.11. With SDKMAN
+installed, activate it with:
+
+```bash
+sdk env
+```
+
+The Gradle wrapper uses Gradle 9.6.1. The application is built on Spring Boot
+4.1 and Spring Batch 6.
 
 Dependencies resolve from Maven Central. The generated schema library is
 published as:
 
 ```text
-io.dsub.opendiscogs:open-discogs-jooq:0.0.4
+io.dsub.opendiscogs:open-discogs-jooq:0.0.5
 ```
 
 No GitHub token is required to build or run this project.
@@ -60,12 +77,26 @@ and enforce the coverage gate:
 ```
 
 Integration tests start PostgreSQL through Testcontainers and therefore require
-Docker. Tests that access `data.discogs.com` are kept outside the deterministic
-suite and can be run explicitly:
+Docker. End-to-end tests run the real HTTP discovery, download, checksum,
+repository, and latest-set selection code against a loopback Discogs
+distribution fixture and can be run explicitly:
 
 ```bash
 ./gradlew e2eTest
 ```
+
+The same E2E suite runs on every pull request and on manual dispatch. It runs on
+a GitHub-hosted Ubuntu runner and is a required pull-request check. The fixture
+serves a root index, year index, four compressed dumps, and their shared
+SHA-256 manifest over a real loopback HTTP server. The test discovers and
+downloads all four domains, verifies their hashes, and resolves the coherent
+same-date set without skipping any case.
+
+Discogs currently returns HTTP 403 to GitHub-hosted runner addresses for both
+directory and direct-download requests. Live upstream availability therefore
+cannot be a reliable GitHub pull-request gate; the E2E gate owns application
+behavior, while real deployments still fail explicitly if Discogs is
+unreachable.
 
 Executable test classes use one of three suffixes:
 
@@ -74,8 +105,8 @@ Executable test classes use one of three suffixes:
 - `*E2ETest` for opt-in end-to-end checks against external services.
 
 The build rejects other executable test class names. Pull requests must pass
-the deterministic suite and maintain at least 85% line coverage and 40% branch
-coverage.
+the deterministic suite, the live Discogs E2E suite, and maintain at least 85%
+line coverage and 40% branch coverage.
 
 The executable is written to:
 
@@ -107,7 +138,7 @@ values are expanded into individual option values.
 | `type` | `t` | no | `artist`, `label`, `master`, or `release` |
 | `year` | `y` | no | Dump year |
 | `yearMonth` | `ym` | no | Dump month in `yyyy-MM` form |
-| `eTag` | `e` | no | Exact dump ETag; overrides year, month, and type selection |
+| `eTag` | `e` | no | Stable dump ID; overrides year, month, and type selection |
 | `chunkSize` | `chunk`, `c` | no | Spring Batch chunk size; defaults to `500` |
 | `coreCount` | `core` | no | Worker count; defaults to 80% of physical cores |
 | `mount` | `m` | no | Keep downloaded dump files |
@@ -117,6 +148,22 @@ values are expanded into individual option values.
 Do not provide both `year` and `yearMonth`. When none of `eTag`, `year`,
 `yearMonth`, or `type` is supplied, the most recent complete set of dumps is
 selected.
+
+The current Discogs HTML index no longer exposes object ETags. For those
+entries, the versioned path such as
+`data/2026/discogs_20260701_releases.xml.gz` is used as the stable dump ID.
+Each dump is paired with the same date's
+`discogs_20260701_CHECKSUM.txt`. The displayed HTML file size is only an
+estimate for progress reporting; existing and newly downloaded files are
+accepted only after their SHA-256 value matches the manifest. One manifest is
+fetched and cached per selected dump date.
+
+If the directory index is unavailable, automatic selection falls back to the
+monthly checksum manifests and resolves the newest complete set. Missing or
+incomplete months are skipped, while access errors stop immediately instead of
+causing repeated failing requests. File size is unknown on this fallback path,
+so download progress is shown without a fixed total and integrity is still
+decided by SHA-256.
 
 The application currently receives the database password as a process
 argument. On a shared host, command-line arguments may be visible to other
@@ -136,4 +183,5 @@ docs: clarify PostgreSQL setup
 
 Allowed types are `build`, `chore`, `ci`, `docs`, `feat`, `fix`, `perf`,
 `refactor`, `revert`, `style`, and `test`. GitHub Actions rejects pull requests
-and new commits that do not follow this format.
+and new commits that do not follow this format. Pull-request branches must also
+not use the reserved `agent/`, `codex/`, or `claude/` prefixes.

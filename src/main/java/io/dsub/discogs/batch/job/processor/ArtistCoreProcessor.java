@@ -4,7 +4,7 @@ import io.dsub.discogs.batch.domain.artist.ArtistXML;
 import io.dsub.discogs.batch.util.ReflectionUtil;
 import io.dsub.opendiscogs.jooq.tables.records.ArtistRecord;
 import lombok.RequiredArgsConstructor;
-import org.springframework.batch.item.ItemProcessor;
+import org.springframework.batch.infrastructure.item.ItemProcessor;
 
 @RequiredArgsConstructor
 public class ArtistCoreProcessor implements ItemProcessor<ArtistXML, ArtistRecord> {

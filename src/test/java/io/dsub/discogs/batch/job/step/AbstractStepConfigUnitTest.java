@@ -8,17 +8,15 @@ import static org.mockito.Mockito.when;
 import ch.qos.logback.classic.Level;
 import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import io.dsub.discogs.batch.testutil.LogSpy;
-import java.util.HashMap;
-import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mockito;
 import org.springframework.batch.core.ExitStatus;
-import org.springframework.batch.core.JobExecution;
-import org.springframework.batch.core.JobParameter;
-import org.springframework.batch.core.JobParameters;
+import org.springframework.batch.core.job.JobExecution;
+import org.springframework.batch.core.job.parameters.JobParameters;
+import org.springframework.batch.core.job.parameters.JobParameter;
 import org.springframework.batch.core.job.flow.FlowExecutionStatus;
 import org.springframework.batch.core.job.flow.JobExecutionDecider;
 
@@ -45,16 +43,15 @@ class AbstractStepConfigUnitTest {
     JobExecution jobExecution = Mockito.mock(JobExecution.class);
     JobParameters jobParameters = Mockito.mock(JobParameters.class);
 
-    Map<String, JobParameter> falsyMap = new HashMap<>();
-    Map<String, JobParameter> truthyMap = new HashMap<>();
-    truthyMap.put(param, new JobParameter("hello"));
+    JobParameter<String> jobParameter =
+        new JobParameter<>(param, "hello", String.class);
 
     ExitStatus exitStatus = Mockito.mock(ExitStatus.class);
     doReturn("COMPLETED").when(exitStatus).getExitCode();
     doReturn(exitStatus).when(jobExecution).getExitStatus();
 
     when(jobExecution.getJobParameters()).thenReturn(jobParameters);
-    when(jobParameters.getParameters()).thenReturn(falsyMap);
+    when(jobParameters.getParameter(param)).thenReturn(null);
 
     FlowExecutionStatus status = jobExecutionDecider.decide(jobExecution, null);
     assertThat(status.getName()).isEqualTo("SKIPPED");
@@ -65,7 +62,7 @@ class AbstractStepConfigUnitTest {
       logSpy.clear();
     }
 
-    when(jobParameters.getParameters()).thenReturn(truthyMap);
+    doReturn(jobParameter).when(jobParameters).getParameter(param);
     status = jobExecutionDecider.decide(jobExecution, null);
 
     assertThat(status.getName()).isEqualTo("COMPLETED");

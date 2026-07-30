@@ -1,81 +1,86 @@
 plugins {
     id 'java'
     id 'jacoco'
-    id 'org.springframework.boot' version '2.5.2'
-    id 'io.spring.dependency-management' version '1.0.11.RELEASE'
+    id 'org.springframework.boot' version '4.1.0'
 }
 
-group 'io.dsub.discogs'
-version '0.1.8'
-sourceCompatibility = JavaVersion.VERSION_16
-targetCompatibility = JavaVersion.VERSION_16
+group = 'io.dsub.opendiscogs'
+version = '0.1.8'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
 
 configurations {
     compileOnly {
         extendsFrom annotationProcessor
     }
+    mockitoAgent
 }
 
 ext {
-    set('testcontainersVersion', "1.21.4")
-    set('springOxmVersion', "5.3.8")
-    set('jaxbApiVersion', "2.3.1")
-    set('jaxbRuntimeVersion', "2.3.8")
-    set('classGraphVersion', "4.8.108")
-    set('pbVersion', "0.9.1")
-    set('openDiscogsJooqVersion', "0.0.4")
-    set('liquibaseVersion', "4.4.0")
-    set('oshiVersion', "5.8.1")
-}
-
-def props = new Properties()
-if (file(".env").exists()) {
-    file(".env").withInputStream { props.load(it) }
+    set('testcontainersVersion', '2.0.5')
+    set('classGraphVersion', '4.8.186')
+    set('jooqVersion', '3.21.6')
+    set('pbVersion', '0.10.2')
+    set('openDiscogsJooqVersion', '0.0.5')
+    set('oshiVersion', '7.4.2')
+    set('postgresqlVersion', '42.7.13')
 }
 
 repositories {
     mavenCentral()
 }
 
-dependencyManagement {
-    imports {
-        mavenBom "org.testcontainers:testcontainers-bom:${testcontainersVersion}"
-    }
-}
-
 dependencies {
+    implementation platform(org.springframework.boot.gradle.plugin.SpringBootPlugin.BOM_COORDINATES)
+    annotationProcessor platform(org.springframework.boot.gradle.plugin.SpringBootPlugin.BOM_COORDINATES)
+    testAnnotationProcessor platform(org.springframework.boot.gradle.plugin.SpringBootPlugin.BOM_COORDINATES)
+    mockitoAgent platform(org.springframework.boot.gradle.plugin.SpringBootPlugin.BOM_COORDINATES)
     implementation(
-            'com.fasterxml.jackson.datatype:jackson-datatype-jsr310',
             'org.springframework.boot:spring-boot-starter-batch',
-            'org.springframework.batch:spring-batch-integration',
             'org.springframework.boot:spring-boot-starter-jooq',
+            "org.jooq:jooq:${jooqVersion}",
             "io.dsub.opendiscogs:open-discogs-jooq:${openDiscogsJooqVersion}",
-            "org.springframework:spring-oxm:${springOxmVersion}",
-            "javax.xml.bind:jaxb-api:${jaxbApiVersion}",
-            "org.glassfish.jaxb:jaxb-runtime:${jaxbRuntimeVersion}",
+            'org.springframework:spring-oxm',
+            'jakarta.xml.bind:jakarta.xml.bind-api',
+            'org.glassfish.jaxb:jaxb-runtime',
             "io.github.classgraph:classgraph:${classGraphVersion}",
             "me.tongfei:progressbar:${pbVersion}",
-            "org.liquibase:liquibase-core:${liquibaseVersion}",
+            'org.liquibase:liquibase-core',
             "com.github.oshi:oshi-core:${oshiVersion}",
-            'mysql:mysql-connector-java',
-            'org.postgresql:postgresql',
-            'org.projectlombok:lombok',
             'org.apache.commons:commons-lang3'
     )
+    runtimeOnly "org.postgresql:postgresql:${postgresqlVersion}"
+    compileOnly 'org.projectlombok:lombok'
+    compileOnly 'org.jspecify:jspecify'
+    testCompileOnly 'org.projectlombok:lombok'
+    testImplementation platform("org.testcontainers:testcontainers-bom:${testcontainersVersion}")
     testImplementation (
-            'org.junit.jupiter:junit-jupiter:5.7.2',
             'org.springframework.boot:spring-boot-starter-test',
             'org.springframework.batch:spring-batch-test',
-            'org.mockito:mockito-inline:3.11.1',
             'org.testcontainers:testcontainers',
-            'org.testcontainers:postgresql',
-            'org.testcontainers:junit-jupiter'
+            'org.testcontainers:testcontainers-postgresql',
+            'org.testcontainers:testcontainers-junit-jupiter'
     )
     annotationProcessor (
             'org.springframework.boot:spring-boot-configuration-processor',
             'org.projectlombok:lombok'
     )
     testAnnotationProcessor 'org.projectlombok:lombok'
+    mockitoAgent('org.mockito:mockito-core') {
+        transitive = false
+    }
+}
+
+tasks.withType(Test).configureEach {
+    jvmArgs += "-javaagent:${configurations.mockitoAgent.asPath}"
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs += ['-Xlint:deprecation', '-Xlint:removal', '-Werror']
 }
 
 test {
@@ -87,32 +92,55 @@ test {
 tasks.register('e2eTest', Test) {
     description = 'Runs tests that access live external services.'
     group = 'verification'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
     useJUnitPlatform {
         includeTags 'e2e'
+    }
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+        exceptionFormat = 'full'
+        showStandardStreams = true
     }
     shouldRunAfter test
 }
 
 tasks.register('validateTestNaming') {
-    description = 'Checks executable test classes use a recognized test suffix.'
+    description = 'Checks executable test classes use the correct suffix and E2E tag.'
     group = 'verification'
+    def projectPath = projectDir.toPath()
     def testSources = fileTree('src/test/java') {
         include '**/*.java'
     }
     inputs.files(testSources)
     doLast {
-        def invalidFiles = testSources.findAll { file ->
+        def executableTestSources = testSources.findAll { file ->
             def source = file.getText('UTF-8')
-            def containsTests =
-                    source =~ /@(Test|ParameterizedTest|RepeatedTest|TestFactory)\b/
-            containsTests && !(file.name ==~ /.*(UnitTest|IntegrationTest|E2ETest)\.java/)
+            (source =~ /@(Test|ParameterizedTest|RepeatedTest|TestFactory)\b/).find()
         }
-        if (!invalidFiles.isEmpty()) {
-            def names = invalidFiles.collect {
-                project.relativePath(it)
+        def invalidNames = executableTestSources.findAll { file ->
+            !(file.name ==~ /.*(UnitTest|IntegrationTest|E2ETest)\.java/)
+        }
+        def invalidLanes = executableTestSources.findAll { file ->
+            def source = file.getText('UTF-8')
+            def isE2ETest = file.name.endsWith('E2ETest.java')
+            def hasE2ETag =
+                    (source =~ /@Tag\s*\(\s*(?:value\s*=\s*)?["']e2e["']\s*\)/).find()
+            isE2ETest != hasE2ETag
+        }
+        if (!invalidNames.isEmpty()) {
+            def names = invalidNames.collect {
+                projectPath.relativize(it.toPath())
             }.sort().join('\n - ')
             throw new GradleException(
                     "Test classes must end in UnitTest, IntegrationTest, or E2ETest:\n - ${names}")
+        }
+        if (!invalidLanes.isEmpty()) {
+            def names = invalidLanes.collect {
+                projectPath.relativize(it.toPath())
+            }.sort().join('\n - ')
+            throw new GradleException(
+                    "Only E2ETest classes must declare @Tag(\"e2e\"):\n - ${names}")
         }
     }
 }
@@ -124,8 +152,8 @@ check.dependsOn jacocoTestCoverageVerification
 jacocoTestReport {
     dependsOn test
     reports {
-        xml.enabled true
-        html.enabled true
+        xml.required = true
+        html.required = true
     }
 }
 
@@ -148,11 +176,5 @@ jacocoTestCoverageVerification {
 }
 
 bootBuildImage {
-    setImageName("open-discogs-batch:${project.version}")
-}
-// disable caching
-configurations.each {
-    it.resolutionStrategy.each {
-        it.cacheChangingModulesFor 0, 'seconds'
-    }
+    imageName = "open-discogs-batch:${project.version}"
 }

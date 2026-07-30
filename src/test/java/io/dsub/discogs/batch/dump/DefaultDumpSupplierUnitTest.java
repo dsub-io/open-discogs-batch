@@ -6,6 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import io.dsub.discogs.batch.testutil.LogSpy;
@@ -14,10 +17,13 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Optional;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -26,6 +32,8 @@ import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Mockito;
 import org.springframework.util.ResourceUtils;
 import org.w3c.dom.Document;
@@ -55,42 +63,270 @@ class DefaultDumpSupplierUnitTest {
   }
 
   @Test
-  void whenParseDumpListWithEmptyOrNullString__ShouldReturnEmptyList() {
-    // when
-    List<DiscogsDump> result = dumpSupplier.parseDumpList("");
+  void whenParseYearIndexUrls__ThenReturnsEveryYearDirectory() throws IOException {
+    List<String> result =
+        dumpSupplier.parseYearIndexUrls(readTestFile("DiscogsDataIndex.html"));
 
-    // then
-    Assertions.assertThat(result).isEmpty();
-    assertThat(logSpy.getEvents().size()).isEqualTo(1);
-    assertThat(logSpy.getEvents().get(0).getMessage()).contains("urlString cannot be blank");
+    assertThat(result)
+        .containsExactly(
+            "https://data.discogs.com/?prefix=data%2F2008%2F",
+            "https://data.discogs.com/?prefix=data%2F2025%2F",
+            "https://data.discogs.com/?prefix=data%2F2026%2F");
   }
 
   @Test
-  void whenParseDumpWithBlankFields__ShouldNotReturnIncompleteDump() {
-    try (InputStream in = new FileInputStream(getTestFile("DiscogsDataMissingFieldsExample.xml"))) {
-      doReturn(in).when(dumpSupplier).openStream(null);
-      doReturn(null).when(dumpSupplier).getBucketURL();
+  void whenParseHtmlDumpList__ThenReturnsDownloadableDumps() throws IOException {
+    List<DiscogsDump> result =
+        dumpSupplier.parseHtmlDumpList(readTestFile("DiscogsData2026.html"));
 
-      // when
-      List<DiscogsDump> dumpList = dumpSupplier.parseDumpList(dumpSupplier.getBucketURL());
+    assertThat(result).hasSize(4);
+    assertThat(result)
+        .extracting(DiscogsDump::getType)
+        .containsExactly(
+            EntityType.ARTIST, EntityType.LABEL, EntityType.MASTER, EntityType.RELEASE);
+    assertThat(result)
+        .allSatisfy(
+            dump -> {
+              assertThat(dump.getETag()).isEqualTo(dump.getUriString());
+              assertThat(dump.getLastModifiedAt()).isEqualTo(LocalDate.of(2026, 7, 1));
+              assertThat(dump.getSize()).isPositive();
+              assertThat(dump.getUrl().toString())
+                  .startsWith("https://data.discogs.com/?download=data%2F2026%2F");
+              assertThat(dump.getChecksumUrl().toString())
+                  .isEqualTo(
+                      "https://data.discogs.com/"
+                          + "?download=data%2F2026%2Fdiscogs_20260701_CHECKSUM.txt");
+            });
+  }
 
-      // then
-      assertAll(
-          () -> Assertions.assertThat(dumpList).isNotEmpty(),
-          () ->
-              assertAll(
-                  () -> {
-                    for (DiscogsDump dump : dumpList) {
-                      assertThat(dump.getUriString()).isNotBlank();
-                      assertThat(dump.getLastModifiedAt()).isNotNull();
-                      assertThat(dump.getSize()).isNotNull();
-                      assertThat(dump.getETag()).isNotNull();
-                      assertThat(dump.getType()).isNotNull();
-                    }
-                  }));
-    } catch (IOException e) {
-      fail(e);
+  @Test
+  void whenParseChecksumUrls__ThenAssociatesManifestByDumpDate() throws IOException {
+    assertThat(dumpSupplier.parseChecksumUrls(readTestFile("DiscogsData2026.html")))
+        .containsOnlyKeys(LocalDate.of(2026, 7, 1));
+  }
+
+  @Test
+  void whenDumpHasNoMatchingChecksum__ThenSkipsIt() {
+    String html =
+        "2026-07-01 00:00:00 1 MB "
+            + "<a href=\"?download=data%2F2026%2Fdiscogs_20260701_artists.xml.gz\">"
+            + "discogs_20260701_artists.xml.gz</a>";
+
+    assertThat(dumpSupplier.parseHtmlDumpList(html)).isEmpty();
+    assertThat(logSpy.getEvents())
+        .anyMatch(event -> event.getMessage().contains("without a matching checksum"));
+  }
+
+  @Test
+  void whenGet__ThenFetchesRootAndEveryYearIndex() throws Exception {
+    String rootIndex = readTestFile("DiscogsDataIndex.html");
+    String yearIndex = readTestFile("DiscogsData2026.html");
+    doReturn(rootIndex)
+        .when(dumpSupplier)
+        .getDiscogsDataSource("https://data.discogs.com/");
+    for (String yearUrl : dumpSupplier.parseYearIndexUrls(rootIndex)) {
+      doReturn(yearIndex).when(dumpSupplier).getDiscogsDataSource(yearUrl);
     }
+
+    assertThat(dumpSupplier.get()).hasSize(12);
+  }
+
+  @Test
+  void whenOneYearIndexFails__ThenReturnsOtherYears() throws Exception {
+    String rootIndex = readTestFile("DiscogsDataIndex.html");
+    String yearIndex = readTestFile("DiscogsData2026.html");
+    List<String> yearUrls = dumpSupplier.parseYearIndexUrls(rootIndex);
+    doReturn(rootIndex)
+        .when(dumpSupplier)
+        .getDiscogsDataSource("https://data.discogs.com/");
+    doReturn(yearIndex).when(dumpSupplier).getDiscogsDataSource(yearUrls.get(0));
+    doThrow(new IOException("unavailable"))
+        .when(dumpSupplier)
+        .getDiscogsDataSource(yearUrls.get(1));
+    doReturn(yearIndex).when(dumpSupplier).getDiscogsDataSource(yearUrls.get(2));
+
+    assertThat(dumpSupplier.get()).hasSize(8);
+    assertThat(logSpy.getEvents())
+        .anyMatch(event -> event.getMessage().contains("failed to fetch Discogs data index"));
+  }
+
+  @Test
+  void whenRootIndexFails__ThenUsesManifestFallback() throws Exception {
+    DiscogsDump fallbackDump =
+        new DiscogsDump(
+            "data/2026/discogs_20260701_artists.xml.gz",
+            EntityType.ARTIST,
+            "data/2026/discogs_20260701_artists.xml.gz",
+            -1L,
+            LocalDate.of(2026, 7, 1),
+            null);
+    doThrow(new IOException("unavailable"))
+        .when(dumpSupplier)
+        .getDiscogsDataSource("https://data.discogs.com/");
+    doReturn(List.of(fallbackDump))
+        .when(dumpSupplier)
+        .getLatestCompleteDumpsFromManifests();
+
+    assertThat(dumpSupplier.get()).containsExactly(fallbackDump);
+    assertThat(logSpy.getEvents())
+        .anyMatch(event -> event.getMessage().contains("failed to fetch the Discogs data index"));
+  }
+
+  @Test
+  void whenLatestManifestIsMissing__ThenUsesPreviousCompleteMonth() throws Exception {
+    String augustManifestUrl = manifestUrl("20260801");
+    String julyManifestUrl = manifestUrl("20260701");
+    doReturn(LocalDate.of(2026, 8, 1)).when(dumpSupplier).getCurrentUtcDate();
+    doReturn(Optional.empty())
+        .when(dumpSupplier)
+        .getDiscogsManifestSource(augustManifestUrl);
+    doReturn(Optional.of(completeManifest("20260701")))
+        .when(dumpSupplier)
+        .getDiscogsManifestSource(julyManifestUrl);
+
+    List<DiscogsDump> result = dumpSupplier.getLatestCompleteDumpsFromManifests();
+
+    assertThat(result)
+        .hasSize(4)
+        .extracting(DiscogsDump::getType)
+        .containsExactly(EntityType.values());
+    assertThat(result)
+        .allSatisfy(
+            dump -> {
+              assertThat(dump.getLastModifiedAt()).isEqualTo(LocalDate.of(2026, 7, 1));
+              assertThat(dump.getSize()).isEqualTo(-1L);
+              assertThat(dump.getETag()).isEqualTo(dump.getUriString());
+              assertThat(dump.getUrl().toString())
+                  .startsWith("https://data.discogs.com/?download=data%2F2026%2F");
+              assertThat(dump.getChecksumUrl().toString()).isEqualTo(julyManifestUrl);
+            });
+    verify(dumpSupplier, times(1)).getDiscogsManifestSource(augustManifestUrl);
+    verify(dumpSupplier, times(1)).getDiscogsManifestSource(julyManifestUrl);
+  }
+
+  @Test
+  void whenLatestManifestMissesOneDomain__ThenUsesPreviousCompleteMonth() throws Exception {
+    String julyManifestUrl = manifestUrl("20260701");
+    String juneManifestUrl = manifestUrl("20260601");
+    doReturn(LocalDate.of(2026, 7, 31)).when(dumpSupplier).getCurrentUtcDate();
+    doReturn(
+            Optional.of(
+                completeManifest("20260701")
+                    .replace(manifestLine("20260701", EntityType.LABEL), "")))
+        .when(dumpSupplier)
+        .getDiscogsManifestSource(julyManifestUrl);
+    doReturn(Optional.of(completeManifest("20260601")))
+        .when(dumpSupplier)
+        .getDiscogsManifestSource(juneManifestUrl);
+
+    List<DiscogsDump> result = dumpSupplier.getLatestCompleteDumpsFromManifests();
+
+    assertThat(result)
+        .hasSize(4)
+        .extracting(DiscogsDump::getLastModifiedAt)
+        .containsOnly(LocalDate.of(2026, 6, 1));
+    assertThat(logSpy.getEvents())
+        .anyMatch(
+            event ->
+                event
+                    .getFormattedMessage()
+                    .contains("manifest for 2026-07-01 is incomplete"));
+  }
+
+  @Test
+  void whenManifestAccessIsRejected__ThenDoesNotRetryOlderMonths() throws Exception {
+    String julyManifestUrl = manifestUrl("20260701");
+    doReturn(LocalDate.of(2026, 7, 31)).when(dumpSupplier).getCurrentUtcDate();
+    doThrow(new IOException("HTTP 403"))
+        .when(dumpSupplier)
+        .getDiscogsManifestSource(julyManifestUrl);
+
+    assertThrows(IOException.class, dumpSupplier::getLatestCompleteDumpsFromManifests);
+    verify(dumpSupplier, times(1)).getDiscogsManifestSource(julyManifestUrl);
+  }
+
+  @Test
+  void whenRootIndexIsInterrupted__ThenRestoresInterruptStatus() throws Exception {
+    doThrow(new InterruptedException("interrupted"))
+        .when(dumpSupplier)
+        .getDiscogsDataSource("https://data.discogs.com/");
+
+    try {
+      assertThat(dumpSupplier.get()).isEmpty();
+      assertThat(Thread.currentThread().isInterrupted()).isTrue();
+    } finally {
+      Thread.interrupted();
+    }
+  }
+
+  @Test
+  void whenHtmlContainsMalformedDumpEntries__ThenSkipsThem() {
+    String html =
+        "2026-07-01 00:00:00 1 MB "
+            + "<a href=\"?download=data%2F2026%2Fdiscogs_20261301_artists.xml.gz\">"
+            + "discogs_20261301_artists.xml.gz</a>\n"
+            + "2026-07-01 00:00:00 1 MB "
+            + "<a href=\"?download=data%2F2026%2Fdiscogs_20260701_unknown.xml.gz\">"
+            + "discogs_20260701_unknown.xml.gz</a>\n"
+            + "2026-07-01 00:00:00 1 MB "
+            + "<a href=\"?download=data%2F2026%2Fdiscogs_20260701_artists.xml.gz\">"
+            + "discogs_20260701_labels.xml.gz</a>";
+
+    assertThat(dumpSupplier.parseHtmlDumpList(html)).isEmpty();
+  }
+
+  @ParameterizedTest
+  @CsvSource({
+      "1, B, 1",
+      "1, KB, 1024",
+      "1.5, MB, 1572864",
+      "2, GB, 2147483648",
+      "1, TB, 1099511627776"
+  })
+  void whenParseDisplaySize__ThenReturnsBytes(String value, String unit, long expected) {
+    assertThat(dumpSupplier.parseDisplaySize(value, unit)).isEqualTo(expected);
+  }
+
+  @Test
+  void whenParseDisplaySizeWithMalformedValue__ThenThrows() {
+    assertThrows(
+        InvalidArgumentException.class, () -> dumpSupplier.parseDisplaySize("not-a-size", "MB"));
+    assertThrows(
+        InvalidArgumentException.class, () -> dumpSupplier.parseDisplaySize("1", "unknown"));
+    assertThrows(
+        InvalidArgumentException.class,
+        () -> dumpSupplier.parseDisplaySize("999999999999999999", "TB"));
+  }
+
+  @Test
+  void whenHtmlIsBlank__ThenIndexParsersReturnEmptyLists() {
+    assertThat(dumpSupplier.parseYearIndexUrls("")).isEmpty();
+    assertThat(dumpSupplier.parseYearIndexUrls(null)).isEmpty();
+    assertThat(dumpSupplier.parseHtmlDumpList("")).isEmpty();
+    assertThat(dumpSupplier.parseHtmlDumpList(null)).isEmpty();
+    assertThat(dumpSupplier.parseChecksumUrls("")).isEmpty();
+    assertThat(dumpSupplier.parseChecksumUrls(null)).isEmpty();
+  }
+
+  @Test
+  void whenParseDumpWithBlankFields__ShouldNotReturnIncompleteDump()
+      throws FileNotFoundException {
+    List<DiscogsDump> dumpList =
+        dumpSupplier.parseDumpList(getTestFile("DiscogsDataMissingFieldsExample.xml"));
+
+    assertAll(
+        () -> Assertions.assertThat(dumpList).isNotEmpty(),
+        () ->
+            assertAll(
+                () -> {
+                  for (DiscogsDump dump : dumpList) {
+                    assertThat(dump.getUriString()).isNotBlank();
+                    assertThat(dump.getLastModifiedAt()).isNotNull();
+                    assertThat(dump.getSize()).isNotNull();
+                    assertThat(dump.getETag()).isNotNull();
+                    assertThat(dump.getType()).isNotNull();
+                  }
+                }));
   }
 
   @Test
@@ -258,5 +494,34 @@ class DefaultDumpSupplierUnitTest {
 
   private File getTestFile(String filename) throws FileNotFoundException {
     return ResourceUtils.getFile("classpath:test/" + filename);
+  }
+
+  private String readTestFile(String filename) throws IOException {
+    return Files.readString(getTestFile(filename).toPath());
+  }
+
+  private String completeManifest(String dateStamp) {
+    StringBuilder manifest = new StringBuilder();
+    for (EntityType type : EntityType.values()) {
+      manifest.append(manifestLine(dateStamp, type));
+    }
+    return manifest.toString();
+  }
+
+  private String manifestLine(String dateStamp, EntityType type) {
+    return "a".repeat(64)
+        + "  discogs_"
+        + dateStamp
+        + "_"
+        + type
+        + "s.xml.gz\n";
+  }
+
+  private String manifestUrl(String dateStamp) {
+    return "https://data.discogs.com/?download=data%2F"
+        + dateStamp.substring(0, 4)
+        + "%2Fdiscogs_"
+        + dateStamp
+        + "_CHECKSUM.txt";
   }
 }

@@ -1,22 +1,18 @@
 package io.dsub.discogs.batch.config;
 
-import io.dsub.discogs.batch.job.UniqueRunIdIncrementer;
 import io.dsub.discogs.batch.job.listener.ClearanceJobExecutionListener;
 import io.dsub.discogs.batch.job.listener.ExitSignalJobExecutionListener;
 import io.dsub.discogs.batch.job.listener.IdCachingJobExecutionListener;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
-import org.springframework.batch.core.Job;
-import org.springframework.batch.core.Step;
-import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
-import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
+import org.springframework.batch.core.job.Job;
+import org.springframework.batch.core.job.builder.JobBuilder;
+import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.core.step.Step;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-@EnableBatchProcessing
-@ComponentScan(basePackageClasses = {DiscogsBatchConfigurer.class})
 @RequiredArgsConstructor
 public class BatchConfig {
 
@@ -31,7 +27,7 @@ public class BatchConfig {
   private final Step masterStep;
   private final Step releaseStep;
 
-  private final JobBuilderFactory jobBuilderFactory;
+  private final JobRepository jobRepository;
   private final IdCachingJobExecutionListener idCachingJobExecutionListener;
   private final ExitSignalJobExecutionListener exitSignalJobExecutionListener;
   private final ClearanceJobExecutionListener clearanceJobExecutionListener;
@@ -39,16 +35,12 @@ public class BatchConfig {
   @Bean
   public Job discogsBatchJob() {
     // @formatter:off
-    return jobBuilderFactory
-        .get(JOB_NAME)
+    return new JobBuilder(JOB_NAME, jobRepository)
 
         // listeners
         .listener(idCachingJobExecutionListener)
         .listener(exitSignalJobExecutionListener)
         .listener(clearanceJobExecutionListener)
-
-        // incrementer
-        .incrementer(new UniqueRunIdIncrementer())
 
         // from artist step
         .start(artistStep)

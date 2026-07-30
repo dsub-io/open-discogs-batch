@@ -15,15 +15,19 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.springframework.batch.core.JobExecution;
-import org.springframework.batch.core.StepContribution;
-import org.springframework.batch.core.StepExecution;
+import org.springframework.batch.core.job.JobExecution;
+import org.springframework.batch.core.job.JobInstance;
+import org.springframework.batch.core.job.parameters.JobParameters;
+import org.springframework.batch.core.step.StepContribution;
+import org.springframework.batch.core.step.StepExecution;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.scope.context.StepContext;
 
 class FileClearTaskletUnitTest {
 
-  final StepExecution stepExecution = new StepExecution("step", new JobExecution(1L));
+  final JobExecution jobExecution =
+      new JobExecution(1L, new JobInstance(1L, "job"), new JobParameters());
+  final StepExecution stepExecution = new StepExecution(1L, "step", jobExecution);
   final ChunkContext chunkContext = new ChunkContext(new StepContext(stepExecution));
   final StepContribution stepContribution = new StepContribution(stepExecution);
 

@@ -4,7 +4,7 @@ import io.dsub.discogs.batch.domain.master.MasterXML;
 import io.dsub.discogs.batch.util.ReflectionUtil;
 import io.dsub.opendiscogs.jooq.tables.records.MasterRecord;
 import lombok.RequiredArgsConstructor;
-import org.springframework.batch.item.ItemProcessor;
+import org.springframework.batch.infrastructure.item.ItemProcessor;
 
 @RequiredArgsConstructor
 public class MasterCoreProcessor implements ItemProcessor<MasterXML, MasterRecord> {

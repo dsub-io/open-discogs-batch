@@ -8,13 +8,12 @@ import io.dsub.opendiscogs.jooq.tables.Label;
 import io.dsub.opendiscogs.jooq.tables.Master;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jooq.DSLContext;
-import org.springframework.batch.core.JobExecution;
-import org.springframework.batch.core.JobExecutionListener;
+import org.springframework.batch.core.job.JobExecution;
+import org.springframework.batch.core.listener.JobExecutionListener;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -31,17 +30,15 @@ public class IdCachingJobExecutionListener implements JobExecutionListener {
 
   @Override
   public void beforeJob(JobExecution jobExecution) {
-    Map<String, ?> params = jobExecution.getJobParameters().getParameters();
-
     // caching only required in strict mode (i.e. skipping required steps)
-    if (params.containsKey(STRICT)) {
+    if (jobExecution.getJobParameters().getParameter(STRICT) != null) {
       return;
     }
 
-    boolean doArtist = params.containsKey(ARTIST);
-    boolean doLabel = params.containsKey(LABEL);
-    boolean doMaster = params.containsKey(MASTER);
-    boolean doRelease = params.containsKey(RELEASE);
+    boolean doArtist = jobExecution.getJobParameters().getParameter(ARTIST) != null;
+    boolean doLabel = jobExecution.getJobParameters().getParameter(LABEL) != null;
+    boolean doMaster = jobExecution.getJobParameters().getParameter(MASTER) != null;
+    boolean doRelease = jobExecution.getJobParameters().getParameter(RELEASE) != null;
 
     if (doMaster && !doRelease) {
       if (!doArtist) {
