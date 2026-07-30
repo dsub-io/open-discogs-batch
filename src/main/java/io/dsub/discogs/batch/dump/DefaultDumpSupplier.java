@@ -88,7 +88,11 @@ public class DefaultDumpSupplier implements DumpSupplier {
   private static final String DISCOGS_DATA_URL = "https://data.discogs.com/";
   private static final String LEGACY_BUCKET_URL =
       "https://discogs-data.s3-us-west-2.amazonaws.com";
-  private static final String USER_AGENT = "open-discogs-batch/0.1";
+  private static final String USER_AGENT =
+      "Mozilla/5.0 (compatible; OpenDiscogsBatch/0.1;"
+          + " +https://github.com/dsub-io/open-discogs-batch)";
+  private static final String ACCEPT_HTML =
+      "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
   private static final long KIBIBYTE = 1024L;
   private static final long MEBIBYTE = KIBIBYTE * 1024L;
   private static final long GIBIBYTE = MEBIBYTE * 1024L;
@@ -141,7 +145,7 @@ public class DefaultDumpSupplier implements DumpSupplier {
         HttpRequest.newBuilder()
             .uri(URI.create(url))
             .timeout(Duration.ofSeconds(10))
-            .header("Accept", "text/html")
+            .header("Accept", ACCEPT_HTML)
             .header("User-Agent", USER_AGENT)
             .GET()
             .build();
