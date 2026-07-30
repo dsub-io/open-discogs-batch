@@ -14,7 +14,7 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import oshi.SystemInfo;
 
-class TaskExecutorConfigTest {
+class TaskExecutorConfigUnitTest {
 
   ApplicationContextRunner ctx;
 

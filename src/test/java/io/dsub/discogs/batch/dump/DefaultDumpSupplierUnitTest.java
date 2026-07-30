@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.doReturn;
 
-import io.dsub.discogs.batch.condition.RequiresDiscogsDataConnection;
 import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import io.dsub.discogs.batch.testutil.LogSpy;
 import java.io.File;
@@ -26,7 +25,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mockito;
 import org.springframework.util.ResourceUtils;
@@ -36,7 +34,6 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
 @Slf4j
-@ExtendWith(RequiresDiscogsDataConnection.class)
 class DefaultDumpSupplierUnitTest {
 
   @RegisterExtension
@@ -46,35 +43,6 @@ class DefaultDumpSupplierUnitTest {
   @BeforeEach
   void setUp() {
     dumpSupplier = Mockito.spy(new DefaultDumpSupplier());
-  }
-
-  @Test
-  void whenGet__ThenReturnsNotEmptyListOfValidDiscogsDumps() {
-    // when
-    List<DiscogsDump> foundList = dumpSupplier.get();
-
-    // then
-    assertThat(dumpSupplier.get())
-        .isNotNull()
-        .satisfies(list -> assertThat(list.size()).isGreaterThan(0));
-
-    foundList.forEach(
-        item ->
-            assertThat(item)
-                .satisfies(dump -> assertThat(dump.getETag()).isNotNull().isNotBlank())
-                .satisfies(dump -> assertThat(dump.getSize()).isNotNull().isGreaterThan(0))
-                .satisfies(dump -> assertThat(dump.getUriString()).isNotNull().isNotBlank())
-                .satisfies(dump -> assertThat(dump.getFileName()).matches("^[\\w_]+.xml.gz$"))
-                .satisfies(dump -> assertThat(dump.getType()).isNotNull()));
-  }
-
-  @Test
-  void whenGetBucketURL__ReturnsValidURL() {
-    // when
-    String url = dumpSupplier.getBucketURL();
-
-    // then
-    assertThat(url).isNotNull().isNotBlank().matches("^https://[\\w_.-]+[\\w_-].com$");
   }
 
   @Test

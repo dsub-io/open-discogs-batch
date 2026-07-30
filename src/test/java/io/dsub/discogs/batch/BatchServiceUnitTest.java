@@ -26,7 +26,7 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 
-class BatchServiceTest {
+class BatchServiceUnitTest {
 
   BatchService batchService;
 

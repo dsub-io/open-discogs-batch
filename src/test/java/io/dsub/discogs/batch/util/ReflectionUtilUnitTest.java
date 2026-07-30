@@ -22,7 +22,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 @Slf4j
-class ReflectionUtilTest {
+class ReflectionUtilUnitTest {
 
   @RegisterExtension
   LogSpy logSpy = new LogSpy();

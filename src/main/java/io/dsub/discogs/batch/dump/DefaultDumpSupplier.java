@@ -14,6 +14,7 @@ import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -22,8 +23,6 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
@@ -109,19 +108,18 @@ public class DefaultDumpSupplier implements DumpSupplier {
    * @return bucket url if success, else return null.
    */
   protected String getBucketURL() {
-    Stream<String> resultStream;
     int retryCount = 0;
     String bucketURL = null;
 
-    while (retryCount < 3 && bucketURL == null) { // retry future.get() method three times max.
-      try {
-        resultStream = getDiscogsDataSourceStream();
+    while (retryCount < 3 && bucketURL == null) {
+      retryCount++;
+      try (Stream<String> resultStream = getDiscogsDataSourceStream()) {
         AtomicReference<String> bucketUrlRef = new AtomicReference<>();
         resultStream
             .map(String::trim)
             .filter(s -> BUCKET_VAR_DECLARATION_PATTERN.matcher(s).matches())
             .findFirst()
-            .ifPresent( // we found something that
+            .ifPresent(
                 s -> {
                   s = StringUtils.trimAllWhitespace(s);
                   String fin = s.substring(s.indexOf('\'') + 1, s.lastIndexOf('\''));
@@ -134,26 +132,27 @@ public class DefaultDumpSupplier implements DumpSupplier {
                 });
         // get referenced value.
         bucketURL = bucketUrlRef.get();
-      } catch (ExecutionException | InterruptedException e) {
-        retryCount++;
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        return null;
+      } catch (IOException e) {
+        log.warn("failed to resolve the Discogs data bucket URL", e);
       }
     }
     return bucketURL;
   }
 
   protected Stream<String> getDiscogsDataSourceStream()
-      throws ExecutionException, InterruptedException {
-    HttpClient client = HttpClient.newBuilder().build();
-
-    // make GET request to
-    CompletableFuture<HttpResponse<Stream<String>>> future =
-        client.sendAsync(
-            HttpRequest.newBuilder().uri(URI.create(DISCOGS_DATA_URL)).GET().build(),
-            HttpResponse.BodyHandlers.ofLines());
-    while (!future.isDone()) {
-      Thread.onSpinWait();
-    }
-    return future.get().body();
+      throws IOException, InterruptedException {
+    HttpClient client =
+        HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
+    HttpRequest request =
+        HttpRequest.newBuilder()
+            .uri(URI.create(DISCOGS_DATA_URL))
+            .timeout(Duration.ofSeconds(10))
+            .GET()
+            .build();
+    return client.send(request, HttpResponse.BodyHandlers.ofLines()).body();
   }
 
   /**

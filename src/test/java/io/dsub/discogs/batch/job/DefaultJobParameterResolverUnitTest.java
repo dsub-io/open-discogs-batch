@@ -28,7 +28,7 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.DefaultApplicationArguments;
 
-class DefaultJobParameterResolverTest {
+class DefaultJobParameterResolverUnitTest {
 
   @RegisterExtension
   LogSpy logSpy = new LogSpy();

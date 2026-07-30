@@ -21,7 +21,7 @@ import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
-class BatchApplicationTest {
+class BatchApplicationUnitTest {
 
   @Mock
   BatchService batchService;

@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import io.dsub.discogs.batch.argument.validator.DatabaseConnectionValidator;
 import io.dsub.discogs.batch.argument.validator.DefaultDatabaseConnectionValidator;
 import io.dsub.discogs.batch.argument.validator.ValidationResult;
-import io.dsub.discogs.batch.container.PostgreSQLContainerBaseTest;
+import io.dsub.discogs.batch.container.PostgreSQLIntegrationSupport;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -16,7 +16,7 @@ public class DefaultDatabaseConnectionValidatorIntegrationTest {
   static final DatabaseConnectionValidator service = new DefaultDatabaseConnectionValidator();
 
   @Nested
-  class PostgreSQLIntegrationTest extends PostgreSQLContainerBaseTest {
+  class PostgreSQLIntegrationTest extends PostgreSQLIntegrationSupport {
 
     @Test
     void shouldPassIfCredentialsMatch() {

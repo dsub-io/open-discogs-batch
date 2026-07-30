@@ -29,7 +29,7 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
-class JobPreparationRunnerTest {
+class JobPreparationRunnerUnitTest {
 
   @Mock
   ApplicationArguments args;

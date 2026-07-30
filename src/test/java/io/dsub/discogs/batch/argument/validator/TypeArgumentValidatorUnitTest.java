@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.DefaultApplicationArguments;
 
-class TypeArgumentValidatorTest {
+class TypeArgumentValidatorUnitTest {
 
   final TypeArgumentValidator validator = new TypeArgumentValidator();
 

@@ -4,7 +4,6 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.when;
 
-import io.dsub.discogs.batch.condition.RequiresDiscogsDataConnection;
 import io.dsub.discogs.batch.dump.DefaultDumpSupplier;
 import io.dsub.discogs.batch.dump.DiscogsDump;
 import io.dsub.discogs.batch.dump.DumpSupplier;
@@ -18,20 +17,14 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mockito;
+import org.springframework.util.ResourceUtils;
 
-@ExtendWith(RequiresDiscogsDataConnection.class)
 public class DefaultDiscogsDumpServiceIntegrationTest {
 
-  final List<DiscogsDump> sampleDumpList =
-      new DefaultDumpSupplier().get().stream()
-          .sorted(DiscogsDump::compareTo)
-          .skip(200)
-          .limit(10)
-          .collect(Collectors.toList());
+  List<DiscogsDump> sampleDumpList;
 
   DumpSupplier dumpSupplier;
   DiscogsDumpRepository repository;
@@ -39,6 +32,11 @@ public class DefaultDiscogsDumpServiceIntegrationTest {
 
   @BeforeEach
   void setUp() throws Exception {
+    sampleDumpList =
+        new DefaultDumpSupplier()
+            .get(ResourceUtils.getFile("classpath:test/DiscogsDataDump.xml")).stream()
+            .sorted(DiscogsDump::compareTo)
+            .collect(Collectors.toList());
     dumpSupplier = Mockito.mock(DumpSupplier.class);
     when(dumpSupplier.get()).thenReturn(sampleDumpList);
     repository = new MapDiscogsDumpRepository(dumpSupplier);

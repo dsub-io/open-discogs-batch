@@ -20,7 +20,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 
-class ItemCountingItemProcessListenerTest {
+class ItemCountingItemProcessListenerUnitTest {
 
   private ItemCountingItemProcessListener listener;
   private AtomicLong counter;

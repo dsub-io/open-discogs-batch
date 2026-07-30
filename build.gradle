@@ -20,8 +20,7 @@ ext {
     set('testcontainersVersion', "1.21.4")
     set('springOxmVersion', "5.3.8")
     set('jaxbApiVersion', "2.3.1")
-    set('jaxbImplVersion', "3.0.1")
-    set('istackCommonsRuntimeVersion', "4.0.1")
+    set('jaxbRuntimeVersion', "2.3.8")
     set('classGraphVersion', "4.8.108")
     set('pbVersion', "0.9.1")
     set('openDiscogsJooqVersion', "0.0.4")
@@ -48,14 +47,12 @@ dependencies {
     implementation(
             'com.fasterxml.jackson.datatype:jackson-datatype-jsr310',
             'org.springframework.boot:spring-boot-starter-batch',
-            'org.springframework.boot:spring-boot-starter-data-jpa',
             'org.springframework.batch:spring-batch-integration',
             'org.springframework.boot:spring-boot-starter-jooq',
             "io.dsub.opendiscogs:open-discogs-jooq:${openDiscogsJooqVersion}",
             "org.springframework:spring-oxm:${springOxmVersion}",
             "javax.xml.bind:jaxb-api:${jaxbApiVersion}",
-            "com.sun.xml.bind:jaxb-impl:${jaxbImplVersion}",
-            "com.sun.istack:istack-commons-runtime:${istackCommonsRuntimeVersion}",
+            "org.glassfish.jaxb:jaxb-runtime:${jaxbRuntimeVersion}",
             "io.github.classgraph:classgraph:${classGraphVersion}",
             "me.tongfei:progressbar:${pbVersion}",
             "org.liquibase:liquibase-core:${liquibaseVersion}",
@@ -82,16 +79,71 @@ dependencies {
 }
 
 test {
-    useJUnitPlatform()
+    useJUnitPlatform {
+        excludeTags 'e2e'
+    }
 }
 
-// coverage
+tasks.register('e2eTest', Test) {
+    description = 'Runs tests that access live external services.'
+    group = 'verification'
+    useJUnitPlatform {
+        includeTags 'e2e'
+    }
+    shouldRunAfter test
+}
+
+tasks.register('validateTestNaming') {
+    description = 'Checks executable test classes use a recognized test suffix.'
+    group = 'verification'
+    def testSources = fileTree('src/test/java') {
+        include '**/*.java'
+    }
+    inputs.files(testSources)
+    doLast {
+        def invalidFiles = testSources.findAll { file ->
+            def source = file.getText('UTF-8')
+            def containsTests =
+                    source =~ /@(Test|ParameterizedTest|RepeatedTest|TestFactory)\b/
+            containsTests && !(file.name ==~ /.*(UnitTest|IntegrationTest|E2ETest)\.java/)
+        }
+        if (!invalidFiles.isEmpty()) {
+            def names = invalidFiles.collect {
+                project.relativePath(it)
+            }.sort().join('\n - ')
+            throw new GradleException(
+                    "Test classes must end in UnitTest, IntegrationTest, or E2ETest:\n - ${names}")
+        }
+    }
+}
+
+check.dependsOn validateTestNaming
 check.dependsOn jacocoTestReport
+check.dependsOn jacocoTestCoverageVerification
 
 jacocoTestReport {
+    dependsOn test
     reports {
         xml.enabled true
-        html.enabled false
+        html.enabled true
+    }
+}
+
+jacocoTestCoverageVerification {
+    dependsOn jacocoTestReport
+    violationRules {
+        rule {
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.85
+            }
+            limit {
+                counter = 'BRANCH'
+                value = 'COVEREDRATIO'
+                minimum = 0.40
+            }
+        }
     }
 }
 

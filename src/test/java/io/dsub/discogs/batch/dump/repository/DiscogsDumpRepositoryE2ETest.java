@@ -10,13 +10,15 @@ import io.dsub.discogs.batch.dump.DumpSupplier;
 import io.dsub.discogs.batch.dump.EntityType;
 import java.util.List;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
+@Tag("e2e")
 @ExtendWith(RequiresDiscogsDataConnection.class)
-class DiscogsDiscogsDumpRepositoryIntegrationTest {
+class DiscogsDumpRepositoryE2ETest {
 
   static DumpSupplier dumpSupplier;
   static DiscogsDumpRepository repository;

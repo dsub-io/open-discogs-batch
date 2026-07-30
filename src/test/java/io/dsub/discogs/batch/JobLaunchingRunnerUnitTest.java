@@ -34,7 +34,7 @@ import org.springframework.boot.ExitCodeGenerator;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 
-class JobLaunchingRunnerTest {
+class JobLaunchingRunnerUnitTest {
 
   @Mock
   Job job;

@@ -2,14 +2,14 @@ package io.dsub.discogs.batch.argument.handler;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
-import io.dsub.discogs.batch.container.PostgreSQLContainerBaseTest;
+import io.dsub.discogs.batch.container.PostgreSQLIntegrationSupport;
 import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-class DefaultArgumentHandlerIntegrationTest extends PostgreSQLContainerBaseTest {
+class DefaultArgumentHandlerIntegrationTest extends PostgreSQLIntegrationSupport {
 
   private final ArgumentHandler handler = new DefaultArgumentHandler();
 

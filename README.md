@@ -52,15 +52,30 @@ Build the executable JAR:
 ./gradlew clean assemble
 ```
 
-Run the complete test suite:
+Run the deterministic unit and integration suite, generate the coverage report,
+and enforce the coverage gate:
 
 ```bash
-./gradlew clean test
+./gradlew clean check
 ```
 
-Some integration tests start PostgreSQL through Testcontainers, and some
-exercise the live dump index at `data.discogs.com`. They therefore require
-Docker and external network access.
+Integration tests start PostgreSQL through Testcontainers and therefore require
+Docker. Tests that access `data.discogs.com` are kept outside the deterministic
+suite and can be run explicitly:
+
+```bash
+./gradlew e2eTest
+```
+
+Executable test classes use one of three suffixes:
+
+- `*UnitTest` for isolated tests.
+- `*IntegrationTest` for deterministic component and Testcontainers tests.
+- `*E2ETest` for opt-in end-to-end checks against external services.
+
+The build rejects other executable test class names. Pull requests must pass
+the deterministic suite and maintain at least 85% line coverage and 40% branch
+coverage.
 
 The executable is written to:
 

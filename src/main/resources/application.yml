@@ -12,18 +12,6 @@ spring:
   batch:
     job:
       enabled: false
-  jpa:
-    properties:
-      hibernate:
-        jdbc:
-          batch_size: 500
-          time_zone: UTC
-          batch_versioned_data: true
-        order_updates: true
-        order_inserts: true
-        format_sql: true
-    hibernate:
-      ddl-auto: update
   jmx:
     enabled: false
 logging:
@@ -35,7 +23,6 @@ logging:
     org:
       reflections: ERROR
       springframework: ERROR
-      hibernate: ERROR
     com.zaxxer.hikari: ERROR
 server:
   shutdown: graceful
