@@ -65,7 +65,7 @@ Docker and external network access.
 The executable is written to:
 
 ```text
-build/libs/discogs-batch-0.1.8.jar
+build/libs/open-discogs-batch-0.1.8.jar
 ```
 
 ## Run
@@ -73,7 +73,7 @@ build/libs/discogs-batch-0.1.8.jar
 The database URL, username, and password are required. For example:
 
 ```bash
-java -jar build/libs/discogs-batch-0.1.8.jar \
+java -jar build/libs/open-discogs-batch-0.1.8.jar \
   --url=jdbc:postgresql://localhost:5432/discogs \
   --username=<database-user> \
   --password=<database-password> \

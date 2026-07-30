@@ -96,7 +96,7 @@ jacocoTestReport {
 }
 
 bootBuildImage {
-    setImageName('sehy0121/discogs-batch-0.1.8')
+    setImageName("open-discogs-batch:${project.version}")
 }
 // disable caching
 configurations.each {
