@@ -90,8 +90,6 @@ public class DefaultDumpSupplier implements DumpSupplier {
   private static final List<String> KNOWN_NODE_TYPES = List.of(KEY, ETAG, SIZE);
 
   private static final String DISCOGS_DATA_URL = "https://data.discogs.com/";
-  private static final String DIRECT_BUCKET_URL =
-      "https://discogs-data-dumps.s3.us-west-2.amazonaws.com/";
   private static final String LEGACY_BUCKET_URL =
       "https://discogs-data.s3-us-west-2.amazonaws.com";
   private static final String USER_AGENT =
@@ -289,9 +287,6 @@ public class DefaultDumpSupplier implements DumpSupplier {
   }
 
   private URL createDownloadUrl(String uri) throws MalformedURLException {
-    if (DISCOGS_DATA_URL.equals(discogsDataUrl)) {
-      return URI.create(DIRECT_BUCKET_URL + uri).toURL();
-    }
     return URI.create(
             discogsDataUrl + "?download=" + URLEncoder.encode(uri, StandardCharsets.UTF_8))
         .toURL();
