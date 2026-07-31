@@ -16,7 +16,7 @@ class DiscogsDataE2ETest {
 
   private static final URI CHECKSUM_MANIFEST =
       URI.create(
-          "https://discogs-data-dumps.s3-us-west-2.amazonaws.com/"
+          "https://discogs-data-dumps.s3.us-west-2.amazonaws.com/"
               + "data/2026/discogs_20260701_CHECKSUM.txt");
 
   @Test
@@ -40,7 +40,12 @@ class DiscogsDataE2ETest {
     HttpResponse<String> response =
         client.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
 
-    assertThat(response.statusCode()).isEqualTo(200);
+    assertThat(response.statusCode())
+        .withFailMessage(
+            "Discogs checksum manifest returned HTTP %s: %s",
+            response.statusCode(),
+            response.body())
+        .isEqualTo(200);
     assertThat(response.body())
         .contains(
             "discogs_20260701_artists.xml.gz",

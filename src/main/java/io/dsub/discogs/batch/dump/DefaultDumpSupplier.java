@@ -91,7 +91,7 @@ public class DefaultDumpSupplier implements DumpSupplier {
 
   private static final String DISCOGS_DATA_URL = "https://data.discogs.com/";
   private static final String DIRECT_BUCKET_URL =
-      "https://discogs-data-dumps.s3-us-west-2.amazonaws.com/";
+      "https://discogs-data-dumps.s3.us-west-2.amazonaws.com/";
   private static final String LEGACY_BUCKET_URL =
       "https://discogs-data.s3-us-west-2.amazonaws.com";
   private static final String USER_AGENT =

@@ -198,7 +198,7 @@ class DefaultDumpSupplierUnitTest {
               assertThat(dump.getETag()).isEqualTo(dump.getUriString());
               assertThat(dump.getUrl().toString())
                   .startsWith(
-                      "https://discogs-data-dumps.s3-us-west-2.amazonaws.com/data/2026/");
+                      "https://discogs-data-dumps.s3.us-west-2.amazonaws.com/data/2026/");
               assertThat(dump.getChecksumUrl().toString()).isEqualTo(julyManifestUrl);
             });
     verify(dumpSupplier, times(1)).getDiscogsManifestSource(augustManifestUrl);
@@ -525,7 +525,7 @@ class DefaultDumpSupplierUnitTest {
   }
 
   private String manifestUrl(String dateStamp) {
-    return "https://discogs-data-dumps.s3-us-west-2.amazonaws.com/data/"
+    return "https://discogs-data-dumps.s3.us-west-2.amazonaws.com/data/"
         + dateStamp.substring(0, 4)
         + "/discogs_"
         + dateStamp
