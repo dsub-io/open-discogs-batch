@@ -7,7 +7,6 @@ import io.dsub.discogs.batch.dump.repository.DiscogsDumpRepository;
 import io.dsub.discogs.batch.exception.DumpNotFoundException;
 import io.dsub.discogs.batch.exception.InitializationFailureException;
 import io.dsub.discogs.batch.exception.InvalidArgumentException;
-import java.time.Clock;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.EnumMap;
@@ -16,7 +15,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
@@ -116,10 +114,10 @@ public class DefaultDiscogsDumpService implements DiscogsDumpService, Initializi
 
   /**
    * Fetches collection of {@link DiscogsDump} from given type, year and month. The types must be
-   * unique and each type must be present for the same dump date (otherwise throws).
+   * unique and each type must be present during the requested month (otherwise throws).
    *
-   * <p>If a month contains multiple releases, this returns the newest date that has a coherent set
-   * of all requested types. It never combines files from different dump dates.
+   * <p>If a month contains multiple publications, this returns the newest dump independently for
+   * each requested type. The selected types may therefore have different dump dates.
    *
    * @param types target {@link EntityType}(s). throws {@link InvalidArgumentException} if null or
    *              blank.
@@ -135,7 +133,10 @@ public class DefaultDiscogsDumpService implements DiscogsDumpService, Initializi
     Set<EntityType> requiredTypes = new LinkedHashSet<>(types);
     LocalDate targetDate = LocalDate.of(year, month, 1);
     List<DiscogsDump> dumpList =
-        findLatestCoherentSet(requiredTypes, targetDate, targetDate.plusMonths(1));
+        findLatestPerType(
+            requiredTypes,
+            repository.findAllByLastModifiedAtIsBetween(
+                targetDate, targetDate.plusMonths(1)));
     if (!dumpList.isEmpty()) {
       return dumpList;
     }
@@ -156,7 +157,7 @@ public class DefaultDiscogsDumpService implements DiscogsDumpService, Initializi
               + " not found");
     }
     throw new DumpNotFoundException(
-        "complete dump set of types "
+        "dump set of types "
             + requiredTypes
             + " from "
             + year
@@ -181,33 +182,19 @@ public class DefaultDiscogsDumpService implements DiscogsDumpService, Initializi
   }
 
   /**
-   * Fetch latest complete dump that contains all four {@link EntityType} from the exact same dump
-   * date. It is extremely important to note that the current year and month must be the same from
-   * those of UTC.
+   * Fetch the latest available dump independently for every {@link EntityType}. Dates may differ
+   * when an upstream publication omits one domain.
    *
    * @return latest complete dump set.
    */
   @Override
   public List<DiscogsDump> getLatestCompleteDumpSet() throws DumpNotFoundException {
-    LocalDate curr = LocalDate.now(Clock.systemUTC()); // get current date by timezone: UTC.
-
-    int year = curr.getYear(), month = curr.getMonthValue();
-
-    LocalDate start = LocalDate.of(year, month, 1);
-    LocalDate end = start.plusMonths(1);
-
-    // limit condition to first known year and month.
-    while (start.isAfter(FIRST_DUMP_YEAR_MONTH)) {
-      List<DiscogsDump> completeSet =
-          findLatestCoherentSet(Set.of(EntityType.values()), start, end);
-      if (!completeSet.isEmpty()) {
-        return completeSet;
-      }
-      start = start.minusMonths(1);
-      end = end.minusMonths(1);
+    List<DiscogsDump> latest =
+        findLatestPerType(Set.of(EntityType.values()), repository.findAll());
+    if (!latest.isEmpty()) {
+      return latest;
     }
-
-    throw new DumpNotFoundException("failed to locate the complete dump set...");
+    throw new DumpNotFoundException("failed to locate a dump for every entity type");
   }
 
   /**
@@ -220,37 +207,30 @@ public class DefaultDiscogsDumpService implements DiscogsDumpService, Initializi
     return repository.findAll();
   }
 
-  private List<DiscogsDump> findLatestCoherentSet(
-      Set<EntityType> requiredTypes, LocalDate start, LocalDate end) {
+  private List<DiscogsDump> findLatestPerType(
+      Set<EntityType> requiredTypes, Collection<DiscogsDump> candidates) {
     if (requiredTypes.isEmpty()) {
       return List.of();
     }
 
-    Map<LocalDate, Map<EntityType, DiscogsDump>> dumpsByDate =
-        new TreeMap<>(java.util.Comparator.reverseOrder());
-    repository.findAllByLastModifiedAtIsBetween(start, end).stream()
+    Map<EntityType, DiscogsDump> latest = new EnumMap<>(EntityType.class);
+    candidates.stream()
         .filter(Objects::nonNull)
         .filter(dump -> requiredTypes.contains(dump.getType()))
         .forEach(
             dump ->
-                dumpsByDate
-                    .computeIfAbsent(
-                        dump.getLastModifiedAt(), ignored -> new EnumMap<>(EntityType.class))
-                    .merge(
-                        dump.getType(),
-                        dump,
-                        (left, right) -> left.compareTo(right) >= 0 ? left : right));
+                latest.merge(
+                    dump.getType(),
+                    dump,
+                    (left, right) -> left.compareTo(right) >= 0 ? left : right));
 
-    return dumpsByDate.values().stream()
-        .filter(dumps -> dumps.keySet().containsAll(requiredTypes))
-        .findFirst()
-        .map(
-            dumps ->
-                requiredTypes.stream()
-                    .map(dumps::get)
-                    .sorted(DiscogsDump::compareTo)
-                    .collect(Collectors.toList()))
-        .orElseGet(List::of);
+    if (!latest.keySet().containsAll(requiredTypes)) {
+      return List.of();
+    }
+    return requiredTypes.stream()
+        .sorted(java.util.Comparator.comparingInt(Enum::ordinal))
+        .map(latest::get)
+        .collect(Collectors.toList());
   }
 
   /**

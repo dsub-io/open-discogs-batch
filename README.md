@@ -26,11 +26,10 @@ artist -> label -> master -> release
 Selecting `master` also selects artist and label dependencies. Selecting
 `release` selects all four entity types unless `strict` is enabled.
 
-Files are selected as a coherent dump-date set. A full import requires all four
-types from the same date. A targeted import only requires the selected type and
-its dependencies, so a missing label dump does not prevent an artist-only
-import. If the required set is incomplete for a month, automatic selection
-moves to the previous month.
+Each requested entity independently selects its newest available dump. A full
+import can therefore combine, for example, a newer artist dump with an older
+release dump when an upstream publication omits one domain. Each entity keeps
+its own successful checkpoint and exact source provenance.
 
 The current schema is documented in the
 [OpenDiscogs ERD](https://dbdocs.io/state303/OpenDiscogs).
@@ -56,7 +55,7 @@ Dependencies resolve from Maven Central. The generated schema library is
 published as:
 
 ```text
-io.dsub.opendiscogs:open-discogs-jooq:0.0.5
+io.dsub.opendiscogs:open-discogs-model-jooq:0.1.2
 ```
 
 No GitHub token is required to build or run this project.
@@ -77,26 +76,20 @@ and enforce the coverage gate:
 ```
 
 Integration tests start PostgreSQL through Testcontainers and therefore require
-Docker. End-to-end tests run the real HTTP discovery, download, checksum,
-repository, and latest-set selection code against a loopback Discogs
-distribution fixture and can be run explicitly:
+Docker. They also exercise discovery, downloads, checksums, repository
+selection, and independent per-entity dates against a loopback distribution
+fixture.
+
+The end-to-end lane makes one bounded request for the public July 2026 checksum
+manifest and verifies that it advertises all four entity dumps:
 
 ```bash
 ./gradlew e2eTest
 ```
 
-The same E2E suite runs on every pull request and on manual dispatch. It runs on
-a GitHub-hosted Ubuntu runner and is a required pull-request check. The fixture
-serves a root index, year index, four compressed dumps, and their shared
-SHA-256 manifest over a real loopback HTTP server. The test discovers and
-downloads all four domains, verifies their hashes, and resolves the coherent
-same-date set without skipping any case.
-
-Discogs currently returns HTTP 403 to GitHub-hosted runner addresses for both
-directory and direct-download requests. Live upstream availability therefore
-cannot be a reliable GitHub pull-request gate; the E2E gate owns application
-behavior, while real deployments still fail explicitly if Discogs is
-unreachable.
+The E2E workflow runs on every pull request and on manual dispatch using a
+GitHub-hosted `ubuntu-latest` runner. It does not use a self-hosted runner and
+does not download the large XML dumps.
 
 Executable test classes use one of three suffixes:
 
@@ -143,6 +136,8 @@ values are expanded into individual option values.
 | `coreCount` | `core` | no | Worker count; defaults to 80% of physical cores |
 | `mount` | `m` | no | Keep downloaded dump files |
 | `strict` | `s` | no | Do not add entity dependencies |
+| `force` | `f` | no | Reprocess an already successful manifest |
+| `allowDowngrade` | `allow-downgrade` | no | Explicitly allow an older dump than the current entity checkpoint |
 | `driverClassName` | `driverclassname`, `driver_class_name` | no | JDBC driver override; normally inferred |
 
 Do not provide both `year` and `yearMonth`. When none of `eTag`, `year`,
@@ -159,11 +154,23 @@ accepted only after their SHA-256 value matches the manifest. One manifest is
 fetched and cached per selected dump date.
 
 If the directory index is unavailable, automatic selection falls back to the
-monthly checksum manifests and resolves the newest complete set. Missing or
-incomplete months are skipped, while access errors stop immediately instead of
-causing repeated failing requests. File size is unknown on this fallback path,
-so download progress is shown without a fixed total and integrity is still
-decided by SHA-256.
+monthly checksum manifests. It keeps the newest dump found for each entity and
+looks further back only for unresolved entities, so one missing domain does not
+roll the other three back. Access errors stop immediately instead of causing
+repeated failing requests. File size is unknown on this fallback path, so
+download progress is shown without a fixed total and integrity is still decided
+by SHA-256.
+
+The four selected dump checksums form one language-neutral manifest
+fingerprint. A manifest that already completed successfully is skipped unless
+`--force` is supplied. Failed imports remain retryable. Force never permits an
+older dump by itself; downgrade requires the separate
+`--allow-downgrade` option and is recorded in import history.
+
+Java and Go importers use the same PostgreSQL entity advisory locks. Disjoint
+entity sets may run concurrently, but a second process cannot update an entity
+that is already being imported. The `discogs_import_checkpoint` database view
+shows the last successfully applied dump date and provenance for each entity.
 
 The application currently receives the database password as a process
 argument. On a shared host, command-line arguments may be visible to other
@@ -185,3 +192,8 @@ Allowed types are `build`, `chore`, `ci`, `docs`, `feat`, `fix`, `perf`,
 `refactor`, `revert`, `style`, and `test`. GitHub Actions rejects pull requests
 and new commits that do not follow this format. Pull-request branches must also
 not use the reserved `agent/`, `codex/`, or `claude/` prefixes.
+
+## License
+
+MIT. See [LICENSE](LICENSE). The `state303` attribution must be retained in
+copies or substantial portions of the software.

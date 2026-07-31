@@ -15,11 +15,16 @@ public class MasterMainReleaseItemProcessor
 
   @Override
   public MasterRecord process(MasterMainReleaseXML item) throws Exception {
-    if (item == null || item.getId() == null || item.getMainReleaseId() == null) {
+    if (item == null
+        || item.getReleaseId() == null
+        || item.getMaster() == null
+        || item.getMaster().getMasterId() == null
+        || !item.getMaster().isMainRelease()) {
       return null;
     }
 
-    if (!idRegistry.exists(DefaultEntityIdRegistry.Type.RELEASE, item.getMainReleaseId())) {
+    if (!idRegistry.exists(DefaultEntityIdRegistry.Type.MASTER, item.getMaster().getMasterId())
+        || !idRegistry.exists(DefaultEntityIdRegistry.Type.RELEASE, item.getReleaseId())) {
       return null;
     }
 

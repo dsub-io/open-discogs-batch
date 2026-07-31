@@ -111,19 +111,11 @@ public class DefaultDiscogsDumpServiceIntegrationTest {
         throws DumpNotFoundException {
       List<DiscogsDump> recentDumps =
           sampleDumpList.stream()
-              .collect(Collectors.groupingBy(DiscogsDump::getLastModifiedAt))
-              .entrySet()
+              .collect(Collectors.groupingBy(DiscogsDump::getType))
+              .values()
               .stream()
-              .filter(
-                  entry ->
-                      entry.getValue().stream()
-                              .map(DiscogsDump::getType)
-                              .distinct()
-                              .count()
-                          == EntityType.values().length)
-              .max(java.util.Map.Entry.comparingByKey())
-              .orElseThrow()
-              .getValue();
+              .map(dumps -> dumps.stream().max(DiscogsDump::compareTo).orElseThrow())
+              .toList();
 
       // when
       List<DiscogsDump> result = dumpService.getLatestCompleteDumpSet();

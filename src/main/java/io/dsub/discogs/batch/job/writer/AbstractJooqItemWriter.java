@@ -140,4 +140,10 @@ public abstract class AbstractJooqItemWriter<T extends UpdatableRecord<?>> imple
     updateFieldsCache.put(table, updateFields);
     return updateFields;
   }
+
+  protected List<Field<?>> getBusinessUpdateFields(Table<?> table) {
+    return getUpdateFields(table).stream()
+        .filter(field -> !field.getName().equals("last_modified_at"))
+        .collect(Collectors.toList());
+  }
 }

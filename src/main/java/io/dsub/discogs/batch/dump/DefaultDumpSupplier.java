@@ -27,6 +27,7 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeParseException;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -197,13 +198,14 @@ public class DefaultDumpSupplier implements DumpSupplier {
   }
 
   /**
-   * Resolves the newest monthly manifest containing artists, labels, masters, and releases. A
-   * missing or incomplete month is skipped, while an access or server error aborts immediately so
-   * the fallback cannot create a burst of failing requests.
+   * Resolves the newest available dump independently for artists, labels, masters, and releases.
+   * Missing domains are filled from older manifests, while an access or server error aborts
+   * immediately so the fallback cannot create a burst of failing requests.
    */
   protected List<DiscogsDump> getLatestCompleteDumpsFromManifests()
       throws IOException, InterruptedException {
     LocalDate candidate = getCurrentUtcDate().withDayOfMonth(1);
+    Map<EntityType, DiscogsDump> latest = new EnumMap<>(EntityType.class);
     for (int monthOffset = 0; monthOffset < MANIFEST_LOOKBACK_MONTHS; monthOffset++) {
       LocalDate dumpDate = candidate.minusMonths(monthOffset);
       String dateStamp = DUMP_DATE_FORMATTER.format(dumpDate);
@@ -219,13 +221,16 @@ public class DefaultDumpSupplier implements DumpSupplier {
         continue;
       }
 
-      List<DiscogsDump> dumps =
-          createCompleteDumpSet(dumpDate, checksumUrl, manifestSource.get());
-      if (!dumps.isEmpty()) {
-        return dumps;
+      createDumpSet(dumpDate, checksumUrl, manifestSource.get())
+          .forEach(dump -> latest.putIfAbsent(dump.getType(), dump));
+      if (latest.size() == EntityType.values().length) {
+        return java.util.Arrays.stream(EntityType.values())
+            .map(latest::get)
+            .toList();
       }
       log.warn(
-          "Discogs checksum manifest for {} is incomplete; checking the previous month",
+          "Discogs checksum manifest for {} does not cover every unresolved entity; "
+              + "checking the previous month",
           dumpDate);
     }
     return List.of();
@@ -257,7 +262,7 @@ public class DefaultDumpSupplier implements DumpSupplier {
     return Optional.of(response.body());
   }
 
-  protected List<DiscogsDump> createCompleteDumpSet(
+  protected List<DiscogsDump> createDumpSet(
       LocalDate dumpDate, URL checksumUrl, String manifestSource) throws MalformedURLException {
     Map<String, String> checksums = DiscogsDumpVerifier.parseChecksums(manifestSource);
     String dateStamp = DUMP_DATE_FORMATTER.format(dumpDate);
@@ -265,7 +270,7 @@ public class DefaultDumpSupplier implements DumpSupplier {
     for (EntityType type : EntityType.values()) {
       String fileName = "discogs_" + dateStamp + "_" + type + "s.xml.gz";
       if (!checksums.containsKey(fileName)) {
-        return List.of();
+        continue;
       }
       String uri = "data/" + dumpDate.getYear() + "/" + fileName;
       dumps.add(

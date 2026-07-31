@@ -96,7 +96,7 @@ public class ItemReaderConfig {
   @StepScope
   public SynchronizedItemStreamReader<MasterMainReleaseXML> masterMainReleaseStreamReader() {
     try {
-      return readerBuilder.build(MasterMainReleaseXML.class, masterDump(null));
+      return readerBuilder.build(MasterMainReleaseXML.class, releaseItemDump(null));
     } catch (Exception e) {
       throw new InitializationFailureException(
           "failed to initialize master main release stream reader: " + e.getMessage());

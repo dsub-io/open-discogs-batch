@@ -37,6 +37,7 @@ class DefaultMalformedDateParserUnitTest {
   @Test
   void whenValidMonth__ShouldReturnTrue() {
     assertTrue(parser.isMonthValid("193x-03"));
+    assertTrue(parser.isMonthValid("193x-03-00"));
     assertTrue(parser.isMonthValid("193x-3"));
     assertTrue(parser.isMonthValid("193x-002"));
   }

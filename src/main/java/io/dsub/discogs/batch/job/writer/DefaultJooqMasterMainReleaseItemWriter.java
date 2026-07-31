@@ -32,6 +32,7 @@ public class DefaultJooqMasterMainReleaseItemWriter implements JooqItemWriter<Ma
         .update(Master.MASTER)
         .set(Master.MASTER.LAST_MODIFIED_AT, record.getLastModifiedAt())
         .set(Master.MASTER.MAIN_RELEASE_ID, record.getMainReleaseId())
-        .where(Master.MASTER.ID.eq(record.getId()));
+        .where(Master.MASTER.ID.eq(record.getId()))
+        .and(Master.MASTER.MAIN_RELEASE_ID.isDistinctFrom(record.getMainReleaseId()));
   }
 }

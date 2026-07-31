@@ -5,6 +5,7 @@ import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -21,10 +22,18 @@ import io.dsub.discogs.batch.util.FileUtil;
 import io.dsub.discogs.batch.util.SimpleFileUtil;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.Statement;
+import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import javax.sql.DataSource;
 import lombok.extern.slf4j.Slf4j;
@@ -79,6 +88,8 @@ public abstract class DiscogsJobIntegrationTest {
   Map<EntityType, File> dumpFiles;
   @Autowired
   CountDownLatch exitLatch;
+  @Autowired
+  DataSource dataSource;
   @RegisterExtension
   LogSpy logSpy = new LogSpy();
   @Autowired
@@ -96,7 +107,7 @@ public abstract class DiscogsJobIntegrationTest {
     jobRepositoryTestUtils.removeJobExecutions();
     dumpMap.clear();
     dumpFiles = new TestDumpGenerator(fileUtil.getAppDirectory(true)).createDiscogsDumpFiles();
-    exitLatch = spy(new CountDownLatch(1));
+    clearInvocations(exitLatch);
   }
 
   private JobParameters defaultJobParameters() {
@@ -157,5 +168,166 @@ public abstract class DiscogsJobIntegrationTest {
             "label eTag found. executing label step.",
             "master eTag not found. skipping master step.",
             "release eTag not found. skipping release step."));
+  }
+
+  @Test
+  void whenSameDumpIsForcedTwice__BusinessRowsRemainIdentical() throws Exception {
+    JobParameters firstParameters =
+        jobOperatorTestUtils
+            .getUniqueJobParametersBuilder()
+            .addJobParameters(defaultJobParameters())
+            .toJobParameters();
+    JobExecution first =
+        jobOperator.start(jobOperatorTestUtils.getJob(), firstParameters);
+    assertThat(first.getExitStatus().getExitCode(), is("COMPLETED"));
+    Map<String, String> firstState = businessTableState();
+
+    JobParameters secondParameters =
+        jobOperatorTestUtils
+            .getUniqueJobParametersBuilder()
+            .addJobParameters(defaultJobParameters())
+            .toJobParameters();
+    JobExecution second =
+        jobOperator.start(jobOperatorTestUtils.getJob(), secondParameters);
+    assertThat(second.getExitStatus().getExitCode(), is("COMPLETED"));
+
+    Map<String, String> secondState = businessTableState();
+    List<String> changedTables =
+        firstState.keySet().stream()
+            .filter(table -> !Objects.equals(firstState.get(table), secondState.get(table)))
+            .toList();
+    assertThat(changedTables, is(List.of()));
+    try (InputStream expected =
+        Objects.requireNonNull(
+            getClass().getResourceAsStream("/test/cross-language-state.json"))) {
+      String expectedJson = new String(expected.readAllBytes(), StandardCharsets.UTF_8);
+      String actualJson = normalizedBusinessState();
+      try (Connection connection = dataSource.getConnection();
+          PreparedStatement comparison =
+              connection.prepareStatement(
+                  """
+                  with actual as (select ?::jsonb as value),
+                       expected as (select ?::jsonb as value),
+                       keys as (
+                         select jsonb_object_keys(actual.value) as key from actual
+                         union
+                         select jsonb_object_keys(expected.value) as key from expected
+                       )
+                  select coalesce(array_agg(key order by key), '{}'::text[])
+                  from keys, actual, expected
+                  where exists (
+                    (select value from jsonb_array_elements(actual.value -> key)
+                     except all
+                     select value from jsonb_array_elements(expected.value -> key))
+                    union all
+                    (select value from jsonb_array_elements(expected.value -> key)
+                     except all
+                     select value from jsonb_array_elements(actual.value -> key))
+                  )
+                  """)) {
+        comparison.setString(1, actualJson);
+        comparison.setString(2, expectedJson);
+        try (ResultSet result = comparison.executeQuery()) {
+          result.next();
+          List<String> mismatchedTables =
+              List.of((String[]) result.getArray(1).getArray());
+          if (!mismatchedTables.isEmpty()) {
+            Path actualOutput = Path.of("build", "reports", "cross-language-actual.json");
+            Files.createDirectories(actualOutput.getParent());
+            Files.writeString(actualOutput, actualJson, StandardCharsets.UTF_8);
+          }
+          assertThat(
+              mismatchedTables,
+              is(List.of()));
+        }
+      }
+    }
+  }
+
+  private Map<String, String> businessTableState() throws Exception {
+    Map<String, String> state = new LinkedHashMap<>();
+    try (Connection connection = dataSource.getConnection();
+        Statement tables = connection.createStatement();
+        ResultSet tableNames =
+            tables.executeQuery(
+                """
+                select tablename
+                from pg_tables
+                where schemaname = 'public'
+                  and tablename not like 'batch_%'
+                  and tablename not like 'databasechangelog%'
+                  and tablename not like 'discogs_%'
+                order by tablename
+                """)) {
+      while (tableNames.next()) {
+        String tableName = tableNames.getString(1);
+        String quoted = "\"" + tableName.replace("\"", "\"\"") + "\"";
+        try (Statement rows = connection.createStatement();
+            ResultSet serialized =
+                rows.executeQuery(
+                    "select coalesce(string_agg(row_to_json(row_value)::text, "
+                        + "E'\\n' order by row_to_json(row_value)::text), '') "
+                        + "from "
+                        + quoted
+                        + " row_value")) {
+          serialized.next();
+          state.put(tableName, serialized.getString(1));
+        }
+      }
+    }
+    return state;
+  }
+
+  private String normalizedBusinessState() throws Exception {
+    StringBuilder state = new StringBuilder("{");
+    boolean firstTable = true;
+    try (Connection connection = dataSource.getConnection();
+        Statement tables = connection.createStatement();
+        ResultSet tableNames =
+            tables.executeQuery(
+                """
+                select tablename
+                from pg_tables
+                where schemaname = 'public'
+                  and tablename not like 'batch_%'
+                  and tablename not like 'databasechangelog%'
+                  and tablename not like 'discogs_%'
+                order by tablename
+                """)) {
+      while (tableNames.next()) {
+        String tableName = tableNames.getString(1);
+        String quoted = "\"" + tableName.replace("\"", "\"\"") + "\"";
+        boolean core =
+            List.of("artist", "label", "master", "release_item").contains(tableName);
+        boolean named = List.of("genre", "style").contains(tableName);
+        String projection =
+            "to_jsonb(row_value) - 'created_at' - 'last_modified_at'";
+        if (!core && !named) {
+          projection += " - 'id'";
+        }
+        try (Statement rows = connection.createStatement();
+            ResultSet serialized =
+                rows.executeQuery(
+                    "select coalesce(jsonb_agg(projected order by projected::text), "
+                        + "'[]'::jsonb)::text "
+                        + "from (select "
+                        + projection
+                        + " as projected from "
+                        + quoted
+                        + " row_value) normalized")) {
+          serialized.next();
+          if (!firstTable) {
+            state.append(',');
+          }
+          state
+              .append('"')
+              .append(tableName)
+              .append("\":")
+              .append(serialized.getString(1));
+          firstTable = false;
+        }
+      }
+    }
+    return state.append('}').toString();
   }
 }

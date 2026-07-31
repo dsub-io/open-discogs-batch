@@ -13,7 +13,7 @@ public abstract class PostgreSQLIntegrationSupport {
   protected static final DataSource dataSource;
 
   static {
-    CONTAINER = new PostgreSQLContainer("postgres:16.13-alpine")
+    CONTAINER = new PostgreSQLContainer("postgres:18.4-alpine")
         .withDatabaseName("databaseName")
         .withPassword("password")
         .withUsername("username");

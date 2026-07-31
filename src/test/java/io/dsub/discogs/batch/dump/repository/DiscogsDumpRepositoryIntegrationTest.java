@@ -10,14 +10,12 @@ import io.dsub.discogs.batch.testutil.DiscogsDumpE2EFixture;
 import java.util.List;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.Mockito;
 
-@Tag("e2e")
-class DiscogsDumpRepositoryE2ETest {
+class DiscogsDumpRepositoryIntegrationTest {
 
   static DumpSupplier dumpSupplier;
   static DiscogsDumpRepository repository;
