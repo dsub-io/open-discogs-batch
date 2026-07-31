@@ -91,7 +91,8 @@ class DefaultDumpSupplierUnitTest {
               assertThat(dump.getLastModifiedAt()).isEqualTo(LocalDate.of(2026, 7, 1));
               assertThat(dump.getSize()).isPositive();
               assertThat(dump.getUrl().toString())
-                  .startsWith("https://data.discogs.com/?download=data%2F2026%2F");
+                  .startsWith(
+                      "https://discogs-data-dumps.s3.us-west-2.amazonaws.com/data/2026/");
               assertThat(dump.getChecksumUrl().toString())
                   .isEqualTo(
                       "https://data.discogs.com/"
@@ -197,7 +198,8 @@ class DefaultDumpSupplierUnitTest {
               assertThat(dump.getSize()).isEqualTo(-1L);
               assertThat(dump.getETag()).isEqualTo(dump.getUriString());
               assertThat(dump.getUrl().toString())
-                  .startsWith("https://data.discogs.com/?download=data%2F2026%2F");
+                  .startsWith(
+                      "https://discogs-data-dumps.s3.us-west-2.amazonaws.com/data/2026/");
               assertThat(dump.getChecksumUrl().toString()).isEqualTo(julyManifestUrl);
             });
     verify(dumpSupplier, times(1)).getDiscogsManifestSource(augustManifestUrl);

@@ -38,7 +38,7 @@ The current schema is documented in the
 
 - JDK 21
 - A reachable PostgreSQL database
-- Network access to `data.discogs.com`
+- Network access to `data.discogs.com` and the public Discogs S3 dump objects
 - Docker for the Testcontainers-based integration tests
 
 The repository includes an `.sdkmanrc` pinned to Temurin 21.0.11. With SDKMAN
@@ -80,8 +80,8 @@ Docker. They also exercise discovery, downloads, checksums, repository
 selection, and independent per-entity dates against a loopback distribution
 fixture.
 
-The end-to-end lane makes one bounded request for the public July 2026 checksum
-manifest and verifies that it advertises all four entity dumps:
+The end-to-end lane makes one ranged request for the public July 2026 release
+dump and verifies its HTTP range contract and gzip header:
 
 ```bash
 ./gradlew e2eTest
@@ -89,7 +89,7 @@ manifest and verifies that it advertises all four entity dumps:
 
 The E2E workflow runs on every pull request and on manual dispatch using a
 GitHub-hosted `ubuntu-latest` runner. It does not use a self-hosted runner and
-does not download the large XML dumps.
+transfers only the first two bytes of the large XML dump.
 
 Executable test classes use one of three suffixes:
 

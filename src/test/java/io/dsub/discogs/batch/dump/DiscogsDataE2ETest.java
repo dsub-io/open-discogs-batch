@@ -2,6 +2,7 @@ package io.dsub.discogs.batch.dump;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.InputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -14,13 +15,13 @@ import org.junit.jupiter.api.Test;
 @Tag("e2e")
 class DiscogsDataE2ETest {
 
-  private static final URI CHECKSUM_MANIFEST =
+  private static final URI DUMP_OBJECT =
       URI.create(
-          "https://data.discogs.com/"
-              + "?download=data%2F2026%2Fdiscogs_20260701_CHECKSUM.txt");
+          "https://discogs-data-dumps.s3.us-west-2.amazonaws.com/"
+              + "data/2026/discogs_20260701_releases.xml.gz");
 
   @Test
-  void publicChecksumManifestContainsTheCompleteMonthlyDumpSet() throws Exception {
+  void publicDumpObjectServesGzipBytes() throws Exception {
     HttpClient client =
         HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(10))
@@ -28,8 +29,9 @@ class DiscogsDataE2ETest {
             .build();
     HttpRequest request =
         HttpRequest.newBuilder()
-            .uri(CHECKSUM_MANIFEST)
+            .uri(DUMP_OBJECT)
             .timeout(Duration.ofSeconds(30))
+            .header("Range", "bytes=0-1")
             .header(
                 "User-Agent",
                 "OpenDiscogsBatch-E2E/1.0"
@@ -37,20 +39,21 @@ class DiscogsDataE2ETest {
             .GET()
             .build();
 
-    HttpResponse<String> response =
-        client.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+    HttpResponse<InputStream> response =
+        client.send(request, HttpResponse.BodyHandlers.ofInputStream());
+    byte[] body;
+    try (InputStream input = response.body()) {
+      body = input.readNBytes(response.statusCode() == 206 ? 2 : 4096);
+    }
 
     assertThat(response.statusCode())
         .withFailMessage(
-            "Discogs checksum manifest returned HTTP %s: %s",
+            "Discogs dump object returned HTTP %s: %s",
             response.statusCode(),
-            response.body())
-        .isEqualTo(200);
-    assertThat(response.body())
-        .contains(
-            "discogs_20260701_artists.xml.gz",
-            "discogs_20260701_labels.xml.gz",
-            "discogs_20260701_masters.xml.gz",
-            "discogs_20260701_releases.xml.gz");
+            new String(body, StandardCharsets.UTF_8))
+        .isEqualTo(206);
+    assertThat(response.headers().firstValue("Content-Range").orElse(""))
+        .startsWith("bytes 0-1/");
+    assertThat(body).containsExactly((byte) 0x1f, (byte) 0x8b);
   }
 }
