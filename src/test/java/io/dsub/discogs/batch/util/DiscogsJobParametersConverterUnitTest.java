@@ -27,14 +27,15 @@ class DiscogsJobParametersConverterUnitTest {
   void getJobParametersBy__ApplicationArguments__ShouldHaveProperValueMapped()
       throws InvalidArgumentException {
     String[] args =
-        "url=localhost user=root pass=pass --type=hello,world,java,land --chunk=1000".split(" ");
+        "url=localhost user=root pass=pass --entities=artist,label,master,release --chunk-size=1000"
+            .split(" ");
     ApplicationArguments applicationArguments = new DefaultApplicationArguments(args);
     JobParameters jobParameters = converter.getJobParameters(applicationArguments);
     assertDoesNotThrow(() -> jobParameters.getLong("chunkSize"));
     assertThat(jobParameters.getString("url")).isEqualTo("localhost");
     assertThat(jobParameters.getString("username")).isEqualTo("root");
     assertThat(jobParameters.getString("password")).isEqualTo("pass");
-    assertThat(jobParameters.getString("type")).isEqualTo("hello,world,java,land");
+    assertThat(jobParameters.getString("entities")).isEqualTo("artist,label,master,release");
     assertThat(jobParameters.getLong("chunkSize")).isEqualTo(1000L);
   }
 

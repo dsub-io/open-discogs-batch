@@ -26,7 +26,6 @@ ext {
     set('jooqVersion', '3.21.6')
     set('pbVersion', '0.10.2')
     set('openDiscogsModelVersion', '0.1.2')
-    set('oshiVersion', '7.4.2')
     set('postgresqlVersion', '42.7.13')
 }
 
@@ -50,7 +49,6 @@ dependencies {
             "io.github.classgraph:classgraph:${classGraphVersion}",
             "me.tongfei:progressbar:${pbVersion}",
             'org.liquibase:liquibase-core',
-            "com.github.oshi:oshi-core:${oshiVersion}",
             'org.apache.commons:commons-lang3'
     )
     runtimeOnly "org.postgresql:postgresql:${postgresqlVersion}"

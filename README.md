@@ -1,198 +1,121 @@
 # OpenDiscogs Batch
 
-OpenDiscogs Batch imports the public monthly data dumps from
-[data.discogs.com](https://data.discogs.com) into PostgreSQL. It uses Spring
-Batch for orchestration, Liquibase for schema setup, and jOOQ for database
-writes.
+OpenDiscogs Batch imports the public OpenDiscogs monthly dumps into PostgreSQL.
+It uses Spring Batch for orchestration and the canonical jOOQ schema model from
+[`open-discogs-model`](https://github.com/dsub-io/open-discogs-model), so the
+Java and Go importers write the same database contract.
 
 This is an independent DSUB project. It is not affiliated with or endorsed by
-Discogs. The Discogs name is used only to identify the public data source.
+Discogs. The Discogs name identifies only the public data source.
 
-## What it does
+## Import behavior and safety
 
-- Downloads a selected dump, or resolves the most recent available dump.
-- Verifies downloaded dumps against the matching Discogs SHA-256 manifest.
-- Creates and updates the PostgreSQL schema through Liquibase.
-- Imports artist, label, master, and release data in dependency order.
-- Uses idempotent writes so a dump can be processed again.
-- Can retain downloaded dump files when `mount` is enabled.
+- Liquibase schema migrations and dump discovery run automatically.
+- Artist, label, master, and release select their newest available dump
+  independently unless an exact `--dump-month` is requested.
+- Every run records the selected dump dates, SHA-256 checksums, source URIs,
+  sizes, and stable identifiers as one immutable manifest.
+- A manifest that already succeeded is skipped. `--force` reruns that same
+  manifest without changing the idempotent database result.
+- An older entity dump is rejected unless `--allow-downgrade` is supplied; the
+  override is recorded in import history.
+- PostgreSQL advisory locks prevent concurrent runs from updating an overlapping
+  entity set. Runs with disjoint entity sets may proceed together.
+- Downloads are retained by default. `--cleanup` deletes them only after a
+  successful import. Failed imports retain their files for retry.
 
-The current entity order is:
-
-```text
-artist -> label -> master -> release
-```
-
-Selecting `master` also selects artist and label dependencies. Selecting
-`release` selects all four entity types unless `strict` is enabled.
-
-Each requested entity independently selects its newest available dump. A full
-import can therefore combine, for example, a newer artist dump with an older
-release dump when an upstream publication omits one domain. Each entity keeps
-its own successful checkpoint and exact source provenance.
-
-The current schema is documented in the
-[OpenDiscogs ERD](https://dbdocs.io/state303/OpenDiscogs).
+Discogs dump paths such as `data/2026/discogs_20260701_releases.xml.gz` are used
+as stable identifiers and are paired with the same date's checksum manifest.
+When one domain is absent from a month, it does not roll the other domains back.
 
 ## Requirements
 
 - JDK 21
 - A reachable PostgreSQL database
-- Network access to `data.discogs.com` and the Discogs dump distribution
-- Docker for the Testcontainers-based integration tests
+- Docker for Testcontainers-based integration and E2E tests
 
-The repository includes an `.sdkmanrc` pinned to Temurin 21.0.11. With SDKMAN
-installed, activate it with:
+The repository includes an `.sdkmanrc` pinned to Temurin 21.0.11:
 
-```bash
+```shell
 sdk env
 ```
 
-The Gradle wrapper uses Gradle 9.6.1. The application is built on Spring Boot
-4.1 and Spring Batch 6.
-
-Dependencies resolve from Maven Central. The generated schema library is
-published as:
-
-```text
-io.dsub.opendiscogs:open-discogs-model-jooq:0.1.2
-```
-
-No GitHub token is required to build or run this project.
+The build uses Gradle 9.6.1, Spring Boot 4.1, and Spring Batch 6. Dependencies
+resolve from Maven Central, including
+`io.dsub.opendiscogs:open-discogs-model-jooq:0.1.2`. No GitHub token is required
+to build or run this project.
 
 ## Build and test
 
-Build the executable JAR:
-
-```bash
+```shell
 ./gradlew clean assemble
+./gradlew clean check --no-daemon --warning-mode=fail
+./gradlew e2eTest --no-daemon --warning-mode=fail
 ```
 
-Run the deterministic unit and integration suite, generate the coverage report,
-and enforce the coverage gate:
+`check` runs the deterministic unit and integration suite, generates JaCoCo
+reports, enforces 85% line and 40% branch coverage, and validates test naming.
+`e2eTest` imports the complete cross-language fixture into PostgreSQL and
+verifies reruns and entity admission rules. CI uses GitHub-hosted
+`ubuntu-latest` and does not depend on live Discogs availability.
 
-```bash
-./gradlew clean check
-```
+## Usage
 
-Integration tests start PostgreSQL through Testcontainers and therefore require
-Docker. They also exercise discovery, downloads, checksums, repository
-selection, and independent per-entity dates against a loopback distribution
-fixture.
-
-The end-to-end lane imports the complete artists, labels, masters, and releases
-fixture into PostgreSQL, reruns it, and compares the resulting business state
-with the shared cross-language golden state:
-
-```bash
-./gradlew e2eTest
-```
-
-The E2E workflow runs on every pull request and on manual dispatch using a
-GitHub-hosted `ubuntu-latest` runner. It does not use a self-hosted runner or
-depend on Discogs' current Cloudflare and S3 access policy.
-
-Executable test classes use one of three suffixes:
-
-- `*UnitTest` for isolated tests.
-- `*IntegrationTest` for deterministic component and Testcontainers tests.
-- `*E2ETest` for opt-in end-to-end checks against external services.
-
-The build rejects other executable test class names. Pull requests must pass
-the deterministic suite, the live Discogs E2E suite, and maintain at least 85%
-line coverage and 40% branch coverage.
-
-The executable is written to:
-
-```text
-build/libs/open-discogs-batch-0.1.8.jar
-```
-
-## Run
-
-The database URL, username, and password are required. For example:
-
-```bash
+```shell
 java -jar build/libs/open-discogs-batch-0.1.8.jar \
-  --url=jdbc:postgresql://localhost:5432/discogs \
-  --username=<database-user> \
-  --password=<database-password> \
-  --yearMonth=2021-03 \
-  --type=release
+  --database-url 'postgresql://user:password@localhost:5432/open_discogs' \
+  --entities artist,label,master,release
 ```
 
-Options may be written with `--`, `-`, or no leading hyphen. Comma-separated
-values are expanded into individual option values.
+Use `--dump-month=2026-07` to require that exact month. Without it, each selected
+entity uses its own latest available dump.
 
-| Option | Aliases | Required | Purpose |
+| Option | Environment variable | Default | Purpose |
 | --- | --- | --- | --- |
-| `url` | — | yes | PostgreSQL JDBC URL |
-| `username` | `user`, `u` | yes | Database user |
-| `password` | `pass`, `p` | yes | Database password |
-| `type` | `t` | no | `artist`, `label`, `master`, or `release` |
-| `year` | `y` | no | Dump year |
-| `yearMonth` | `ym` | no | Dump month in `yyyy-MM` form |
-| `eTag` | `e` | no | Stable dump ID; overrides year, month, and type selection |
-| `chunkSize` | `chunk`, `c` | no | Spring Batch chunk size; defaults to `500` |
-| `coreCount` | `core` | no | Worker count; defaults to 80% of physical cores |
-| `mount` | `m` | no | Keep downloaded dump files |
-| `strict` | `s` | no | Do not add entity dependencies |
-| `force` | `f` | no | Reprocess an already successful manifest |
-| `allowDowngrade` | `allow-downgrade` | no | Explicitly allow an older dump than the current entity checkpoint |
-| `driverClassName` | `driverclassname`, `driver_class_name` | no | JDBC driver override; normally inferred |
+| `--database-url` | `OPEN_DISCOGS_BATCH_DATABASE_URL` | required | PostgreSQL URI including percent-encoded credentials |
+| `--entities`, `-e` | `OPEN_DISCOGS_BATCH_ENTITIES` | all four | Comma-separated `artist`, `label`, `master`, `release` |
+| `--dump-month`, `-m` | `OPEN_DISCOGS_BATCH_DUMP_MONTH` | latest per entity | Exact dump month in `yyyy-MM` form |
+| `--data-dir` | `OPEN_DISCOGS_BATCH_DATA_DIR` | `~/.cache/open-discogs-batch` | Download directory |
+| `--chunk-size`, `-b` | `OPEN_DISCOGS_BATCH_CHUNK_SIZE` | `5000` | Import chunk size |
+| `--cleanup`, `-c` | `OPEN_DISCOGS_BATCH_CLEANUP` | `false` | Delete downloads after success |
+| `--force`, `-f` | `OPEN_DISCOGS_BATCH_FORCE` | `false` | Rerun an already-successful manifest |
+| `--allow-downgrade` | `OPEN_DISCOGS_BATCH_ALLOW_DOWNGRADE` | `false` | Permit and audit older entity dumps |
+| `--help`, `-h` | — | — | Show help |
+| `--version`, `-v` | — | — | Show version |
 
-Do not provide both `year` and `yearMonth`. When none of `eTag`, `year`,
-`yearMonth`, or `type` is supplied, the most recent complete set of dumps is
-selected.
+Command-line options take precedence over environment variables, which take
+precedence over defaults. The two importer implementations accept this same
+public contract. The former `url`, `username`, `password`, `type`, `year`,
+`yearMonth`, `eTag`, `mount`, `strict`, `coreCount`, and driver override options
+are no longer part of the public interface.
 
-The current Discogs HTML index no longer exposes object ETags. For those
-entries, the versioned path such as
-`data/2026/discogs_20260701_releases.xml.gz` is used as the stable dump ID.
-Each dump is paired with the same date's
-`discogs_20260701_CHECKSUM.txt`. The displayed HTML file size is only an
-estimate for progress reporting; existing and newly downloaded files are
-accepted only after their SHA-256 value matches the manifest. One manifest is
-fetched and cached per selected dump date.
+Percent-encode reserved characters in the URI username or password. Never
+commit a real database URL to source control. Environment variables also remain
+visible to a container administrator, so provide them through the deployment
+platform's secret mechanism.
 
-If the directory index is unavailable, automatic selection falls back to the
-monthly checksum manifests. It keeps the newest dump found for each entity and
-looks further back only for unresolved entities, so one missing domain does not
-roll the other three back. Access errors stop immediately instead of causing
-repeated failing requests. File size is unknown on this fallback path, so
-download progress is shown without a fixed total and integrity is still decided
-by SHA-256.
+## Container image
 
-The four selected dump checksums form one language-neutral manifest
-fingerprint. A manifest that already completed successfully is skipped unless
-`--force` is supplied. Failed imports remain retryable. Force never permits an
-older dump by itself; downgrade requires the separate
-`--allow-downgrade` option and is recorded in import history.
+Build a local OCI image with the Spring Boot buildpack task:
 
-Java and Go importers use the same PostgreSQL entity advisory locks. Disjoint
-entity sets may run concurrently, but a second process cannot update an entity
-that is already being imported. The `discogs_import_checkpoint` database view
-shows the last successfully applied dump date and provenance for each entity.
+```shell
+./gradlew bootBuildImage
+docker run --rm \
+  -e OPEN_DISCOGS_BATCH_DATABASE_URL='postgresql://user:password@db:5432/open_discogs' \
+  -e OPEN_DISCOGS_BATCH_ENTITIES='artist,label,master,release' \
+  -e OPEN_DISCOGS_BATCH_DATA_DIR=/data \
+  -v open-discogs-data:/data \
+  open-discogs-batch:0.1.8
+```
 
-The application currently receives the database password as a process
-argument. On a shared host, command-line arguments may be visible to other
-users, so run it in an appropriately isolated environment and never commit
-real credentials to scripts or configuration files.
+Setting `OPEN_DISCOGS_BATCH_CLEANUP=true` removes downloads only after success.
 
 ## Contributing
 
-Pull request titles and commit subjects must follow
-[Conventional Commits](https://www.conventionalcommits.org/), for example:
-
-```text
-feat: add resumable dump downloads
-fix(parser): handle an empty release identifier
-docs: clarify PostgreSQL setup
-```
-
+Pull request titles and commit subjects must follow Conventional Commits.
 Allowed types are `build`, `chore`, `ci`, `docs`, `feat`, `fix`, `perf`,
-`refactor`, `revert`, `style`, and `test`. GitHub Actions rejects pull requests
-and new commits that do not follow this format. Pull-request branches must also
-not use the reserved `agent/`, `codex/`, or `claude/` prefixes.
+`refactor`, `revert`, `style`, and `test`. Branches must not use `agent/`,
+`codex/`, or `claude/` prefixes.
 
 ## License
 

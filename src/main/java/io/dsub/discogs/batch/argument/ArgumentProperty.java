@@ -31,10 +31,14 @@ public class ArgumentProperty {
   }
 
   public boolean contains(String argName) {
-    String target = argName.replaceAll("[_-]", "");
+    String target = normalize(argName);
     return this.getSynonyms().stream()
-        .map(String::toLowerCase)
+        .map(ArgumentProperty::normalize)
         .anyMatch(s -> s.equalsIgnoreCase(target));
+  }
+
+  private static String normalize(String value) {
+    return value.replaceAll("[_-]", "").toLowerCase();
   }
 
   public static class ArgumentPropertyBuilder {

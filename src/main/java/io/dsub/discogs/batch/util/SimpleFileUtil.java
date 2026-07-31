@@ -33,7 +33,8 @@ public class SimpleFileUtil implements FileUtil {
   public SimpleFileUtil(String appDirectory, boolean isTemporary) {
     this.appDirectory = appDirectory;
     this.isTemporary = isTemporary;
-    appDirPath = Path.of(getHomeDirectory().toFile().getAbsolutePath(), appDirectory);
+    Path configuredPath = Path.of(appDirectory);
+    appDirPath = configuredPath.isAbsolute() ? configuredPath : getHomeDirectory().resolve(configuredPath);
   }
 
   public static AppFileUtilBuilder builder() {
@@ -103,10 +104,6 @@ public class SimpleFileUtil implements FileUtil {
     if (!Files.exists(filePath) && generate) {
       tryCreateFile(filePath);
       log.debug("generated new file at {}.", filePath.toAbsolutePath());
-      if (isTemporary) {
-        log.debug("marking delete on exit on {}", filePath.toAbsolutePath());
-        filePath.toFile().deleteOnExit();
-      }
       return filePath;
     }
     return filePath;
@@ -155,11 +152,6 @@ public class SimpleFileUtil implements FileUtil {
     if (!dirCreated && generate) {
       log.debug("generating new application directory in {}", appDirPath.toAbsolutePath());
       tryCreateDirectory(appDirPath);
-      if (isTemporary()) {
-        appDirPath.toFile().deleteOnExit();
-        log.debug(
-            "marked deletion on exit for application directory {}", appDirPath.toAbsolutePath());
-      }
       dirCreated = true;
     }
     return appDirPath;
@@ -167,7 +159,7 @@ public class SimpleFileUtil implements FileUtil {
 
   protected void tryCreateDirectory(Path path) throws FileException {
     try {
-      Files.createDirectory(path);
+      Files.createDirectories(path);
     } catch (IOException e) {
       FileException ex = new FileException("failed to create directory: " + path, e);
       log.error(ex.getMessage(), e);

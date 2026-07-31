@@ -4,6 +4,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 import io.dsub.discogs.batch.container.PostgreSQLIntegrationSupport;
 import io.dsub.discogs.batch.exception.InvalidArgumentException;
+import java.util.Map;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -15,7 +16,7 @@ class DefaultArgumentHandlerIntegrationTest extends PostgreSQLIntegrationSupport
 
   @Test
   void shouldHandleMalformedUrlArgumentFlag() throws InvalidArgumentException {
-    String[] args = new String[]{"url=" + jdbcUrl, "user=" + username, "pass=" + password};
+    String[] args = new String[] {"database-url=" + databaseUrl()};
     Assertions.assertDoesNotThrow(() -> handler.resolve(args));
     String[] resolved = handler.resolve(args);
     for (String s : resolved) {
@@ -24,24 +25,54 @@ class DefaultArgumentHandlerIntegrationTest extends PostgreSQLIntegrationSupport
   }
 
   @ParameterizedTest
-  @ValueSource(strings = {"--m", "m", "--mount", "mount"})
+  @ValueSource(strings = {"--c", "c", "--cleanup", "cleanup"})
   void whenOptionArgGiven__ShouldAddAsOption__RegardlessOfDashPresented(String arg)
       throws InvalidArgumentException {
-    String[] args = {"url=" + jdbcUrl, "user=" + username, "pass=" + password, arg};
+    String[] args = {"database-url=" + databaseUrl(), arg};
     args = handler.resolve(args);
-    assertThat(args).contains("--mount");
+    assertThat(args).contains("--cleanup");
   }
 
   @Test
-  void shouldReplacePlurals() throws InvalidArgumentException {
-    String[] args = {"urls=" + jdbcUrl, "user=" + username, "pass=" + password, "etags=hello"};
+  void shouldNormalizePublicOptionNames() throws InvalidArgumentException {
+    String[] args = {"database-url=" + databaseUrl(), "entities=artist"};
     args = handler.resolve(args);
-    for (String arg : args) {
-      String head = arg.split("=")[0];
-      if (head.contains("pass")) {
-        continue;
-      }
-      assertThat(arg.split("=")[0].matches(".*s$")).isFalse();
-    }
+    assertThat(args).contains("--entities=artist");
+  }
+
+  @Test
+  void shouldAcceptStandardSeparatedOptionValues() {
+    String[] args = {"--database-url", databaseUrl(), "--entities", "artist"};
+
+    String[] resolved = handler.resolve(args);
+
+    assertThat(resolved).contains("--entities=artist", "--url=" + jdbcUrl);
+  }
+
+  @Test
+  void shouldResolveThePublicDatabaseUrlEnvironmentVariable() {
+    ArgumentHandler environmentHandler =
+        new DefaultArgumentHandler(
+            Map.of("OPEN_DISCOGS_BATCH_DATABASE_URL", databaseUrl()));
+
+    String[] resolved = environmentHandler.resolve(new String[] {"--entities=artist"});
+
+    assertThat(resolved)
+        .contains("--url=" + jdbcUrl, "--username=" + username, "--password=" + password);
+  }
+
+  @Test
+  void shouldRejectLegacyDatabaseOptions() {
+    Assertions.assertThrows(
+        InvalidArgumentException.class,
+        () ->
+            handler.resolve(
+                new String[] {"--url=" + jdbcUrl, "--username=test", "--password=test"}));
+  }
+
+  private String databaseUrl() {
+    return jdbcUrl
+        .replaceFirst("^jdbc:", "")
+        .replaceFirst("//", "//" + username + ":" + password + "@");
   }
 }

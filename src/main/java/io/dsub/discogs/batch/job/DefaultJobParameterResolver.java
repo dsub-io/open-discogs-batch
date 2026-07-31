@@ -24,7 +24,6 @@ import org.springframework.stereotype.Component;
 public class DefaultJobParameterResolver implements JobParameterResolver {
 
   private static final String CHUNK_SIZE = ArgType.CHUNK_SIZE.getGlobalName();
-  private static final String STRICT = ArgType.STRICT.getGlobalName();
   private static final String FORCE = ArgType.FORCE.getGlobalName();
   private static final String ALLOW_DOWNGRADE = ArgType.ALLOW_DOWNGRADE.getGlobalName();
 
@@ -58,9 +57,6 @@ public class DefaultJobParameterResolver implements JobParameterResolver {
         ImportJobParameters.ALLOW_DOWNGRADE,
         String.valueOf(args.containsOption(ALLOW_DOWNGRADE)));
 
-    if (args.containsOption(STRICT)) {
-      props.put(STRICT, "true");
-    }
     return props;
   }
 
@@ -70,7 +66,11 @@ public class DefaultJobParameterResolver implements JobParameterResolver {
       String toParse = args.getOptionValues(chunkSizeOptName).get(0);
       try {
         log.debug("found entry for " + chunkSizeOptName + ": " + toParse);
-        return Integer.parseInt(toParse);
+        int chunkSize = Integer.parseInt(toParse);
+        if (chunkSize <= 0) {
+          throw new InvalidArgumentException(chunkSizeOptName + " must be a positive integer");
+        }
+        return chunkSize;
       } catch (NumberFormatException ignored) {
         throw new InvalidArgumentException("failed to parse " + chunkSizeOptName + ": " + toParse);
       }

@@ -1,6 +1,7 @@
 package io.dsub.discogs.batch;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -44,7 +45,9 @@ class BatchApplicationUnitTest {
       app.when(BatchApplication::getBatchService).thenReturn(batchService);
       app.when(() -> BatchApplication.main(args)).thenCallRealMethod();
       doThrow(new Exception(args[0])).when(batchService).run(args);
-      BatchApplication.main(args);
+      assertThatThrownBy(() -> BatchApplication.main(args))
+          .isInstanceOf(IllegalStateException.class)
+          .hasMessage("open-discogs-batch failed");
       List<String> errLogs = logSpy.getLogsByExactLevelAsString(Level.ERROR, true);
 
       assertAll(

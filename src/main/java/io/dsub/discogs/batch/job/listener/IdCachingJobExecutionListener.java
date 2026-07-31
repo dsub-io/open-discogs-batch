@@ -1,6 +1,5 @@
 package io.dsub.discogs.batch.job.listener;
 
-import io.dsub.discogs.batch.argument.ArgType;
 import io.dsub.discogs.batch.job.registry.DefaultEntityIdRegistry;
 import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
 import io.dsub.opendiscogs.jooq.tables.Artist;
@@ -23,18 +22,12 @@ public class IdCachingJobExecutionListener implements JobExecutionListener {
   protected static final String LABEL = "label";
   protected static final String MASTER = "master";
   protected static final String RELEASE = "release";
-  protected static final String STRICT = ArgType.STRICT.getGlobalName();
 
   private final EntityIdRegistry idRegistry;
   private final DSLContext context;
 
   @Override
   public void beforeJob(JobExecution jobExecution) {
-    // caching only required in strict mode (i.e. skipping required steps)
-    if (jobExecution.getJobParameters().getParameter(STRICT) != null) {
-      return;
-    }
-
     boolean doArtist = jobExecution.getJobParameters().getParameter(ARTIST) != null;
     boolean doLabel = jobExecution.getJobParameters().getParameter(LABEL) != null;
     boolean doMaster = jobExecution.getJobParameters().getParameter(MASTER) != null;

@@ -23,6 +23,7 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.BatchStatus;
 import io.dsub.discogs.batch.job.ImportExecutionCoordinator;
+import io.dsub.discogs.batch.job.DownloadedFileCleanup;
 import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.job.JobExecution;
 import org.springframework.batch.core.job.parameters.JobParameters;
@@ -52,6 +53,8 @@ class JobLaunchingRunnerUnitTest {
   CountDownLatch countDownLatch;
   @Mock
   ImportExecutionCoordinator importExecutionCoordinator;
+  @Mock
+  DownloadedFileCleanup downloadedFileCleanup;
   @InjectMocks
   JobLaunchingRunner runner;
 
@@ -128,10 +131,12 @@ class JobLaunchingRunnerUnitTest {
     doReturn(ImportExecutionCoordinator.Preparation.skipped("a".repeat(64), 7L))
         .when(importExecutionCoordinator)
         .prepare(discogsJobParameters);
+    doReturn(true).when(downloadedFileCleanup).isEnabled();
 
     runner.run(args);
 
     verify(jobOperator, times(0)).start(job, discogsJobParameters);
     verify(countDownLatch, times(0)).await();
+    verify(downloadedFileCleanup).cleanup(discogsJobParameters);
   }
 }

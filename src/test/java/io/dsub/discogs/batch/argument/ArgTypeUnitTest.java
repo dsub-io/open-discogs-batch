@@ -4,8 +4,6 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -14,7 +12,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 class ArgTypeUnitTest {
 
   @ParameterizedTest
-  @ValueSource(strings = {"chunk", "e", "y", "c"})
+  @ValueSource(strings = {"chunk-size", "e", "m", "c"})
   void shouldReturnValidBooleanForContainsMethod(String value) {
     assertThat(ArgType.contains(value)).isTrue();
   }
@@ -115,17 +113,7 @@ class ArgTypeUnitTest {
   @ParameterizedTest
   @EnumSource(ArgType.class)
   void testValueOfReturnsProperMatch(ArgType argType) {
-    if (argType.equals(ArgType.ETAG)) {
-      return;
-    }
-    String name =
-        IntStream.range(0, argType.getGlobalName().length())
-            .map(i -> argType.getGlobalName().charAt(i))
-            .mapToObj(i -> String.valueOf((char) i))
-            .map(s -> s.matches("[A-Z]") ? "_" + s : s)
-            .map(String::toUpperCase)
-            .collect(Collectors.joining(""));
-    assertThat(ArgType.valueOf(name)).isNotNull();
+    assertThat(ArgType.valueOf(argType.name())).isEqualTo(argType);
   }
 
   @ParameterizedTest

@@ -15,7 +15,7 @@ import org.apache.commons.lang3.SystemUtils;
  */
 public interface FileUtil {
 
-  String DEFAULT_APP_DIR = "discogs-data-batch";
+  String DEFAULT_APP_DIR = ".cache/open-discogs-batch";
 
   void clearAll() throws FileException;
 

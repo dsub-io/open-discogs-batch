@@ -1,66 +1,32 @@
 package io.dsub.discogs.batch.argument.validator;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
-import java.util.stream.Collectors;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.DefaultApplicationArguments;
 
 class TypeArgumentValidatorUnitTest {
 
-  final TypeArgumentValidator validator = new TypeArgumentValidator();
+  private final TypeArgumentValidator validator = new TypeArgumentValidator();
 
-  @BeforeEach
-  void setUp() {
+  @Test
+  void malformedEntityValuesAreReported() {
+    ValidationResult result =
+        validator.validate(
+            new DefaultApplicationArguments("--entities=hello", "--entities=world"));
+
+    assertThat(result.getIssues())
+        .containsExactlyInAnyOrder("unknown entity value: hello", "unknown entity value: world");
   }
 
   @Test
-  void whenDuplicatedTypeArgExists__ThenShouldIncludeAllOfThemInReport() {
-
-    ApplicationArguments args = new DefaultApplicationArguments("--types=hello", "--type=hi");
-    // when
-    ValidationResult result = validator.validate(args);
-
-    // then
-    assertThat(result.getIssues().size()).isEqualTo(1);
-    assertThat(result.getIssues().get(0)).contains("types", "type");
-  }
-
-  @Test
-  void whenMalformedTypeValueExists__ThenShouldReportEachOfThemInReport() {
-    List<String> values = List.of("--types=hello", "--types=world", "--types=malformed");
-    ApplicationArguments args = new DefaultApplicationArguments(values.toArray(String[]::new));
-
-    // when
-    ValidationResult result = validator.validate(args);
-
-    // then
-    assertThat(result.getIssues().size()).isEqualTo(3);
-    for (String value : values) {
-      assertThat("unknown type argument value: " + value.replaceAll("--types=", ""))
-          .isIn(result.getIssues());
-    }
-  }
-
-  @Test
-  void whenProperTypeValuesPresented__ThenShouldNotReportAnyIssue() {
-    String prefix = "--type=";
-    List<String> wantedTypes = List.of("release", "artist", "master", "label");
-    String[] optionArgs =
-        wantedTypes.stream()
-            .map(value -> prefix + value)
-            .collect(Collectors.toList())
+  void allSupportedEntityValuesAreAccepted() {
+    String[] args =
+        List.of("release", "artist", "master", "label").stream()
+            .map(value -> "--entities=" + value)
             .toArray(String[]::new);
 
-    ApplicationArguments args = new DefaultApplicationArguments(optionArgs);
-
-    // when
-    ValidationResult result = validator.validate(args);
-
-    // then
-    assertThat(result.getIssues().size()).isEqualTo(0);
+    assertThat(validator.validate(new DefaultApplicationArguments(args)).isValid()).isTrue();
   }
 }
