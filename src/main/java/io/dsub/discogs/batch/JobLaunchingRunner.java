@@ -1,10 +1,12 @@
 package io.dsub.discogs.batch;
 
+import io.dsub.discogs.batch.job.ImportExecutionCoordinator;
 import java.util.concurrent.CountDownLatch;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.job.JobExecution;
+import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.job.parameters.JobParameters;
 import org.springframework.batch.core.launch.JobOperator;
 import org.springframework.boot.ApplicationArguments;
@@ -28,17 +30,47 @@ public class JobLaunchingRunner implements ApplicationRunner {
   private final JobOperator jobOperator;
   private final ConfigurableApplicationContext ctx;
   private final CountDownLatch countDownLatch;
+  private final ImportExecutionCoordinator importExecutionCoordinator;
 
   @Override
   public void run(ApplicationArguments args) throws Exception {
-    JobExecution jobExecution = jobOperator.start(job, discogsJobParameters);
-    log.info("main thread started job execution. awaiting for completion...");
-    countDownLatch.await();
-    log.info("job execution completed. exiting...");
-    SpringApplication.exit(ctx, getExitCodeGenerator(jobExecution));
+    ImportExecutionCoordinator.Preparation preparation =
+        importExecutionCoordinator.prepare(discogsJobParameters);
+    if (preparation.skipped()) {
+      log.info(
+          "import skipped because manifest {} already succeeded as run {}",
+          preparation.manifestSha256(),
+          preparation.priorSuccessfulRunId());
+      SpringApplication.exit(ctx, () -> 0);
+      return;
+    }
+
+    JobExecution jobExecution = null;
+    try {
+      jobExecution = jobOperator.start(job, discogsJobParameters);
+      log.info("main thread started job execution. awaiting for completion...");
+      countDownLatch.await();
+      log.info("job execution completed. exiting...");
+      boolean success =
+          jobExecution.getStatus() == BatchStatus.COMPLETED
+              && jobExecution.getFailureExceptions().isEmpty();
+      Throwable failure =
+          success || jobExecution.getFailureExceptions().isEmpty()
+              ? null
+              : jobExecution.getFailureExceptions().get(0);
+      importExecutionCoordinator.complete(success, failure);
+      SpringApplication.exit(ctx, getExitCodeGenerator(jobExecution));
+    } catch (Exception exception) {
+      importExecutionCoordinator.complete(false, exception);
+      throw exception;
+    }
   }
 
   public ExitCodeGenerator getExitCodeGenerator(JobExecution jobExecution) {
-    return () -> jobExecution.getFailureExceptions().size() > 0 ? 1 : 0;
+    return () ->
+        jobExecution.getStatus() == BatchStatus.COMPLETED
+                && jobExecution.getFailureExceptions().isEmpty()
+            ? 0
+            : 1;
   }
 }

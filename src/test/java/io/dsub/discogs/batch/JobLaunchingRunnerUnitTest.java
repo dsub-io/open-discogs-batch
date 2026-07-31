@@ -21,6 +21,8 @@ import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.springframework.batch.core.ExitStatus;
+import org.springframework.batch.core.BatchStatus;
+import io.dsub.discogs.batch.job.ImportExecutionCoordinator;
 import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.job.JobExecution;
 import org.springframework.batch.core.job.parameters.JobParameters;
@@ -48,6 +50,8 @@ class JobLaunchingRunnerUnitTest {
   ConfigurableApplicationContext context;
   @Mock
   CountDownLatch countDownLatch;
+  @Mock
+  ImportExecutionCoordinator importExecutionCoordinator;
   @InjectMocks
   JobLaunchingRunner runner;
 
@@ -58,7 +62,11 @@ class JobLaunchingRunnerUnitTest {
     doReturn(false).when(exitStatus).isRunning();
     doReturn(false).when(jobExecution).isRunning();
     doReturn(exitStatus).when(jobExecution).getExitStatus();
+    doReturn(BatchStatus.COMPLETED).when(jobExecution).getStatus();
     doReturn(Collections.emptyList()).when(jobExecution).getFailureExceptions();
+    doReturn(ImportExecutionCoordinator.Preparation.started("a".repeat(64), 1L))
+        .when(importExecutionCoordinator)
+        .prepare(discogsJobParameters);
     runner = spy(runner);
   }
 
@@ -69,6 +77,8 @@ class JobLaunchingRunnerUnitTest {
 
     // then
     verify(jobOperator, times(1)).start(job, discogsJobParameters);
+    verify(importExecutionCoordinator, times(1)).prepare(discogsJobParameters);
+    verify(importExecutionCoordinator, times(1)).complete(true, null);
   }
 
   @Test
@@ -101,7 +111,9 @@ class JobLaunchingRunnerUnitTest {
       int errorsCnt) {
     // given
     List<Throwable> mockList = spy(new ArrayList<>());
-    doReturn(errorsCnt).when(mockList).size();
+    for (int index = 0; index < errorsCnt; index++) {
+      mockList.add(new IllegalStateException("fixture failure"));
+    }
     doReturn(mockList).when(jobExecution).getFailureExceptions();
 
     // when
@@ -109,5 +121,17 @@ class JobLaunchingRunnerUnitTest {
 
     // then
     assertThat(exitCode).isEqualTo(errorsCnt > 0 ? 1 : 0);
+  }
+
+  @Test
+  void successfulExistingManifestSkipsJobLaunch() throws Exception {
+    doReturn(ImportExecutionCoordinator.Preparation.skipped("a".repeat(64), 7L))
+        .when(importExecutionCoordinator)
+        .prepare(discogsJobParameters);
+
+    runner.run(args);
+
+    verify(jobOperator, times(0)).start(job, discogsJobParameters);
+    verify(countDownLatch, times(0)).await();
   }
 }

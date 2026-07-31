@@ -52,6 +52,22 @@ public class DiscogsDumpVerifier {
     return expected.equalsIgnoreCase(calculateSha256(file));
   }
 
+  /**
+   * Returns the normalized SHA-256 value that identifies a dump before it is downloaded.
+   */
+  public String getExpectedChecksum(DiscogsDump dump) throws FileException {
+    if (dump.getChecksumUrl() == null) {
+      throw new FileException(
+          "SHA-256 manifest is required for idempotent import: " + dump.getFileName());
+    }
+    String expected = getChecksums(dump.getChecksumUrl()).get(dump.getFileName());
+    if (expected == null) {
+      throw new FileException(
+          "checksum for " + dump.getFileName() + " is missing from " + dump.getChecksumUrl());
+    }
+    return expected.toLowerCase(Locale.ROOT);
+  }
+
   protected synchronized Map<String, String> getChecksums(URL checksumUrl) throws FileException {
     URI checksumUri;
     try {

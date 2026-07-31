@@ -9,26 +9,38 @@ import jakarta.xml.bind.annotation.XmlAccessorType;
 import jakarta.xml.bind.annotation.XmlAttribute;
 import jakarta.xml.bind.annotation.XmlElement;
 import jakarta.xml.bind.annotation.XmlRootElement;
+import jakarta.xml.bind.annotation.XmlValue;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 @Data
-@XmlRootElement(name = "master")
+@XmlRootElement(name = "release")
 @XmlAccessorType(XmlAccessType.FIELD)
 @EqualsAndHashCode(callSuper = false)
 public class MasterMainReleaseXML implements BaseXML<MasterRecord> {
 
   @XmlAttribute(name = "id")
-  private Integer id;
+  private Integer releaseId;
 
-  @XmlElement(name = "main_release")
-  private Integer mainReleaseId;
+  @XmlElement(name = "master_id")
+  private Master master;
 
   @Override
   public MasterRecord buildRecord() {
     return new MasterRecord()
-        .setId(id)
-        .setMainReleaseId(mainReleaseId)
+        .setId(master == null ? null : master.getMasterId())
+        .setMainReleaseId(releaseId)
         .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()));
+  }
+
+  @Data
+  @XmlAccessorType(XmlAccessType.FIELD)
+  public static class Master {
+
+    @XmlValue
+    private Integer masterId;
+
+    @XmlAttribute(name = "is_main_release")
+    private boolean mainRelease;
   }
 }

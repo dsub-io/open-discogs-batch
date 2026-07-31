@@ -93,6 +93,21 @@ class DiscogsDumpVerifierUnitTest {
   }
 
   @Test
+  void expectedChecksumUsesTheSameCachedManifestAsFileVerification() throws Exception {
+    Path file = Files.writeString(tempDir.resolve("discogs_20260701_releases.xml.gz"), CONTENT);
+    URL checksumUrl = URI.create("https://example.test/discogs_20260701_CHECKSUM.txt").toURL();
+    DiscogsDump dump = dump(file, checksumUrl);
+    DiscogsDumpVerifier verifier = spy(new DiscogsDumpVerifier());
+    doReturn(SHA_256 + "  " + file.getFileName())
+        .when(verifier)
+        .getChecksumSource(checksumUrl.toURI());
+
+    assertThat(verifier.getExpectedChecksum(dump)).isEqualTo(SHA_256);
+    assertThat(verifier.isValid(dump, file)).isTrue();
+    verify(verifier, times(1)).getChecksumSource(checksumUrl.toURI());
+  }
+
+  @Test
   void whenLegacyDumpHasNoChecksum__ThenExactSizeIsUsed() throws Exception {
     Path file = Files.writeString(tempDir.resolve("legacy.xml.gz"), CONTENT);
     DiscogsDump dump =

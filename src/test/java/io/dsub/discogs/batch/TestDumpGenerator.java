@@ -4,11 +4,14 @@ import io.dsub.discogs.batch.dump.EntityType;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.zip.GZIPOutputStream;
 import lombok.RequiredArgsConstructor;
 
@@ -1115,15 +1118,13 @@ public class TestDumpGenerator {
       file.deleteOnExit();
       OutputStreamWriter writer =
           new OutputStreamWriter(new GZIPOutputStream(new FileOutputStream(file)));
+      String resourceName =
+          "/test/cross-language/" + value.toString().toLowerCase() + ".xml";
       String content;
-      if (value.equals(EntityType.ARTIST)) {
-        content = ARTIST_XML;
-      } else if (value.equals(EntityType.RELEASE)) {
-        content = RELEASE_XML;
-      } else if (value.equals(EntityType.MASTER)) {
-        content = MASTER_XML;
-      } else {
-        content = LABEL_XML;
+      try (InputStream input =
+          Objects.requireNonNull(
+              getClass().getResourceAsStream(resourceName), resourceName)) {
+        content = new String(input.readAllBytes(), StandardCharsets.UTF_8);
       }
       writer.write(content);
       writer.flush();

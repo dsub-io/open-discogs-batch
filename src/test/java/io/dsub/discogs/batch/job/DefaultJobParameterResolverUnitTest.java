@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 import io.dsub.discogs.batch.TestArguments;
 import io.dsub.discogs.batch.argument.ArgType;
 import io.dsub.discogs.batch.dump.DiscogsDump;
+import io.dsub.discogs.batch.dump.DiscogsDumpVerifier;
 import io.dsub.discogs.batch.dump.DumpDependencyResolver;
 import io.dsub.discogs.batch.dump.EntityType;
 import io.dsub.discogs.batch.exception.DumpNotFoundException;
@@ -35,6 +36,8 @@ class DefaultJobParameterResolverUnitTest {
 
   @Mock
   DumpDependencyResolver dependencyResolver;
+  @Mock
+  DiscogsDumpVerifier dumpVerifier;
 
   @InjectMocks
   DefaultJobParameterResolver jobParameterResolver;
@@ -42,6 +45,11 @@ class DefaultJobParameterResolverUnitTest {
   @BeforeEach
   void setUp() {
     MockitoAnnotations.openMocks(this);
+    try {
+      when(dumpVerifier.getExpectedChecksum(any())).thenReturn("a".repeat(64));
+    } catch (Exception exception) {
+      throw new IllegalStateException(exception);
+    }
   }
 
   @Test
@@ -88,7 +96,7 @@ class DefaultJobParameterResolverUnitTest {
 
   @Test
   void whenResolve__ShouldCallDumpResolverOnlyOnce()
-      throws InvalidArgumentException, DumpNotFoundException {
+      throws Exception {
 
     DiscogsDump dump = TestArguments.getRandomDump();
 
@@ -106,7 +114,7 @@ class DefaultJobParameterResolverUnitTest {
 
   @Test
   void whenResolve__ShouldReturnAsExpected()
-      throws io.dsub.discogs.batch.exception.InvalidArgumentException, DumpNotFoundException {
+      throws Exception {
 
     EntityType type = TestArguments.getRandomType();
     DiscogsDump dump = TestArguments.getRandomDumpWithType(type);
@@ -119,8 +127,13 @@ class DefaultJobParameterResolverUnitTest {
     System.out.println(resultProps);
 
     // then
-    assertThat(resultProps.size()).isEqualTo(2);
     assertThat(resultProps.get(type.toString())).isEqualTo(dump.getETag());
+    assertThat(resultProps.get(ImportJobParameters.checksum(type)))
+        .isEqualTo("a".repeat(64));
+    assertThat(resultProps.get(ImportJobParameters.MANIFEST_SHA256))
+        .isNotNull();
+    assertThat(resultProps.get(ImportJobParameters.FORCE)).isEqualTo("false");
+    assertThat(resultProps.get(ImportJobParameters.ALLOW_DOWNGRADE)).isEqualTo("false");
     assertThat(resultProps.get(ArgType.CHUNK_SIZE.getGlobalName()))
         .isEqualTo(String.valueOf(DEFAULT_CHUNK_SIZE));
   }

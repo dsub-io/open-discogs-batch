@@ -25,7 +25,7 @@ ext {
     set('classGraphVersion', '4.8.186')
     set('jooqVersion', '3.21.6')
     set('pbVersion', '0.10.2')
-    set('openDiscogsJooqVersion', '0.0.5')
+    set('openDiscogsModelVersion', '0.1.2')
     set('oshiVersion', '7.4.2')
     set('postgresqlVersion', '42.7.13')
 }
@@ -43,7 +43,7 @@ dependencies {
             'org.springframework.boot:spring-boot-starter-batch',
             'org.springframework.boot:spring-boot-starter-jooq',
             "org.jooq:jooq:${jooqVersion}",
-            "io.dsub.opendiscogs:open-discogs-jooq:${openDiscogsJooqVersion}",
+            "io.dsub.opendiscogs:open-discogs-model-jooq:${openDiscogsModelVersion}",
             'org.springframework:spring-oxm',
             'jakarta.xml.bind:jakarta.xml.bind-api',
             'org.glassfish.jaxb:jaxb-runtime',
@@ -90,7 +90,7 @@ test {
 }
 
 tasks.register('e2eTest', Test) {
-    description = 'Runs tests that access live external services.'
+    description = 'Runs the deterministic dump-to-PostgreSQL end-to-end lane.'
     group = 'verification'
     testClassesDirs = sourceSets.test.output.classesDirs
     classpath = sourceSets.test.runtimeClasspath
@@ -177,4 +177,10 @@ jacocoTestCoverageVerification {
 
 bootBuildImage {
     imageName = "open-discogs-batch:${project.version}"
+}
+
+tasks.named('jar') {
+    manifest {
+        attributes('Implementation-Version': project.version)
+    }
 }

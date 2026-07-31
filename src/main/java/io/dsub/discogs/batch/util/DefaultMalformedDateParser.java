@@ -11,7 +11,7 @@ public class DefaultMalformedDateParser implements MalformedDateParser {
   private static final Pattern YEAR_PRESENT = Pattern.compile("^([\\w]{4}).*");
 
   private static final Pattern MONTH_PATTERN =
-      Pattern.compile("^[\\w]{2,4}[- /.](0*[1-9]|1[0-2])[- /.]?");
+      Pattern.compile("^[\\w]{2,4}[- /.](0*[1-9]|1[0-2])(?:[- /.].*)?");
 
   private static final Pattern MONTH_PRESENT = Pattern.compile("^[\\w]{2,4}[- /.](0*[\\w]{1,2}).*");
 

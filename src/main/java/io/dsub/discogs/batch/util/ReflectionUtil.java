@@ -31,6 +31,8 @@ public class ReflectionUtil {
       String val = ((String) o).trim();
       if (val.isBlank()) {
         setFieldValue(target, field, null);
+      } else {
+        setFieldValue(target, field, val);
       }
     } else if (List.class.isAssignableFrom(o.getClass())) {
       List<?> list = (List<?>) o;

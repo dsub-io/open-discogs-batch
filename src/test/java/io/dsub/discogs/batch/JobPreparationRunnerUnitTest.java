@@ -66,7 +66,8 @@ class JobPreparationRunnerUnitTest {
   }
 
   @Test
-  void givenApplicationArgument__WhenGetDiscogsJobParameters__ShouldCallResolverAndConverter() {
+  void givenApplicationArgument__WhenGetDiscogsJobParameters__ShouldCallResolverAndConverter()
+      throws Exception {
     Properties properties = mock(Properties.class);
     JobParameters jobParameters = mock(JobParameters.class);
     willReturn(properties).given(jobParameterResolver).resolve(args);

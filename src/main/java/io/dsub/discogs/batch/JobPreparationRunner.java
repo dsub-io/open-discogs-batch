@@ -2,6 +2,7 @@ package io.dsub.discogs.batch;
 
 import com.zaxxer.hikari.HikariDataSource;
 import io.dsub.discogs.batch.exception.DumpNotFoundException;
+import io.dsub.discogs.batch.exception.FileException;
 import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import io.dsub.discogs.batch.job.JobParameterResolver;
 
@@ -60,7 +61,7 @@ public class JobPreparationRunner implements ApplicationRunner {
 
   @Bean(name = "discogsJobParameters")
   public JobParameters getDiscogsJobParameters(ApplicationArguments args)
-      throws InvalidArgumentException, DumpNotFoundException {
+      throws InvalidArgumentException, DumpNotFoundException, FileException {
     log.info("resolving given job parameters");
     Properties props = jobParameterResolver.resolve(args);
     props.put("run.id", UUID.randomUUID().toString());

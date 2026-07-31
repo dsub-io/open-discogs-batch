@@ -91,7 +91,8 @@ class DefaultDumpSupplierUnitTest {
               assertThat(dump.getLastModifiedAt()).isEqualTo(LocalDate.of(2026, 7, 1));
               assertThat(dump.getSize()).isPositive();
               assertThat(dump.getUrl().toString())
-                  .startsWith("https://data.discogs.com/?download=data%2F2026%2F");
+                  .startsWith(
+                      "https://discogs-data-dumps.s3.us-west-2.amazonaws.com/data/2026/");
               assertThat(dump.getChecksumUrl().toString())
                   .isEqualTo(
                       "https://data.discogs.com/"
@@ -197,7 +198,8 @@ class DefaultDumpSupplierUnitTest {
               assertThat(dump.getSize()).isEqualTo(-1L);
               assertThat(dump.getETag()).isEqualTo(dump.getUriString());
               assertThat(dump.getUrl().toString())
-                  .startsWith("https://data.discogs.com/?download=data%2F2026%2F");
+                  .startsWith(
+                      "https://discogs-data-dumps.s3.us-west-2.amazonaws.com/data/2026/");
               assertThat(dump.getChecksumUrl().toString()).isEqualTo(julyManifestUrl);
             });
     verify(dumpSupplier, times(1)).getDiscogsManifestSource(augustManifestUrl);
@@ -205,7 +207,8 @@ class DefaultDumpSupplierUnitTest {
   }
 
   @Test
-  void whenLatestManifestMissesOneDomain__ThenUsesPreviousCompleteMonth() throws Exception {
+  void whenLatestManifestMissesOneDomain__ThenFillsOnlyThatDomainFromPreviousMonth()
+      throws Exception {
     String julyManifestUrl = manifestUrl("20260701");
     String juneManifestUrl = manifestUrl("20260601");
     doReturn(LocalDate.of(2026, 7, 31)).when(dumpSupplier).getCurrentUtcDate();
@@ -223,14 +226,19 @@ class DefaultDumpSupplierUnitTest {
 
     assertThat(result)
         .hasSize(4)
-        .extracting(DiscogsDump::getLastModifiedAt)
-        .containsOnly(LocalDate.of(2026, 6, 1));
+        .allSatisfy(
+            dump ->
+                assertThat(dump.getLastModifiedAt())
+                    .isEqualTo(
+                        dump.getType() == EntityType.LABEL
+                            ? LocalDate.of(2026, 6, 1)
+                            : LocalDate.of(2026, 7, 1)));
     assertThat(logSpy.getEvents())
         .anyMatch(
             event ->
                 event
                     .getFormattedMessage()
-                    .contains("manifest for 2026-07-01 is incomplete"));
+                    .contains("manifest for 2026-07-01 does not cover every unresolved entity"));
   }
 
   @Test

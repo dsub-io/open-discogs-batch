@@ -8,6 +8,14 @@ import lombok.RequiredArgsConstructor;
  */
 @RequiredArgsConstructor
 public enum ArgType {
+  ALLOW_DOWNGRADE(
+      ArgumentProperty.builder()
+          .globalName("allowDowngrade")
+          .synonyms("allow-downgrade")
+          .required(false)
+          .maxValuesCount(0)
+          .minValuesCount(0)
+          .build()),
   CHUNK_SIZE(
       ArgumentProperty.builder()
           .globalName("chunkSize")
@@ -21,6 +29,14 @@ public enum ArgType {
           .supportedType(Long.class)
           .build()),
   ETAG(ArgumentProperty.builder().globalName("eTag").synonyms("e").maxValuesCount(4).build()),
+  FORCE(
+      ArgumentProperty.builder()
+          .globalName("force")
+          .synonyms("f")
+          .required(false)
+          .maxValuesCount(0)
+          .minValuesCount(0)
+          .build()),
   MOUNT(
       ArgumentProperty.builder()
           .globalName("mount")

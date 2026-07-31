@@ -11,12 +11,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-@Tag("e2e")
-class DefaultDumpSupplierE2ETest {
+class DefaultDumpSupplierIntegrationTest {
 
   @AfterAll
   static void afterAll() {
