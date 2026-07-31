@@ -80,7 +80,7 @@ Docker. They also exercise discovery, downloads, checksums, repository
 selection, and independent per-entity dates against a loopback distribution
 fixture.
 
-The end-to-end lane makes one ranged request for the public July 2026 release
+The end-to-end lane makes one ranged request for the public July 2024 release
 dump and verifies its HTTP range contract and gzip header:
 
 ```bash

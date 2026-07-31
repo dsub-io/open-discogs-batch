@@ -18,7 +18,7 @@ class DiscogsDataE2ETest {
   private static final URI DUMP_OBJECT =
       URI.create(
           "https://discogs-data-dumps.s3.us-west-2.amazonaws.com/"
-              + "data/2026/discogs_20260701_releases.xml.gz");
+              + "data/2024/discogs_20240701_releases.xml.gz");
 
   @Test
   void publicDumpObjectServesGzipBytes() throws Exception {
