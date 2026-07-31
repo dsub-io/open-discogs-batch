@@ -16,8 +16,8 @@ class DiscogsDataE2ETest {
 
   private static final URI CHECKSUM_MANIFEST =
       URI.create(
-          "https://data.discogs.com/"
-              + "?download=data/2026/discogs_20260701_CHECKSUM.txt");
+          "https://discogs-data-dumps.s3-us-west-2.amazonaws.com/"
+              + "data/2026/discogs_20260701_CHECKSUM.txt");
 
   @Test
   void publicChecksumManifestContainsTheCompleteMonthlyDumpSet() throws Exception {
