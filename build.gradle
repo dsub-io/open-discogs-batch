@@ -5,7 +5,7 @@ plugins {
 }
 
 group = 'io.dsub.opendiscogs'
-version = '0.1.8'
+version = providers.gradleProperty('version').orElse('0.1.8').get()
 
 java {
     toolchain {
