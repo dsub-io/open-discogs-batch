@@ -6,6 +6,8 @@ import ch.qos.logback.classic.Level;
 import io.dsub.discogs.batch.testutil.LogSpy;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.DefaultApplicationArguments;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
@@ -14,12 +16,12 @@ class TaskExecutorConfigUnitTest {
   @RegisterExtension private final LogSpy logSpy = new LogSpy();
 
   @Test
-  void workerCountUsesTheContainerVisibleProcessorCount() {
-    int available = Runtime.getRuntime().availableProcessors();
-    int expected = available > 2 ? Math.max(1, (int) (available * 0.8)) : 1;
+  void maxWorkersDefaultsToTheRuntimeProcessorAllocation() {
+    int expected = Runtime.getRuntime().availableProcessors();
 
     new ApplicationContextRunner()
         .withUserConfiguration(TaskExecutorConfig.class)
+        .withBean(ApplicationArguments.class, DefaultApplicationArguments::new)
         .run(
             context -> {
               assertThat(context).hasSingleBean(ThreadPoolTaskExecutor.class);
@@ -29,6 +31,24 @@ class TaskExecutorConfigUnitTest {
             });
 
     assertThat(logSpy.getLogsByExactLevelAsString(Level.INFO, true))
-        .containsExactly("setting worker count to " + expected + ".");
+        .containsExactly("max-workers=" + expected + " (source=auto).");
+  }
+
+  @Test
+  void configuredMaxWorkersIsUsedExactly() {
+    new ApplicationContextRunner()
+        .withUserConfiguration(TaskExecutorConfig.class)
+        .withBean(
+            ApplicationArguments.class,
+            () -> new DefaultApplicationArguments("--maxWorkers=3"))
+        .run(
+            context -> {
+              ThreadPoolTaskExecutor executor = context.getBean(ThreadPoolTaskExecutor.class);
+              assertThat(executor.getCorePoolSize()).isEqualTo(3);
+              assertThat(executor.getMaxPoolSize()).isEqualTo(3);
+            });
+
+    assertThat(logSpy.getLogsByExactLevelAsString(Level.INFO, true))
+        .containsExactly("max-workers=3 (source=configured).");
   }
 }

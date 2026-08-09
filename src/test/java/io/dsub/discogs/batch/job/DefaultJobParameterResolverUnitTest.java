@@ -91,7 +91,7 @@ class DefaultJobParameterResolverUnitTest {
     // then
     assertThat(t)
         .isInstanceOf(InvalidArgumentException.class)
-        .hasMessage("failed to parse chunkSize: SpongeBob");
+        .hasMessage("chunkSize must be a positive integer");
   }
 
   @Test

@@ -16,6 +16,7 @@ public class BatchService {
         -m, --dump-month <yyyy-MM> Import an exact dump month (default: latest per entity)
             --data-dir <path>      Download directory (default: ~/.cache/open-discogs-batch)
         -b, --chunk-size <number>  Import chunk size (default: 5000)
+            --max-workers <number> Maximum concurrent import workers (default: runtime CPU allocation)
         -c, --cleanup              Delete downloads after a successful import
         -f, --force                Reprocess an already successful dump
             --allow-downgrade      Allow an older dump than the entity checkpoint

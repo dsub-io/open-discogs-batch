@@ -1,6 +1,7 @@
 package io.dsub.discogs.batch.job;
 
 import io.dsub.discogs.batch.argument.ArgType;
+import io.dsub.discogs.batch.argument.PositiveIntegerParser;
 import io.dsub.discogs.batch.config.BatchConfig;
 import io.dsub.discogs.batch.dump.DumpDependencyResolver;
 import io.dsub.discogs.batch.dump.DiscogsDump;
@@ -63,22 +64,15 @@ public class DefaultJobParameterResolver implements JobParameterResolver {
   protected int parseChunkSize(ApplicationArguments args) throws InvalidArgumentException {
     String chunkSizeOptName = ArgType.CHUNK_SIZE.getGlobalName();
     if (args.containsOption(chunkSizeOptName)) {
-      String toParse = args.getOptionValues(chunkSizeOptName).get(0);
-      try {
-        log.debug("found entry for " + chunkSizeOptName + ": " + toParse);
-        int chunkSize = Integer.parseInt(toParse);
-        if (chunkSize <= 0) {
-          throw new InvalidArgumentException(chunkSizeOptName + " must be a positive integer");
-        }
-        return chunkSize;
-      } catch (NumberFormatException ignored) {
-        throw new InvalidArgumentException("failed to parse " + chunkSizeOptName + ": " + toParse);
-      }
+      List<String> values = args.getOptionValues(chunkSizeOptName);
+      String toParse = values == null || values.isEmpty() ? null : values.getFirst();
+      log.debug("found entry for {}: {}", chunkSizeOptName, toParse);
+      return PositiveIntegerParser.require(chunkSizeOptName, toParse);
     }
     log.debug(
-        chunkSizeOptName
-            + " not specified. returning default value: "
-            + BatchConfig.DEFAULT_CHUNK_SIZE);
+        "{} not specified. returning default value: {}",
+        chunkSizeOptName,
+        BatchConfig.DEFAULT_CHUNK_SIZE);
     return BatchConfig.DEFAULT_CHUNK_SIZE;
   }
 }

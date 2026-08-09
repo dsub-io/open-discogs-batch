@@ -17,6 +17,7 @@ final class EnvironmentArgumentProvider {
           new Binding("DUMP_MONTH", "dump-month", ArgType.DUMP_MONTH, false),
           new Binding("DATA_DIR", "data-dir", ArgType.DATA_DIR, false),
           new Binding("CHUNK_SIZE", "chunk-size", ArgType.CHUNK_SIZE, false),
+          new Binding("MAX_WORKERS", "max-workers", ArgType.MAX_WORKERS, false),
           new Binding("CLEANUP", "cleanup", ArgType.CLEANUP, true),
           new Binding("FORCE", "force", ArgType.FORCE, true),
           new Binding("ALLOW_DOWNGRADE", "allow-downgrade", ArgType.ALLOW_DOWNGRADE, true));

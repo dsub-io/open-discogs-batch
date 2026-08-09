@@ -48,6 +48,12 @@ public enum ArgType {
           .maxValuesCount(0)
           .minValuesCount(0)
           .build()),
+  MAX_WORKERS(
+      ArgumentProperty.builder()
+          .globalName("maxWorkers")
+          .supportedType(Long.class)
+          .synonyms("max-workers")
+          .build()),
   PASSWORD(
       ArgumentProperty.builder()
           .globalName("password")

@@ -35,9 +35,11 @@ class DefaultArgumentHandlerIntegrationTest extends PostgreSQLIntegrationSupport
 
   @Test
   void shouldNormalizePublicOptionNames() throws InvalidArgumentException {
-    String[] args = {"database-url=" + databaseUrl(), "entities=artist"};
+    String[] args = {
+        "database-url=" + databaseUrl(), "entities=artist", "max-workers=3"
+    };
     args = handler.resolve(args);
-    assertThat(args).contains("--entities=artist");
+    assertThat(args).contains("--entities=artist", "--maxWorkers=3");
   }
 
   @Test
@@ -68,6 +70,18 @@ class DefaultArgumentHandlerIntegrationTest extends PostgreSQLIntegrationSupport
         () ->
             handler.resolve(
                 new String[] {"--url=" + jdbcUrl, "--username=test", "--password=test"}));
+  }
+
+  @Test
+  void shouldRejectNonPositiveMaxWorkers() {
+    InvalidArgumentException exception =
+        Assertions.assertThrows(
+            InvalidArgumentException.class,
+            () ->
+                handler.resolve(
+                    new String[] {"--database-url=" + databaseUrl(), "--max-workers=0"}));
+
+    assertThat(exception.getMessage()).contains("max-workers must be a positive integer");
   }
 
   private String databaseUrl() {

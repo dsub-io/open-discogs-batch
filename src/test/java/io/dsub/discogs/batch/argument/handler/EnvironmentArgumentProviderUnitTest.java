@@ -19,6 +19,7 @@ class EnvironmentArgumentProviderUnitTest {
                 "OPEN_DISCOGS_BATCH_DUMP_MONTH", "2026-07",
                 "OPEN_DISCOGS_BATCH_DATA_DIR", "/data",
                 "OPEN_DISCOGS_BATCH_CHUNK_SIZE", "9000",
+                "OPEN_DISCOGS_BATCH_MAX_WORKERS", "6",
                 "OPEN_DISCOGS_BATCH_CLEANUP", "true",
                 "OPEN_DISCOGS_BATCH_FORCE", "1",
                 "OPEN_DISCOGS_BATCH_ALLOW_DOWNGRADE", "yes"));
@@ -30,6 +31,7 @@ class EnvironmentArgumentProviderUnitTest {
             "--dump-month=2026-07",
             "--data-dir=/data",
             "--chunk-size=9000",
+            "--max-workers=6",
             "--cleanup",
             "--force",
             "--allow-downgrade");
@@ -41,10 +43,11 @@ class EnvironmentArgumentProviderUnitTest {
         new EnvironmentArgumentProvider(
             Map.of(
                 "OPEN_DISCOGS_BATCH_CHUNK_SIZE", "9000",
+                "OPEN_DISCOGS_BATCH_MAX_WORKERS", "8",
                 "OPEN_DISCOGS_BATCH_CLEANUP", "false"));
 
-    assertThat(provider.apply(new String[] {"--chunk-size=1000"}))
-        .containsExactly("--chunk-size=1000");
+    assertThat(provider.apply(new String[] {"--chunk-size=1000", "--max-workers=2"}))
+        .containsExactly("--chunk-size=1000", "--max-workers=2");
   }
 
   @Test
