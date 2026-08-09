@@ -6,7 +6,6 @@ import io.dsub.discogs.batch.dump.DiscogsDump;
 import io.dsub.discogs.batch.dump.DiscogsDumpVerifier;
 import io.dsub.discogs.batch.exception.DumpNotFoundException;
 import io.dsub.discogs.batch.exception.InvalidArgumentException;
-import io.dsub.discogs.batch.job.listener.CacheInversionStepExecutionListener;
 import io.dsub.discogs.batch.job.listener.IdCachingItemProcessListener;
 import io.dsub.discogs.batch.job.listener.ItemCountingItemProcessListener;
 import io.dsub.discogs.batch.job.listener.StopWatchStepExecutionListener;
@@ -64,7 +63,6 @@ public class ArtistStepConfig extends AbstractStepConfig {
   private final DiscogsDumpVerifier dumpVerifier;
 
   private final StopWatchStepExecutionListener stopWatchStepExecutionListener;
-  private final CacheInversionStepExecutionListener cacheInversionStepExecutionListener;
   private final StringNormalizingItemReadListener stringNormalizingItemReadListener;
   private final IdCachingItemProcessListener idCachingItemProcessListener;
   private final ItemCountingItemProcessListener itemCountingItemProcessListener;
@@ -132,7 +130,6 @@ public class ArtistStepConfig extends AbstractStepConfig {
         .listener(stringNormalizingItemReadListener)
         .listener(idCachingItemProcessListener)
         .listener(itemCountingItemProcessListener)
-        .listener(cacheInversionStepExecutionListener)
         .taskExecutor(taskExecutor)
         .allowStartIfComplete(true)
         .build();

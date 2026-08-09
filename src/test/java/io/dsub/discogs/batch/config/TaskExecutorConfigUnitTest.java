@@ -10,6 +10,7 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.DefaultApplicationArguments;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import java.util.concurrent.SynchronousQueue;
 
 class TaskExecutorConfigUnitTest {
 
@@ -28,6 +29,8 @@ class TaskExecutorConfigUnitTest {
               ThreadPoolTaskExecutor executor = context.getBean(ThreadPoolTaskExecutor.class);
               assertThat(executor.getCorePoolSize()).isEqualTo(expected);
               assertThat(executor.getMaxPoolSize()).isEqualTo(expected);
+              assertThat(executor.getThreadPoolExecutor().getQueue())
+                  .isInstanceOf(SynchronousQueue.class);
             });
 
     assertThat(logSpy.getLogsByExactLevelAsString(Level.INFO, true))
@@ -46,6 +49,8 @@ class TaskExecutorConfigUnitTest {
               ThreadPoolTaskExecutor executor = context.getBean(ThreadPoolTaskExecutor.class);
               assertThat(executor.getCorePoolSize()).isEqualTo(3);
               assertThat(executor.getMaxPoolSize()).isEqualTo(3);
+              assertThat(executor.getThreadPoolExecutor().getQueue())
+                  .isInstanceOf(SynchronousQueue.class);
             });
 
     assertThat(logSpy.getLogsByExactLevelAsString(Level.INFO, true))

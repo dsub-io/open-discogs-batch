@@ -34,7 +34,6 @@ public class MasterMainReleaseStepJobExecutionDecider implements JobExecutionDec
       log.info("release item eTag missing. " + SKIP_MSG);
     } else if (idRegistry
         .getLongIdCache(DefaultEntityIdRegistry.Type.RELEASE)
-        .getConcurrentSkipListSet()
         .isEmpty()) {
       log.info("release item identity cache is missing. " + SKIP_MSG);
     } else {

@@ -18,29 +18,14 @@ import org.jooq.UpdatableRecord;
 public abstract class AbstractJooqItemWriter<T extends UpdatableRecord<?>> implements JooqItemWriter<T> {
 
   private final Map<Table<?>, List<Field<?>>> insertFields = new ConcurrentHashMap<>();
-  private final Map<Table<?>, List<String>> insertFieldNames = new ConcurrentHashMap<>();
   private final Map<Table<?>, List<String>> keysToDeleteCache = new ConcurrentHashMap<>();
   private final Map<Table<?>, List<Field<?>>> constraintFieldsCache = new ConcurrentHashMap<>();
   private final Map<Table<?>, List<Field<?>>> updateFieldsCache = new ConcurrentHashMap<>();
 
   protected List<Object> getInsertValues(T record) {
-
-    List<String> fieldNames;
-
-    if (insertFieldNames.containsKey(record.getTable())) {
-      fieldNames = insertFieldNames.get(record.getTable());
-    } else {
-      fieldNames =
-          getInsertFields(record.getTable()).stream()
-              .map(Field::getName)
-              .collect(Collectors.toList());
-      insertFieldNames.put(record.getTable(), fieldNames);
-    }
-
-    return record.intoMap().entrySet().stream()
-        .filter(entry -> fieldNames.contains(entry.getKey()))
-        .map(Map.Entry::getValue)
-        .collect(Collectors.toList());
+    return getInsertFields(record.getTable()).stream()
+        .map(field -> field.getValue(record))
+        .collect(Collectors.toCollection(ArrayList::new));
   }
 
   protected List<Field<?>> getInsertFields(Table<?> table) {

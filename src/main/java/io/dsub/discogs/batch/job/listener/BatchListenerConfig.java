@@ -35,11 +35,6 @@ public class BatchListenerConfig {
   }
 
   @Bean
-  public CacheInversionStepExecutionListener cacheInversionStepExecutionListener() {
-    return new CacheInversionStepExecutionListener(entityIdRegistry());
-  }
-
-  @Bean
   public StopWatchStepExecutionListener stopWatchStepExecutionListener() {
     return new StopWatchStepExecutionListener(itemsCounter());
   }

@@ -1,8 +1,8 @@
 package io.dsub.discogs.batch.job.writer;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +15,7 @@ import org.springframework.batch.infrastructure.item.ItemWriter;
 public class CollectionItemWriter<T> implements ItemWriter<Collection<T>> {
 
   private final ItemWriter<T> delegate;
+  private final int maxBatchSize;
 
   @Override
   public void write(Chunk<? extends Collection<T>> items) throws Exception {
@@ -23,16 +24,20 @@ public class CollectionItemWriter<T> implements ItemWriter<Collection<T>> {
     for (Collection<? extends T> subItems : items) {
       for (T subItem : subItems) {
         Class<?> key = subItem.getClass();
-        if (!consolidatedMap.containsKey(subItem.getClass())) {
-          consolidatedMap.put(key, new LinkedList<>());
+        List<T> batch =
+            consolidatedMap.computeIfAbsent(key, ignored -> new ArrayList<>(maxBatchSize));
+        batch.add(subItem);
+        if (batch.size() == maxBatchSize) {
+          delegate.write(new Chunk<>(batch));
+          batch.clear();
         }
-        consolidatedMap.get(key).add(subItem);
       }
     }
 
     for (List<T> subItems : consolidatedMap.values()) {
-      delegate.write(new Chunk<>(subItems));
-      subItems.clear();
+      if (!subItems.isEmpty()) {
+        delegate.write(new Chunk<>(subItems));
+      }
     }
   }
 }

@@ -1,105 +1,73 @@
 package io.dsub.discogs.batch.job.registry;
 
-import java.util.Objects;
-import java.util.OptionalInt;
-import java.util.concurrent.ConcurrentSkipListSet;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.IntStream;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLongArray;
 import lombok.Getter;
 
+/**
+ * Concurrent, segmented bit set for positive Discogs identifiers.
+ *
+ * <p>A segment is allocated only when an identifier in that 65,536-value range is observed. Dense
+ * identifiers therefore require one bit each instead of one boxed {@link Integer} and one skip-list
+ * node each. Segment words use compare-and-set so chunk workers can register identifiers without a
+ * global lock.
+ */
 public class IdCache {
 
-  @Getter
-  private final DefaultEntityIdRegistry.Type type;
-  @Getter
-  private final ConcurrentSkipListSet<Integer> concurrentSkipListSet;
-  private boolean inverted = false;
-  private AtomicInteger lastMax = null;
+  private static final int SEGMENT_SHIFT = 16;
+  private static final int SEGMENT_MASK = (1 << SEGMENT_SHIFT) - 1;
+  private static final int WORD_SHIFT = 6;
+  private static final int WORDS_PER_SEGMENT = 1 << (SEGMENT_SHIFT - WORD_SHIFT);
+
+  @Getter private final DefaultEntityIdRegistry.Type type;
+  private final ConcurrentHashMap<Integer, AtomicLongArray> segments = new ConcurrentHashMap<>();
 
   public IdCache(DefaultEntityIdRegistry.Type type) {
     this.type = type;
-    this.concurrentSkipListSet = new ConcurrentSkipListSet<>();
   }
 
   public boolean exists(Integer item) {
-    if (item == null || lastMax == null) {
+    if (item == null || item < 1) {
       return false;
     }
-
-    if (item > lastMax.get()) {
+    AtomicLongArray segment = segments.get(item >>> SEGMENT_SHIFT);
+    if (segment == null) {
       return false;
     }
-
-    if (inverted) {
-      return !concurrentSkipListSet.contains(item);
-    }
-    return concurrentSkipListSet.contains(item);
+    int segmentOffset = item & SEGMENT_MASK;
+    int wordIndex = segmentOffset >>> WORD_SHIFT;
+    long mask = 1L << (segmentOffset & 63);
+    return (segment.get(wordIndex) & mask) != 0;
   }
 
   public void add(Integer item) {
-    if (item == null) {
+    if (item == null || item < 1) {
       return;
     }
-    if (lastMax == null) {
-      lastMax = new AtomicInteger(item);
-    } else if (lastMax.get() < item) {
-      lastMax.set(item);
-    }
-    if (inverted) {
-      return;
-    }
-    this.concurrentSkipListSet.add(item);
+    AtomicLongArray segment =
+        segments.computeIfAbsent(
+            item >>> SEGMENT_SHIFT, ignored -> new AtomicLongArray(WORDS_PER_SEGMENT));
+    int segmentOffset = item & SEGMENT_MASK;
+    int wordIndex = segmentOffset >>> WORD_SHIFT;
+    long mask = 1L << (segmentOffset & 63);
+    long current;
+    do {
+      current = segment.get(wordIndex);
+      if ((current & mask) != 0) {
+        return;
+      }
+    } while (!segment.compareAndSet(wordIndex, current, current | mask));
   }
 
-  public boolean isInverted() {
-    return this.inverted;
+  public boolean isEmpty() {
+    return segments.isEmpty();
   }
 
-  public void invert() {
-    if (!this.inverted) {
-      doInvertFromNonInverted();
-    } else {
-      doInvertFromInverted();
-    }
-    this.inverted = !inverted;
-    System.gc(); // force gc call for mem clear
+  public void clear() {
+    segments.clear();
   }
 
-  private void doInvertFromInverted() {
-    if (lastMax == null || lastMax.get() < 1) {
-      return;
-    }
-    flip();
-  }
-
-  private void doInvertFromNonInverted() {
-    OptionalInt optMax =
-        this.concurrentSkipListSet.stream().filter(Objects::nonNull).mapToInt(num -> num).max();
-
-    if (optMax.isEmpty()) {
-      return;
-    }
-
-    int max = optMax.getAsInt();
-
-    if (lastMax == null) {
-      lastMax = new AtomicInteger(max);
-    } else if (lastMax.get() < max) {
-      lastMax.set(max);
-    }
-
-    flip();
-  }
-
-  private void flip() {
-    IntStream.range(1, lastMax.get() + 1).forEach(this::flipSingleValue);
-  }
-
-  private void flipSingleValue(int intValue) {
-    if (this.concurrentSkipListSet.contains(intValue)) {
-      this.concurrentSkipListSet.remove(intValue);
-      return;
-    }
-    this.concurrentSkipListSet.add(intValue);
+  long allocatedWordBytes() {
+    return (long) segments.size() * WORDS_PER_SEGMENT * Long.BYTES;
   }
 }

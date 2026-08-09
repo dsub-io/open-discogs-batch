@@ -18,7 +18,8 @@ public class TaskExecutorConfig {
   /**
    * Primary executor for concurrent chunk processing. Core and maximum pool sizes use the same
    * resolved {@code max-workers} value so concurrent chunk execution cannot exceed the configured
-   * limit.
+   * limit. A synchronous handoff plus blocking rejection policy applies producer backpressure
+   * instead of retaining parsed chunks in an executor queue.
    *
    * <p>{@link ThreadPoolTaskExecutor#setWaitForTasksToCompleteOnShutdown(boolean)} is set to
    * true so in-flight chunks finish during graceful shutdown.
@@ -33,6 +34,8 @@ public class TaskExecutorConfig {
     ThreadPoolTaskExecutor taskExecutor = new ThreadPoolTaskExecutor();
     taskExecutor.setCorePoolSize(maxWorkers);
     taskExecutor.setMaxPoolSize(maxWorkers);
+    taskExecutor.setQueueCapacity(0);
+    taskExecutor.setRejectedExecutionHandler(new BlockingTaskSubmissionPolicy());
     taskExecutor.setWaitForTasksToCompleteOnShutdown(true);
     return taskExecutor;
   }

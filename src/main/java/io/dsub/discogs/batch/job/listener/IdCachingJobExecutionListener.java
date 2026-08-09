@@ -5,12 +5,14 @@ import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
 import io.dsub.opendiscogs.jooq.tables.Artist;
 import io.dsub.opendiscogs.jooq.tables.Label;
 import io.dsub.opendiscogs.jooq.tables.Master;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jooq.Cursor;
 import org.jooq.DSLContext;
+import org.jooq.Field;
+import org.jooq.Record1;
+import org.jooq.Table;
+import org.jooq.impl.DSL;
 import org.springframework.batch.core.job.JobExecution;
 import org.springframework.batch.core.listener.JobExecutionListener;
 
@@ -56,55 +58,41 @@ public class IdCachingJobExecutionListener implements JobExecutionListener {
   }
 
   private void preCacheMasterIds() {
-    cacheThenInvert(fetchMasterIdentifiers(), DefaultEntityIdRegistry.Type.MASTER);
+    cacheIdentifiers(
+        Master.MASTER.ID, Master.MASTER, DefaultEntityIdRegistry.Type.MASTER);
   }
 
   private void preCacheLabelIds() {
-    cacheThenInvert(fetchLabelIdentifiers(), DefaultEntityIdRegistry.Type.LABEL);
+    cacheIdentifiers(
+        Label.LABEL.ID, Label.LABEL, DefaultEntityIdRegistry.Type.LABEL);
   }
 
   private void preCacheArtistIds() {
-    cacheThenInvert(fetchArtistIdentifiers(), DefaultEntityIdRegistry.Type.ARTIST);
+    cacheIdentifiers(
+        Artist.ARTIST.ID, Artist.ARTIST, DefaultEntityIdRegistry.Type.ARTIST);
   }
 
-  private void cacheThenInvert(List<Integer> idList, DefaultEntityIdRegistry.Type type) {
-    cache(idList, type);
-    invert(type);
-  }
-
-  private void invert(DefaultEntityIdRegistry.Type type) {
-    idRegistry.invert(type);
-  }
-
-  private void cache(List<Integer> idList, DefaultEntityIdRegistry.Type type) {
+  private void cacheIdentifiers(
+      Field<Integer> idField, Table<?> table, DefaultEntityIdRegistry.Type type) {
     log.info("caching {} identifiers", type.name().toLowerCase());
-    idList.stream().filter(Objects::nonNull).forEach(id -> idRegistry.put(type, id));
-  }
-
-  private List<Integer> fetchArtistIdentifiers() {
-    log.info("fetching artist identifiers");
-    List<Integer> list =
-        new ArrayList<>(
-            context.select(Artist.ARTIST.ID).from(Artist.ARTIST).fetch(Artist.ARTIST.ID));
-    log.info("fetched artists ids. count: {}", list.size());
-    return list;
-  }
-
-  private List<Integer> fetchLabelIdentifiers() {
-    log.info("fetching label identifiers");
-    List<Integer> list =
-        new ArrayList<>(context.select(Label.LABEL.ID).from(Label.LABEL).fetch(Label.LABEL.ID));
-    log.info("fetched label ids. count: {}", list.size());
-    return list;
-  }
-
-  private List<Integer> fetchMasterIdentifiers() {
-    log.info("fetching master identifiers");
-    List<Integer> list =
-        new ArrayList<>(
-            context.select(Master.MASTER.ID).from(Master.MASTER).fetch(Master.MASTER.ID));
-    log.info("fetched master ids. count: {}", list.size());
-    return list;
+    long count =
+        context.transactionResult(
+            configuration -> {
+              var query = DSL.using(configuration).select(idField).from(table);
+              query.fetchSize(10_000);
+              long cached = 0;
+              try (Cursor<Record1<Integer>> cursor = query.fetchLazy()) {
+                for (Record1<Integer> record : cursor) {
+                  Integer id = record.value1();
+                  if (id != null) {
+                    idRegistry.put(type, id);
+                    cached++;
+                  }
+                }
+              }
+              return cached;
+            });
+    log.info("cached {} ids. count: {}", type.name().toLowerCase(), count);
   }
 
   @Override
