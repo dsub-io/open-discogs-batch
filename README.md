@@ -62,7 +62,7 @@ verifies reruns and entity admission rules. CI uses GitHub-hosted
 ## Usage
 
 ```shell
-java -jar build/libs/open-discogs-batch-0.1.8.jar \
+java -jar build/libs/open-discogs-batch-*.jar \
   --database-url 'postgresql://user:password@localhost:5432/open_discogs' \
   --entities artist,label,master,release
 ```
@@ -96,17 +96,51 @@ to the runtime; no percentage or physical-core heuristic is applied. It is not
 a hard CPU quota. Use the container or workload scheduler's CPU limit when the
 process itself must not exceed a CPU allocation.
 
+## Large-import resource model
+
+The dump is decompressed and parsed as a stream; it is never loaded into memory
+as one document. Worker submission has no waiting queue: when all workers are
+busy, XML production waits until a worker becomes available. The live chunk
+count therefore cannot grow with the total dump size.
+
+Integer reference IDs use a segmented concurrent bit set. Each occupied range
+of 65,536 IDs allocates 8 KiB of bit storage, so dense IDs use one bit each.
+When an import depends on entities not selected in the same run, their IDs are
+read from PostgreSQL with a 10,000-row server-side cursor rather than fetched as
+one in-memory result. Expanded relation records are also flushed to jOOQ in
+`chunk-size` batches instead of accumulating one unbounded JDBC batch.
+
+Peak working memory is driven by `chunk-size × max-workers × relation fan-out`,
+not by the total row count. Release records have the largest fan-out. For a
+large production import, set `--max-workers` explicitly to the smaller of the
+container CPU allocation and the number of database write connections reserved
+for this job, then tune `--chunk-size` separately from measured heap usage and
+database latency. Lower `chunk-size` before lowering worker count when a single
+release chunk is too large; lower `max-workers` when concurrent chunks or the
+database are the constraint.
+
+### Measured ID-cache improvement
+
+On an Apple M2 Pro with Java 21, the previous skip-list cache and two inversion
+passes were compared with the segmented bit set using the same sequence of
+1,000,000 positive IDs. Across three fresh-process runs, median elapsed time
+fell from 648.549 ms to 28.997 ms (`22.4×` faster), and median maximum RSS fell
+from 163.9 MB to 64.47 MB (`60.7%` lower). The new bit-set words occupied 128
+KiB. These figures isolate the ID-cache operation; end-to-end import throughput
+still depends on dump shape, PostgreSQL, storage, and runtime limits.
+
 Percent-encode reserved characters in the URI username or password. Never
 commit a real database URL to source control. Environment variables also remain
 visible to a container administrator, so provide them through the deployment
 platform's secret mechanism.
 
-## Container image
+## Container
 
-Build a local OCI image with the Spring Boot buildpack task:
+Release images are published from Release Please release commits for
+`linux/amd64` and `linux/arm64`:
 
 ```shell
-./gradlew bootBuildImage
+docker pull ghcr.io/dsub-io/open-discogs-batch:latest
 docker run --rm \
   --cpus=4 \
   -e OPEN_DISCOGS_BATCH_DATABASE_URL='postgresql://user:password@db:5432/open_discogs' \
@@ -114,10 +148,19 @@ docker run --rm \
   -e OPEN_DISCOGS_BATCH_DATA_DIR=/data \
   -e OPEN_DISCOGS_BATCH_MAX_WORKERS=4 \
   -v open-discogs-data:/data \
-  open-discogs-batch:0.1.8
+  ghcr.io/dsub-io/open-discogs-batch:latest
 ```
 
-Setting `OPEN_DISCOGS_BATCH_CLEANUP=true` removes downloads only after success.
+The image runs as a non-root user. Mount a writable volume when downloads must
+survive container removal. Setting `OPEN_DISCOGS_BATCH_CLEANUP=true` removes
+downloads only after success. Versioned executable JARs are attached to the
+repository's GitHub Releases.
+
+For a local buildpack image instead of the published Docker image:
+
+```shell
+./gradlew bootBuildImage
+```
 
 ## Contributing
 
