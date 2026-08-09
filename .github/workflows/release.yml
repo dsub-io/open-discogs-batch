@@ -21,6 +21,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
+      prs-created: ${{ steps.release.outputs.prs_created }}
+      pr: ${{ steps.release.outputs.pr }}
       release-created: ${{ steps.release.outputs.release_created }}
       tag-name: ${{ steps.release.outputs.tag_name }}
       version: ${{ steps.release.outputs.version }}
@@ -31,6 +33,78 @@ jobs:
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
           token: ${{ secrets.GH_TOKEN }}
+
+  sign-release-pr:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.prs-created == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+          ref: ${{ fromJSON(needs.release-please.outputs.pr).headBranchName }}
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: Import commit signing key
+        shell: bash
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$GPG_PRIVATE_KEY" ]]; then
+            echo "::error::Missing GitHub Actions secret: GPG_PRIVATE_KEY"
+            exit 1
+          fi
+          export GNUPGHOME="$RUNNER_TEMP/gnupg"
+          install -d -m 700 "$GNUPGHOME"
+          printf '%s' "$GPG_PRIVATE_KEY" | gpg --batch --import
+          echo "GNUPGHOME=$GNUPGHOME" >> "$GITHUB_ENV"
+
+      - name: Sign Release Please commit
+        shell: bash
+        env:
+          EXPECTED_BASE_BRANCH: ${{ fromJSON(needs.release-please.outputs.pr).baseBranchName }}
+          RELEASE_PR_BRANCH: ${{ fromJSON(needs.release-please.outputs.pr).headBranchName }}
+        run: |
+          set -euo pipefail
+          if [[ "$EXPECTED_BASE_BRANCH" != "main" ]]; then
+            echo "::error::Release Please pull request does not target main."
+            exit 1
+          fi
+          if [[ ! "$RELEASE_PR_BRANCH" =~ ^release-please--branches--main--components--[A-Za-z0-9._-]+$ ]]; then
+            echo "::error::Unexpected Release Please branch."
+            exit 1
+          fi
+          expected_head_sha="$(
+            git rev-parse "refs/remotes/origin/$RELEASE_PR_BRANCH"
+          )"
+          if [[ "$(git rev-parse HEAD)" != "$expected_head_sha" ]]; then
+            echo "::error::Checked-out commit does not match Release Please output."
+            exit 1
+          fi
+
+          signing_key="$(
+            gpg --batch --with-colons --list-secret-keys |
+              awk -F: '$1 == "fpr" { print $10; exit }'
+          )"
+          if [[ -z "$signing_key" ]]; then
+            echo "::error::No GPG secret key is available for commit signing."
+            exit 1
+          fi
+
+          git config user.name state303
+          git config user.email state303@dsub.io
+          git config user.signingkey "$signing_key"
+          git commit --amend --no-edit --gpg-sign="$signing_key"
+          git verify-commit HEAD
+          git push \
+            --force-with-lease="refs/heads/$RELEASE_PR_BRANCH:$expected_head_sha" \
+            origin \
+            "HEAD:refs/heads/$RELEASE_PR_BRANCH"
 
   publish:
     needs: release-please
