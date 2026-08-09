@@ -41,32 +41,40 @@ public class BatchInfrastructureConfigUnitTest {
   }
 
   @Test
-  void givenMountOption__ShouldSetNotBeingTemporaryFile() {
+  void givenCleanupOption__ShouldRemoveDownloadedFilesAfterSuccess() {
     // given
-    ctx = ctx.withBean(DefaultApplicationArguments.class, "--mount");
+    ctx = ctx.withBean(DefaultApplicationArguments.class, "--cleanup");
 
     // when
-    ctx.run(it -> assertThat(it).hasSingleBean(FileUtil.class));
+    ctx.run(
+        it -> {
+          assertThat(it).hasSingleBean(FileUtil.class);
+          assertThat(it.getBean(FileUtil.class).isTemporary()).isTrue();
+        });
 
     // then
     assertThat(logSpy.getLogsByExactLevelAsString(Level.INFO, true))
         .hasSize(1)
         .first()
-        .isEqualTo("detected mount option. keeping file...");
+        .isEqualTo("cleanup option applied. downloaded files will be removed after success.");
   }
 
   @Test
-  void givenOptionWithoutMount__ShouldSetAsTemporaryFile() {
+  void givenOptionWithoutCleanup__ShouldKeepDownloadedFiles() {
     // given
     ctx = ctx.withBean(DefaultApplicationArguments.class);
 
     // when
-    ctx.run(it -> assertThat(it).hasSingleBean(FileUtil.class));
+    ctx.run(
+        it -> {
+          assertThat(it).hasSingleBean(FileUtil.class);
+          assertThat(it.getBean(FileUtil.class).isTemporary()).isFalse();
+        });
 
     // then
     assertThat(logSpy.getLogsByExactLevelAsString(Level.INFO, true))
         .hasSize(1)
         .first()
-        .isEqualTo("mount option not set. files will be removed after the job.");
+        .isEqualTo("cleanup option not set. downloaded files will be kept.");
   }
 }

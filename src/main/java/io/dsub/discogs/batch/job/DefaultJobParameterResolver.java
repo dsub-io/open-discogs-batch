@@ -1,6 +1,7 @@
 package io.dsub.discogs.batch.job;
 
 import io.dsub.discogs.batch.argument.ArgType;
+import io.dsub.discogs.batch.argument.PositiveIntegerParser;
 import io.dsub.discogs.batch.config.BatchConfig;
 import io.dsub.discogs.batch.dump.DumpDependencyResolver;
 import io.dsub.discogs.batch.dump.DiscogsDump;
@@ -24,7 +25,6 @@ import org.springframework.stereotype.Component;
 public class DefaultJobParameterResolver implements JobParameterResolver {
 
   private static final String CHUNK_SIZE = ArgType.CHUNK_SIZE.getGlobalName();
-  private static final String STRICT = ArgType.STRICT.getGlobalName();
   private static final String FORCE = ArgType.FORCE.getGlobalName();
   private static final String ALLOW_DOWNGRADE = ArgType.ALLOW_DOWNGRADE.getGlobalName();
 
@@ -58,27 +58,21 @@ public class DefaultJobParameterResolver implements JobParameterResolver {
         ImportJobParameters.ALLOW_DOWNGRADE,
         String.valueOf(args.containsOption(ALLOW_DOWNGRADE)));
 
-    if (args.containsOption(STRICT)) {
-      props.put(STRICT, "true");
-    }
     return props;
   }
 
   protected int parseChunkSize(ApplicationArguments args) throws InvalidArgumentException {
     String chunkSizeOptName = ArgType.CHUNK_SIZE.getGlobalName();
     if (args.containsOption(chunkSizeOptName)) {
-      String toParse = args.getOptionValues(chunkSizeOptName).get(0);
-      try {
-        log.debug("found entry for " + chunkSizeOptName + ": " + toParse);
-        return Integer.parseInt(toParse);
-      } catch (NumberFormatException ignored) {
-        throw new InvalidArgumentException("failed to parse " + chunkSizeOptName + ": " + toParse);
-      }
+      List<String> values = args.getOptionValues(chunkSizeOptName);
+      String toParse = values == null || values.isEmpty() ? null : values.getFirst();
+      log.debug("found entry for {}: {}", chunkSizeOptName, toParse);
+      return PositiveIntegerParser.require(chunkSizeOptName, toParse);
     }
     log.debug(
-        chunkSizeOptName
-            + " not specified. returning default value: "
-            + BatchConfig.DEFAULT_CHUNK_SIZE);
+        "{} not specified. returning default value: {}",
+        chunkSizeOptName,
+        BatchConfig.DEFAULT_CHUNK_SIZE);
     return BatchConfig.DEFAULT_CHUNK_SIZE;
   }
 }

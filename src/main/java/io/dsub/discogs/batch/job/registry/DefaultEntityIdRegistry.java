@@ -11,7 +11,7 @@ public class DefaultEntityIdRegistry implements EntityIdRegistry {
   private final IdCache artistCache = new IdCache(Type.ARTIST);
   private final IdCache masterCache = new IdCache(Type.MASTER);
   private final IdCache labelCache = new IdCache(Type.LABEL);
-  private final IdCache releaseItemCache = new IdCache(Type.LABEL);
+  private final IdCache releaseItemCache = new IdCache(Type.RELEASE);
 
   private final ConcurrentSkipListSet<String> genreSet = new ConcurrentSkipListSet<>();
   private final ConcurrentSkipListSet<String> styleSet = new ConcurrentSkipListSet<>();
@@ -44,18 +44,9 @@ public class DefaultEntityIdRegistry implements EntityIdRegistry {
   }
 
   @Override
-  public void invert(Type type) {
-    switch (type) {
-      case ARTIST -> artistCache.invert();
-      case LABEL -> labelCache.invert();
-      case MASTER -> masterCache.invert();
-    }
-  }
-
-  @Override
   public void clearAll() {
     for (Type t : List.of(Type.ARTIST, Type.LABEL, Type.MASTER, Type.RELEASE)) {
-      getLongIdCache(t).getConcurrentSkipListSet().clear();
+      getLongIdCache(t).clear();
     }
     genreSet.clear();
     styleSet.clear();

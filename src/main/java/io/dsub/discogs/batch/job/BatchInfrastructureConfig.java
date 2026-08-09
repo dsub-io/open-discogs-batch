@@ -57,12 +57,16 @@ public class BatchInfrastructureConfig {
   // TODO: test!
   @Bean
   public FileUtil fileUtil() {
-    boolean keepFile = args.containsOption(ArgType.MOUNT.getGlobalName());
-    FileUtil fileUtil = SimpleFileUtil.builder().isTemporary(!keepFile).build();
-    if (keepFile) {
-      log.info("detected mount option. keeping file...");
+    boolean cleanup = args.containsOption(ArgType.CLEANUP.getGlobalName());
+    SimpleFileUtil.AppFileUtilBuilder builder = SimpleFileUtil.builder().isTemporary(cleanup);
+    if (args.containsOption(ArgType.DATA_DIR.getGlobalName())) {
+      builder.appDirectory(args.getOptionValues(ArgType.DATA_DIR.getGlobalName()).getFirst());
+    }
+    FileUtil fileUtil = builder.build();
+    if (cleanup) {
+      log.info("cleanup option applied. downloaded files will be removed after success.");
     } else {
-      log.info("mount option not set. files will be removed after the job.");
+      log.info("cleanup option not set. downloaded files will be kept.");
     }
     return fileUtil;
   }

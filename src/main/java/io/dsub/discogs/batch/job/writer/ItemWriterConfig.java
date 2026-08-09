@@ -8,6 +8,7 @@ import org.jooq.DSLContext;
 import org.jooq.UpdatableRecord;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.infrastructure.item.ItemWriter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -24,8 +25,10 @@ public class ItemWriterConfig {
   }
 
   @Bean
-  public ItemWriter<Collection<UpdatableRecord<?>>> baseEntityCollectionItemWriter() {
-    return getBaseEntityCollectionItemWriter(jooqItemWriter());
+  @StepScope
+  public ItemWriter<Collection<UpdatableRecord<?>>> baseEntityCollectionItemWriter(
+      @Value("#{jobParameters['chunkSize']}") Integer chunkSize) {
+    return getBaseEntityCollectionItemWriter(jooqItemWriter(), chunkSize);
   }
 
   @Bean
@@ -35,7 +38,7 @@ public class ItemWriterConfig {
   }
 
   private CollectionItemWriter<UpdatableRecord<?>> getBaseEntityCollectionItemWriter(
-      ItemWriter<UpdatableRecord<?>> delegate) {
-    return new CollectionItemWriter<>(delegate);
+      ItemWriter<UpdatableRecord<?>> delegate, int maxBatchSize) {
+    return new CollectionItemWriter<>(delegate, maxBatchSize);
   }
 }

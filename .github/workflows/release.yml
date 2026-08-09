@@ -1,0 +1,162 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+  packages: write
+  pull-requests: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      release-created: ${{ steps.release.outputs.release_created }}
+      tag-name: ${{ steps.release.outputs.tag_name }}
+      version: ${{ steps.release.outputs.version }}
+      sha: ${{ steps.release.outputs.sha }}
+    steps:
+      - name: Create or update release
+        id: release
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+
+  publish:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release-created == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.release-please.outputs.sha }}
+
+      - name: Validate Release Please output
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ needs.release-please.outputs.sha }}
+          RELEASE_TAG: ${{ needs.release-please.outputs.tag-name }}
+          RELEASE_VERSION: ${{ needs.release-please.outputs.version }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Release Please returned an invalid semantic version."
+            exit 1
+          fi
+          if [[ "$RELEASE_TAG" != "v$RELEASE_VERSION" ]]; then
+            echo "::error::Release tag does not match the release version."
+            exit 1
+          fi
+          if [[ "$(git rev-parse HEAD)" != "$RELEASE_SHA" ]]; then
+            echo "::error::Checked-out commit does not match the release."
+            exit 1
+          fi
+          git fetch --no-tags origin main:refs/remotes/origin/main
+          if ! git merge-base --is-ancestor "$RELEASE_SHA" origin/main; then
+            echo "::error::Release commit is not on main."
+            exit 1
+          fi
+
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Test and build release source
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ needs.release-please.outputs.version }}
+        run: >-
+          ./gradlew clean check e2eTest bootJar
+          --no-daemon
+          --warning-mode=fail
+          -Pversion="$RELEASE_VERSION"
+
+      - name: Verify and attach executable JAR
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ needs.release-please.outputs.tag-name }}
+          RELEASE_VERSION: ${{ needs.release-please.outputs.version }}
+        run: |
+          set -euo pipefail
+          asset="open-discogs-batch-${RELEASE_VERSION}.jar"
+          source="build/libs/${asset}"
+          reported_version="$(java -jar "$source" --version)"
+          if [[ "$reported_version" != "open-discogs-batch $RELEASE_VERSION" ]]; then
+            echo "::error::JAR version $reported_version does not match $RELEASE_VERSION."
+            exit 1
+          fi
+          sha256sum "$source" > "${asset}.sha256"
+          cp "$source" "$asset"
+          gh release upload "$RELEASE_TAG" "$asset" "${asset}.sha256" --clobber
+
+      - name: Log in to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4
+
+      - name: Publish release container
+        id: image
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            VERSION=${{ needs.release-please.outputs.version }}
+          tags: |
+            ghcr.io/dsub-io/open-discogs-batch:${{ needs.release-please.outputs.version }}
+            ghcr.io/dsub-io/open-discogs-batch:latest
+          labels: |
+            org.opencontainers.image.source=https://github.com/dsub-io/open-discogs-batch
+            org.opencontainers.image.revision=${{ needs.release-please.outputs.sha }}
+            org.opencontainers.image.version=${{ needs.release-please.outputs.version }}
+            org.opencontainers.image.licenses=MIT
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Verify published architectures
+        shell: bash
+        env:
+          IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
+        run: |
+          set -euo pipefail
+          manifest="$(
+            docker buildx imagetools inspect --raw \
+              "ghcr.io/dsub-io/open-discogs-batch@${IMAGE_DIGEST}"
+          )"
+          jq -e '
+            ([
+              .manifests[].platform
+              | select(
+                  .os == "linux" and
+                  (.architecture == "amd64" or .architecture == "arm64")
+                )
+              | (.os + "/" + .architecture)
+            ] | unique) == ["linux/amd64", "linux/arm64"]
+          ' <<<"$manifest"

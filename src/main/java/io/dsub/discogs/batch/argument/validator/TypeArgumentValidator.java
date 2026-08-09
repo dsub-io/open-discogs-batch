@@ -12,7 +12,7 @@ public class TypeArgumentValidator implements ArgumentValidator {
       Pattern.compile("^((ARTIST)|(RELEASE)|(MASTER)|(LABEL))$", Pattern.CASE_INSENSITIVE);
 
   private static final Pattern TYPE_PATTERN =
-      Pattern.compile("^type[s]?$", Pattern.CASE_INSENSITIVE);
+      Pattern.compile("^entities$", Pattern.CASE_INSENSITIVE);
 
   @Override
   public ValidationResult validate(ApplicationArguments args) {
@@ -32,7 +32,7 @@ public class TypeArgumentValidator implements ArgumentValidator {
 
     // duplicated entries to be picked up from here.
     if (typeArgNames.size() > 1) {
-      String msg = "duplicated type argument exists: " + Strings.join(typeArgNames, ',');
+      String msg = "duplicated entities argument exists: " + Strings.join(typeArgNames, ',');
       return result.withIssues(msg);
     }
 
@@ -40,7 +40,7 @@ public class TypeArgumentValidator implements ArgumentValidator {
     List<String> issues =
         args.getOptionValues(typeArgNames.get(0)).stream()
             .filter(val -> !TYPE_VALUE_PATTERN.matcher(val).matches())
-            .map(val -> "unknown type argument value: " + val)
+            .map(val -> "unknown entity value: " + val)
             .collect(Collectors.toList());
 
     // will be empty if there was no issue.

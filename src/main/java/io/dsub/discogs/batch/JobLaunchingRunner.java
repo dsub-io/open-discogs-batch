@@ -1,5 +1,6 @@
 package io.dsub.discogs.batch;
 
+import io.dsub.discogs.batch.job.DownloadedFileCleanup;
 import io.dsub.discogs.batch.job.ImportExecutionCoordinator;
 import java.util.concurrent.CountDownLatch;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +32,7 @@ public class JobLaunchingRunner implements ApplicationRunner {
   private final ConfigurableApplicationContext ctx;
   private final CountDownLatch countDownLatch;
   private final ImportExecutionCoordinator importExecutionCoordinator;
+  private final DownloadedFileCleanup downloadedFileCleanup;
 
   @Override
   public void run(ApplicationArguments args) throws Exception {
@@ -41,11 +43,15 @@ public class JobLaunchingRunner implements ApplicationRunner {
           "import skipped because manifest {} already succeeded as run {}",
           preparation.manifestSha256(),
           preparation.priorSuccessfulRunId());
+      if (downloadedFileCleanup.isEnabled()) {
+        downloadedFileCleanup.cleanup(discogsJobParameters);
+      }
       SpringApplication.exit(ctx, () -> 0);
       return;
     }
 
     JobExecution jobExecution = null;
+    boolean coordinatorCompleted = false;
     try {
       jobExecution = jobOperator.start(job, discogsJobParameters);
       log.info("main thread started job execution. awaiting for completion...");
@@ -59,9 +65,15 @@ public class JobLaunchingRunner implements ApplicationRunner {
               ? null
               : jobExecution.getFailureExceptions().get(0);
       importExecutionCoordinator.complete(success, failure);
+      coordinatorCompleted = true;
       SpringApplication.exit(ctx, getExitCodeGenerator(jobExecution));
+      if (!success) {
+        throw new IllegalStateException("batch job failed", failure);
+      }
     } catch (Exception exception) {
-      importExecutionCoordinator.complete(false, exception);
+      if (!coordinatorCompleted) {
+        importExecutionCoordinator.complete(false, exception);
+      }
       throw exception;
     }
   }

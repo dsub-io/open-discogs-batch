@@ -8,7 +8,6 @@ import io.dsub.discogs.batch.dump.DiscogsDumpVerifier;
 import io.dsub.discogs.batch.exception.DumpNotFoundException;
 import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import io.dsub.discogs.batch.job.decider.MasterMainReleaseStepJobExecutionDecider;
-import io.dsub.discogs.batch.job.listener.CacheInversionStepExecutionListener;
 import io.dsub.discogs.batch.job.listener.IdCachingItemProcessListener;
 import io.dsub.discogs.batch.job.listener.ItemCountingItemProcessListener;
 import io.dsub.discogs.batch.job.listener.StopWatchStepExecutionListener;
@@ -83,7 +82,6 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
   private final StringNormalizingItemReadListener stringNormalizingItemReadListener;
   private final ItemCountingItemProcessListener itemCountingItemProcessListener;
   private final IdCachingItemProcessListener idCachingItemProcessListener;
-  private final CacheInversionStepExecutionListener cacheInversionStepExecutionListener;
   private final MasterMainReleaseStepJobExecutionDecider masterMainReleaseStepJobExecutionDecider;
 
   @Bean
@@ -172,7 +170,6 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
         .listener(stringNormalizingItemReadListener)
         .listener(itemCountingItemProcessListener)
         .listener(idCachingItemProcessListener)
-        .listener(cacheInversionStepExecutionListener)
         .taskExecutor(taskExecutor)
         .build();
   }

@@ -23,13 +23,13 @@ class KnownArgumentValidatorUnitTest {
             new DefaultApplicationArguments("--hello", "--world", "--string", "--chunk", "--t"));
 
     List<String> issues = result.getIssues();
-    assertThat(issues.size()).isEqualTo(3);
+    assertThat(issues.size()).isEqualTo(5);
 
     assertThat("unknown argument: string").isIn(issues);
     assertThat("unknown argument: hello").isIn(issues);
     assertThat("unknown argument: world").isIn(issues);
 
-    assertThat("unknown argument: t").isNotIn(issues);
-    assertThat("unknown argument: chunk").isNotIn(issues);
+    assertThat("unknown argument: t").isIn(issues);
+    assertThat("unknown argument: chunk").isIn(issues);
   }
 }

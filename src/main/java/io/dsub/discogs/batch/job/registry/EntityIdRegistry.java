@@ -16,8 +16,6 @@ public interface EntityIdRegistry {
 
   void put(Type type, String id);
 
-  void invert(Type type);
-
   void clearAll();
 
   ConcurrentSkipListSet<String> getStringIdSetByType(Type type);

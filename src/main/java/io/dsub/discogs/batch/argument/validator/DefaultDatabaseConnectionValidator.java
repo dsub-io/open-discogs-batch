@@ -2,8 +2,6 @@ package io.dsub.discogs.batch.argument.validator;
 
 import io.dsub.discogs.batch.datasource.DBType;
 import io.dsub.discogs.batch.exception.DriverLoadFailureException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
@@ -37,8 +35,8 @@ public class DefaultDatabaseConnectionValidator implements DatabaseConnectionVal
   @Override
   public ValidationResult validate(String url, String username, String password) {
     ValidationResult result = new DefaultValidationResult();
-    username = username == null ? "" : encode(username);
-    password = password == null ? "" : encode(password);
+    username = username == null ? "" : username;
+    password = password == null ? "" : password;
     if (url == null || url.isBlank()) {
       return result.withIssue("url cannot be null or blank");
     }
@@ -176,9 +174,6 @@ public class DefaultDatabaseConnectionValidator implements DatabaseConnectionVal
     return type.getDriverClassName();
   }
 
-  private String encode(String value) {
-    return URLEncoder.encode(value, StandardCharsets.UTF_8);
-  }
 
   private String getOptionValue(ApplicationArguments args, String key) {
     boolean hasOption = args.containsOption(key);

@@ -16,7 +16,7 @@ import org.springframework.context.annotation.Configuration;
 @RequiredArgsConstructor
 public class BatchConfig {
 
-  public static final int DEFAULT_CHUNK_SIZE = 500;
+  public static final int DEFAULT_CHUNK_SIZE = 5000;
 
   public static final String JOB_NAME = "discogs-batch-job" + LocalDateTime.now();
   private static final String FAILED = "FAILED";

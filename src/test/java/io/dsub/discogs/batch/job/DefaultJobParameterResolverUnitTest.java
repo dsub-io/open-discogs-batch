@@ -91,7 +91,21 @@ class DefaultJobParameterResolverUnitTest {
     // then
     assertThat(t)
         .isInstanceOf(InvalidArgumentException.class)
-        .hasMessage("failed to parse chunkSize: SpongeBob");
+        .hasMessage("chunkSize must be a positive integer");
+  }
+
+  @Test
+  void whenParseChunkSize__WithNonPositiveValue__ShouldThrow() {
+    for (String value : List.of("0", "-1")) {
+      ApplicationArguments args =
+          new DefaultApplicationArguments("--chunkSize=" + value);
+
+      Throwable throwable = catchThrowable(() -> jobParameterResolver.parseChunkSize(args));
+
+      assertThat(throwable)
+          .isInstanceOf(InvalidArgumentException.class)
+          .hasMessage("chunkSize must be a positive integer");
+    }
   }
 
   @Test

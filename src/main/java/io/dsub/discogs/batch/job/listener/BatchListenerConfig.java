@@ -1,6 +1,7 @@
 package io.dsub.discogs.batch.job.listener;
 
 import io.dsub.discogs.batch.job.registry.DefaultEntityIdRegistry;
+import io.dsub.discogs.batch.job.DownloadedFileCleanup;
 import io.dsub.discogs.batch.util.FileUtil;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicLong;
@@ -34,11 +35,6 @@ public class BatchListenerConfig {
   }
 
   @Bean
-  public CacheInversionStepExecutionListener cacheInversionStepExecutionListener() {
-    return new CacheInversionStepExecutionListener(entityIdRegistry());
-  }
-
-  @Bean
   public StopWatchStepExecutionListener stopWatchStepExecutionListener() {
     return new StopWatchStepExecutionListener(itemsCounter());
   }
@@ -60,6 +56,11 @@ public class BatchListenerConfig {
 
   @Bean
   public ClearanceJobExecutionListener clearanceJobExecutionListener(FileUtil fileUtil) {
-    return new ClearanceJobExecutionListener(entityIdRegistry(), fileUtil);
+    return new ClearanceJobExecutionListener(entityIdRegistry(), downloadedFileCleanup(fileUtil));
+  }
+
+  @Bean
+  public DownloadedFileCleanup downloadedFileCleanup(FileUtil fileUtil) {
+    return new DownloadedFileCleanup(fileUtil);
   }
 }

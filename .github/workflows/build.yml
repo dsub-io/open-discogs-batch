@@ -29,5 +29,16 @@ jobs:
           distribution: temurin
           java-version: 21
           cache: gradle
+      - name: Verify release policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq empty release-please-config.json
+          for type in build chore ci docs refactor style test; do
+            jq -e \
+              --arg type "$type" \
+              'any(.["changelog-sections"][]; .type == $type and .hidden == true)' \
+              release-please-config.json >/dev/null
+          done
       - name: Build, test, and enforce coverage
         run: ./gradlew clean build --no-daemon --warning-mode=fail

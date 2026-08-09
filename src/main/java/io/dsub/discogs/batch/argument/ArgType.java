@@ -20,15 +20,26 @@ public enum ArgType {
       ArgumentProperty.builder()
           .globalName("chunkSize")
           .supportedType(Long.class)
-          .synonyms("chunk", "c")
+          .synonyms("chunk-size", "b")
           .build()),
-  CORE_COUNT(
+  CLEANUP(
       ArgumentProperty.builder()
-          .globalName("coreCount")
-          .synonyms("core")
-          .supportedType(Long.class)
+          .globalName("cleanup")
+          .synonyms("c")
+          .required(false)
+          .maxValuesCount(0)
+          .minValuesCount(0)
           .build()),
-  ETAG(ArgumentProperty.builder().globalName("eTag").synonyms("e").maxValuesCount(4).build()),
+  DATA_DIR(
+      ArgumentProperty.builder()
+          .globalName("dataDir")
+          .synonyms("data-dir")
+          .build()),
+  DUMP_MONTH(
+      ArgumentProperty.builder()
+          .globalName("dumpMonth")
+          .synonyms("dump-month", "m")
+          .build()),
   FORCE(
       ArgumentProperty.builder()
           .globalName("force")
@@ -37,13 +48,11 @@ public enum ArgType {
           .maxValuesCount(0)
           .minValuesCount(0)
           .build()),
-  MOUNT(
+  MAX_WORKERS(
       ArgumentProperty.builder()
-          .globalName("mount")
-          .synonyms("m")
-          .required(false)
-          .maxValuesCount(0)
-          .minValuesCount(0)
+          .globalName("maxWorkers")
+          .supportedType(Long.class)
+          .synonyms("max-workers")
           .build()),
   PASSWORD(
       ArgumentProperty.builder()
@@ -51,36 +60,24 @@ public enum ArgType {
           .synonyms("password", "pass", "p")
           .required(true)
           .build()),
-  STRICT(
+  TYPE(
       ArgumentProperty.builder()
-          .globalName("strict")
-          .synonyms("s")
-          .required(false)
-          .maxValuesCount(0)
-          .minValuesCount(0)
+          .globalName("entities")
+          .synonyms("entity", "e")
+          .maxValuesCount(4)
           .build()),
-  TYPE(ArgumentProperty.builder().globalName("type").synonyms("t").maxValuesCount(4).build()),
-  URL(ArgumentProperty.builder().globalName("url").required(true).build()),
+  URL(
+      ArgumentProperty.builder()
+          .globalName("url")
+          .synonyms("database-url")
+          .required(true)
+          .build()),
   USERNAME(
       ArgumentProperty.builder()
           .globalName("username")
           .synonyms("username", "user", "u")
           .required(true)
-          .build()),
-  YEAR(
-      ArgumentProperty.builder()
-          .globalName("year")
-          .synonyms("y")
-          .supportedType(Long.class)
-          .build()),
-  DRIVER_CLASS_NAME(
-      ArgumentProperty.builder()
-          .globalName("driverClassName")
-          .synonyms("driverclassname", "driver_class_name")
-          .required(false)
-          .supportedType(String.class)
-          .build()),
-  YEAR_MONTH(ArgumentProperty.builder().globalName("yearMonth").synonyms("ym").build());
+          .build());
 
   // properties mapped to each enum instance.
   private final ArgumentProperty props;

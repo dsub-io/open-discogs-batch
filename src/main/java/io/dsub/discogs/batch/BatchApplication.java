@@ -17,6 +17,7 @@ public class BatchApplication {
       APP_CONTEXT = service.run(args);
     } catch (Exception e) {
       log.error(e.getMessage(), e);
+      throw new IllegalStateException("open-discogs-batch failed", e);
     }
   }
 

@@ -2,9 +2,9 @@ package io.dsub.discogs.batch.argument.validator;
 
 import io.dsub.discogs.batch.argument.ArgType;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.springframework.boot.ApplicationArguments;
@@ -16,7 +16,7 @@ import org.springframework.boot.ApplicationArguments;
  */
 public class MappedValueValidator implements ArgumentValidator {
 
-  private static final Pattern LONG_PATTERN = Pattern.compile("^\\d*$");
+  private static final Pattern LONG_PATTERN = Pattern.compile("^-?\\d+$");
   private static final Pattern MULTI_VALUE_PATTERN = Pattern.compile(".*,.*");
   private static final String INVALID_TYPE_MSG = "invalid type for %s. supported = %s";
   private static final String MISSING_VALUE_MSG = "missing value for %s";
@@ -48,7 +48,7 @@ public class MappedValueValidator implements ArgumentValidator {
    * @return sum of entire arguments.
    */
   private Map<ArgType, List<String>> collectArguments(ApplicationArguments args) {
-    Map<ArgType, List<String>> argMap = new ConcurrentHashMap<>();
+    Map<ArgType, List<String>> argMap = new EnumMap<>(ArgType.class);
     // collect optionValues
     for (String optionName : args.getOptionNames()) {
       ArgType type = ArgType.getTypeOf(optionName);
@@ -58,11 +58,10 @@ public class MappedValueValidator implements ArgumentValidator {
       }
 
       List<String> values = args.getOptionValues(optionName);
-      if (argMap.containsKey(type)) {
-        argMap.get(type).addAll(values);
-      } else {
-        argMap.put(type, values);
+      if (values == null) {
+        continue;
       }
+      argMap.computeIfAbsent(type, ignored -> new ArrayList<>()).addAll(values);
     }
 
     return argMap;

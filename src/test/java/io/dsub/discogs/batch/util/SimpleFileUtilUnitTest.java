@@ -344,7 +344,7 @@ class SimpleFileUtilUnitTest {
     try (MockedStatic<Files> mockFiles = Mockito.mockStatic(Files.class)) {
 
       Path p = Path.of("test path");
-      mockFiles.when(() -> Files.createDirectory(p)).thenThrow(new IOException("test"));
+      mockFiles.when(() -> Files.createDirectories(p)).thenThrow(new IOException("test"));
 
       Throwable t = catchThrowable(() -> fileUtil.tryCreateDirectory(p));
 

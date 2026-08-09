@@ -4,21 +4,21 @@ import io.dsub.discogs.batch.argument.formatter.ArgumentFormatter;
 import io.dsub.discogs.batch.argument.formatter.ArgumentNameFormatter;
 import io.dsub.discogs.batch.argument.formatter.CompositeArgumentFormatter;
 import io.dsub.discogs.batch.argument.formatter.FlagRemovingArgumentFormatter;
-import io.dsub.discogs.batch.argument.formatter.JdbcUrlFormatter;
 import io.dsub.discogs.batch.argument.validator.ArgumentValidator;
 import io.dsub.discogs.batch.argument.validator.CompositeArgumentValidator;
 import io.dsub.discogs.batch.argument.validator.DataSourceArgumentValidator;
 import io.dsub.discogs.batch.argument.validator.DefaultDatabaseConnectionValidator;
 import io.dsub.discogs.batch.argument.validator.KnownArgumentValidator;
 import io.dsub.discogs.batch.argument.validator.MappedValueValidator;
+import io.dsub.discogs.batch.argument.validator.PositiveIntegerArgumentValidator;
 import io.dsub.discogs.batch.argument.validator.TypeArgumentValidator;
 import io.dsub.discogs.batch.argument.validator.ValidationResult;
 import io.dsub.discogs.batch.argument.validator.YearMonthValidator;
-import io.dsub.discogs.batch.datasource.DBType;
 import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +33,10 @@ public class DefaultArgumentHandler implements ArgumentHandler {
 
   private final ArgumentFormatter argumentFormatter;
   private final ArgumentValidator argumentValidator;
+  private final EnvironmentArgumentProvider environmentArgumentProvider;
+  private final DatabaseUrlArgumentExpander databaseUrlArgumentExpander;
+  private final SeparatedArgumentCoalescer separatedArgumentCoalescer;
+  private final LegacyDatabaseArgumentRejector legacyDatabaseArgumentRejector;
   /**
    * Splits multiple values for OPTIONS into individual entries. It will pass through the
    * NonOptional arguments even if it has several arguments with ',' delimiters.
@@ -53,21 +57,29 @@ public class DefaultArgumentHandler implements ArgumentHandler {
    * Default no-arg constructor.
    */
   public DefaultArgumentHandler() {
+    this(System.getenv());
+  }
+
+  DefaultArgumentHandler(Map<String, String> environment) {
     CompositeArgumentValidator validator =
         new CompositeArgumentValidator()
             .addValidator(new DataSourceArgumentValidator())
             .addValidator(new DefaultDatabaseConnectionValidator())
             .addValidator(new KnownArgumentValidator())
             .addValidator(new MappedValueValidator())
+            .addValidator(new PositiveIntegerArgumentValidator())
             .addValidator(new TypeArgumentValidator())
             .addValidator(new YearMonthValidator());
     CompositeArgumentFormatter formatter =
         new CompositeArgumentFormatter()
             .addFormatter(new FlagRemovingArgumentFormatter())
-            .addFormatter(new ArgumentNameFormatter())
-            .addFormatter(new JdbcUrlFormatter());
+            .addFormatter(new ArgumentNameFormatter());
     this.argumentValidator = validator;
     this.argumentFormatter = formatter;
+    this.environmentArgumentProvider = new EnvironmentArgumentProvider(environment);
+    this.databaseUrlArgumentExpander = new DatabaseUrlArgumentExpander();
+    this.separatedArgumentCoalescer = new SeparatedArgumentCoalescer();
+    this.legacyDatabaseArgumentRejector = new LegacyDatabaseArgumentRejector();
   }
 
   /**
@@ -80,18 +92,18 @@ public class DefaultArgumentHandler implements ArgumentHandler {
    */
   @Override
   public String[] resolve(String[] args) throws InvalidArgumentException {
-    ApplicationArguments arguments = normalizeArguments(new DefaultApplicationArguments(args));
+    legacyDatabaseArgumentRejector.validate(args);
+    String[] coalesced = separatedArgumentCoalescer.coalesce(args);
+    String[] withEnvironment = environmentArgumentProvider.apply(coalesced);
+    String[] expanded = databaseUrlArgumentExpander.expand(withEnvironment);
+    ApplicationArguments arguments = normalizeArguments(new DefaultApplicationArguments(expanded));
     ValidationResult validationResult = this.argumentValidator.validate(arguments);
 
     if (!validationResult.isValid()) {
-      log.error(String.join(",", String.join(",", validationResult.getIssues())));
-      return null;
+      throw new InvalidArgumentException(String.join(",", validationResult.getIssues()));
     }
 
-    String[] finalized = getSourceArgsWithDriverClassName(arguments);
-    finalized = addFlags(finalized);
-
-    return finalized;
+    return addFlags(arguments.getSourceArgs());
   }
 
   public String[] addFlags(String[] args) {
@@ -105,35 +117,6 @@ public class DefaultArgumentHandler implements ArgumentHandler {
       normalized[i] = arg;
     }
     return normalized;
-  }
-
-  public String[] getSourceArgsWithDriverClassName(ApplicationArguments arguments) {
-
-    String driverClassNameHeader = "driver-class-name=";
-
-    List<String> args = new ArrayList<>(List.of(arguments.getSourceArgs()));
-
-    if (args.stream().anyMatch(arg -> arg.startsWith(driverClassNameHeader))) {
-      return args.toArray(String[]::new);
-    }
-
-    String driverClassName = null;
-
-    loop:
-    for (String arg : args) {
-      if (!arg.startsWith("--url=")) {
-        continue;
-      }
-      for (DBType type : DBType.values()) {
-        if (arg.matches(".*" + type.value() + ".*")) {
-          driverClassName = type.getDriverClassName();
-          break loop;
-        }
-      }
-    }
-
-    args.add(driverClassNameHeader + driverClassName);
-    return args.toArray(String[]::new);
   }
 
   /**
