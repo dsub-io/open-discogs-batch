@@ -5,6 +5,7 @@ import io.dsub.discogs.batch.dump.DiscogsDump;
 import io.dsub.discogs.batch.dump.EntityType;
 import io.dsub.discogs.batch.job.decider.MasterMainReleaseStepJobExecutionDecider;
 import io.dsub.discogs.batch.job.listener.BatchListenerConfig;
+import io.dsub.discogs.batch.job.progress.ImportProgressStore;
 import io.dsub.discogs.batch.job.processor.ItemProcessorConfig;
 import io.dsub.discogs.batch.job.reader.DiscogsDumpItemReaderBuilder;
 import io.dsub.discogs.batch.job.reader.ItemReaderConfig;
@@ -32,6 +33,7 @@ import org.springframework.context.annotation.Import;
         ItemProcessorConfig.class,
         ItemWriterConfig.class,
         BatchListenerConfig.class,
+        ImportProgressStore.class,
         GenreStyleInsertionTasklet.class
     })
 public class BatchInfrastructureConfig {

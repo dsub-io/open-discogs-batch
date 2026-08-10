@@ -3,6 +3,7 @@ package io.dsub.discogs.batch.job.processor;
 import static io.dsub.discogs.batch.job.registry.EntityIdRegistry.Type.ARTIST;
 
 import io.dsub.discogs.batch.domain.artist.ArtistSubItemsXML;
+import io.dsub.discogs.batch.dump.EntityType;
 import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
 import io.dsub.discogs.batch.util.ReflectionUtil;
 import io.dsub.opendiscogs.jooq.tables.records.ArtistAliasRecord;
@@ -13,7 +14,6 @@ import io.dsub.opendiscogs.jooq.tables.records.ArtistUrlRecord;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -24,12 +24,12 @@ import org.springframework.batch.infrastructure.item.ItemProcessor;
 
 @RequiredArgsConstructor
 public class ArtistSubItemsProcessor
-    implements ItemProcessor<ArtistSubItemsXML, Collection<UpdatableRecord<?>>> {
+    implements ItemProcessor<ArtistSubItemsXML, RelationSet> {
 
   private final EntityIdRegistry idRegistry;
 
   @Override
-  public Collection<UpdatableRecord<?>> process(ArtistSubItemsXML item) {
+  public RelationSet process(ArtistSubItemsXML item) {
 
     if (item.getId() == null || item.getId() < 1) {
       return null;
@@ -45,7 +45,7 @@ public class ArtistSubItemsProcessor
     items.addAll(getArtistUrlRecords(item));
     items.addAll(getArtistNameVariationRecords(item));
 
-    return items;
+    return new RelationSet(EntityType.ARTIST, item.getId(), items);
   }
 
   private List<ArtistNameVariationRecord> getArtistNameVariationRecords(ArtistSubItemsXML item) {

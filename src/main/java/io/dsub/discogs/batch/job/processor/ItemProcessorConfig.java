@@ -9,14 +9,14 @@ import io.dsub.discogs.batch.domain.master.MasterSubItemsXML;
 import io.dsub.discogs.batch.domain.master.MasterXML;
 import io.dsub.discogs.batch.domain.release.ReleaseItemSubItemsXML;
 import io.dsub.discogs.batch.domain.release.ReleaseItemXML;
+import io.dsub.discogs.batch.job.progress.ProcessedChunk;
+import io.dsub.discogs.batch.job.progress.SourceChunk;
 import io.dsub.discogs.batch.job.registry.DefaultEntityIdRegistry;
 import io.dsub.opendiscogs.jooq.tables.records.ArtistRecord;
 import io.dsub.opendiscogs.jooq.tables.records.LabelRecord;
 import io.dsub.opendiscogs.jooq.tables.records.MasterRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemRecord;
-import java.util.Collection;
 import lombok.RequiredArgsConstructor;
-import org.jooq.UpdatableRecord;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.infrastructure.item.ItemProcessor;
 import org.springframework.context.annotation.Bean;
@@ -36,9 +36,9 @@ public class ItemProcessorConfig {
 
   @Bean
   @StepScope
-  public ItemProcessor<ArtistSubItemsXML, Collection<UpdatableRecord<?>>>
+  public ItemProcessor<SourceChunk<ArtistSubItemsXML>, ProcessedChunk<RelationSet>>
   artistSubItemsProcessor() {
-    return new ArtistSubItemsProcessor(entityIdRegistry);
+    return new SourceChunkItemProcessor<>(new ArtistSubItemsProcessor(entityIdRegistry));
   }
 
   @Bean
@@ -49,8 +49,9 @@ public class ItemProcessorConfig {
 
   @Bean
   @StepScope
-  public ItemProcessor<LabelSubItemsXML, Collection<UpdatableRecord<?>>> labelSubItemsProcessor() {
-    return new LabelSubItemsProcessor(entityIdRegistry);
+  public ItemProcessor<SourceChunk<LabelSubItemsXML>, ProcessedChunk<RelationSet>>
+  labelSubItemsProcessor() {
+    return new SourceChunkItemProcessor<>(new LabelSubItemsProcessor(entityIdRegistry));
   }
 
   @Bean
@@ -61,9 +62,9 @@ public class ItemProcessorConfig {
 
   @Bean
   @StepScope
-  public ItemProcessor<MasterSubItemsXML, Collection<UpdatableRecord<?>>>
+  public ItemProcessor<SourceChunk<MasterSubItemsXML>, ProcessedChunk<RelationSet>>
   masterSubItemsProcessor() {
-    return new MasterSubItemsProcessor(entityIdRegistry);
+    return new SourceChunkItemProcessor<>(new MasterSubItemsProcessor(entityIdRegistry));
   }
 
   @Bean
@@ -74,9 +75,9 @@ public class ItemProcessorConfig {
 
   @Bean
   @StepScope
-  public ItemProcessor<ReleaseItemSubItemsXML, Collection<UpdatableRecord<?>>>
+  public ItemProcessor<SourceChunk<ReleaseItemSubItemsXML>, ProcessedChunk<RelationSet>>
   releaseItemSubItemsProcessor() {
-    return new ReleaseItemSubItemsProcessor(entityIdRegistry);
+    return new SourceChunkItemProcessor<>(new ReleaseItemSubItemsProcessor(entityIdRegistry));
   }
 
   @Bean

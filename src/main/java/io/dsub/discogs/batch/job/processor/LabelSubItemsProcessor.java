@@ -3,13 +3,13 @@ package io.dsub.discogs.batch.job.processor;
 import static io.dsub.discogs.batch.job.registry.EntityIdRegistry.Type.LABEL;
 
 import io.dsub.discogs.batch.domain.label.LabelSubItemsXML;
+import io.dsub.discogs.batch.dump.EntityType;
 import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
 import io.dsub.discogs.batch.util.ReflectionUtil;
 import io.dsub.opendiscogs.jooq.tables.records.LabelUrlRecord;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.jooq.UpdatableRecord;
@@ -17,12 +17,12 @@ import org.springframework.batch.infrastructure.item.ItemProcessor;
 
 @RequiredArgsConstructor
 public class LabelSubItemsProcessor
-    implements ItemProcessor<LabelSubItemsXML, Collection<UpdatableRecord<?>>> {
+    implements ItemProcessor<LabelSubItemsXML, RelationSet> {
 
   private final EntityIdRegistry idRegistry;
 
   @Override
-  public Collection<UpdatableRecord<?>> process(LabelSubItemsXML item) {
+  public RelationSet process(LabelSubItemsXML item) {
     if (item.getId() == null || item.getId() < 1) {
       return null;
     }
@@ -48,7 +48,7 @@ public class LabelSubItemsProcessor
           .forEach(records::add);
     }
 
-    return records;
+    return new RelationSet(EntityType.LABEL, labelId, records);
   }
 
   private LabelUrlRecord getLabelUrlRecord(Integer labelId, String url) {

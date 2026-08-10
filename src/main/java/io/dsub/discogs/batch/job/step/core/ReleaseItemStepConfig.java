@@ -5,20 +5,28 @@ import io.dsub.discogs.batch.domain.release.ReleaseItemSubItemsXML;
 import io.dsub.discogs.batch.domain.release.ReleaseItemXML;
 import io.dsub.discogs.batch.dump.DiscogsDump;
 import io.dsub.discogs.batch.dump.DiscogsDumpVerifier;
+import io.dsub.discogs.batch.dump.EntityType;
 import io.dsub.discogs.batch.exception.DumpNotFoundException;
 import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import io.dsub.discogs.batch.job.decider.MasterMainReleaseStepJobExecutionDecider;
+import io.dsub.discogs.batch.job.listener.EntityProgressStepExecutionListener;
 import io.dsub.discogs.batch.job.listener.IdCachingItemProcessListener;
 import io.dsub.discogs.batch.job.listener.ItemCountingItemProcessListener;
+import io.dsub.discogs.batch.job.listener.NestedStepFailurePropagatingListener;
 import io.dsub.discogs.batch.job.listener.StopWatchStepExecutionListener;
 import io.dsub.discogs.batch.job.listener.StringNormalizingItemReadListener;
+import io.dsub.discogs.batch.job.processor.RelationSet;
+import io.dsub.discogs.batch.job.progress.ImportProgressStore;
+import io.dsub.discogs.batch.job.progress.ProcessedChunk;
+import io.dsub.discogs.batch.job.progress.SourceChunk;
+import io.dsub.discogs.batch.job.reader.SourceChunkItemStreamReader;
 import io.dsub.discogs.batch.job.step.AbstractStepConfig;
 import io.dsub.discogs.batch.job.tasklet.FileFetchTasklet;
 import io.dsub.discogs.batch.job.tasklet.GenreStyleInsertionTasklet;
+import io.dsub.discogs.batch.job.writer.DurableRelationItemWriterFactory;
 import io.dsub.discogs.batch.util.FileUtil;
 import io.dsub.opendiscogs.jooq.tables.records.MasterRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemRecord;
-import java.util.Collection;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jooq.UpdatableRecord;
@@ -55,18 +63,20 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
   public static final String RELEASE_GENRE_STYLE_INSERTION_STEP =
       "release genre style insertion step";
 
-  private final SynchronizedItemStreamReader<ReleaseItemSubItemsXML>
+  private final SourceChunkItemStreamReader<ReleaseItemSubItemsXML>
       releaseItemSubItemsStreamReader;
   private final SynchronizedItemStreamReader<ReleaseItemXML> releaseItemStreamReader;
   private final SynchronizedItemStreamReader<MasterMainReleaseXML> masterMainReleaseStreamReader;
 
-  private final ItemProcessor<ReleaseItemSubItemsXML, Collection<UpdatableRecord<?>>>
+  private final ItemProcessor<
+          SourceChunk<ReleaseItemSubItemsXML>, ProcessedChunk<RelationSet>>
       releaseItemSubItemsProcessor;
   private final ItemProcessor<ReleaseItemXML, ReleaseItemRecord> releaseItemCoreProcessor;
   private final ItemProcessor<MasterMainReleaseXML, MasterRecord> masterMainReleaseItemProcessor;
 
   private final ItemWriter<UpdatableRecord<?>> entityItemWriter;
-  private final ItemWriter<Collection<UpdatableRecord<?>>> collectionItemWriter;
+  private final DurableRelationItemWriterFactory durableRelationItemWriterFactory;
+  private final ImportProgressStore importProgressStore;
   private final ItemWriter<MasterRecord> postgresJooqMasterMainReleaseItemWriter;
 
   private final DiscogsDump releaseItemDump;
@@ -102,7 +112,7 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
             // from fetch
             .from(releaseFileFetchStep())
             .on(FAILED)
-            .end()
+            .fail()
             .from(releaseFileFetchStep())
             .on(ANY)
             .to(releaseItemCoreInsertionStep(chunkSize))
@@ -110,7 +120,7 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
             // from core insertion
             .from(releaseItemCoreInsertionStep(chunkSize))
             .on(FAILED)
-            .end()
+            .fail()
             .from(releaseItemCoreInsertionStep(chunkSize))
             .on(ANY)
             .to(releaseGenreStyleInsertionStep())
@@ -118,16 +128,16 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
             // from genre style insertion step
             .from(releaseGenreStyleInsertionStep())
             .on(FAILED)
-            .end()
+            .fail()
             .from(releaseGenreStyleInsertionStep())
             .on(ANY)
-            .to(releaseItemSubItemsInsertionStep(chunkSize))
+            .to(releaseItemSubItemsInsertionStep(chunkSize, null, null))
 
             // from sub items insertion
-            .from(releaseItemSubItemsInsertionStep(chunkSize))
+            .from(releaseItemSubItemsInsertionStep(chunkSize, null, null))
             .on(FAILED)
-            .end()
-            .from(releaseItemSubItemsInsertionStep(chunkSize))
+            .fail()
+            .from(releaseItemSubItemsInsertionStep(chunkSize, null, null))
             .on(ANY)
             .to(masterMainReleaseStepJobExecutionDecider)
 
@@ -141,6 +151,9 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
 
             // from master main release update step
             .from(masterMainReleaseUpdateStep(chunkSize))
+            .on(FAILED)
+            .fail()
+            .from(masterMainReleaseUpdateStep(chunkSize))
             .on(ANY)
             .end()
             // conclude
@@ -151,6 +164,7 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
     artistFlowStep.setName(RELEASE_FLOW_STEP);
     artistFlowStep.setStartLimit(Integer.MAX_VALUE);
     artistFlowStep.setFlow(artistStepFlow);
+    artistFlowStep.registerStepExecutionListener(new NestedStepFailurePropagatingListener());
     return artistFlowStep;
   }
 
@@ -176,20 +190,28 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
 
   @Bean
   @JobScope
-  public Step releaseItemSubItemsInsertionStep(@Value(CHUNK) Integer chunkSize) {
+  public Step releaseItemSubItemsInsertionStep(
+      @Value(CHUNK) Integer chunkSize,
+      @Value(RUN_ID) Long runId,
+      @Value(RESUMED) Boolean resumed) {
     return new StepBuilder(RELEASE_ITEM_SUB_ITEMS_INSERTION_STEP, jobRepository)
-        .<ReleaseItemSubItemsXML, Collection<UpdatableRecord<?>>>chunk(
-            Integer.divideUnsigned(chunkSize, 2)) // due to memory consumptions
+        .<SourceChunk<ReleaseItemSubItemsXML>, ProcessedChunk<RelationSet>>chunk(
+            TRACKED_CHUNKS_PER_TRANSACTION)
         .transactionManager(transactionManager)
         .reader(releaseItemSubItemsStreamReader)
         .processor(releaseItemSubItemsProcessor)
-        .writer(collectionItemWriter)
+        .writer(
+            durableRelationItemWriterFactory.create(
+                EntityType.RELEASE, runId, chunkSize, resumed))
         .faultTolerant()
         .retryLimit(100)
         .retry(PessimisticLockingFailureException.class)
         .listener(stringNormalizingItemReadListener)
         .listener(stopWatchStepExecutionListener)
         .listener(itemCountingItemProcessListener)
+        .listener(
+            new EntityProgressStepExecutionListener(
+                importProgressStore, EntityType.RELEASE, runId, chunkSize))
         .taskExecutor(taskExecutor)
         .build();
   }

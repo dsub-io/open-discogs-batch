@@ -8,6 +8,11 @@ import static org.mockito.Mockito.verify;
 
 import ch.qos.logback.classic.Level;
 import io.dsub.discogs.batch.testutil.LogSpy;
+import io.dsub.discogs.batch.dump.EntityType;
+import io.dsub.discogs.batch.job.processor.RelationSet;
+import io.dsub.discogs.batch.job.progress.ChunkRange;
+import io.dsub.discogs.batch.job.progress.ProcessedChunk;
+import io.dsub.opendiscogs.jooq.tables.records.ArtistUrlRecord;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -82,6 +87,32 @@ class ItemCountingItemProcessListenerUnitTest {
     Set<?> items = Set.of(1,2,3,4,5);
     listener.afterProcess(items, items);
     assertThat(counter.get()).isEqualTo(5);
+  }
+
+  @Test
+  void processedRelationChunkCountsExpandedRecords() {
+    ProcessedChunk<RelationSet> result =
+        new ProcessedChunk<>(
+            new ChunkRange(0, 0, 1),
+            List.of(
+                new RelationSet(
+                    EntityType.ARTIST,
+                    1,
+                    List.of(new ArtistUrlRecord(), new ArtistUrlRecord()))));
+
+    listener.afterProcess(result, result);
+
+    assertThat(counter.get()).isEqualTo(2);
+  }
+
+  @Test
+  void processedNonRelationChunkCountsValues() {
+    ProcessedChunk<String> result =
+        new ProcessedChunk<>(new ChunkRange(0, 0, 2), List.of("a", "b"));
+
+    listener.afterProcess(result, result);
+
+    assertThat(counter.get()).isEqualTo(2);
   }
 
   @Test

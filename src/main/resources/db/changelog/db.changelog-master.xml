@@ -49,6 +49,30 @@
         splitStatements="true"/>
   </changeSet>
 
+  <changeSet id="open-discogs-model-v005" author="state303">
+    <preConditions onFail="MARK_RAN">
+      <not>
+        <columnExists tableName="discogs_import_run" columnName="resumed_from_run_id"/>
+      </not>
+    </preConditions>
+    <sqlFile
+        path="migrations/V005__durable_import_progress.sql"
+        relativeToChangelogFile="false"
+        splitStatements="true"/>
+  </changeSet>
+
+  <changeSet id="open-discogs-model-v006" author="state303">
+    <preConditions onFail="MARK_RAN">
+      <not>
+        <tableExists tableName="discogs_import_run_chunk"/>
+      </not>
+    </preConditions>
+    <sqlFile
+        path="migrations/V006__concurrent_import_progress.sql"
+        relativeToChangelogFile="false"
+        splitStatements="true"/>
+  </changeSet>
+
   <changeSet id="spring-batch-postgresql" author="state303">
     <preConditions onFail="MARK_RAN">
       <not>

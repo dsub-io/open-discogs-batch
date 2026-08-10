@@ -1,5 +1,6 @@
 package io.dsub.discogs.batch.container;
 
+import java.util.Map;
 import javax.sql.DataSource;
 import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.boot.test.util.TestPropertyValues;
@@ -9,6 +10,10 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 
 public abstract class PostgreSQLIntegrationSupport {
 
+  public static final String TEST_OWNER_LABEL = "io.dsub.test-owner";
+  public static final String TEST_OWNER = "open-discogs-batch";
+  private static final String POSTGRES_DATA_DIRECTORY = "/var/lib/postgresql";
+
   protected static final PostgreSQLContainer CONTAINER;
   protected static final DataSource dataSource;
 
@@ -16,8 +21,13 @@ public abstract class PostgreSQLIntegrationSupport {
     CONTAINER = new PostgreSQLContainer("postgres:18.4-alpine")
         .withDatabaseName("databaseName")
         .withPassword("password")
-        .withUsername("username");
+        .withUsername("username")
+        .withLabel(TEST_OWNER_LABEL, TEST_OWNER)
+        .withTmpFs(Map.of(POSTGRES_DATA_DIRECTORY, "rw"))
+        .withReuse(false);
     CONTAINER.start();
+    Runtime.getRuntime()
+        .addShutdownHook(new Thread(CONTAINER::stop, "open-discogs-testcontainer-cleanup"));
     dataSource = DataSourceBuilder.create()
         .driverClassName(CONTAINER.getDriverClassName())
         .url(CONTAINER.getJdbcUrl())

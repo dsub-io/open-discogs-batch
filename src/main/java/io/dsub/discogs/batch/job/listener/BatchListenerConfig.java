@@ -55,8 +55,8 @@ public class BatchListenerConfig {
   }
 
   @Bean
-  public ClearanceJobExecutionListener clearanceJobExecutionListener(FileUtil fileUtil) {
-    return new ClearanceJobExecutionListener(entityIdRegistry(), downloadedFileCleanup(fileUtil));
+  public ClearanceJobExecutionListener clearanceJobExecutionListener() {
+    return new ClearanceJobExecutionListener(entityIdRegistry());
   }
 
   @Bean

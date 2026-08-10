@@ -4,18 +4,26 @@ import io.dsub.discogs.batch.domain.master.MasterSubItemsXML;
 import io.dsub.discogs.batch.domain.master.MasterXML;
 import io.dsub.discogs.batch.dump.DiscogsDump;
 import io.dsub.discogs.batch.dump.DiscogsDumpVerifier;
+import io.dsub.discogs.batch.dump.EntityType;
 import io.dsub.discogs.batch.exception.DumpNotFoundException;
 import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import io.dsub.discogs.batch.job.listener.IdCachingItemProcessListener;
+import io.dsub.discogs.batch.job.listener.EntityProgressStepExecutionListener;
 import io.dsub.discogs.batch.job.listener.ItemCountingItemProcessListener;
+import io.dsub.discogs.batch.job.listener.NestedStepFailurePropagatingListener;
 import io.dsub.discogs.batch.job.listener.StopWatchStepExecutionListener;
 import io.dsub.discogs.batch.job.listener.StringNormalizingItemReadListener;
 import io.dsub.discogs.batch.job.step.AbstractStepConfig;
+import io.dsub.discogs.batch.job.processor.RelationSet;
+import io.dsub.discogs.batch.job.progress.ImportProgressStore;
+import io.dsub.discogs.batch.job.progress.ProcessedChunk;
+import io.dsub.discogs.batch.job.progress.SourceChunk;
+import io.dsub.discogs.batch.job.reader.SourceChunkItemStreamReader;
 import io.dsub.discogs.batch.job.tasklet.FileFetchTasklet;
 import io.dsub.discogs.batch.job.tasklet.GenreStyleInsertionTasklet;
 import io.dsub.discogs.batch.util.FileUtil;
+import io.dsub.discogs.batch.job.writer.DurableRelationItemWriterFactory;
 import io.dsub.opendiscogs.jooq.tables.records.MasterRecord;
-import java.util.Collection;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jooq.UpdatableRecord;
@@ -52,11 +60,12 @@ public class MasterStepConfig extends AbstractStepConfig {
       "master genre style insertion step";
 
   private final SynchronizedItemStreamReader<MasterXML> masterStreamReader;
-  private final SynchronizedItemStreamReader<MasterSubItemsXML> masterSubItemsStreamReader;
+  private final SourceChunkItemStreamReader<MasterSubItemsXML> masterSubItemsStreamReader;
   private final ItemProcessor<MasterXML, MasterRecord> masterCoreProcessor;
-  private final ItemProcessor<MasterSubItemsXML, Collection<UpdatableRecord<?>>>
+  private final ItemProcessor<SourceChunk<MasterSubItemsXML>, ProcessedChunk<RelationSet>>
       masterSubItemsProcessor;
-  private final ItemWriter<Collection<UpdatableRecord<?>>> collectionItemWriter;
+  private final DurableRelationItemWriterFactory durableRelationItemWriterFactory;
+  private final ImportProgressStore importProgressStore;
   private final ItemWriter<UpdatableRecord<?>> entityItemWriter;
   private final DiscogsDump masterDump;
 
@@ -91,7 +100,7 @@ public class MasterStepConfig extends AbstractStepConfig {
             // from fetch
             .from(masterFileFetchStep())
             .on(FAILED)
-            .end()
+            .fail()
             .from(masterFileFetchStep())
             .on(ANY)
             .to(masterCoreInsertionStep(chunkSize))
@@ -99,7 +108,7 @@ public class MasterStepConfig extends AbstractStepConfig {
             // from core insertion
             .from(masterCoreInsertionStep(chunkSize))
             .on(FAILED)
-            .end()
+            .fail()
             .from(masterCoreInsertionStep(chunkSize))
             .on(ANY)
             .to(masterGenreStyleInsertionStep())
@@ -107,13 +116,16 @@ public class MasterStepConfig extends AbstractStepConfig {
             // from master genre style insertion step
             .from(masterGenreStyleInsertionStep())
             .on(FAILED)
-            .end()
+            .fail()
             .from(masterGenreStyleInsertionStep())
             .on(ANY)
-            .to(masterSubItemsInsertionStep(chunkSize))
+            .to(masterSubItemsInsertionStep(chunkSize, null, null))
 
             // from sub items insertion
-            .from(masterSubItemsInsertionStep(chunkSize))
+            .from(masterSubItemsInsertionStep(chunkSize, null, null))
+            .on(FAILED)
+            .fail()
+            .from(masterSubItemsInsertionStep(chunkSize, null, null))
             .on(ANY)
             .end()
 
@@ -125,6 +137,7 @@ public class MasterStepConfig extends AbstractStepConfig {
     artistFlowStep.setName(MASTER_FLOW_STEP);
     artistFlowStep.setStartLimit(Integer.MAX_VALUE);
     artistFlowStep.setFlow(artistStepFlow);
+    artistFlowStep.registerStepExecutionListener(new NestedStepFailurePropagatingListener());
     return artistFlowStep;
   }
 
@@ -159,19 +172,28 @@ public class MasterStepConfig extends AbstractStepConfig {
 
   @Bean
   @JobScope
-  public Step masterSubItemsInsertionStep(@Value(CHUNK) Integer chunkSize) {
+  public Step masterSubItemsInsertionStep(
+      @Value(CHUNK) Integer chunkSize,
+      @Value(RUN_ID) Long runId,
+      @Value(RESUMED) Boolean resumed) {
     return new StepBuilder(MASTER_SUB_ITEMS_INSERTION_STEP, jobRepository)
-        .<MasterSubItemsXML, Collection<UpdatableRecord<?>>>chunk(chunkSize)
+        .<SourceChunk<MasterSubItemsXML>, ProcessedChunk<RelationSet>>chunk(
+            TRACKED_CHUNKS_PER_TRANSACTION)
         .transactionManager(transactionManager)
         .reader(masterSubItemsStreamReader)
         .processor(masterSubItemsProcessor)
-        .writer(collectionItemWriter)
+        .writer(
+            durableRelationItemWriterFactory.create(
+                EntityType.MASTER, runId, chunkSize, resumed))
         .faultTolerant()
         .retryLimit(10)
         .retry(PessimisticLockingFailureException.class)
         .listener(stringNormalizingItemReadListener)
         .listener(stopWatchStepExecutionListener)
         .listener(itemCountingItemProcessListener)
+        .listener(
+            new EntityProgressStepExecutionListener(
+                importProgressStore, EntityType.MASTER, runId, chunkSize))
         .taskExecutor(taskExecutor)
         .build();
   }

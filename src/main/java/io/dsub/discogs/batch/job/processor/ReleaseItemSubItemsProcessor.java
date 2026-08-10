@@ -1,6 +1,7 @@
 package io.dsub.discogs.batch.job.processor;
 
 import io.dsub.discogs.batch.domain.release.ReleaseItemSubItemsXML;
+import io.dsub.discogs.batch.dump.EntityType;
 import io.dsub.discogs.batch.job.registry.DefaultEntityIdRegistry;
 import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
 import io.dsub.discogs.batch.util.ReflectionUtil;
@@ -9,7 +10,6 @@ import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemStyleRecord;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -19,12 +19,12 @@ import org.springframework.batch.infrastructure.item.ItemProcessor;
 
 @RequiredArgsConstructor
 public class ReleaseItemSubItemsProcessor
-    implements ItemProcessor<ReleaseItemSubItemsXML, Collection<UpdatableRecord<?>>> {
+    implements ItemProcessor<ReleaseItemSubItemsXML, RelationSet> {
 
   private final EntityIdRegistry idRegistry;
 
   @Override
-  public Collection<UpdatableRecord<?>> process(ReleaseItemSubItemsXML item) {
+  public RelationSet process(ReleaseItemSubItemsXML item) {
     if (item.getId() == null || item.getId() < 1) {
       return null;
     }
@@ -130,7 +130,10 @@ public class ReleaseItemSubItemsProcessor
           .forEach(items::add);
     }
 
-    return items.stream().filter(Objects::nonNull).collect(Collectors.toList());
+    return new RelationSet(
+        EntityType.RELEASE,
+        releaseItemId,
+        items.stream().filter(Objects::nonNull).collect(Collectors.toList()));
   }
 
   private boolean isExistingArtist(Integer id) {
