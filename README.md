@@ -77,11 +77,11 @@ to build or run this project.
 ./gradlew e2eTest --no-daemon --warning-mode=fail
 ```
 
-`check` runs the deterministic unit and integration suite, generates JaCoCo
-reports, enforces 85% line and 40% branch coverage, and validates test naming.
-`e2eTest` imports the complete cross-language fixture into PostgreSQL and
-verifies reruns and entity admission rules. CI uses GitHub-hosted
-`ubuntu-latest` and does not depend on live Discogs availability.
+`check` runs the deterministic unit, integration, and E2E suites, generates a
+combined JaCoCo report, enforces 100% line and branch coverage, and validates
+test naming. `e2eTest` imports the complete cross-language fixture into
+PostgreSQL and verifies reruns and entity admission rules. CI uses
+GitHub-hosted `ubuntu-latest` and does not depend on live Discogs availability.
 
 ## Usage
 
