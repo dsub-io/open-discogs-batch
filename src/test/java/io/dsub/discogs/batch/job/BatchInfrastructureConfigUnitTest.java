@@ -79,4 +79,17 @@ public class BatchInfrastructureConfigUnitTest {
         .first()
         .isEqualTo("cleanup option not set. downloaded files will be kept.");
   }
+
+  @Test
+  void givenDataDirectory__ShouldUseConfiguredPath() {
+    String configuredDirectory = "/tmp/open-discogs-fixture";
+    ctx = ctx.withBean(
+        DefaultApplicationArguments.class,
+        () -> new DefaultApplicationArguments("--dataDir=" + configuredDirectory));
+
+    ctx.run(
+        context ->
+            assertThat(context.getBean(FileUtil.class).getAppDirectory())
+                .isEqualTo(configuredDirectory));
+  }
 }

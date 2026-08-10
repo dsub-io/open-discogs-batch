@@ -39,7 +39,7 @@ final class DatabaseUrlArgumentExpander {
           || !(scheme.equalsIgnoreCase("postgres") || scheme.equalsIgnoreCase("postgresql"))) {
         throw invalid();
       }
-      if (uri.getHost() == null || uri.getHost().isBlank()) {
+      if (uri.getHost() == null) {
         throw invalid();
       }
       String userInfo = uri.getRawUserInfo();
@@ -49,11 +49,11 @@ final class DatabaseUrlArgumentExpander {
       }
       String[] credentials = userInfo.split(":", 2);
       String path = uri.getRawPath();
-      if (path == null || path.length() <= 1) {
+      if (path.length() <= 1) {
         throw new InvalidArgumentException("database-url must include a database name");
       }
 
-      String host = uri.getHost().contains(":") ? "[" + uri.getHost() + "]" : uri.getHost();
+      String host = uri.getHost();
       StringBuilder jdbcUrl =
           new StringBuilder("jdbc:postgresql://").append(host.toLowerCase(Locale.ROOT));
       if (uri.getPort() >= 0) {

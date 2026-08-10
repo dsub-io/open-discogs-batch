@@ -1,6 +1,9 @@
 package io.dsub.discogs.batch.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import ch.qos.logback.classic.Level;
 import io.dsub.discogs.batch.testutil.LogSpy;
@@ -11,6 +14,7 @@ import org.springframework.boot.DefaultApplicationArguments;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import java.util.concurrent.SynchronousQueue;
+import java.util.List;
 
 class TaskExecutorConfigUnitTest {
 
@@ -55,5 +59,20 @@ class TaskExecutorConfigUnitTest {
 
     assertThat(logSpy.getLogsByExactLevelAsString(Level.INFO, true))
         .containsExactly("max-workers=3 (source=configured).");
+  }
+
+  @Test
+  void configuredOptionMustContainExactlyAUsablePositiveValue() {
+    ApplicationArguments nullValues = mock(ApplicationArguments.class);
+    when(nullValues.containsOption("maxWorkers")).thenReturn(true);
+    when(nullValues.getOptionValues("maxWorkers")).thenReturn(null);
+    ApplicationArguments emptyValues = mock(ApplicationArguments.class);
+    when(emptyValues.containsOption("maxWorkers")).thenReturn(true);
+    when(emptyValues.getOptionValues("maxWorkers")).thenReturn(List.of());
+
+    assertThatThrownBy(() -> new TaskExecutorConfig().batchTaskExecutor(nullValues))
+        .hasMessage("max-workers must be a positive integer");
+    assertThatThrownBy(() -> new TaskExecutorConfig().batchTaskExecutor(emptyValues))
+        .hasMessage("max-workers must be a positive integer");
   }
 }

@@ -63,6 +63,10 @@ public class BatchService {
 
   private String getVersion() {
     String version = BatchService.class.getPackage().getImplementationVersion();
-    return version == null || version.isBlank() ? "development" : version;
+    return resolveVersion(version);
+  }
+
+  String resolveVersion(String version) {
+    return version == null ? "development" : version;
   }
 }

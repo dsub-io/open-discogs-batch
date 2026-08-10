@@ -37,4 +37,35 @@ class DatabaseUrlArgumentExpanderUnitTest {
                 expander.expand(new String[] {"--database-url=postgresql://user:pass@db:5432"}))
         .isInstanceOf(InvalidArgumentException.class);
   }
+
+  @Test
+  void supportsShortSchemeIpv6DefaultPortAndLiteralPlusCredentials() {
+    assertThat(
+            expander.expand(
+                new String[] {"database_url=postgres://user+name:pass+word@[::1]/discogs"}))
+        .containsExactly(
+            "--url=jdbc:postgresql://[::1]/discogs",
+            "--username=user+name",
+            "--password=pass+word");
+  }
+
+  @Test
+  void rejectsEveryMalformedDatabaseUrlBoundary() {
+    assertThat(expander.expand(new String[] {"--cleanup"})).containsExactly("--cleanup");
+    for (String argument :
+        new String[] {
+          "--database-url",
+          "--database-url=",
+          "--database-url=relative",
+          "--database-url=mysql://user:pass@db/discogs",
+          "--database-url=postgresql:///discogs",
+          "--database-url=postgresql://user@db/discogs",
+          "--database-url=postgresql://user:pass@db/",
+          "--database-url=postgresql://user:pass@db/%"
+        }) {
+      assertThatThrownBy(() -> expander.expand(new String[] {argument}))
+          .as(argument)
+          .isInstanceOf(InvalidArgumentException.class);
+    }
+  }
 }

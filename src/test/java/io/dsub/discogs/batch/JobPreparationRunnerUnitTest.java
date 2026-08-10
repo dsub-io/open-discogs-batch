@@ -66,6 +66,19 @@ class JobPreparationRunnerUnitTest {
   }
 
   @Test
+  void nonHikariDataSourceIsNotMutated() {
+    DataSource plainDataSource = mock(DataSource.class);
+    JobPreparationRunner plainRunner =
+        new JobPreparationRunner(
+            jobParameterResolver, jobParametersConverter, plainDataSource, taskExecutor);
+    when(taskExecutor.getMaxPoolSize()).thenReturn(2);
+
+    plainRunner.run(args);
+
+    verify(taskExecutor).getMaxPoolSize();
+  }
+
+  @Test
   void givenApplicationArgument__WhenGetDiscogsJobParameters__ShouldCallResolverAndConverter()
       throws Exception {
     Properties properties = mock(Properties.class);

@@ -4,12 +4,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import io.dsub.discogs.batch.exception.FileException;
 import java.net.URI;
 import java.net.URL;
+import java.net.ServerSocket;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
@@ -121,6 +125,106 @@ class DiscogsDumpVerifierUnitTest {
     DiscogsDumpVerifier verifier = new DiscogsDumpVerifier();
 
     assertThat(verifier.isValid(dump, file)).isTrue();
+  }
+
+  @Test
+  void expectedChecksumRequiresAManifestAndTheRequestedEntry() throws Exception {
+    Path file = Files.writeString(tempDir.resolve("legacy.xml.gz"), CONTENT);
+    DiscogsDump legacy =
+        new DiscogsDump(
+            "etag",
+            EntityType.RELEASE,
+            "data/2020/legacy.xml.gz",
+            Files.size(file),
+            LocalDate.of(2020, 1, 1),
+            null);
+    assertThatThrownBy(() -> new DiscogsDumpVerifier().getExpectedChecksum(legacy))
+        .isInstanceOf(FileException.class)
+        .hasMessageContaining("manifest is required");
+
+    URL checksumUrl = URI.create("https://example.test/checksum.txt").toURL();
+    DiscogsDumpVerifier verifier = spy(new DiscogsDumpVerifier());
+    doReturn(SHA_256 + "  another.xml.gz")
+        .when(verifier)
+        .getChecksumSource(checksumUrl.toURI());
+    assertThatThrownBy(() -> verifier.getExpectedChecksum(dump(file, checksumUrl)))
+        .isInstanceOf(FileException.class)
+        .hasMessageContaining("checksum for legacy.xml.gz is missing");
+  }
+
+  @Test
+  void invalidManifestUrlAndUnreadableFileReturnFileErrors() throws Exception {
+    URL invalid = mock(URL.class);
+    when(invalid.toURI()).thenThrow(new URISyntaxException("fixture", "invalid"));
+    assertThatThrownBy(() -> new DiscogsDumpVerifier().getChecksums(invalid))
+        .isInstanceOf(FileException.class)
+        .hasMessageContaining("invalid checksum URL");
+
+    assertThatThrownBy(
+            () -> new DiscogsDumpVerifier().calculateSha256(tempDir.resolve("missing.xml.gz")))
+        .isInstanceOf(FileException.class)
+        .hasMessageContaining("failed to calculate SHA-256");
+  }
+
+  @Test
+  void checksumTransportHandlesHttpFailureIoFailureAndInterrupt() throws Exception {
+    DiscogsDumpVerifier verifier = new DiscogsDumpVerifier();
+    com.sun.net.httpserver.HttpServer server =
+        com.sun.net.httpserver.HttpServer.create(
+            new java.net.InetSocketAddress("127.0.0.1", 0), 0);
+    server.createContext(
+        "/failure",
+        exchange -> {
+          exchange.sendResponseHeaders(503, -1);
+          exchange.close();
+        });
+    server.start();
+    try {
+      URI failure =
+          URI.create(
+              "http://127.0.0.1:" + server.getAddress().getPort() + "/failure");
+      assertThatThrownBy(() -> verifier.getChecksumSource(failure))
+          .isInstanceOf(FileException.class)
+          .hasMessageContaining("HTTP 503");
+    } finally {
+      server.stop(0);
+    }
+
+    int unusedPort;
+    try (ServerSocket socket = new ServerSocket(0)) {
+      unusedPort = socket.getLocalPort();
+    }
+    URI unavailable = URI.create("http://127.0.0.1:" + unusedPort + "/checksum");
+    assertThatThrownBy(() -> verifier.getChecksumSource(unavailable))
+        .isInstanceOf(FileException.class)
+        .hasMessageContaining("failed to fetch checksum");
+
+    Thread.currentThread().interrupt();
+    try {
+      assertThatThrownBy(() -> verifier.getChecksumSource(unavailable))
+          .isInstanceOf(FileException.class)
+          .hasMessageContaining("interrupted while fetching checksum");
+      assertThat(Thread.currentThread().isInterrupted()).isTrue();
+    } finally {
+      Thread.interrupted();
+    }
+  }
+
+  @Test
+  void legacySizeVerificationHandlesNullMismatchAndUnreadableFile() throws Exception {
+    Path file = Files.writeString(tempDir.resolve("legacy.xml.gz"), CONTENT);
+    DiscogsDumpVerifier verifier = new DiscogsDumpVerifier();
+    DiscogsDump nullSize =
+        new DiscogsDump(
+            "etag", EntityType.RELEASE, "legacy.xml.gz", null, LocalDate.of(2020, 1, 1), null);
+    DiscogsDump wrongSize =
+        new DiscogsDump(
+            "etag", EntityType.RELEASE, "legacy.xml.gz", 1L, LocalDate.of(2020, 1, 1), null);
+    assertThat(verifier.isValid(nullSize, file)).isFalse();
+    assertThat(verifier.isValid(wrongSize, file)).isFalse();
+    assertThatThrownBy(() -> verifier.isValid(wrongSize, tempDir.resolve("missing.xml.gz")))
+        .isInstanceOf(FileException.class)
+        .hasMessageContaining("failed to fetch size");
   }
 
   private DiscogsDump dump(Path file, URL checksumUrl) throws Exception {

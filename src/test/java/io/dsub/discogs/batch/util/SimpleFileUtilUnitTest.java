@@ -64,6 +64,13 @@ class SimpleFileUtilUnitTest {
     fileUtil = spy(SimpleFileUtil.builder().appDirectory(RandomString.make()).build());
   }
 
+  @Test
+  void absoluteApplicationDirectoryShouldRemainAbsolute() {
+    SimpleFileUtil absoluteFileUtil = new SimpleFileUtil(tempDirectory.toString(), true);
+
+    assertThat(absoluteFileUtil.getAppDirPath()).isEqualTo(tempDirectory);
+  }
+
   @AfterEach
   void cleanUp() {
     try {

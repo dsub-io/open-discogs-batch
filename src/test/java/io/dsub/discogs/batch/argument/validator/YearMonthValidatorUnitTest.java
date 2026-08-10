@@ -1,12 +1,16 @@
 package io.dsub.discogs.batch.argument.validator;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.time.YearMonth;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.boot.DefaultApplicationArguments;
+import org.springframework.boot.ApplicationArguments;
 
 class YearMonthValidatorUnitTest {
 
@@ -52,5 +56,16 @@ class YearMonthValidatorUnitTest {
             new DefaultApplicationArguments("--dumpMonth=2026-06", "--dumpMonth=2026-07"));
 
     assertThat(result.isValid()).isFalse();
+  }
+
+  @Test
+  void optionWithoutValuesIsRejected() {
+    ApplicationArguments arguments = mock(ApplicationArguments.class);
+    when(arguments.containsOption("dumpMonth")).thenReturn(true);
+    when(arguments.getOptionNames()).thenReturn(Set.of("dumpMonth"));
+    when(arguments.getOptionValues("dumpMonth")).thenReturn(null);
+
+    assertThat(validator.validate(arguments).getIssues())
+        .containsExactly("dumpMonth must have exactly one value");
   }
 }

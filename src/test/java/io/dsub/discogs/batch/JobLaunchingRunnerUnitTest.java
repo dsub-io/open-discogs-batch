@@ -203,4 +203,56 @@ class JobLaunchingRunnerUnitTest {
     verify(importExecutionCoordinator).complete(eq(false), any(Throwable.class));
     assertThat(runner.getExitCodeGenerator(jobExecution).getExitCode()).isEqualTo(1);
   }
+
+  @Test
+  void resumedPreparationMarksExecutionParametersAsResumed() throws Exception {
+    doReturn(ImportExecutionCoordinator.Preparation.started("a".repeat(64), 2L, 1L))
+        .when(importExecutionCoordinator)
+        .prepare(discogsJobParameters);
+
+    runner.run(args);
+
+    verify(jobOperator)
+        .start(
+            eq(job),
+            argThat(
+                parameters ->
+                    parameters.getLong("import.runId") == 2L
+                        && "true".equals(parameters.getString("import.resumed"))));
+  }
+
+  @Test
+  void frameworkFailureIsRecordedAsTheOriginalCause() throws Exception {
+    IllegalStateException failure = new IllegalStateException("framework failure");
+    doReturn(List.of(failure)).when(jobExecution).getFailureExceptions();
+
+    assertThatThrownBy(() -> runner.run(args))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessage("batch job failed")
+        .hasCause(failure);
+
+    verify(importExecutionCoordinator).complete(false, failure);
+  }
+
+  @Test
+  void launchFailureIsDurablyRecordedBeforeItEscapes() throws Exception {
+    IllegalStateException failure = new IllegalStateException("launch failure");
+    doThrow(failure).when(jobOperator).start(eq(job), any(JobParameters.class));
+
+    assertThatThrownBy(() -> runner.run(args)).isSameAs(failure);
+
+    verify(importExecutionCoordinator).complete(false, failure);
+  }
+
+  @Test
+  void skippedRunDoesNotCleanupWhenCleanupIsDisabled() throws Exception {
+    doReturn(ImportExecutionCoordinator.Preparation.skipped("a".repeat(64), 7L))
+        .when(importExecutionCoordinator)
+        .prepare(discogsJobParameters);
+    doReturn(false).when(downloadedFileCleanup).isEnabled();
+
+    runner.run(args);
+
+    verify(downloadedFileCleanup, times(0)).cleanup(discogsJobParameters);
+  }
 }

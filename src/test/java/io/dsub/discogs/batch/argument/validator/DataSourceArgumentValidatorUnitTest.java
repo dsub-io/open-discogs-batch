@@ -79,6 +79,22 @@ class DataSourceArgumentValidatorUnitTest {
   }
 
   @Test
+  void duplicateCheckIgnoresUnknownAndKnownNonRequiredOptions() {
+    ValidationResult result =
+        validator.validate(
+            new DefaultApplicationArguments(
+                "--user=user",
+                "--pass=password",
+                "--url=not-jdbc",
+                "--unknown=one",
+                "--unknown=two",
+                "--cleanup",
+                "--cleanup"));
+
+    assertThat(result.getIssues()).noneMatch(issue -> issue.contains("duplicated"));
+  }
+
+  @Test
   void shouldReportAsBlankIfEverythingIsPresent() {
     String[] arg =
         new String[]{"--user=hello", "--pass=pass", "--url=jdbc:mysql://localhost:3306/something"};
@@ -87,5 +103,17 @@ class DataSourceArgumentValidatorUnitTest {
     assertThat(result.getIssues())
         .hasSize(1)
         .contains("database product \"mysql\" is not supported");
+
+    result =
+        validator.validate(
+            new DefaultApplicationArguments(
+                "--user=hello", "--pass=pass", "--url=jdbc:postgresql://localhost/discogs"));
+    assertThat(result.isValid()).isTrue();
+
+    result =
+        validator.validate(
+            new DefaultApplicationArguments(
+                "--user=hello", "--pass=pass", "--url=not-jdbc", "--cleanup"));
+    assertThat(result.isValid()).isTrue();
   }
 }

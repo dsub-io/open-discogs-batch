@@ -17,6 +17,7 @@ import org.springframework.batch.core.converter.JobParametersConverter;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.DefaultApplicationArguments;
 import org.springframework.batch.core.job.parameters.JobParametersBuilder;
+import org.springframework.test.util.ReflectionTestUtils;
 
 class DiscogsJobParametersConverterUnitTest {
 
@@ -43,6 +44,55 @@ class DiscogsJobParametersConverterUnitTest {
   void afterPropertiesSetMethodShouldThrowIfDelegateIsNull() {
     assertThatThrownBy(() -> new DiscogsJobParametersConverter(null).afterPropertiesSet())
         .hasMessage("delegate should not be null");
+  }
+
+  @Test
+  void shouldAcceptValidDelegate() {
+    assertDoesNotThrow(converter::afterPropertiesSet);
+  }
+
+  @Test
+  void shouldRejectUnknownOptionArgument() {
+    ApplicationArguments arguments = new DefaultApplicationArguments("--unknown=value");
+
+    assertThatThrownBy(() -> converter.getJobParameters(arguments))
+        .isInstanceOf(InvalidArgumentException.class)
+        .hasMessageContaining("unknown");
+  }
+
+  @Test
+  void shouldHandleKnownNonOptionWithoutMappingMark() throws InvalidArgumentException {
+    ApplicationArguments arguments = new DefaultApplicationArguments("cleanup");
+
+    assertThat(converter.getJobParameters(arguments).getString("cleanup")).isEmpty();
+  }
+
+  @Test
+  void shouldRejectUnknownNonOptionArgument() {
+    ApplicationArguments arguments = new DefaultApplicationArguments("unknown=value");
+
+    assertThatThrownBy(() -> converter.getJobParameters(arguments))
+        .isInstanceOf(InvalidArgumentException.class)
+        .hasMessageContaining("unknown");
+  }
+
+  @Test
+  void shouldRejectMappingWithoutValue() {
+    ApplicationArguments arguments = new DefaultApplicationArguments("url=");
+
+    assertThatThrownBy(() -> converter.getJobParameters(arguments))
+        .isInstanceOf(InvalidArgumentException.class)
+        .hasMessageContaining("value is missing");
+  }
+
+  @Test
+  void shouldAddDoubleParameter() {
+    JobParametersBuilder builder = new JobParametersBuilder();
+
+    ReflectionTestUtils.invokeMethod(
+        converter, "addParameter", builder, "ratio", "1.25", Double.class);
+
+    assertThat(builder.toJobParameters().getDouble("ratio")).isEqualTo(1.25D);
   }
 
   @ParameterizedTest

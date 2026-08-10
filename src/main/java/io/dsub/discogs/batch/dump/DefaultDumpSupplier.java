@@ -325,7 +325,10 @@ public class DefaultDumpSupplier implements DumpSupplier {
       try {
         String encodedUri = matcher.group(4);
         String uri = URLDecoder.decode(encodedUri, StandardCharsets.UTF_8);
-        if (!uri.endsWith("/" + fileName) || !XML_GZ_PATTERN.matcher(uri).matches()) {
+        if (!uri.endsWith("/" + fileName)) {
+          continue;
+        }
+        if (!XML_GZ_PATTERN.matcher(uri).matches()) {
           continue;
         }
         LocalDate dumpDate = parseLastModifiedAt(uri);
@@ -416,9 +419,9 @@ public class DefaultDumpSupplier implements DumpSupplier {
       }
       return parseResult.stream().filter(Objects::nonNull).collect(Collectors.toList());
     } catch (SAXException | ParserConfigurationException | IOException e) {
-      e.printStackTrace();
+      log.error("failed to parse Discogs dump catalog {}", file, e);
     }
-    return null;
+    return List.of();
   }
 
   /**
@@ -456,22 +459,24 @@ public class DefaultDumpSupplier implements DumpSupplier {
       // loop through the target nodes.
       for (Node node : targetNodes) {
         String content = node.getTextContent();
-        if (content == null || content.isEmpty()) {
+        if (content.isEmpty()) {
           return null;
         }
-        switch (node.getNodeName()) {
-          case KEY -> {
-            uri = content; // formatted as 'data/{year}/{file_name}'
-            url = URI.create(LEGACY_BUCKET_URL + "/" + uri).toURL();
-            type = getType(content);
-            lastModified = parseLastModifiedAt(uri);
-          }
-          case ETAG -> etag = node.getTextContent().replace("\"", "");
-          case SIZE -> size = getSize(node);
+        String nodeName = node.getNodeName();
+        if (KEY.equals(nodeName)) {
+          uri = content; // formatted as 'data/{year}/{file_name}'
+          url = URI.create(LEGACY_BUCKET_URL + "/" + uri).toURL();
+          type = getType(content);
+          lastModified = parseLastModifiedAt(uri);
+        } else if (ETAG.equals(nodeName)) {
+          etag = content.replace("\"", "");
+        } else {
+          size = getSize(node);
         }
       }
     } catch (InvalidArgumentException | IllegalArgumentException | MalformedURLException e) {
       log.error("failed to parse DiscogsDump. reason: " + e.getMessage());
+      return null;
     }
     return new DiscogsDump(etag, type, uri, size, lastModified, url);
   }

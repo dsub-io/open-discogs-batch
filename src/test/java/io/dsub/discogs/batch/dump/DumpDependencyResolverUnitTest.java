@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.mock;
 
 import io.dsub.discogs.batch.TestArguments;
 import io.dsub.discogs.batch.dump.service.DiscogsDumpService;
@@ -18,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.boot.DefaultApplicationArguments;
+import org.springframework.boot.ApplicationArguments;
 
 class DumpDependencyResolverUnitTest {
 
@@ -89,5 +91,15 @@ class DumpDependencyResolverUnitTest {
             () -> resolver.resolve(new DefaultApplicationArguments("--entities=master")))
         .isInstanceOf(DumpNotFoundException.class)
         .hasMessage("failed to locate latest dump for master");
+  }
+
+  @Test
+  void explicitEmptyEntitySelectionIsRejected() {
+    ApplicationArguments arguments = mock(ApplicationArguments.class);
+    when(arguments.containsOption("entities")).thenReturn(true);
+    when(arguments.getOptionValues("entities")).thenReturn(List.of());
+
+    assertThatThrownBy(() -> resolver.parseEntities(arguments))
+        .hasMessage("entities cannot be empty");
   }
 }

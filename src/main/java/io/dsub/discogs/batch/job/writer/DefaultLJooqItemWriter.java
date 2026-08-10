@@ -52,7 +52,7 @@ public class DefaultLJooqItemWriter<T extends UpdatableRecord<?>> extends Abstra
     List<Field<?>> businessFieldsToUpdate = getBusinessUpdateFields(record.getTable());
     Map<?, ?> updateMap = getUpdateMap(record);
 
-    if (fieldsToUpdate.isEmpty() || businessFieldsToUpdate.isEmpty()) {
+    if (businessFieldsToUpdate.isEmpty()) {
       return context
           .insertInto(record.getTable(), getInsertFields(record.getTable()))
           .values(getInsertValues(record))

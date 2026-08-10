@@ -68,7 +68,7 @@ public class ImportProgressStore {
             ImportProgressQueries.FENCE_ACTIVE_RUN,
             (result, rowNumber) -> result.getLong(1),
             runId);
-    if (active.size() != 1 || active.getFirst() != runId) {
+    if (active.size() != 1) {
       throw new ImportExecutionException("import run is not active: " + runId);
     }
   }

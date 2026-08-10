@@ -11,6 +11,7 @@ import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.jooq.UpdatableRecord;
 import org.springframework.batch.infrastructure.item.ItemProcessor;
@@ -35,6 +36,8 @@ public class LabelSubItemsProcessor
 
     if (item.getLabelSubLabels() != null) {
       item.getLabelSubLabels().stream()
+          .filter(Objects::nonNull)
+          .distinct()
           .filter(subLabel -> isExistingLabel(subLabel.getSubLabelId()))
           .map(xml -> xml.getRecord(labelId))
           .forEach(records::add);
@@ -42,7 +45,7 @@ public class LabelSubItemsProcessor
 
     if (item.getUrls() != null) {
       item.getUrls().stream()
-          .filter(url -> !url.isBlank())
+          .filter(Objects::nonNull)
           .distinct()
           .map(url -> getLabelUrlRecord(labelId, url))
           .forEach(records::add);

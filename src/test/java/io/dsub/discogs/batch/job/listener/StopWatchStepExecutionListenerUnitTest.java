@@ -7,6 +7,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 
 import ch.qos.logback.classic.Level;
 import io.dsub.discogs.batch.testutil.LogSpy;
@@ -87,6 +88,15 @@ class StopWatchStepExecutionListenerUnitTest {
 
     // then
     verify(stopWatch, times(1)).stop();
+  }
+
+  @Test
+  void completedStopWatchIsNotStoppedAgain() {
+    doReturn(false).when(stopWatch).isRunning();
+
+    assertThat(listener.getTotalTimeSeconds()).isEqualTo(10);
+
+    verify(stopWatch, never()).stop();
   }
 
   @Test

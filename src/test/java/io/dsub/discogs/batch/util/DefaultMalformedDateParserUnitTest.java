@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
 
 class DefaultMalformedDateParserUnitTest {
 
@@ -24,10 +25,12 @@ class DefaultMalformedDateParserUnitTest {
   @Test
   void whenInvalidYear__ShouldReturnFalse() {
     assertFalse(parser.isYearValid("193x-3"));
+    assertFalse(parser.isYearValid(null));
   }
 
   @Test
   void whenInvalidMonth__ShouldReturnFalse() {
+    assertFalse(parser.isMonthValid(null));
     assertFalse(parser.isMonthValid("193X-33"));
     assertFalse(parser.isMonthValid("193X-3X"));
     assertFalse(parser.isMonthValid("193X-"));
@@ -50,10 +53,37 @@ class DefaultMalformedDateParserUnitTest {
 
   @Test
   void whenInvalidDay__ShouldReturnFalse() {
+    assertFalse(parser.isDayValid(null));
     assertFalse(parser.isDayValid("1931-03-33"));
     assertFalse(parser.isDayValid("1931-03-"));
     assertFalse(parser.isDayValid("1931-02-29"));
     assertFalse(parser.isDayValid("1931-02-00"));
+    assertFalse(parser.isDayValid("09990101"));
+    assertFalse(parser.isDayValid("20201301"));
+  }
+
+  @ParameterizedTest
+  @CsvSource({"20201301,2020-01-01", "20200100,2020-01-01", "20200231,2020-02-01"})
+  void shouldFallbackForOutOfRangeFlatMonthOrDay(String value, String expected) {
+    assertThat(parser.parse(value)).isEqualTo(LocalDate.parse(expected));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"09990101", "99990101"})
+  void shouldRejectOutOfRangeFlatYears(String value) {
+    assertThat(parser.parse(value)).isNull();
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"0999-01-01", "9999-01-01"})
+  void shouldRejectOutOfRangeSeparatedYears(String value) {
+    assertThat(parser.parse(value)).isNull();
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"2020-00", "2020-13"})
+  void shouldFallbackForOutOfRangeSeparatedMonths(String value) {
+    assertThat(parser.parse(value)).isEqualTo(LocalDate.of(2020, 1, 1));
   }
 
   @Test
@@ -86,6 +116,7 @@ class DefaultMalformedDateParserUnitTest {
 
     // then
     assertThat(parsedDate).isNull();
+    assertThat(parser.parse("a1")).isNull();
   }
 
   @Test

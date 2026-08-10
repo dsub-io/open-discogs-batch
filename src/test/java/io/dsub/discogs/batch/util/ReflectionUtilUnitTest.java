@@ -27,6 +27,11 @@ class ReflectionUtilUnitTest {
   @RegisterExtension
   LogSpy logSpy = new LogSpy();
 
+  @Test
+  void shouldAllowUtilityInstantiation() {
+    assertThat(new ReflectionUtil()).isNotNull();
+  }
+
   @ParameterizedTest
   @MethodSource("io.dsub.discogs.batch.TestArguments#getXmlClasses")
   void givenXmlClass__WhenInvokeNoArgConstructor_ShouldSuccessfullyGenerate(Class<?> xmlClass) {
@@ -258,6 +263,39 @@ class ReflectionUtilUnitTest {
           assertThat(child.secondVal).isEqualTo("world");
           assertThat(child.list).isNull();
         });
+  }
+
+  @Test
+  void normalizeShouldIgnoreNullTarget() {
+    assertDoesNotThrow(() -> ReflectionUtil.normalizeStringFields(null));
+  }
+
+  @Test
+  void normalizeShouldRemoveNullEntriesFromStringLists() {
+    TestChild child = new TestChild();
+    child.list = new ArrayList<>();
+    child.list.add(null);
+    child.list.add(" first ");
+    child.list.add("second");
+
+    ReflectionUtil.normalizeStringFields(child);
+
+    assertThat(child.list).containsExactly("first", "second");
+  }
+
+  @Test
+  void setFieldShouldIgnoreInaccessibleJdkField() throws NoSuchFieldException {
+    Field valueField = String.class.getDeclaredField("value");
+
+    assertDoesNotThrow(() -> ReflectionUtil.setFieldValue("text", valueField, null));
+  }
+
+  @Test
+  void getValueShouldReturnNullWhenFieldDoesNotBelongToTarget() throws NoSuchFieldException {
+    Field field = TestChild.class.getDeclaredField("firstVal");
+    field.setAccessible(true);
+
+    assertThat(ReflectionUtil.getValue(new TestParent(), field)).isNull();
   }
 
   private static class ExceptionThrowingTestClass {

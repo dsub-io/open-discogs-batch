@@ -53,7 +53,7 @@ public class DataSourceArgumentValidator implements ArgumentValidator {
   private ValidationResult checkIfSupported(String url) {
     ValidationResult result = new DefaultValidationResult();
     Matcher m = JDBC_PROD_NAME_PATTERN.matcher(url);
-    if (m.matches() && m.group(1) != null) {
+    if (m.matches()) {
       if (DBType.getTypeOf(m.group(1)) == null) {
         return result.withIssue("database product \"" + m.group(1) + "\" is not supported");
       }
@@ -102,7 +102,10 @@ public class DataSourceArgumentValidator implements ArgumentValidator {
     List<String> issues = new ArrayList<>();
     for (String optionName : args.getOptionNames()) {
       ArgType type = ArgType.getTypeOf(optionName);
-      if (type == null || !REQUIRED_TYPES.contains(type)) {
+      if (type == null) {
+        continue;
+      }
+      if (!REQUIRED_TYPES.contains(type)) {
         continue;
       }
 

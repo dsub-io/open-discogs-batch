@@ -26,10 +26,8 @@ public class FlagRemovingArgumentFormatter implements ArgumentFormatter {
     if (arg == null || arg.isBlank()) {
       return arg;
     }
-    Matcher m = PATTERN.matcher(arg);
-    if (m.matches()) {
-      return m.group(1);
-    }
-    return arg;
+    Matcher matcher = PATTERN.matcher(arg);
+    matcher.matches();
+    return matcher.group(1);
   }
 }

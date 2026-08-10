@@ -14,9 +14,10 @@ class PositiveIntegerParserUnitTest {
 
   @Test
   void rejectsZeroNegativeAndOverflowValues() {
-    for (String value : new String[] {"0", "-1", "2147483648"}) {
+    for (String value : new String[] {"0", "-1", "2147483648", "invalid"}) {
       assertThatThrownBy(() -> PositiveIntegerParser.require("max-workers", value))
           .hasMessage("max-workers must be a positive integer");
     }
+    assertThat(PositiveIntegerParser.isIntegerLiteral(null)).isFalse();
   }
 }

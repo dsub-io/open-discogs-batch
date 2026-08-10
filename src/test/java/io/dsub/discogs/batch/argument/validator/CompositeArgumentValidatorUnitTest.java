@@ -25,6 +25,8 @@ class CompositeArgumentValidatorUnitTest {
 
   @Test
   void addValidator() {
+    assertThat(this.compositeArgumentValidator.addValidator(null))
+        .isEqualTo(this.compositeArgumentValidator);
     assertThat(this.compositeArgumentValidator.addValidator(helloValidator))
         .isEqualTo(this.compositeArgumentValidator);
     assertThat(this.compositeArgumentValidator.addValidator(worldValidator))
@@ -44,6 +46,8 @@ class CompositeArgumentValidatorUnitTest {
         .isEqualTo(this.compositeArgumentValidator);
     ArgumentValidator[] validators = null;
     assertThat(this.compositeArgumentValidator.addValidators(validators))
+        .isEqualTo(this.compositeArgumentValidator);
+    assertThat(this.compositeArgumentValidator.addValidators())
         .isEqualTo(this.compositeArgumentValidator);
   }
 

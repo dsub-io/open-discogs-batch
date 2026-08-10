@@ -1,6 +1,7 @@
 package io.dsub.discogs.batch.argument.handler;
 
 import io.dsub.discogs.batch.argument.formatter.ArgumentFormatter;
+import io.dsub.discogs.batch.argument.ArgType;
 import io.dsub.discogs.batch.argument.formatter.ArgumentNameFormatter;
 import io.dsub.discogs.batch.argument.formatter.CompositeArgumentFormatter;
 import io.dsub.discogs.batch.argument.formatter.FlagRemovingArgumentFormatter;
@@ -43,9 +44,10 @@ public class DefaultArgumentHandler implements ArgumentHandler {
    */
   private final Function<String, List<String>> splitMultiValues =
       arg -> {
-        if (arg.matches("^--.*") && arg.indexOf('=') < arg.length() && arg.indexOf('=') > 0) {
-          String flagHead = arg.substring(0, arg.indexOf("="));
-          String valueString = arg.substring(arg.indexOf("=") + 1);
+        int separator = arg.indexOf('=');
+        if (separator > 0 && ArgType.getTypeOf(arg.substring(0, separator)) != null) {
+          String flagHead = arg.substring(0, separator);
+          String valueString = arg.substring(separator + 1);
           return List.of(valueString.split(",")).stream()
               .map(value -> String.join("=", flagHead, value))
               .collect(Collectors.toList());

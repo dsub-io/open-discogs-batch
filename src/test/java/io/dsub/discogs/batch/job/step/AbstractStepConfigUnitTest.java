@@ -12,6 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.job.JobExecution;
@@ -31,6 +32,15 @@ class AbstractStepConfigUnitTest {
   void setUp() throws InvalidArgumentException {
     stepConfig = Mockito.mock(AbstractStepConfig.class);
     when(stepConfig.executionDecider(any())).thenCallRealMethod();
+  }
+
+  @Test
+  void shouldSkipFailedJobBeforeReadingParameters() throws InvalidArgumentException {
+    JobExecutionDecider decider = stepConfig.executionDecider("artist");
+    JobExecution jobExecution = Mockito.mock(JobExecution.class);
+    doReturn(ExitStatus.FAILED).when(jobExecution).getExitStatus();
+
+    assertThat(decider.decide(jobExecution, null).getName()).isEqualTo("SKIPPED");
   }
 
   @ParameterizedTest

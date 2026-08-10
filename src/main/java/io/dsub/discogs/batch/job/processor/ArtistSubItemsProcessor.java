@@ -54,7 +54,6 @@ public class ArtistSubItemsProcessor
     }
     return item.getNameVariations().stream()
         .filter(Objects::nonNull)
-        .filter(nameVar -> !nameVar.isBlank())
         .distinct()
         .map(nameVar -> makeArtistNameVariationRecord(item.getId(), nameVar))
         .collect(Collectors.toList());
@@ -66,7 +65,6 @@ public class ArtistSubItemsProcessor
     }
     return item.getUrls().stream()
         .filter(Objects::nonNull)
-        .filter(url -> !url.isBlank())
         .distinct()
         .map(url -> makeArtistUrlRecord(item.getId(), url))
         .collect(Collectors.toList());
@@ -77,6 +75,8 @@ public class ArtistSubItemsProcessor
       return Collections.emptyList();
     }
     return item.getMembers().stream()
+        .filter(Objects::nonNull)
+        .distinct()
         .filter(member -> idRegistry.exists(ARTIST, member.getMemberId()))
         .map(xml -> xml.getRecord(item.getId()))
         .collect(Collectors.toList());
@@ -87,6 +87,8 @@ public class ArtistSubItemsProcessor
       return Collections.emptyList();
     }
     return item.getGroups().stream()
+        .filter(Objects::nonNull)
+        .distinct()
         .filter(group -> idRegistry.exists(ARTIST, group.getGroupId()))
         .map(xml -> xml.getRecord(item.getId()))
         .collect(Collectors.toList());
@@ -97,6 +99,8 @@ public class ArtistSubItemsProcessor
       return Collections.emptyList();
     }
     return item.getAliases().stream()
+        .filter(Objects::nonNull)
+        .distinct()
         .filter(alias -> idRegistry.exists(ARTIST, alias.getAliasId()))
         .map(xml -> xml.getRecord(item.getId()))
         .collect(Collectors.toList());

@@ -19,6 +19,7 @@ import javax.sql.DataSource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.job.parameters.JobParameters;
+import org.springframework.batch.core.job.parameters.JobParameter;
 import org.springframework.stereotype.Component;
 
 /** Owns database-wide import admission, recovery selection, and entity advisory locks. */
@@ -195,12 +196,12 @@ public class ImportExecutionCoordinator {
 
   private String requiredParameter(JobParameters parameters, String key)
       throws ImportExecutionException {
-    String value = parameters.getString(key);
-    if (value == null || value.isBlank()) {
-      Long longValue = parameters.getLong(key);
-      if (longValue != null) {
-        return longValue.toString();
-      }
+    JobParameter<?> parameter = parameters.getParameter(key);
+    if (parameter == null) {
+      throw new ImportExecutionException("missing import job parameter: " + key);
+    }
+    String value = parameter.value().toString();
+    if (value.isBlank()) {
       throw new ImportExecutionException("missing import job parameter: " + key);
     }
     return value;
@@ -315,6 +316,7 @@ public class ImportExecutionCoordinator {
   }
 
   private long findOrInsertDump(PlannedDump dump) throws SQLException {
+    Long insertedId;
     try (PreparedStatement statement =
         lockConnection.prepareStatement(ImportExecutionQueries.INSERT_DUMP)) {
       statement.setString(1, dump.etag());
@@ -324,10 +326,11 @@ public class ImportExecutionCoordinator {
       statement.setLong(5, dump.sizeBytes());
       statement.setString(6, dump.uri());
       try (ResultSet result = statement.executeQuery()) {
-        if (result.next()) {
-          return result.getLong(1);
-        }
+        insertedId = result.next() ? result.getLong(1) : null;
       }
+    }
+    if (insertedId != null) {
+      return insertedId;
     }
     try (PreparedStatement statement =
         lockConnection.prepareStatement(ImportExecutionQueries.FIND_DUMP)) {
@@ -463,7 +466,11 @@ public class ImportExecutionCoordinator {
 
   private String processorVersion() {
     String version = ImportExecutionCoordinator.class.getPackage().getImplementationVersion();
-    return version == null || version.isBlank() ? DEVELOPMENT_VERSION : version;
+    return resolveProcessorVersion(version);
+  }
+
+  String resolveProcessorVersion(String version) {
+    return version == null ? DEVELOPMENT_VERSION : version;
   }
 
   private void rollbackAndRelease() {

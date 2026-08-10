@@ -130,6 +130,27 @@ class ImportExecutionCoordinatorIntegrationTest extends PostgreSQLIntegrationSup
   }
 
   @Test
+  void numericJobParameterFallbackIsAcceptedAndMissingManifestIsRejected() throws Exception {
+    JobParameters numericChunk =
+        new JobParametersBuilder(parameters(EntityType.ARTIST, JULY_DUMP, 'a', false, false))
+            .addLong(ImportJobParameters.CHUNK_SIZE, (long) CHUNK_SIZE)
+            .toJobParameters();
+    ImportExecutionCoordinator coordinator = new ImportExecutionCoordinator(dataSource);
+    ImportExecutionCoordinator.Preparation preparation = coordinator.prepare(numericChunk);
+    coordinator.complete(false, null);
+    assertThat(preparation.runId()).isPositive();
+
+    JobParameters missingManifest =
+        new JobParametersBuilder()
+            .addString(EntityType.ARTIST.toString(), "artist")
+            .addString(ImportJobParameters.CHUNK_SIZE, String.valueOf(CHUNK_SIZE))
+            .toJobParameters();
+    assertThatThrownBy(
+            () -> new ImportExecutionCoordinator(dataSource).prepare(missingManifest))
+        .hasMessageContaining("missing import job parameter: import.manifestSha256");
+  }
+
+  @Test
   void malformedDumpMetadataFailsBeforeCreatingARun() {
     JobParameters malformed =
         new JobParametersBuilder(

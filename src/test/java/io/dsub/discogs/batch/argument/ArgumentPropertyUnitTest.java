@@ -28,6 +28,8 @@ class ArgumentPropertyUnitTest {
     assertThrows(InvalidArgumentException.class, () -> ArgumentProperty.builder().build());
     assertThrows(
         InvalidArgumentException.class, () -> ArgumentProperty.builder().globalName(null).build());
+    assertThrows(
+        InvalidArgumentException.class, () -> ArgumentProperty.builder().globalName("  ").build());
   }
 
   @ParameterizedTest
@@ -140,6 +142,10 @@ class ArgumentPropertyUnitTest {
         () -> ArgumentProperty.builder().globalName(name).synonyms(nullList).build());
     Assertions.assertDoesNotThrow(
         () -> ArgumentProperty.builder().globalName(name).synonyms(nullString).build());
+    Assertions.assertDoesNotThrow(
+        () -> ArgumentProperty.builder().globalName(name).synonyms(List.of()).build());
+    Assertions.assertDoesNotThrow(
+        () -> ArgumentProperty.builder().globalName(name).synonyms().build());
   }
 
   @Test
@@ -155,6 +161,27 @@ class ArgumentPropertyUnitTest {
     property =
         ArgumentProperty.builder().globalName("test").synonyms(list.toArray(String[]::new)).build();
     assertThat(property.getSynonyms().size()).isEqualTo(2);
+  }
+
+  @Test
+  void shouldAccumulateRepeatedSynonymDeclarations() {
+    ArgumentProperty.ArgumentPropertyBuilder builder =
+        ArgumentProperty.builder().globalName("test");
+
+    ArgumentProperty property =
+        builder.synonyms(List.of("first")).synonyms(List.of("second"))
+            .synonyms("third").synonyms("fourth").build();
+
+    org.assertj.core.api.Assertions.assertThat(property.getSynonyms())
+        .contains("first", "second", "third", "fourth", "test");
+  }
+
+  @Test
+  void shouldIgnoreNullVarargsArray() {
+    ArgumentProperty property =
+        ArgumentProperty.builder().globalName("test").synonyms((String[]) null).build();
+
+    org.assertj.core.api.Assertions.assertThat(property.getSynonyms()).containsExactly("test");
   }
 
   @Test

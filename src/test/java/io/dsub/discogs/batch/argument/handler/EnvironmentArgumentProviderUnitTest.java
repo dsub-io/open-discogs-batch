@@ -59,4 +59,12 @@ class EnvironmentArgumentProviderUnitTest {
         .isInstanceOf(InvalidArgumentException.class)
         .hasMessageContaining("OPEN_DISCOGS_BATCH_CLEANUP must be a boolean");
   }
+
+  @Test
+  void blankEnvironmentValuesAreIgnored() {
+    EnvironmentArgumentProvider provider =
+        new EnvironmentArgumentProvider(Map.of("OPEN_DISCOGS_BATCH_DATA_DIR", "  "));
+
+    assertThat(provider.apply(new String[0])).isEmpty();
+  }
 }

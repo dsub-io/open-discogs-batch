@@ -12,7 +12,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.jooq.UpdatableRecord;
 import org.springframework.batch.infrastructure.item.ItemProcessor;
@@ -124,16 +123,14 @@ public class ReleaseItemSubItemsProcessor
     if (item.getReleaseVideos() != null) {
       item.getReleaseVideos().stream()
           .filter(Objects::nonNull)
-          .filter(vid -> vid.getUrl() != null && !vid.getUrl().isBlank())
+          .filter(vid -> vid.getUrl() != null)
           .distinct()
           .map(xml -> xml.getRecord(releaseItemId))
           .forEach(items::add);
     }
 
     return new RelationSet(
-        EntityType.RELEASE,
-        releaseItemId,
-        items.stream().filter(Objects::nonNull).collect(Collectors.toList()));
+        EntityType.RELEASE, releaseItemId, items);
   }
 
   private boolean isExistingArtist(Integer id) {
@@ -151,16 +148,10 @@ public class ReleaseItemSubItemsProcessor
   }
 
   private boolean isExistingGenre(String genre) {
-    if (genre == null || genre.isBlank()) {
-      return false;
-    }
     return idRegistry.exists(DefaultEntityIdRegistry.Type.GENRE, genre);
   }
 
   private boolean isExistingStyle(String style) {
-    if (style == null || style.isBlank()) {
-      return false;
-    }
     return idRegistry.exists(DefaultEntityIdRegistry.Type.STYLE, style);
   }
 }

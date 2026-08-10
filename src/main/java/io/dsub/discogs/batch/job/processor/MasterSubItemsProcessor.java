@@ -16,7 +16,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.jooq.UpdatableRecord;
 import org.springframework.batch.infrastructure.item.ItemProcessor;
@@ -52,7 +51,7 @@ public class MasterSubItemsProcessor
       master.getMasterVideos().stream()
           .filter(Objects::nonNull)
           .distinct()
-          .filter(video -> video.getUrl() != null && !video.getUrl().isBlank())
+          .filter(video -> video.getUrl() != null)
           .map(video -> getMasterVideoRecord(masterId, video))
           .forEach(items::add);
     }
@@ -78,9 +77,7 @@ public class MasterSubItemsProcessor
     }
 
     return new RelationSet(
-        EntityType.MASTER,
-        masterId,
-        items.stream().filter(Objects::nonNull).collect(Collectors.toList()));
+        EntityType.MASTER, masterId, items);
   }
 
   private boolean isExistingArtist(Integer id) {
@@ -116,7 +113,7 @@ public class MasterSubItemsProcessor
     String hashSrc =
         (video.getTitle() == null ? "" : video.getTitle())
             + (video.getDescription() == null ? "" : video.getDescription())
-            + (video.getUrl() == null ? "" : video.getUrl());
+            + video.getUrl();
     return new MasterVideoRecord()
         .setMasterId(masterId)
         .setTitle(video.getTitle())

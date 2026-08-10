@@ -95,7 +95,7 @@ public class MappedValueValidator implements ArgumentValidator {
       int size = values.size();
       int min = type.getMinValuesCount();
       int max = type.getMaxValuesCount();
-      if (size > max || size < min) {
+      if (size > max) {
         String msg;
         if (max == min) {
           msg = String.format(INVALID_SIZE_MSG, name, min, size);
@@ -120,11 +120,9 @@ public class MappedValueValidator implements ArgumentValidator {
 
       String className = argType.getSupportedType().getSimpleName();
 
-      if (type.equals(Long.class)) {
-        for (String s : argMap.get(argType)) {
-          if (!LONG_PATTERN.matcher(s).matches()) {
-            result = result.withIssues(String.format(INVALID_TYPE_MSG, name, className));
-          }
+      for (String s : argMap.get(argType)) {
+        if (!LONG_PATTERN.matcher(s).matches()) {
+          result = result.withIssues(String.format(INVALID_TYPE_MSG, name, className));
         }
       }
     }

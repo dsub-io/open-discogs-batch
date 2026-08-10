@@ -57,17 +57,17 @@ public class IdCachingJobExecutionListener implements JobExecutionListener {
     }
   }
 
-  private void preCacheMasterIds() {
+  void preCacheMasterIds() {
     cacheIdentifiers(
         Master.MASTER.ID, Master.MASTER, DefaultEntityIdRegistry.Type.MASTER);
   }
 
-  private void preCacheLabelIds() {
+  void preCacheLabelIds() {
     cacheIdentifiers(
         Label.LABEL.ID, Label.LABEL, DefaultEntityIdRegistry.Type.LABEL);
   }
 
-  private void preCacheArtistIds() {
+  void preCacheArtistIds() {
     cacheIdentifiers(
         Artist.ARTIST.ID, Artist.ARTIST, DefaultEntityIdRegistry.Type.ARTIST);
   }
@@ -84,10 +84,8 @@ public class IdCachingJobExecutionListener implements JobExecutionListener {
               try (Cursor<Record1<Integer>> cursor = query.fetchLazy()) {
                 for (Record1<Integer> record : cursor) {
                   Integer id = record.value1();
-                  if (id != null) {
-                    idRegistry.put(type, id);
-                    cached++;
-                  }
+                  idRegistry.put(type, id);
+                  cached++;
                 }
               }
               return cached;
