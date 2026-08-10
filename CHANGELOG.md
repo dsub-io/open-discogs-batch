@@ -1,26 +1,5 @@
 # Changelog
 
-## [1.0.1](https://github.com/dsub-io/open-discogs-batch/compare/v1.0.0...v1.0.1) (2026-08-10)
-
-
-### Durability and Idempotency
-
-* persist immutable import manifests, stable run identity, per-entity progress, and exact committed source-chunk ledgers
-* resume only compatible failed runs, skip successful manifests only while their entity checkpoints remain current, and make forced runs start fresh
-* commit relation convergence and its progress ledger atomically, fence canonical writes to the active run, and lock selected entities with their Artist, Label, and Master dependencies
-* propagate nested step failures, require complete entity coverage before success, and preserve durable database success when optional file cleanup fails
-
-### Measured Impact
-
-* on the same Apple M2 Pro, Java 21, PostgreSQL 18.4 Alpine tmpfs, four 3-record fixtures, chunk size 1,000, one worker, two warm-ups, and 20 samples, forced two-import p50/p95/p99 changed from `734/845/854 ms` to `767/916/980 ms` (`+4.5%/+8.4%/+14.8%`)
-* median throughput changed from `32.7` to `31.3 records/s` (`-4.3%`); this is the measured cost of checkpoint validation, exact ledgers, and active-run fencing on a tiny fixture, not a 200M-row throughput estimate
-* whole-suite line coverage increased from `93.33%` to `100.00%` (`+6.67` percentage points), and branch coverage increased from `78.50%` to `100.00%` (`+21.50` percentage points)
-
-### Validation and Distribution
-
-* verify restart, failure, cleanup, physical idempotency, and relation convergence against PostgreSQL with no residual test containers, networks, or volumes
-* publish the versioned executable JAR, SHA-256 checksum, and non-root `linux/amd64` and `linux/arm64` GHCR images through the protected release workflow
-
 ## [1.0.0](https://github.com/dsub-io/open-discogs-batch/compare/v0.1.8...v1.0.0) (2026-08-09)
 
 
