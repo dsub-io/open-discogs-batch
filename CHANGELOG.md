@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.0.0](https://github.com/dsub-io/open-discogs-batch/compare/v1.0.1...v2.0.0) (2026-08-10)
+
+
+### ⚠ BREAKING CHANGES
+
+* replace legacy Java runtime options with the shared OpenDiscogs Batch contract. Add exact max-workers control, bounded chunk handoff, segmented ID caches, streamed dependency IDs, bounded relation writes, and multi-architecture GitHub/GHCR release publication.
+
+### Features
+
+* unify runtime options and optimize large imports ([#24](https://github.com/dsub-io/open-discogs-batch/issues/24)) ([8673730](https://github.com/dsub-io/open-discogs-batch/commit/8673730146501d77c15470586bbf24597fde3229))
+
+
+### Bug Fixes
+
+* close batch correctness and coverage gaps ([eeeae1a](https://github.com/dsub-io/open-discogs-batch/commit/eeeae1a747fb0ee47fd337848bb6d451ca152f7f))
+* make snapshot imports durable and convergent ([7d93c07](https://github.com/dsub-io/open-discogs-batch/commit/7d93c077f1c51cbcf16cb38beceb220c2432e5ad))
+* make snapshot imports durable and convergent ([#26](https://github.com/dsub-io/open-discogs-batch/issues/26)) ([ec2f6a0](https://github.com/dsub-io/open-discogs-batch/commit/ec2f6a0476a6af3bcf25a77e62fbe423f33f1434))
+
 ## [1.0.1](https://github.com/dsub-io/open-discogs-batch/compare/v1.0.0...v1.0.1) (2026-08-10)
 
 
