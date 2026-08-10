@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.0.1](https://github.com/dsub-io/open-discogs-batch/compare/v1.0.0...v1.0.1) (2026-08-10)
+
+
+### Bug Fixes
+
+* close batch correctness and coverage gaps ([eeeae1a](https://github.com/dsub-io/open-discogs-batch/commit/eeeae1a747fb0ee47fd337848bb6d451ca152f7f))
+* make snapshot imports durable and convergent ([7d93c07](https://github.com/dsub-io/open-discogs-batch/commit/7d93c077f1c51cbcf16cb38beceb220c2432e5ad))
+* make snapshot imports durable and convergent ([#26](https://github.com/dsub-io/open-discogs-batch/issues/26)) ([ec2f6a0](https://github.com/dsub-io/open-discogs-batch/commit/ec2f6a0476a6af3bcf25a77e62fbe423f33f1434))
+
 ## [1.0.0](https://github.com/dsub-io/open-discogs-batch/compare/v0.1.8...v1.0.0) (2026-08-09)
 
 
