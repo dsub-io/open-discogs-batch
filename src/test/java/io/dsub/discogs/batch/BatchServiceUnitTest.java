@@ -13,6 +13,9 @@ import static org.mockito.Mockito.verify;
 import io.dsub.discogs.batch.argument.handler.ArgumentHandler;
 import io.dsub.discogs.batch.argument.validator.ValidationResult;
 import io.dsub.discogs.batch.testutil.LogSpy;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -119,5 +122,42 @@ class BatchServiceUnitTest {
     } catch (Exception e) {
       fail(e);
     }
+  }
+
+  @Test
+  void helpAndVersionReturnWithoutResolvingOrStartingSpring() throws Exception {
+    PrintStream original = System.out;
+    ByteArrayOutputStream output = new ByteArrayOutputStream();
+    try {
+      System.setOut(new PrintStream(output, true, StandardCharsets.UTF_8));
+      assertThat(batchService.run(new String[] {"--help"})).isNull();
+      assertThat(output.toString(StandardCharsets.UTF_8)).contains("Usage: open-discogs-batch");
+      output.reset();
+      assertThat(batchService.run(new String[] {"-v"})).isNull();
+      assertThat(output.toString(StandardCharsets.UTF_8))
+          .contains("open-discogs-batch development");
+    } finally {
+      System.setOut(original);
+    }
+    verify(argumentHandler, times(0)).resolve(any());
+    verify(batchService, times(0)).runSpringApplication(any());
+  }
+
+  @Test
+  void shortHelpAndLongVersionOptionsAreAlsoRecognized() throws Exception {
+    PrintStream original = System.out;
+    try {
+      System.setOut(new PrintStream(new ByteArrayOutputStream()));
+      assertThat(batchService.run(new String[] {"-h"})).isNull();
+      assertThat(batchService.run(new String[] {"--version"})).isNull();
+    } finally {
+      System.setOut(original);
+    }
+  }
+
+  @Test
+  void versionResolutionPreservesPackagedVersion() {
+    assertThat(batchService.resolveVersion(null)).isEqualTo("development");
+    assertThat(batchService.resolveVersion("1.2.3")).isEqualTo("1.2.3");
   }
 }

@@ -91,6 +91,7 @@ class FileClearTaskletUnitTest {
   void givenClearAllThrows__WhenTaskExecutes__WillMarkAsComplete() {
     try {
       // given
+      given(fileUtil.isTemporary()).willReturn(true);
       willThrow(new FileException("FAIL")).given(fileUtil).clearAll();
 
       // when

@@ -50,13 +50,7 @@ public class IdCache {
     int segmentOffset = item & SEGMENT_MASK;
     int wordIndex = segmentOffset >>> WORD_SHIFT;
     long mask = 1L << (segmentOffset & 63);
-    long current;
-    do {
-      current = segment.get(wordIndex);
-      if ((current & mask) != 0) {
-        return;
-      }
-    } while (!segment.compareAndSet(wordIndex, current, current | mask));
+    segment.getAndUpdate(wordIndex, current -> current | mask);
   }
 
   public boolean isEmpty() {

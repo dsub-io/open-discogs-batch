@@ -117,6 +117,23 @@ class DefaultDiscogsDumpServiceUnitTest {
   }
 
   @Test
+  void whenUpdateDBWithEmptyList__ShouldNotPersist() {
+    when(dumpSupplier.get()).thenReturn(List.of());
+
+    dumpService.updateDB();
+
+    verify(repository, never()).saveAll(any());
+  }
+
+  @Test
+  void existsShouldDelegateToRepository() {
+    when(repository.existsByETag("etag")).thenReturn(true);
+
+    assertThat(dumpService.exists("etag")).isTrue();
+    verify(repository).existsByETag("etag");
+  }
+
+  @Test
   void whenUpdateDB__ShouldCallProperDelegatedMethodsWithValues() {
     List<DiscogsDump> dumpList =
         IntStream.range(0, 10 + random.nextInt(10))
@@ -313,6 +330,57 @@ class DefaultDiscogsDumpServiceUnitTest {
     assertThat(t)
         .isInstanceOf(DumpNotFoundException.class)
         .hasMessage("dump of type " + type + " from 1-1 not found");
+  }
+
+  @Test
+  void whenCurrentMonthIsMissing__ShouldReportDistributionDelay() {
+    LocalDate now = LocalDate.now();
+    when(repository.findAllByLastModifiedAtIsBetween(any(), any())).thenReturn(List.of());
+
+    Throwable throwable = catchThrowable(
+        () -> dumpService.getAllByTypeYearMonth(
+            List.of(EntityType.ARTIST), now.getYear(), now.getMonthValue()));
+
+    assertThat(throwable)
+        .isInstanceOf(DumpNotFoundException.class)
+        .hasMessage("dump for current month seems to be missing from distribution.");
+  }
+
+  @Test
+  void whenAnotherMonthInCurrentYearIsMissing__ShouldReportRequestedType() {
+    LocalDate now = LocalDate.now();
+    int otherMonth = now.getMonthValue() == 1 ? 2 : 1;
+    when(repository.findAllByLastModifiedAtIsBetween(any(), any())).thenReturn(List.of());
+
+    Throwable throwable = catchThrowable(
+        () -> dumpService.getAllByTypeYearMonth(
+            List.of(EntityType.ARTIST), now.getYear(), otherMonth));
+
+    assertThat(throwable)
+        .isInstanceOf(DumpNotFoundException.class)
+        .hasMessageContaining("dump of type artist");
+  }
+
+  @Test
+  void whenMultipleRequestedTypesAreMissing__ShouldReportSet() {
+    when(repository.findAllByLastModifiedAtIsBetween(any(), any())).thenReturn(List.of());
+
+    Throwable throwable = catchThrowable(
+        () -> dumpService.getAllByTypeYearMonth(
+            List.of(EntityType.ARTIST, EntityType.LABEL), 2008, 3));
+
+    assertThat(throwable)
+        .isInstanceOf(DumpNotFoundException.class)
+        .hasMessageContaining("dump set of types");
+  }
+
+  @Test
+  void whenNoTypesAreRequested__ShouldReportMissingSet() {
+    when(repository.findAllByLastModifiedAtIsBetween(any(), any())).thenReturn(List.of());
+
+    assertThat(catchThrowable(() -> dumpService.getAllByTypeYearMonth(List.of(), 2008, 3)))
+        .isInstanceOf(DumpNotFoundException.class)
+        .hasMessageContaining("dump set of types []");
   }
 
   @ParameterizedTest

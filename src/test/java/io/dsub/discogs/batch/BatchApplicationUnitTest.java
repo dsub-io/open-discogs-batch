@@ -83,4 +83,20 @@ class BatchApplicationUnitTest {
       fail(e);
     }
   }
+
+  @Test
+  void parentContextReturnsTheContextCapturedByMain() throws Exception {
+    try (MockedStatic<BatchApplication> app = Mockito.mockStatic(BatchApplication.class)) {
+      String[] args = {"fixture"};
+      org.springframework.context.ConfigurableApplicationContext context =
+          Mockito.mock(org.springframework.context.ConfigurableApplicationContext.class);
+      app.when(BatchApplication::getBatchService).thenReturn(batchService);
+      app.when(() -> BatchApplication.main(args)).thenCallRealMethod();
+      Mockito.doReturn(context).when(batchService).run(args);
+
+      BatchApplication.main(args);
+
+      assertThat(new BatchApplication().parentContext()).isSameAs(context);
+    }
+  }
 }

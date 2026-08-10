@@ -39,16 +39,17 @@ public class ReflectionUtil {
       if (list.isEmpty()) {
         return;
       }
-      Object first = list.get(0);
-      if (first instanceof String) {
-        List<?> normalized =
+      boolean stringList =
+          list.stream().filter(Objects::nonNull).allMatch(String.class::isInstance);
+      if (stringList) {
+        List<String> normalized =
             list.stream()
-                .map(obj -> obj != null && obj.toString().isBlank() ? null : obj)
                 .filter(Objects::nonNull)
-                .map(Object::toString)
+                .map(String.class::cast)
                 .map(String::trim)
+                .filter(value -> !value.isBlank())
                 .collect(Collectors.toList());
-        setFieldValue(target, field, normalized.size() == 0 ? null : normalized);
+        setFieldValue(target, field, normalized.isEmpty() ? null : normalized);
       } else {
         list.forEach(ReflectionUtil::normalizeStringFields);
       }

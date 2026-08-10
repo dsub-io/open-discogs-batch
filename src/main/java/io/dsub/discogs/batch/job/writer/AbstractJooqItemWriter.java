@@ -52,7 +52,7 @@ public abstract class AbstractJooqItemWriter<T extends UpdatableRecord<?>> imple
   protected Map<?, ?> getUpdateMap(T record) {
     Map<?, ?> map = record.intoMap();
     List<Field<?>> fieldsToUpdate = getUpdateFields(record.getTable());
-    if (fieldsToUpdate == null || fieldsToUpdate.isEmpty()) {
+    if (fieldsToUpdate.isEmpty()) {
       return map;
     }
 

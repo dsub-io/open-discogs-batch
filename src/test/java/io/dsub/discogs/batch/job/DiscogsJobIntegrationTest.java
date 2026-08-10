@@ -20,6 +20,7 @@ import io.dsub.discogs.batch.exception.FileException;
 import io.dsub.discogs.batch.testutil.LogSpy;
 import io.dsub.discogs.batch.util.FileUtil;
 import io.dsub.discogs.batch.util.SimpleFileUtil;
+import io.dsub.opendiscogs.model.manifest.ImportManifest;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -29,12 +30,16 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.sql.Types;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicLong;
 import javax.sql.DataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterAll;
@@ -42,6 +47,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.springframework.batch.core.ExitStatus;
+import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.job.JobExecution;
 import org.springframework.batch.core.job.parameters.JobParameters;
 import org.springframework.batch.core.job.parameters.JobParametersBuilder;
@@ -72,6 +78,8 @@ import org.springframework.test.context.ContextConfiguration;
         DiscogsJobIntegrationTestConfig.class
     })
 public abstract class DiscogsJobIntegrationTest {
+
+  private static final AtomicLong TEST_MANIFEST_SEQUENCE = new AtomicLong();
 
   @Autowired
   JobOperatorTestUtils jobOperatorTestUtils;
@@ -127,6 +135,7 @@ public abstract class DiscogsJobIntegrationTest {
             .getUniqueJobParametersBuilder()
             .addJobParameters(defaultJobParameters())
             .toJobParameters();
+    params = withTrackedImportRun(params);
 
     JobExecution jobExecution = jobOperator.start(jobOperatorTestUtils.getJob(), params);
     ExitStatus exitStatus = jobExecution.getExitStatus();
@@ -153,6 +162,7 @@ public abstract class DiscogsJobIntegrationTest {
             .getUniqueJobParametersBuilder()
             .addJobParameters(builder.toJobParameters())
             .toJobParameters();
+    params = withTrackedImportRun(params);
 
     JobExecution jobExecution = jobOperator.start(jobOperatorTestUtils.getJob(), params);
     ExitStatus exitStatus = jobExecution.getExitStatus();
@@ -171,12 +181,209 @@ public abstract class DiscogsJobIntegrationTest {
   }
 
   @Test
+  void relationFailureFailsTheWholeJobInsteadOfEndingSuccessfully() throws Exception {
+    try (Connection connection = dataSource.getConnection();
+        Statement statement = connection.createStatement()) {
+      statement.execute(
+          """
+          create or replace function reject_label_progress() returns trigger language plpgsql as $$
+          begin
+            if new.entity_type = 'label' then
+              raise exception 'rejected label progress';
+            end if;
+            return new;
+          end
+          $$
+          """);
+      statement.execute(
+          """
+          create trigger reject_label_progress
+          before insert on discogs_import_run_chunk
+          for each row execute function reject_label_progress()
+          """);
+    }
+
+    try {
+      JobParameters selected =
+          new JobParametersBuilder()
+              .addString("label", "label")
+              .addString(ImportJobParameters.CHUNK_SIZE, "1000")
+              .toJobParameters();
+      JobParameters parameters =
+          withTrackedImportRun(
+              jobOperatorTestUtils
+                  .getUniqueJobParametersBuilder()
+                  .addJobParameters(selected)
+                  .toJobParameters());
+
+      JobExecution execution = jobOperator.start(jobOperatorTestUtils.getJob(), parameters);
+
+      String stepStatuses =
+          execution.getStepExecutions().stream()
+              .map(step -> step.getStepName() + "=" + step.getStatus() + "/" + step.getExitStatus())
+              .sorted()
+              .collect(java.util.stream.Collectors.joining(", "));
+      assertThat(stepStatuses, execution.getStatus(), is(BatchStatus.FAILED));
+      assertThat(execution.getExitStatus().getExitCode(), is("FAILED"));
+    } finally {
+      try (Connection connection = dataSource.getConnection();
+          Statement statement = connection.createStatement()) {
+        statement.execute(
+            "drop trigger if exists reject_label_progress on discogs_import_run_chunk");
+        statement.execute("drop function if exists reject_label_progress()");
+      }
+    }
+  }
+
+  @Test
+  void failedMultiEntityRunResumesCompletedSourceChunksWithoutRewritingThem()
+      throws Exception {
+    ImportExecutionCoordinator importExecutionCoordinator =
+        new ImportExecutionCoordinator(dataSource);
+    JobParameters parameters = coordinatedParameters(1, EntityType.ARTIST, EntityType.LABEL);
+    ImportExecutionCoordinator.Preparation firstPreparation =
+        importExecutionCoordinator.prepare(parameters);
+
+    createProgressFailureTrigger();
+    JobExecution firstExecution;
+    try {
+      firstExecution =
+          jobOperator.start(
+              jobOperatorTestUtils.getJob(),
+              withPreparation(parameters, firstPreparation));
+    } finally {
+      dropProgressFailureTrigger();
+    }
+
+    assertThat(firstExecution.getStatus(), is(BatchStatus.FAILED));
+    assertThat(
+        scalarLong(
+            """
+            select count(*)
+            from discogs_import_run_chunk
+            where import_run_id = ?
+              and entity_type = 'artist'
+            """,
+            firstPreparation.runId()),
+        is(3L));
+    assertThat(
+        scalarLong(
+            """
+            select count(*)
+            from discogs_import_run_chunk
+            where import_run_id = ?
+              and entity_type = 'label'
+            """,
+            firstPreparation.runId()),
+        is(1L));
+    importExecutionCoordinator.complete(false, new IllegalStateException("interrupted"));
+
+    ImportExecutionCoordinator.Preparation resumedPreparation =
+        importExecutionCoordinator.prepare(parameters);
+    assertThat(resumedPreparation.resumedFromRunId(), is(firstPreparation.runId()));
+    assertThat(
+        scalarLong(
+            "select count(*) from discogs_import_run_chunk where import_run_id = ?",
+            resumedPreparation.runId()),
+        is(4L));
+
+    createCompletedChunkRewriteGuard();
+    try {
+      JobExecution resumedExecution =
+          jobOperator.start(
+              jobOperatorTestUtils.getJob(),
+              withPreparation(parameters, resumedPreparation));
+      assertThat(resumedExecution.getStatus(), is(BatchStatus.COMPLETED));
+      importExecutionCoordinator.complete(true, null);
+    } finally {
+      dropCompletedChunkRewriteGuard();
+      importExecutionCoordinator.complete(false, new IllegalStateException("test cleanup"));
+    }
+
+    assertThat(
+        scalarLong(
+            """
+            select count(*)
+            from discogs_import_run
+            where id in (?, ?)
+              and status = 'failed'
+            """,
+            firstPreparation.runId(),
+            resumedPreparation.runId()),
+        is(1L));
+    assertThat(
+        scalarLong(
+            "select count(*) from discogs_import_run_chunk where import_run_id = ?",
+            resumedPreparation.runId()),
+        is(0L));
+  }
+
+  @Test
+  void retryRerunsPostRelationWorkAfterReleaseChunksWereAlreadyCompleted()
+      throws Exception {
+    ImportExecutionCoordinator importExecutionCoordinator =
+        new ImportExecutionCoordinator(dataSource);
+    JobParameters parameters = coordinatedParameters(1, EntityType.MASTER, EntityType.RELEASE);
+    executeSql("update master set main_release_id = null");
+    ImportExecutionCoordinator.Preparation firstPreparation =
+        importExecutionCoordinator.prepare(parameters);
+
+    createMasterMainReleaseFailureTrigger();
+    JobExecution firstExecution;
+    try {
+      firstExecution =
+          jobOperator.start(
+              jobOperatorTestUtils.getJob(),
+              withPreparation(parameters, firstPreparation));
+    } finally {
+      dropMasterMainReleaseFailureTrigger();
+    }
+
+    assertThat(firstExecution.getStatus(), is(BatchStatus.FAILED));
+    assertThat(
+        scalarLong(
+            """
+            select count(*)
+            from discogs_import_run_dump
+            where import_run_id = ?
+              and entity_type = 'release'
+              and completed_at is not null
+              and processed_items = total_items
+            """,
+            firstPreparation.runId()),
+        is(1L));
+    importExecutionCoordinator.complete(false, new IllegalStateException("interrupted"));
+
+    ImportExecutionCoordinator.Preparation resumedPreparation =
+        importExecutionCoordinator.prepare(parameters);
+    assertThat(resumedPreparation.resumedFromRunId(), is(firstPreparation.runId()));
+
+    createCompletedChunkRewriteGuard();
+    try {
+      JobExecution resumedExecution =
+          jobOperator.start(
+              jobOperatorTestUtils.getJob(),
+              withPreparation(parameters, resumedPreparation));
+      assertThat(resumedExecution.getStatus(), is(BatchStatus.COMPLETED));
+      importExecutionCoordinator.complete(true, null);
+    } finally {
+      dropCompletedChunkRewriteGuard();
+      importExecutionCoordinator.complete(false, new IllegalStateException("test cleanup"));
+    }
+
+    assertThat(
+        scalarLong("select count(*) from master where id = 1 and main_release_id = 1"),
+        is(1L));
+  }
+
+  @Test
   void whenSameDumpIsForcedTwice__BusinessRowsRemainIdentical() throws Exception {
     JobParameters firstParameters =
         jobOperatorTestUtils
             .getUniqueJobParametersBuilder()
             .addJobParameters(defaultJobParameters())
             .toJobParameters();
+    firstParameters = withTrackedImportRun(firstParameters);
     JobExecution first =
         jobOperator.start(jobOperatorTestUtils.getJob(), firstParameters);
     assertThat(first.getExitStatus().getExitCode(), is("COMPLETED"));
@@ -187,6 +394,7 @@ public abstract class DiscogsJobIntegrationTest {
             .getUniqueJobParametersBuilder()
             .addJobParameters(defaultJobParameters())
             .toJobParameters();
+    secondParameters = withTrackedImportRun(secondParameters);
     JobExecution second =
         jobOperator.start(jobOperatorTestUtils.getJob(), secondParameters);
     assertThat(second.getExitStatus().getExitCode(), is("COMPLETED"));
@@ -196,6 +404,21 @@ public abstract class DiscogsJobIntegrationTest {
         firstState.keySet().stream()
             .filter(table -> !Objects.equals(firstState.get(table), secondState.get(table)))
             .toList();
+    if (!changedTables.isEmpty()) {
+      Path stateDiff = Path.of("build", "reports", "idempotency-state-diff.txt");
+      Files.createDirectories(stateDiff.getParent());
+      StringBuilder details = new StringBuilder();
+      for (String table : changedTables) {
+        details
+            .append(table)
+            .append(" first:\n")
+            .append(firstState.get(table))
+            .append("\nsecond:\n")
+            .append(secondState.get(table))
+            .append('\n');
+      }
+      Files.writeString(stateDiff, details, StandardCharsets.UTF_8);
+    }
     assertThat(changedTables, is(List.of()));
     try (InputStream expected =
         Objects.requireNonNull(
@@ -276,6 +499,227 @@ public abstract class DiscogsJobIntegrationTest {
       }
     }
     return state;
+  }
+
+  private JobParameters withTrackedImportRun(JobParameters parameters) throws Exception {
+    long runId;
+    try (Connection connection = dataSource.getConnection()) {
+      connection.setAutoCommit(false);
+      try (PreparedStatement insertRun =
+          connection.prepareStatement(
+              """
+              insert into discogs_import_run
+                  (manifest_sha256, status, force_requested, allow_downgrade_requested,
+                   processor, processor_version, resumed_from_run_id)
+              values (?, 'running', false, false, 'open-discogs-batch', 'test', ?)
+              """,
+              Statement.RETURN_GENERATED_KEYS)) {
+        insertRun.setString(1, "%064x".formatted(TEST_MANIFEST_SEQUENCE.incrementAndGet()));
+        insertRun.setNull(2, Types.BIGINT);
+        insertRun.executeUpdate();
+        try (ResultSet keys = insertRun.getGeneratedKeys()) {
+          keys.next();
+          runId = keys.getLong(1);
+        }
+      }
+
+      int chunkSize = Integer.parseInt(parameters.getString(ImportJobParameters.CHUNK_SIZE));
+      for (EntityType entityType : EntityType.values()) {
+        if (parameters.getParameter(entityType.toString()) == null) {
+          continue;
+        }
+        long dumpId;
+        try (PreparedStatement insertDump =
+            connection.prepareStatement(
+                """
+                insert into discogs_dump
+                    (etag, dump_date, entity_type, checksum_sha256, size_bytes, uri)
+                values (?, current_date, ?, ?, 1, ?)
+                on conflict (dump_date, entity_type, checksum_sha256)
+                do update set etag = excluded.etag
+                returning id
+                """)) {
+          insertDump.setString(1, "test-" + entityType);
+          insertDump.setString(2, entityType.toString());
+          insertDump.setString(3, String.valueOf(entityType.ordinal()).repeat(64));
+          insertDump.setString(4, "test/" + entityType + ".xml.gz");
+          try (ResultSet result = insertDump.executeQuery()) {
+            result.next();
+            dumpId = result.getLong(1);
+          }
+        }
+        try (PreparedStatement insertRunDump =
+            connection.prepareStatement(
+                """
+                insert into discogs_import_run_dump
+                    (import_run_id, entity_type, dump_id, chunk_size)
+                values (?, ?, ?, ?)
+                """)) {
+          insertRunDump.setLong(1, runId);
+          insertRunDump.setString(2, entityType.toString());
+          insertRunDump.setLong(3, dumpId);
+          insertRunDump.setInt(4, chunkSize);
+          insertRunDump.executeUpdate();
+        }
+      }
+      connection.commit();
+    }
+    return new JobParametersBuilder(parameters)
+        .addLong(ImportJobParameters.RUN_ID, runId)
+        .addString(ImportJobParameters.RESUMED, "false")
+        .toJobParameters();
+  }
+
+  private JobParameters coordinatedParameters(int chunkSize, EntityType... entityTypes) {
+    long sequence = TEST_MANIFEST_SEQUENCE.incrementAndGet();
+    LocalDate dumpDate = LocalDate.now();
+    List<ImportManifest.Dump> manifestDumps = new ArrayList<>(entityTypes.length);
+    JobParametersBuilder selected =
+        jobOperatorTestUtils
+            .getUniqueJobParametersBuilder()
+            .addString(ImportJobParameters.CHUNK_SIZE, Integer.toString(chunkSize))
+            .addString(ImportJobParameters.FORCE, Boolean.FALSE.toString())
+            .addString(ImportJobParameters.ALLOW_DOWNGRADE, Boolean.FALSE.toString());
+    for (EntityType entityType : entityTypes) {
+      String checksum = "%064x".formatted(sequence + entityType.ordinal());
+      manifestDumps.add(
+          new ImportManifest.Dump(entityType.toString(), dumpDate, checksum));
+      selected
+          .addString(entityType.toString(), entityType.toString())
+          .addString(ImportJobParameters.checksum(entityType), checksum)
+          .addString(ImportJobParameters.date(entityType), dumpDate.toString())
+          .addString(ImportJobParameters.etag(entityType), entityType.toString())
+          .addString(ImportJobParameters.size(entityType), "1024")
+          .addString(
+              ImportJobParameters.uri(entityType),
+              "test/" + entityType + ".xml.gz");
+    }
+    return selected
+        .addString(
+            ImportJobParameters.MANIFEST_SHA256,
+            ImportManifest.fingerprint(manifestDumps))
+        .toJobParameters();
+  }
+
+  private JobParameters withPreparation(
+      JobParameters parameters, ImportExecutionCoordinator.Preparation preparation) {
+    return new JobParametersBuilder(parameters)
+        .addLong(ImportJobParameters.RUN_ID, preparation.runId())
+        .addString(
+            ImportJobParameters.RESUMED,
+            Boolean.toString(preparation.resumedFromRunId() != null))
+        .toJobParameters();
+  }
+
+  private void createProgressFailureTrigger() throws Exception {
+    executeSql(
+        """
+        create or replace function reject_second_label_chunk()
+        returns trigger language plpgsql as $$
+        begin
+          if new.entity_type = 'label' and new.chunk_index = 1 then
+            raise exception 'rejected second label chunk';
+          end if;
+          return new;
+        end
+        $$
+        """,
+        """
+        create trigger reject_second_label_chunk
+        before insert on discogs_import_run_chunk
+        for each row execute function reject_second_label_chunk()
+        """);
+  }
+
+  private void dropProgressFailureTrigger() throws Exception {
+    executeSql(
+        "drop trigger if exists reject_second_label_chunk on discogs_import_run_chunk",
+        "drop function if exists reject_second_label_chunk()");
+  }
+
+  private void createCompletedChunkRewriteGuard() throws Exception {
+    executeSql(
+        """
+        create or replace function reject_completed_relation_rewrite()
+        returns trigger language plpgsql as $$
+        begin
+          raise exception 'completed relation chunk was rewritten';
+        end
+        $$
+        """,
+        """
+        create trigger reject_completed_artist_url_rewrite
+        before insert or update on artist_url
+        for each row when (new.artist_id = 1)
+        execute function reject_completed_relation_rewrite()
+        """,
+        """
+        create trigger reject_completed_label_url_rewrite
+        before insert or update on label_url
+        for each row when (new.label_id = 1)
+        execute function reject_completed_relation_rewrite()
+        """,
+        """
+        create trigger reject_completed_release_video_rewrite
+        before insert or update on release_item_video
+        for each row when (new.release_item_id = 1)
+        execute function reject_completed_relation_rewrite()
+        """);
+  }
+
+  private void dropCompletedChunkRewriteGuard() throws Exception {
+    executeSql(
+        "drop trigger if exists reject_completed_artist_url_rewrite on artist_url",
+        "drop trigger if exists reject_completed_label_url_rewrite on label_url",
+        "drop trigger if exists reject_completed_release_video_rewrite on release_item_video",
+        "drop function if exists reject_completed_relation_rewrite()");
+  }
+
+  private void createMasterMainReleaseFailureTrigger() throws Exception {
+    executeSql(
+        """
+        create or replace function reject_master_main_release_update()
+        returns trigger language plpgsql as $$
+        begin
+          raise exception 'rejected master main release update';
+        end
+        $$
+        """,
+        """
+        create trigger reject_master_main_release_update
+        before update of main_release_id on master
+        for each row
+        when (new.main_release_id is distinct from old.main_release_id)
+        execute function reject_master_main_release_update()
+        """);
+  }
+
+  private void dropMasterMainReleaseFailureTrigger() throws Exception {
+    executeSql(
+        "drop trigger if exists reject_master_main_release_update on master",
+        "drop function if exists reject_master_main_release_update()");
+  }
+
+  private void executeSql(String... statements) throws Exception {
+    try (Connection connection = dataSource.getConnection();
+        Statement statement = connection.createStatement()) {
+      for (String sql : statements) {
+        statement.execute(sql);
+      }
+    }
+  }
+
+  private long scalarLong(String sql, Object... parameters) throws Exception {
+    try (Connection connection = dataSource.getConnection();
+        PreparedStatement statement = connection.prepareStatement(sql)) {
+      for (int index = 0; index < parameters.length; index++) {
+        statement.setObject(index + 1, parameters[index]);
+      }
+      try (ResultSet result = statement.executeQuery()) {
+        result.next();
+        return result.getLong(1);
+      }
+    }
   }
 
   private String normalizedBusinessState() throws Exception {

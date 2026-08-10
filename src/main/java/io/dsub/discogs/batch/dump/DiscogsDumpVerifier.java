@@ -86,8 +86,8 @@ public class DiscogsDumpVerifier {
       throw new FileException("no SHA-256 entries found in " + checksumUrl);
     }
     Map<String, String> immutable = Collections.unmodifiableMap(parsed);
-    Map<String, String> existing = checksumCache.putIfAbsent(checksumUri, immutable);
-    return existing == null ? immutable : existing;
+    checksumCache.put(checksumUri, immutable);
+    return immutable;
   }
 
   protected String getChecksumSource(URI checksumUri) throws FileException {

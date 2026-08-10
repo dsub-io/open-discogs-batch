@@ -128,7 +128,7 @@ class ProgressBarStaxEventItemReaderUnitTest {
     // when
     ArtistSubItemsXML item = reader.read();
     while (item != null) {
-      Objects.requireNonNull(processor.process(item)).forEach(System.out::println);
+      Objects.requireNonNull(processor.process(item)).records().forEach(System.out::println);
       item = reader.read();
     }
     reader.close();

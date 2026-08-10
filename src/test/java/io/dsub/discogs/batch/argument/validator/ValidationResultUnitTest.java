@@ -68,6 +68,9 @@ class ValidationResultUnitTest {
     assertThat(this.validationResult.isValid()).isTrue();
     assertThat(this.validationResult.getIssues()).isNotNull();
 
+    this.validationResult = new DefaultValidationResult(new String[0]);
+    assertThat(this.validationResult.isValid()).isTrue();
+
     String nullString = null;
     this.validationResult = new DefaultValidationResult(nullString);
     assertThat(this.validationResult.isValid()).isTrue();
@@ -103,6 +106,15 @@ class ValidationResultUnitTest {
 
     ValidationResult other = validationResult.withIssues(s);
     assertThat(other.getIssues().size()).isEqualTo(1);
+    assertThat(other.getIssues()).isEqualTo(validationResult.getIssues());
+
+    other = validationResult.withIssue(null);
+    assertThat(other.getIssues()).isEqualTo(validationResult.getIssues());
+
+    other = validationResult.withIssues();
+    assertThat(other.getIssues()).isEqualTo(validationResult.getIssues());
+
+    other = validationResult.withIssues((String[]) null);
     assertThat(other.getIssues()).isEqualTo(validationResult.getIssues());
 
     List<String> list = null;

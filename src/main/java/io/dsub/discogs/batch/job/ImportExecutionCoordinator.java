@@ -10,6 +10,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Types;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -18,17 +19,17 @@ import javax.sql.DataSource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.job.parameters.JobParameters;
+import org.springframework.batch.core.job.parameters.JobParameter;
 import org.springframework.stereotype.Component;
 
-/**
- * Owns the database-wide import admission, history, and entity advisory locks for one process.
- */
+/** Owns database-wide import admission, recovery selection, and entity advisory locks. */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class ImportExecutionCoordinator {
 
-  private static final String PROCESSOR = "open-discogs-batch";
+  static final String PROCESSOR = "open-discogs-batch";
+  static final String DEVELOPMENT_VERSION = "development";
 
   private final DataSource dataSource;
 
@@ -43,6 +44,7 @@ public class ImportExecutionCoordinator {
     }
 
     String manifestSha256 = requiredParameter(parameters, ImportJobParameters.MANIFEST_SHA256);
+    int chunkSize = positiveIntegerParameter(parameters, ImportJobParameters.CHUNK_SIZE);
     boolean force = booleanParameter(parameters, ImportJobParameters.FORCE);
     boolean allowDowngrade =
         booleanParameter(parameters, ImportJobParameters.ALLOW_DOWNGRADE);
@@ -50,11 +52,12 @@ public class ImportExecutionCoordinator {
     List<String> entityTypes =
         ImportExecution.orderedEntityTypes(
             dumps.stream().map(PlannedDump::entityType).toList());
+    List<String> lockEntityTypes = ImportExecution.requiredLockEntityTypes(entityTypes);
 
     try {
       lockConnection = dataSource.getConnection();
       lockConnection.setAutoCommit(true);
-      acquireEntityLocks(entityTypes);
+      acquireEntityLocks(lockEntityTypes);
       lockConnection.setAutoCommit(false);
 
       markAbandonedRuns(entityTypes);
@@ -64,7 +67,7 @@ public class ImportExecutionCoordinator {
       if (successfulRunId != null && !force) {
         lockConnection.commit();
         log.info(
-            "manifest {} already succeeded as import run {}. skipping.",
+            "manifest {} is still current as import run {}. skipping.",
             manifestSha256,
             successfulRunId);
         releaseEntityLocks();
@@ -75,18 +78,39 @@ public class ImportExecutionCoordinator {
       for (PlannedDump dump : dumps) {
         dumpIds.add(findOrInsertDump(dump));
       }
+
+      String version = processorVersion();
+      Long resumedFromRunId =
+          force
+              ? null
+              : findResumableRun(
+                  manifestSha256, version, chunkSize, dumps.size());
       activeRunId =
-          insertRun(manifestSha256, force, allowDowngrade, processorVersion());
+          insertRun(
+              manifestSha256,
+              force,
+              allowDowngrade,
+              version,
+              resumedFromRunId);
       for (int index = 0; index < dumps.size(); index++) {
-        insertRunDump(activeRunId, dumps.get(index).entityType(), dumpIds.get(index));
+        insertRunDump(
+            activeRunId,
+            dumps.get(index).entityType(),
+            dumpIds.get(index),
+            chunkSize);
       }
+      if (resumedFromRunId != null) {
+        transferResumeProgress(resumedFromRunId, activeRunId, dumps.size());
+      }
+
       lockConnection.commit();
       log.info(
-          "started import run {} for manifest {} and entities {}",
+          "started import run {} for manifest {}, entities {}, resumed-from {}",
           activeRunId,
           manifestSha256,
-          entityTypes);
-      return Preparation.started(manifestSha256, activeRunId);
+          entityTypes,
+          resumedFromRunId);
+      return Preparation.started(manifestSha256, activeRunId, resumedFromRunId);
     } catch (ImportExecutionException exception) {
       rollbackAndRelease();
       throw exception;
@@ -102,32 +126,31 @@ public class ImportExecutionCoordinator {
       return;
     }
 
+    ImportExecutionException incompleteRun = null;
     try {
       lockConnection.setAutoCommit(false);
-      try (PreparedStatement statement =
-          lockConnection.prepareStatement(
-              """
-              update discogs_import_run
-              set status = ?,
-                  completed_at = now(),
-                  failure_message = ?
-              where id = ?
-                and status = 'running'
-              """)) {
-        statement.setString(1, success ? "success" : "failed");
-        if (success || failure == null) {
-          statement.setNull(2, java.sql.Types.VARCHAR);
-        } else {
-          statement.setString(2, failure.toString());
-        }
-        statement.setLong(3, activeRunId);
-        if (statement.executeUpdate() != 1) {
-          throw new ImportExecutionException(
-              "active import run was not in running state: " + activeRunId);
+      if (success) {
+        long incompleteEntities = countIncompleteEntities(activeRunId);
+        if (incompleteEntities != 0) {
+          incompleteRun =
+              new ImportExecutionException(
+                  "import run " + activeRunId + " has " + incompleteEntities
+                      + " incomplete entities");
+          success = false;
+          failure = incompleteRun;
         }
       }
+
+      updateRunStatus(activeRunId, success, failure);
+      if (success) {
+        pruneSupersededFailedProgress();
+        deleteRunChunks(activeRunId);
+      }
       lockConnection.commit();
-      log.info("completed import run {} with status {}", activeRunId, success ? "success" : "failed");
+      log.info(
+          "completed import run {} with status {}",
+          activeRunId,
+          success ? "success" : "failed");
     } catch (ImportExecutionException exception) {
       rollbackQuietly();
       throw exception;
@@ -137,6 +160,9 @@ public class ImportExecutionCoordinator {
     } finally {
       activeRunId = null;
       releaseEntityLocks();
+    }
+    if (incompleteRun != null) {
+      throw incompleteRun;
     }
   }
 
@@ -170,11 +196,29 @@ public class ImportExecutionCoordinator {
 
   private String requiredParameter(JobParameters parameters, String key)
       throws ImportExecutionException {
-    String value = parameters.getString(key);
-    if (value == null || value.isBlank()) {
+    JobParameter<?> parameter = parameters.getParameter(key);
+    if (parameter == null) {
+      throw new ImportExecutionException("missing import job parameter: " + key);
+    }
+    String value = parameter.value().toString();
+    if (value.isBlank()) {
       throw new ImportExecutionException("missing import job parameter: " + key);
     }
     return value;
+  }
+
+  private int positiveIntegerParameter(JobParameters parameters, String key)
+      throws ImportExecutionException {
+    try {
+      long value = Long.parseLong(requiredParameter(parameters, key));
+      if (value <= 0 || value > Integer.MAX_VALUE) {
+        throw new NumberFormatException("out of range");
+      }
+      return Math.toIntExact(value);
+    } catch (RuntimeException exception) {
+      throw new ImportExecutionException(
+          "import job parameter " + key + " must be a positive integer", exception);
+    }
   }
 
   private boolean booleanParameter(JobParameters parameters, String key) {
@@ -205,23 +249,9 @@ public class ImportExecutionCoordinator {
   }
 
   private void markAbandonedRuns(List<String> entityTypes) throws SQLException {
-    Array requestedTypes =
-        lockConnection.createArrayOf("varchar", entityTypes.toArray());
+    Array requestedTypes = lockConnection.createArrayOf("varchar", entityTypes.toArray());
     try (PreparedStatement statement =
-            lockConnection.prepareStatement(
-                """
-                update discogs_import_run import_run
-                set status = 'failed',
-                    completed_at = now(),
-                    failure_message = 'recovered after entity advisory locks were released'
-                where import_run.status = 'running'
-                  and exists (
-                    select 1
-                    from discogs_import_run_dump run_dump
-                    where run_dump.import_run_id = import_run.id
-                      and run_dump.entity_type = any (?)
-                  )
-                """)) {
+        lockConnection.prepareStatement(ImportExecutionQueries.MARK_ABANDONED)) {
       statement.setArray(1, requestedTypes);
       statement.executeUpdate();
     } finally {
@@ -235,12 +265,7 @@ public class ImportExecutionCoordinator {
       return;
     }
     try (PreparedStatement statement =
-        lockConnection.prepareStatement(
-            """
-            select dump_date
-            from discogs_import_checkpoint
-            where entity_type = ?
-            """)) {
+        lockConnection.prepareStatement(ImportExecutionQueries.FIND_CURRENT_CHECKPOINT_DATE)) {
       for (PlannedDump dump : dumps) {
         statement.setString(1, dump.entityType());
         try (ResultSet result = statement.executeQuery()) {
@@ -263,15 +288,7 @@ public class ImportExecutionCoordinator {
 
   private Long findSuccessfulRun(String manifestSha256) throws SQLException {
     try (PreparedStatement statement =
-        lockConnection.prepareStatement(
-            """
-            select id
-            from discogs_import_run
-            where manifest_sha256 = ?
-              and status = 'success'
-            order by completed_at desc, id desc
-            limit 1
-            """)) {
+        lockConnection.prepareStatement(ImportExecutionQueries.FIND_CURRENT_SUCCESS)) {
       statement.setString(1, manifestSha256);
       try (ResultSet result = statement.executeQuery()) {
         return result.next() ? result.getLong(1) : null;
@@ -279,16 +296,29 @@ public class ImportExecutionCoordinator {
     }
   }
 
-  private long findOrInsertDump(PlannedDump dump) throws SQLException {
+  private Long findResumableRun(
+      String manifestSha256,
+      String version,
+      int chunkSize,
+      int entityCount)
+      throws SQLException {
     try (PreparedStatement statement =
-        lockConnection.prepareStatement(
-            """
-            insert into discogs_dump
-                (etag, dump_date, entity_type, checksum_sha256, size_bytes, uri)
-            values (?, ?, ?, ?, ?, ?)
-            on conflict (dump_date, entity_type, checksum_sha256) do nothing
-            returning id
-            """)) {
+        lockConnection.prepareStatement(ImportExecutionQueries.FIND_RESUMABLE_RUN)) {
+      statement.setString(1, manifestSha256);
+      statement.setString(2, PROCESSOR);
+      statement.setString(3, version);
+      statement.setInt(4, entityCount);
+      statement.setInt(5, chunkSize);
+      try (ResultSet result = statement.executeQuery()) {
+        return result.next() ? result.getLong(1) : null;
+      }
+    }
+  }
+
+  private long findOrInsertDump(PlannedDump dump) throws SQLException {
+    Long insertedId;
+    try (PreparedStatement statement =
+        lockConnection.prepareStatement(ImportExecutionQueries.INSERT_DUMP)) {
       statement.setString(1, dump.etag());
       statement.setDate(2, Date.valueOf(dump.dumpDate()));
       statement.setString(3, dump.entityType());
@@ -296,20 +326,14 @@ public class ImportExecutionCoordinator {
       statement.setLong(5, dump.sizeBytes());
       statement.setString(6, dump.uri());
       try (ResultSet result = statement.executeQuery()) {
-        if (result.next()) {
-          return result.getLong(1);
-        }
+        insertedId = result.next() ? result.getLong(1) : null;
       }
     }
+    if (insertedId != null) {
+      return insertedId;
+    }
     try (PreparedStatement statement =
-        lockConnection.prepareStatement(
-            """
-            select id
-            from discogs_dump
-            where dump_date = ?
-              and entity_type = ?
-              and checksum_sha256 = ?
-            """)) {
+        lockConnection.prepareStatement(ImportExecutionQueries.FIND_DUMP)) {
       statement.setDate(1, Date.valueOf(dump.dumpDate()));
       statement.setString(2, dump.entityType());
       statement.setString(3, dump.checksumSha256());
@@ -326,22 +350,22 @@ public class ImportExecutionCoordinator {
       String manifestSha256,
       boolean force,
       boolean allowDowngrade,
-      String version)
+      String version,
+      Long resumedFromRunId)
       throws SQLException {
     try (PreparedStatement statement =
         lockConnection.prepareStatement(
-            """
-            insert into discogs_import_run
-                (manifest_sha256, status, force_requested,
-                 allow_downgrade_requested, processor, processor_version)
-            values (?, 'running', ?, ?, ?, ?)
-            """,
-            Statement.RETURN_GENERATED_KEYS)) {
+            ImportExecutionQueries.INSERT_RUN, Statement.RETURN_GENERATED_KEYS)) {
       statement.setString(1, manifestSha256);
       statement.setBoolean(2, force);
       statement.setBoolean(3, allowDowngrade);
       statement.setString(4, PROCESSOR);
       statement.setString(5, version);
+      if (resumedFromRunId == null) {
+        statement.setNull(6, Types.BIGINT);
+      } else {
+        statement.setLong(6, resumedFromRunId);
+      }
       statement.executeUpdate();
       try (ResultSet keys = statement.getGeneratedKeys()) {
         if (!keys.next()) {
@@ -352,25 +376,101 @@ public class ImportExecutionCoordinator {
     }
   }
 
-  private void insertRunDump(long runId, String entityType, long dumpId)
+  private void insertRunDump(
+      long runId, String entityType, long dumpId, int chunkSize)
       throws SQLException {
     try (PreparedStatement statement =
-        lockConnection.prepareStatement(
-            """
-            insert into discogs_import_run_dump
-                (import_run_id, entity_type, dump_id)
-            values (?, ?, ?)
-            """)) {
+        lockConnection.prepareStatement(ImportExecutionQueries.INSERT_RUN_DUMP)) {
       statement.setLong(1, runId);
       statement.setString(2, entityType);
       statement.setLong(3, dumpId);
+      statement.setInt(4, chunkSize);
       statement.executeUpdate();
+    }
+  }
+
+  private void transferResumeProgress(
+      long sourceRunId, long targetRunId, int expectedEntityCount)
+      throws SQLException, ImportExecutionException {
+    try (PreparedStatement statement =
+        lockConnection.prepareStatement(ImportExecutionQueries.COPY_RESUME_SUMMARIES)) {
+      statement.setLong(1, targetRunId);
+      statement.setLong(2, sourceRunId);
+      int copied = statement.executeUpdate();
+      if (copied != expectedEntityCount) {
+        throw new ImportExecutionException(
+            "copied " + copied + " of " + expectedEntityCount
+                + " entity summaries from import run " + sourceRunId);
+      }
+    }
+
+    int copiedChunks;
+    try (PreparedStatement statement =
+        lockConnection.prepareStatement(ImportExecutionQueries.COPY_RESUME_CHUNKS)) {
+      statement.setLong(1, targetRunId);
+      statement.setLong(2, sourceRunId);
+      copiedChunks = statement.executeUpdate();
+    }
+    int deletedChunks = deleteRunChunks(sourceRunId);
+    if (copiedChunks != deletedChunks) {
+      throw new ImportExecutionException(
+          "copied " + copiedChunks + " but pruned " + deletedChunks
+              + " chunks from import run " + sourceRunId);
+    }
+  }
+
+  private long countIncompleteEntities(long runId) throws SQLException {
+    try (PreparedStatement statement =
+        lockConnection.prepareStatement(ImportExecutionQueries.COUNT_INCOMPLETE_ENTITIES)) {
+      statement.setLong(1, runId);
+      try (ResultSet result = statement.executeQuery()) {
+        result.next();
+        return result.getLong(1);
+      }
+    }
+  }
+
+  private void updateRunStatus(long runId, boolean success, Throwable failure)
+      throws SQLException, ImportExecutionException {
+    try (PreparedStatement statement =
+        lockConnection.prepareStatement(ImportExecutionQueries.COMPLETE_RUN)) {
+      statement.setString(1, success ? "success" : "failed");
+      if (success || failure == null) {
+        statement.setNull(2, Types.VARCHAR);
+      } else {
+        statement.setString(2, failure.toString());
+      }
+      statement.setLong(3, runId);
+      if (statement.executeUpdate() != 1) {
+        throw new ImportExecutionException(
+            "active import run was not in running state: " + runId);
+      }
+    }
+  }
+
+  private void pruneSupersededFailedProgress() throws SQLException {
+    try (PreparedStatement statement =
+        lockConnection.prepareStatement(
+            ImportExecutionQueries.PRUNE_SUPERSEDED_FAILED_PROGRESS)) {
+      statement.executeUpdate();
+    }
+  }
+
+  private int deleteRunChunks(long runId) throws SQLException {
+    try (PreparedStatement statement =
+        lockConnection.prepareStatement(ImportExecutionQueries.DELETE_RUN_CHUNKS)) {
+      statement.setLong(1, runId);
+      return statement.executeUpdate();
     }
   }
 
   private String processorVersion() {
     String version = ImportExecutionCoordinator.class.getPackage().getImplementationVersion();
-    return version == null || version.isBlank() ? "development" : version;
+    return resolveProcessorVersion(version);
+  }
+
+  String resolveProcessorVersion(String version) {
+    return version == null ? DEVELOPMENT_VERSION : version;
   }
 
   private void rollbackAndRelease() {
@@ -384,7 +484,9 @@ public class ImportExecutionCoordinator {
       return;
     }
     try {
-      lockConnection.rollback();
+      if (!lockConnection.getAutoCommit()) {
+        lockConnection.rollback();
+      }
     } catch (SQLException exception) {
       log.warn("failed to roll back import execution", exception);
     }
@@ -417,14 +519,23 @@ public class ImportExecutionCoordinator {
   }
 
   public record Preparation(
-      boolean skipped, String manifestSha256, Long runId, Long priorSuccessfulRunId) {
+      boolean skipped,
+      String manifestSha256,
+      Long runId,
+      Long priorSuccessfulRunId,
+      Long resumedFromRunId) {
 
     public static Preparation skipped(String manifestSha256, long successfulRunId) {
-      return new Preparation(true, manifestSha256, null, successfulRunId);
+      return new Preparation(true, manifestSha256, null, successfulRunId, null);
+    }
+
+    public static Preparation started(
+        String manifestSha256, long runId, Long resumedFromRunId) {
+      return new Preparation(false, manifestSha256, runId, null, resumedFromRunId);
     }
 
     public static Preparation started(String manifestSha256, long runId) {
-      return new Preparation(false, manifestSha256, runId, null);
+      return started(manifestSha256, runId, null);
     }
   }
 

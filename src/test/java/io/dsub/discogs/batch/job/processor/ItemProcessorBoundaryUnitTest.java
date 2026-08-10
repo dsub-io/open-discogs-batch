@@ -1,0 +1,320 @@
+package io.dsub.discogs.batch.job.processor;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.nullable;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import io.dsub.discogs.batch.domain.artist.ArtistSubItemsXML;
+import io.dsub.discogs.batch.domain.artist.ArtistXML;
+import io.dsub.discogs.batch.domain.label.LabelSubItemsXML;
+import io.dsub.discogs.batch.domain.label.LabelXML;
+import io.dsub.discogs.batch.domain.master.MasterMainReleaseXML;
+import io.dsub.discogs.batch.domain.master.MasterSubItemsXML;
+import io.dsub.discogs.batch.domain.master.MasterXML;
+import io.dsub.discogs.batch.domain.release.ReleaseItemSubItemsXML;
+import io.dsub.discogs.batch.domain.release.ReleaseItemXML;
+import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
+import java.util.List;
+import org.junit.jupiter.api.Test;
+
+class ItemProcessorBoundaryUnitTest {
+
+  @Test
+  void coreProcessorsRejectMissingIdsAndNormalizeValidRecords() throws Exception {
+    ArtistCoreProcessor artistProcessor = new ArtistCoreProcessor();
+    LabelCoreProcessor labelProcessor = new LabelCoreProcessor();
+    MasterCoreProcessor masterProcessor = new MasterCoreProcessor();
+
+    ArtistXML artist = new ArtistXML();
+    assertThat(artistProcessor.process(artist)).isNull();
+    artist.setId(0);
+    assertThat(artistProcessor.process(artist)).isNull();
+    artist.setId(1);
+    artist.setName(" Artist ");
+    assertThat(artistProcessor.process(artist).getName()).isEqualTo("Artist");
+
+    LabelXML label = new LabelXML();
+    assertThat(labelProcessor.process(label)).isNull();
+    label.setId(-1);
+    assertThat(labelProcessor.process(label)).isNull();
+    label.setId(1);
+    label.setName(" Label ");
+    assertThat(labelProcessor.process(label).getName()).isEqualTo("Label");
+
+    MasterXML master = new MasterXML();
+    assertThat(masterProcessor.process(master)).isNull();
+    master.setId(0);
+    assertThat(masterProcessor.process(master)).isNull();
+    master.setId(1);
+    master.setTitle(" Master ");
+    assertThat(masterProcessor.process(master).getTitle()).isEqualTo("Master");
+  }
+
+  @Test
+  void releaseCoreProcessorHandlesEveryMasterReferenceState() throws Exception {
+    EntityIdRegistry registry = registry();
+    ReleaseItemCoreProcessor processor = new ReleaseItemCoreProcessor(registry);
+    ReleaseItemXML release = new ReleaseItemXML();
+
+    assertThat(processor.process(release)).isNull();
+    release.setId(0);
+    assertThat(processor.process(release)).isNull();
+
+    release.setId(10);
+    release.setTitle(" Release ");
+    release.setReleaseDate("2026-07-01");
+    assertThat(processor.process(release))
+        .satisfies(
+            record -> {
+              assertThat(record.getTitle()).isEqualTo("Release");
+              assertThat(record.getMasterId()).isNull();
+              assertThat(record.getIsMaster()).isFalse();
+            });
+
+    ReleaseItemXML.Master master = new ReleaseItemXML.Master();
+    master.setMaster(true);
+    release.setMaster(master);
+    assertThat(processor.process(release).getMasterId()).isNull();
+    master.setMasterId(2);
+    assertThat(processor.process(release).getMasterId()).isNull();
+    master.setMasterId(1);
+    assertThat(processor.process(release))
+        .satisfies(
+            record -> {
+              assertThat(record.getMasterId()).isEqualTo(1);
+              assertThat(record.getIsMaster()).isTrue();
+            });
+  }
+
+  @Test
+  void masterMainReleaseProcessorRequiresBothExistingSidesAndMainFlag() throws Exception {
+    MasterMainReleaseItemProcessor processor = new MasterMainReleaseItemProcessor(registry());
+    MasterMainReleaseXML item = new MasterMainReleaseXML();
+
+    assertThat(processor.process(null)).isNull();
+    assertThat(processor.process(item)).isNull();
+    item.setReleaseId(1);
+    assertThat(processor.process(item)).isNull();
+
+    MasterMainReleaseXML.Master master = new MasterMainReleaseXML.Master();
+    item.setMaster(master);
+    assertThat(processor.process(item)).isNull();
+    master.setMasterId(1);
+    assertThat(processor.process(item)).isNull();
+    master.setMainRelease(true);
+    master.setMasterId(2);
+    assertThat(processor.process(item)).isNull();
+    master.setMasterId(1);
+    item.setReleaseId(2);
+    assertThat(processor.process(item)).isNull();
+    item.setReleaseId(1);
+    assertThat(processor.process(item))
+        .satisfies(
+            record -> {
+              assertThat(record.getId()).isEqualTo(1);
+              assertThat(record.getMainReleaseId()).isEqualTo(1);
+            });
+  }
+
+  @Test
+  void artistRelationsFilterMissingIdsBlankValuesNullsAndDuplicates() {
+    ArtistSubItemsProcessor processor = new ArtistSubItemsProcessor(registry());
+    ArtistSubItemsXML item = new ArtistSubItemsXML();
+
+    assertThat(processor.process(item)).isNull();
+    item.setId(0);
+    assertThat(processor.process(item)).isNull();
+    item.setId(1);
+    assertThat(processor.process(item).records()).isEmpty();
+
+    item.setAliases(List.of());
+    item.setGroups(List.of());
+    item.setMembers(List.of());
+    item.setNameVariations(List.of());
+    item.setUrls(List.of());
+    assertThat(processor.process(item).records()).isEmpty();
+
+    ArtistSubItemsXML.ArtistAliasXML alias = new ArtistSubItemsXML.ArtistAliasXML();
+    alias.setAliasId(1);
+    ArtistSubItemsXML.ArtistAliasXML missingAlias = new ArtistSubItemsXML.ArtistAliasXML();
+    missingAlias.setAliasId(2);
+    ArtistSubItemsXML.ArtistGroupXML group = new ArtistSubItemsXML.ArtistGroupXML();
+    group.setGroupId(1);
+    ArtistSubItemsXML.ArtistMemberXML member = new ArtistSubItemsXML.ArtistMemberXML();
+    member.setMemberId(1);
+    item.setAliases(listWithNull(alias, missingAlias, alias));
+    item.setGroups(listWithNull(group, group));
+    item.setMembers(listWithNull(member, member));
+    item.setNameVariations(listWithNull(" Name ", " ", "Name"));
+    item.setUrls(listWithNull(" https://example.test ", "", "https://example.test"));
+
+    assertThat(processor.process(item).records()).hasSize(5);
+  }
+
+  @Test
+  void labelRelationsFilterMissingLabelsBlankUrlsNullsAndDuplicates() {
+    LabelSubItemsProcessor processor = new LabelSubItemsProcessor(registry());
+    LabelSubItemsXML item = new LabelSubItemsXML();
+
+    assertThat(processor.process(item)).isNull();
+    item.setId(-1);
+    assertThat(processor.process(item)).isNull();
+    item.setId(1);
+    item.setLabelSubLabels(null);
+    item.setUrls(null);
+    assertThat(processor.process(item).records()).isEmpty();
+
+    LabelSubItemsXML.LabelSubLabelXML existing = new LabelSubItemsXML.LabelSubLabelXML();
+    existing.setSubLabelId(1);
+    LabelSubItemsXML.LabelSubLabelXML missing = new LabelSubItemsXML.LabelSubLabelXML();
+    missing.setSubLabelId(2);
+    item.setLabelSubLabels(listWithNull(existing, missing, existing));
+    item.setUrls(listWithNull(" https://example.test ", " ", "https://example.test"));
+
+    assertThat(processor.process(item).records()).hasSize(2);
+  }
+
+  @Test
+  void masterRelationsCoverEmptyAndPopulatedReferenceCollections() {
+    MasterSubItemsProcessor processor = new MasterSubItemsProcessor(registry());
+    MasterSubItemsXML item = new MasterSubItemsXML();
+
+    assertThat(processor.process(item)).isNull();
+    item.setId(0);
+    assertThat(processor.process(item)).isNull();
+    item.setId(1);
+    assertThat(processor.process(item).records()).isEmpty();
+    item.setMasterArtists(List.of());
+    item.setMasterVideos(List.of());
+    item.setGenres(List.of());
+    item.setStyles(List.of());
+    assertThat(processor.process(item).records()).isEmpty();
+
+    MasterSubItemsXML.MasterArtistXML artist = new MasterSubItemsXML.MasterArtistXML();
+    artist.setArtistId(1);
+    MasterSubItemsXML.MasterArtistXML missingArtist = new MasterSubItemsXML.MasterArtistXML();
+    missingArtist.setArtistId(2);
+    MasterSubItemsXML.MasterVideoXML completeVideo = video("Title", "Description", "https://one");
+    MasterSubItemsXML.MasterVideoXML partialVideo = video(null, null, "https://two");
+    MasterSubItemsXML.MasterVideoXML blankVideo = video(null, null, " ");
+    item.setMasterArtists(listWithNull(artist, missingArtist, artist));
+    item.setMasterVideos(listWithNull(completeVideo, partialVideo, blankVideo));
+    item.setGenres(listWithNull(" Rock ", "Missing", "Rock"));
+    item.setStyles(listWithNull(" House ", "Missing", "House"));
+
+    assertThat(processor.process(item).records()).hasSize(5);
+  }
+
+  @Test
+  void releaseRelationsCoverEveryCollectionAndReferenceFilter() {
+    ReleaseItemSubItemsProcessor processor = new ReleaseItemSubItemsProcessor(registry());
+    ReleaseItemSubItemsXML item = new ReleaseItemSubItemsXML();
+
+    assertThat(processor.process(item)).isNull();
+    item.setId(0);
+    assertThat(processor.process(item)).isNull();
+    item.setId(1);
+    assertThat(processor.process(item).records()).isEmpty();
+    setEmptyReleaseRelations(item);
+    assertThat(processor.process(item).records()).isEmpty();
+
+    ReleaseItemSubItemsXML.ReleaseAlbumArtist albumArtist =
+        new ReleaseItemSubItemsXML.ReleaseAlbumArtist();
+    albumArtist.setArtistId(1);
+    ReleaseItemSubItemsXML.ReleaseAlbumArtist invalidAlbumArtist =
+        new ReleaseItemSubItemsXML.ReleaseAlbumArtist();
+    invalidAlbumArtist.setArtistId(0);
+    ReleaseItemSubItemsXML.ReleaseAlbumArtist nullAlbumArtist =
+        new ReleaseItemSubItemsXML.ReleaseAlbumArtist();
+    ReleaseItemSubItemsXML.ReleaseCreditedArtist creditedArtist =
+        new ReleaseItemSubItemsXML.ReleaseCreditedArtist();
+    creditedArtist.setArtistId(1);
+    creditedArtist.setRole("Producer");
+    ReleaseItemSubItemsXML.ReleaseCreditedArtist missingCreditedArtist =
+        new ReleaseItemSubItemsXML.ReleaseCreditedArtist();
+    missingCreditedArtist.setArtistId(2);
+    ReleaseItemSubItemsXML.LabelItemRelease label =
+        new ReleaseItemSubItemsXML.LabelItemRelease();
+    label.setLabelId(1);
+    ReleaseItemSubItemsXML.LabelItemRelease invalidLabel =
+        new ReleaseItemSubItemsXML.LabelItemRelease();
+    invalidLabel.setLabelId(null);
+    ReleaseItemSubItemsXML.LabelItemRelease zeroLabel =
+        new ReleaseItemSubItemsXML.LabelItemRelease();
+    zeroLabel.setLabelId(0);
+    ReleaseItemSubItemsXML.ReleaseWork company = new ReleaseItemSubItemsXML.ReleaseWork();
+    company.setId(1);
+    company.setWork("Pressed By");
+    ReleaseItemSubItemsXML.ReleaseWork missingCompany = new ReleaseItemSubItemsXML.ReleaseWork();
+    missingCompany.setId(2);
+    ReleaseItemSubItemsXML.ReleaseFormat format = new ReleaseItemSubItemsXML.ReleaseFormat();
+    format.setName("Vinyl");
+    format.setDescriptions(listWithNull(" LP ", " "));
+    ReleaseItemSubItemsXML.ReleaseIdentifier identifier =
+        new ReleaseItemSubItemsXML.ReleaseIdentifier();
+    identifier.setType("Barcode");
+    identifier.setValue("1");
+    ReleaseItemSubItemsXML.ReleaseTrack track = new ReleaseItemSubItemsXML.ReleaseTrack();
+    track.setPosition("A1");
+    track.setTitle("Track");
+    ReleaseItemSubItemsXML.ReleaseVideo video = new ReleaseItemSubItemsXML.ReleaseVideo();
+    video.setUrl("https://video");
+    ReleaseItemSubItemsXML.ReleaseVideo invalidVideo = new ReleaseItemSubItemsXML.ReleaseVideo();
+    invalidVideo.setUrl(null);
+    item.setReleaseAlbumArtists(
+        listWithNull(albumArtist, invalidAlbumArtist, nullAlbumArtist, albumArtist));
+    item.setReleaseCreditedArtists(
+        listWithNull(creditedArtist, missingCreditedArtist, creditedArtist));
+    item.setLabelReleaseLabels(listWithNull(label, invalidLabel, zeroLabel, label));
+    item.setCompanies(listWithNull(company, missingCompany, company));
+    item.setReleaseFormats(listWithNull(format, format));
+    item.setReleaseIdentifiers(listWithNull(identifier, identifier));
+    item.setReleaseTracks(listWithNull(track, track));
+    item.setReleaseVideos(listWithNull(video, invalidVideo, video));
+    item.setGenres(listWithNull(" Rock ", " ", "Missing", "Rock"));
+    item.setStyles(listWithNull(" House ", " ", "Missing", "House"));
+
+    assertThat(processor.process(item).records()).hasSize(10);
+  }
+
+  private EntityIdRegistry registry() {
+    EntityIdRegistry registry = mock(EntityIdRegistry.class);
+    when(registry.exists(any(EntityIdRegistry.Type.class), nullable(Integer.class)))
+        .thenAnswer(invocation -> Integer.valueOf(1).equals(invocation.getArgument(1)));
+    when(registry.exists(any(EntityIdRegistry.Type.class), nullable(String.class)))
+        .thenAnswer(
+            invocation -> {
+              String value = invocation.getArgument(1);
+              return "Rock".equals(value) || "House".equals(value);
+            });
+    return registry;
+  }
+
+  @SafeVarargs
+  private <T> List<T> listWithNull(T... values) {
+    return new java.util.ArrayList<>(java.util.Arrays.asList(values));
+  }
+
+  private MasterSubItemsXML.MasterVideoXML video(String title, String description, String url) {
+    MasterSubItemsXML.MasterVideoXML video = new MasterSubItemsXML.MasterVideoXML();
+    video.setTitle(title);
+    video.setDescription(description);
+    video.setUrl(url);
+    return video;
+  }
+
+  private void setEmptyReleaseRelations(ReleaseItemSubItemsXML item) {
+    item.setReleaseAlbumArtists(List.of());
+    item.setCompanies(List.of());
+    item.setReleaseCreditedArtists(List.of());
+    item.setReleaseFormats(List.of());
+    item.setGenres(List.of());
+    item.setStyles(List.of());
+    item.setReleaseIdentifiers(List.of());
+    item.setLabelReleaseLabels(List.of());
+    item.setReleaseTracks(List.of());
+    item.setReleaseVideos(List.of());
+  }
+}

@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -15,10 +16,12 @@ import ch.qos.logback.classic.Level;
 import io.dsub.discogs.batch.dump.DiscogsDump;
 import io.dsub.discogs.batch.dump.DiscogsDumpVerifier;
 import io.dsub.discogs.batch.exception.FileException;
+import io.dsub.discogs.batch.exception.FileDeleteException;
 import io.dsub.discogs.batch.testutil.LogSpy;
 import io.dsub.discogs.batch.util.FileUtil;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ByteArrayInputStream;
 import java.nio.file.Path;
 import lombok.extern.slf4j.Slf4j;
 import net.bytebuddy.utility.RandomString;
@@ -199,6 +202,82 @@ class FileFetchTaskletUnitTest {
     verify(fileUtil).deleteFile(dump.getFileName());
     verify(stepContribution).setExitStatus(ExitStatus.FAILED);
     verify(chunkContext).setComplete();
+  }
+
+  @Test
+  void sizeLookupFailureConcludesWithoutOpeningTheDump() throws Exception {
+    doThrow(new FileException("size failure")).when(fileUtil).getSize(dumpFileName);
+
+    assertThat(fileFetchTasklet.execute(stepContribution, chunkContext))
+        .isEqualTo(RepeatStatus.FINISHED);
+
+    verify(stepContribution).setExitStatus(ExitStatus.FAILED);
+    verify(chunkContext).setComplete();
+    verify(dump, never()).getInputStream();
+  }
+
+  @Test
+  void existingFileVerificationFailureConcludesWithoutDeletingIt() throws Exception {
+    doReturn(10L).when(fileUtil).getSize(dumpFileName);
+    doThrow(new FileException("verification failure"))
+        .when(dumpVerifier)
+        .isValid(dump, dumpPath);
+
+    fileFetchTasklet.execute(stepContribution, chunkContext);
+
+    verify(stepContribution).setExitStatus(ExitStatus.FAILED);
+    verify(fileUtil, never()).deleteFile(dumpFileName);
+  }
+
+  @Test
+  void undeletableInvalidExistingFileConcludesBeforeDownload() throws Exception {
+    doReturn(10L).when(fileUtil).getSize(dumpFileName);
+    doReturn(false).when(dumpVerifier).isValid(dump, dumpPath);
+    doThrow(new FileDeleteException("delete failure", new IOException()))
+        .when(fileUtil)
+        .deleteFile(dumpFileName);
+
+    fileFetchTasklet.execute(stepContribution, chunkContext);
+
+    verify(stepContribution).setExitStatus(ExitStatus.FAILED);
+    verify(fileUtil, never()).copy(any(), any());
+  }
+
+  @Test
+  void copyFailureConcludesAndDownloadedCleanupFailureRemainsAFileFailure() throws Exception {
+    doReturn(-1L).when(fileUtil).getSize(dumpFileName);
+    doReturn(inputStream).when(fileFetchTasklet).wrapInputStream(any(), any());
+    doThrow(new FileException("copy failure")).when(fileUtil).copy(inputStream, dumpFileName);
+
+    fileFetchTasklet.execute(stepContribution, chunkContext);
+
+    verify(stepContribution).setExitStatus(ExitStatus.FAILED);
+
+    Mockito.reset(fileUtil, dumpVerifier);
+    doReturn(-1L).when(fileUtil).getSize(dumpFileName);
+    doReturn(dumpPath).when(fileUtil).getFilePath(dumpFileName);
+    doReturn(inputStream).when(fileFetchTasklet).wrapInputStream(any(), any());
+    doReturn(false).when(dumpVerifier).isValid(dump, dumpPath);
+    doThrow(new FileDeleteException("delete failure", new IOException()))
+        .when(fileUtil)
+        .deleteFile(dumpFileName);
+
+    fileFetchTasklet.execute(stepContribution, chunkContext);
+    verify(fileUtil).deleteFile(dumpFileName);
+  }
+
+  @Test
+  void inputOpenFailureConcludesAndRealProgressWrapperCanBeClosed() throws Exception {
+    doReturn(-1L).when(fileUtil).getSize(dumpFileName);
+    doThrow(new IOException("open failure")).when(dump).getInputStream();
+
+    fileFetchTasklet.execute(stepContribution, chunkContext);
+    verify(stepContribution).setExitStatus(ExitStatus.FAILED);
+
+    try (InputStream wrapped =
+        fileFetchTasklet.wrapInputStream(new ByteArrayInputStream(new byte[0]), "fixture")) {
+      assertThat(wrapped.read()).isEqualTo(-1);
+    }
   }
 
   //  @Test

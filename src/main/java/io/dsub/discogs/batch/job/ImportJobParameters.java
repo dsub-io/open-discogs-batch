@@ -10,6 +10,9 @@ public final class ImportJobParameters {
   public static final String MANIFEST_SHA256 = "import.manifestSha256";
   public static final String FORCE = "import.force";
   public static final String ALLOW_DOWNGRADE = "import.allowDowngrade";
+  public static final String CHUNK_SIZE = "chunkSize";
+  public static final String RUN_ID = "import.runId";
+  public static final String RESUMED = "import.resumed";
 
   private static final String DUMP_PREFIX = "import.dump.";
 

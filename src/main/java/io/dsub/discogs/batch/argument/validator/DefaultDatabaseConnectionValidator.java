@@ -64,7 +64,7 @@ public class DefaultDatabaseConnectionValidator implements DatabaseConnectionVal
     return validate(urlValue, usernameValue, passwordValue);
   }
 
-  private ValidationResult checkMetaData(DatabaseMetaData meta) {
+  ValidationResult checkMetaData(DatabaseMetaData meta) {
     ValidationResult result = new DefaultValidationResult();
     try {
       String productName = meta.getDatabaseProductName().toLowerCase();
@@ -77,10 +77,8 @@ public class DefaultDatabaseConnectionValidator implements DatabaseConnectionVal
         return result.withIssue(getUnsupportedProductMessage(productName));
       }
 
-      if (type.equals(DBType.POSTGRESQL)) {
-        if (majorVersion < 9 || (majorVersion == 9 && minorVersion < 5)) {
-          return result.withIssue(productName + " version below 9.5 is not supported.");
-        }
+      if (majorVersion < 9 || (majorVersion == 9 && minorVersion < 5)) {
+        return result.withIssue(productName + " version below 9.5 is not supported.");
       }
     } catch (SQLException e) {
       String msg = "failed to check database metadata by: " + e.getSQLState();
@@ -90,9 +88,9 @@ public class DefaultDatabaseConnectionValidator implements DatabaseConnectionVal
     return result;
   }
 
-  protected Connection getConnection(Credentials credentials) throws SQLException {
-    return DriverManager.getConnection(
-        credentials.url(), credentials.username(), credentials.password());
+  protected Connection getConnection(String url, String username, String password)
+      throws SQLException {
+    return DriverManager.getConnection(url, username, password);
   }
 
   /**
@@ -114,26 +112,18 @@ public class DefaultDatabaseConnectionValidator implements DatabaseConnectionVal
   protected ValidationResult doValidate(Credentials credentials) {
     ValidationResult result = new DefaultValidationResult();
 
-    int defaultTimeOut = DriverManager.getLoginTimeout(); // default
-
     try {
       tryLoadDriver(credentials);
     } catch (DriverLoadFailureException ex) {
       return result.withIssue("failed to allocate driver for url: " + credentials.url());
     }
 
-    DatabaseMetaData metaData = null;
-
-    try (Connection conn = getConnection(credentials)) {
-      metaData = conn.getMetaData();
+    try (Connection conn =
+        getConnection(credentials.url(), credentials.username(), credentials.password())) {
+      return checkMetaData(conn.getMetaData());
     } catch (SQLException e) {
       return result.withIssue("failed to test connection! " + e.getMessage().toLowerCase());
     }
-
-    result.combine(checkMetaData(metaData));
-    DriverManager.setLoginTimeout(defaultTimeOut); // restore
-
-    return result;
   }
 
   private void tryLoadDriver(Credentials credentials) throws DriverLoadFailureException {
@@ -144,25 +134,22 @@ public class DefaultDatabaseConnectionValidator implements DatabaseConnectionVal
         throw new DriverLoadFailureException(
             "failed to recognize database product name from " + url);
       }
-      Class.forName(driverClassName);
+      loadDriver(driverClassName);
     } catch (ClassNotFoundException e) {
       throw new DriverLoadFailureException(driverClassName + " is not present on the classpath.");
     }
   }
 
+  protected void loadDriver(String driverClassName) throws ClassNotFoundException {
+    Class.forName(driverClassName);
+  }
+
   private String getProductName(String url) throws DriverLoadFailureException {
-    if (url == null) {
-      throw new DriverLoadFailureException("url cannot be null or blank url");
-    }
     Matcher matcher = JDBC_PATTERN.matcher(url);
-    String prodName = null;
-    if (matcher.matches()) {
-      prodName = matcher.group(1);
-    }
-    if (prodName == null || prodName.isBlank()) {
+    if (!matcher.matches() || matcher.group(1).isBlank()) {
       throw new DriverLoadFailureException("failed to recognize database product name from " + url);
     }
-    return prodName;
+    return matcher.group(1);
   }
 
   private String getDriverClassName(String url) throws DriverLoadFailureException {

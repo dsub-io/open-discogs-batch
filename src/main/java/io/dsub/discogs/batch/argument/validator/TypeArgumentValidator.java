@@ -3,7 +3,6 @@ package io.dsub.discogs.batch.argument.validator;
 import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import org.apache.logging.log4j.util.Strings;
 import org.springframework.boot.ApplicationArguments;
 
 public class TypeArgumentValidator implements ArgumentValidator {
@@ -28,12 +27,6 @@ public class TypeArgumentValidator implements ArgumentValidator {
     // empty means we do not need to validate anything.
     if (typeArgNames.isEmpty()) {
       return result;
-    }
-
-    // duplicated entries to be picked up from here.
-    if (typeArgNames.size() > 1) {
-      String msg = "duplicated entities argument exists: " + Strings.join(typeArgNames, ',');
-      return result.withIssues(msg);
     }
 
     // collect issues if any of argument does not match to the criteria.

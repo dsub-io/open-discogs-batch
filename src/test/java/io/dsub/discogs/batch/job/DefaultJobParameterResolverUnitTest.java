@@ -19,6 +19,7 @@ import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import io.dsub.discogs.batch.testutil.LogSpy;
 import java.util.List;
 import java.util.Properties;
+import java.time.LocalDate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -150,5 +151,42 @@ class DefaultJobParameterResolverUnitTest {
     assertThat(resultProps.get(ImportJobParameters.ALLOW_DOWNGRADE)).isEqualTo("false");
     assertThat(resultProps.get(ArgType.CHUNK_SIZE.getGlobalName()))
         .isEqualTo(String.valueOf(DEFAULT_CHUNK_SIZE));
+  }
+
+  @Test
+  void whenDumpSizeIsUnknown__ShouldRecordZero() throws Exception {
+    DiscogsDump dump =
+        new DiscogsDump(
+            "etag",
+            EntityType.ARTIST,
+            "data/2026/artists.xml.gz",
+            null,
+            LocalDate.of(2026, 7, 1),
+            null);
+    when(dependencyResolver.resolve(any())).thenReturn(List.of(dump));
+
+    Properties result = jobParameterResolver.resolve(new DefaultApplicationArguments());
+
+    assertThat(result.get(ImportJobParameters.size(EntityType.ARTIST))).isEqualTo("0");
+  }
+
+  @Test
+  void whenChunkSizeOptionValuesAreNull__ShouldRejectValue() {
+    ApplicationArguments arguments = org.mockito.Mockito.mock(ApplicationArguments.class);
+    when(arguments.containsOption(ArgType.CHUNK_SIZE.getGlobalName())).thenReturn(true);
+    when(arguments.getOptionValues(ArgType.CHUNK_SIZE.getGlobalName())).thenReturn(null);
+
+    assertThat(catchThrowable(() -> jobParameterResolver.parseChunkSize(arguments)))
+        .isInstanceOf(InvalidArgumentException.class);
+  }
+
+  @Test
+  void whenChunkSizeOptionValuesAreEmpty__ShouldRejectValue() {
+    ApplicationArguments arguments = org.mockito.Mockito.mock(ApplicationArguments.class);
+    when(arguments.containsOption(ArgType.CHUNK_SIZE.getGlobalName())).thenReturn(true);
+    when(arguments.getOptionValues(ArgType.CHUNK_SIZE.getGlobalName())).thenReturn(List.of());
+
+    assertThat(catchThrowable(() -> jobParameterResolver.parseChunkSize(arguments)))
+        .isInstanceOf(InvalidArgumentException.class);
   }
 }

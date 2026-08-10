@@ -3,6 +3,7 @@ package io.dsub.discogs.batch.job.processor;
 import static io.dsub.discogs.batch.job.registry.EntityIdRegistry.Type.ARTIST;
 
 import io.dsub.discogs.batch.domain.artist.ArtistSubItemsXML;
+import io.dsub.discogs.batch.dump.EntityType;
 import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
 import io.dsub.discogs.batch.util.ReflectionUtil;
 import io.dsub.opendiscogs.jooq.tables.records.ArtistAliasRecord;
@@ -13,7 +14,6 @@ import io.dsub.opendiscogs.jooq.tables.records.ArtistUrlRecord;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -24,12 +24,12 @@ import org.springframework.batch.infrastructure.item.ItemProcessor;
 
 @RequiredArgsConstructor
 public class ArtistSubItemsProcessor
-    implements ItemProcessor<ArtistSubItemsXML, Collection<UpdatableRecord<?>>> {
+    implements ItemProcessor<ArtistSubItemsXML, RelationSet> {
 
   private final EntityIdRegistry idRegistry;
 
   @Override
-  public Collection<UpdatableRecord<?>> process(ArtistSubItemsXML item) {
+  public RelationSet process(ArtistSubItemsXML item) {
 
     if (item.getId() == null || item.getId() < 1) {
       return null;
@@ -45,7 +45,7 @@ public class ArtistSubItemsProcessor
     items.addAll(getArtistUrlRecords(item));
     items.addAll(getArtistNameVariationRecords(item));
 
-    return items;
+    return new RelationSet(EntityType.ARTIST, item.getId(), items);
   }
 
   private List<ArtistNameVariationRecord> getArtistNameVariationRecords(ArtistSubItemsXML item) {
@@ -54,7 +54,6 @@ public class ArtistSubItemsProcessor
     }
     return item.getNameVariations().stream()
         .filter(Objects::nonNull)
-        .filter(nameVar -> !nameVar.isBlank())
         .distinct()
         .map(nameVar -> makeArtistNameVariationRecord(item.getId(), nameVar))
         .collect(Collectors.toList());
@@ -66,7 +65,6 @@ public class ArtistSubItemsProcessor
     }
     return item.getUrls().stream()
         .filter(Objects::nonNull)
-        .filter(url -> !url.isBlank())
         .distinct()
         .map(url -> makeArtistUrlRecord(item.getId(), url))
         .collect(Collectors.toList());
@@ -77,6 +75,8 @@ public class ArtistSubItemsProcessor
       return Collections.emptyList();
     }
     return item.getMembers().stream()
+        .filter(Objects::nonNull)
+        .distinct()
         .filter(member -> idRegistry.exists(ARTIST, member.getMemberId()))
         .map(xml -> xml.getRecord(item.getId()))
         .collect(Collectors.toList());
@@ -87,6 +87,8 @@ public class ArtistSubItemsProcessor
       return Collections.emptyList();
     }
     return item.getGroups().stream()
+        .filter(Objects::nonNull)
+        .distinct()
         .filter(group -> idRegistry.exists(ARTIST, group.getGroupId()))
         .map(xml -> xml.getRecord(item.getId()))
         .collect(Collectors.toList());
@@ -97,6 +99,8 @@ public class ArtistSubItemsProcessor
       return Collections.emptyList();
     }
     return item.getAliases().stream()
+        .filter(Objects::nonNull)
+        .distinct()
         .filter(alias -> idRegistry.exists(ARTIST, alias.getAliasId()))
         .map(xml -> xml.getRecord(item.getId()))
         .collect(Collectors.toList());

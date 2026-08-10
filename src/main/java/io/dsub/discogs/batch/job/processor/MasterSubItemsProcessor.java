@@ -5,6 +5,7 @@ import static io.dsub.discogs.batch.job.registry.EntityIdRegistry.Type.GENRE;
 import static io.dsub.discogs.batch.job.registry.EntityIdRegistry.Type.STYLE;
 
 import io.dsub.discogs.batch.domain.master.MasterSubItemsXML;
+import io.dsub.discogs.batch.dump.EntityType;
 import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
 import io.dsub.discogs.batch.util.ReflectionUtil;
 import io.dsub.opendiscogs.jooq.tables.records.MasterGenreRecord;
@@ -13,22 +14,20 @@ import io.dsub.opendiscogs.jooq.tables.records.MasterVideoRecord;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.jooq.UpdatableRecord;
 import org.springframework.batch.infrastructure.item.ItemProcessor;
 
 @RequiredArgsConstructor
 public class MasterSubItemsProcessor
-    implements ItemProcessor<MasterSubItemsXML, Collection<UpdatableRecord<?>>> {
+    implements ItemProcessor<MasterSubItemsXML, RelationSet> {
 
   private final EntityIdRegistry idRegistry;
 
   @Override
-  public Collection<UpdatableRecord<?>> process(MasterSubItemsXML master) {
+  public RelationSet process(MasterSubItemsXML master) {
 
     if (master.getId() == null || master.getId() < 1) {
       return null;
@@ -52,7 +51,7 @@ public class MasterSubItemsProcessor
       master.getMasterVideos().stream()
           .filter(Objects::nonNull)
           .distinct()
-          .filter(video -> video.getUrl() != null && !video.getUrl().isBlank())
+          .filter(video -> video.getUrl() != null)
           .map(video -> getMasterVideoRecord(masterId, video))
           .forEach(items::add);
     }
@@ -77,7 +76,8 @@ public class MasterSubItemsProcessor
           .forEach(items::add);
     }
 
-    return items.stream().filter(Objects::nonNull).collect(Collectors.toList());
+    return new RelationSet(
+        EntityType.MASTER, masterId, items);
   }
 
   private boolean isExistingArtist(Integer id) {
@@ -113,7 +113,7 @@ public class MasterSubItemsProcessor
     String hashSrc =
         (video.getTitle() == null ? "" : video.getTitle())
             + (video.getDescription() == null ? "" : video.getDescription())
-            + (video.getUrl() == null ? "" : video.getUrl());
+            + video.getUrl();
     return new MasterVideoRecord()
         .setMasterId(masterId)
         .setTitle(video.getTitle())

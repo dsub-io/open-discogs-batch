@@ -59,7 +59,11 @@ public class DefaultValidationResult implements ValidationResult {
    * @param issues can be null, empty or multiple issues as a set of initial value.
    */
   public DefaultValidationResult(String... issues) {
-    if (issues == null || issues.length == 0) {
+    if (issues == null) {
+      this.issues = new ArrayList<>();
+      return;
+    }
+    if (issues.length == 0) {
       this.issues = new ArrayList<>();
       return;
     }
@@ -90,7 +94,10 @@ public class DefaultValidationResult implements ValidationResult {
    */
   @Override
   public DefaultValidationResult withIssues(String... issues) {
-    if (issues == null || issues.length == 0) {
+    if (issues == null) {
+      return new DefaultValidationResult(List.copyOf(this.issues));
+    }
+    if (issues.length == 0) {
       return new DefaultValidationResult(List.copyOf(this.issues));
     }
 

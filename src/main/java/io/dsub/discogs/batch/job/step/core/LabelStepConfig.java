@@ -4,17 +4,25 @@ import io.dsub.discogs.batch.domain.label.LabelSubItemsXML;
 import io.dsub.discogs.batch.domain.label.LabelXML;
 import io.dsub.discogs.batch.dump.DiscogsDump;
 import io.dsub.discogs.batch.dump.DiscogsDumpVerifier;
+import io.dsub.discogs.batch.dump.EntityType;
 import io.dsub.discogs.batch.exception.DumpNotFoundException;
 import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import io.dsub.discogs.batch.job.listener.IdCachingItemProcessListener;
+import io.dsub.discogs.batch.job.listener.EntityProgressStepExecutionListener;
 import io.dsub.discogs.batch.job.listener.ItemCountingItemProcessListener;
+import io.dsub.discogs.batch.job.listener.NestedStepFailurePropagatingListener;
 import io.dsub.discogs.batch.job.listener.StopWatchStepExecutionListener;
 import io.dsub.discogs.batch.job.listener.StringNormalizingItemReadListener;
 import io.dsub.discogs.batch.job.step.AbstractStepConfig;
+import io.dsub.discogs.batch.job.processor.RelationSet;
+import io.dsub.discogs.batch.job.progress.ImportProgressStore;
+import io.dsub.discogs.batch.job.progress.ProcessedChunk;
+import io.dsub.discogs.batch.job.progress.SourceChunk;
+import io.dsub.discogs.batch.job.reader.SourceChunkItemStreamReader;
 import io.dsub.discogs.batch.job.tasklet.FileFetchTasklet;
 import io.dsub.discogs.batch.util.FileUtil;
+import io.dsub.discogs.batch.job.writer.DurableRelationItemWriterFactory;
 import io.dsub.opendiscogs.jooq.tables.records.LabelRecord;
-import java.util.Collection;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jooq.UpdatableRecord;
@@ -49,12 +57,13 @@ public class LabelStepConfig extends AbstractStepConfig {
   public static final String LABEL_FILE_CLEAR_STEP = "label file clear step";
 
   private final SynchronizedItemStreamReader<LabelXML> labelStreamReader;
-  private final SynchronizedItemStreamReader<LabelSubItemsXML> labelSubItemsStreamReader;
+  private final SourceChunkItemStreamReader<LabelSubItemsXML> labelSubItemsStreamReader;
 
   private final ItemProcessor<LabelXML, LabelRecord> labelCoreProcessor;
-  private final ItemProcessor<LabelSubItemsXML, Collection<UpdatableRecord<?>>>
+  private final ItemProcessor<SourceChunk<LabelSubItemsXML>, ProcessedChunk<RelationSet>>
       labelSubItemsProcessor;
-  private final ItemWriter<Collection<UpdatableRecord<?>>> collectionItemWriter;
+  private final DurableRelationItemWriterFactory durableRelationItemWriterFactory;
+  private final ImportProgressStore importProgressStore;
   private final ItemWriter<UpdatableRecord<?>> entityItemWriter;
   private final DiscogsDump labelDump;
 
@@ -87,7 +96,7 @@ public class LabelStepConfig extends AbstractStepConfig {
             // from fetch
             .from(labelFileFetchStep())
             .on(FAILED)
-            .end()
+            .fail()
             .from(labelFileFetchStep())
             .on(ANY)
             .to(labelCoreInsertionStep(null))
@@ -95,13 +104,16 @@ public class LabelStepConfig extends AbstractStepConfig {
             // from core item insertion
             .from(labelCoreInsertionStep(null))
             .on(FAILED)
-            .end()
+            .fail()
             .from(labelCoreInsertionStep(null))
             .on(ANY)
-            .to(labelSubItemsInsertionStep(null))
+            .to(labelSubItemsInsertionStep(null, null, null))
 
             // from sub items insertion
-            .from(labelSubItemsInsertionStep(null))
+            .from(labelSubItemsInsertionStep(null, null, null))
+            .on(FAILED)
+            .fail()
+            .from(labelSubItemsInsertionStep(null, null, null))
             .on(ANY)
             .end()
 
@@ -113,6 +125,7 @@ public class LabelStepConfig extends AbstractStepConfig {
     labelFlowStep.setName(LABEL_FLOW_STEP);
     labelFlowStep.setStartLimit(Integer.MAX_VALUE);
     labelFlowStep.setFlow(labelStepFlow);
+    labelFlowStep.registerStepExecutionListener(new NestedStepFailurePropagatingListener());
     return labelFlowStep;
   }
 
@@ -138,19 +151,28 @@ public class LabelStepConfig extends AbstractStepConfig {
 
   @Bean
   @JobScope
-  public Step labelSubItemsInsertionStep(@Value(CHUNK) Integer chunkSize) {
+  public Step labelSubItemsInsertionStep(
+      @Value(CHUNK) Integer chunkSize,
+      @Value(RUN_ID) Long runId,
+      @Value(RESUMED) Boolean resumed) {
     return new StepBuilder(LABEL_SUB_ITEMS_INSERTION_STEP, jobRepository)
-        .<LabelSubItemsXML, Collection<UpdatableRecord<?>>>chunk(chunkSize)
+        .<SourceChunk<LabelSubItemsXML>, ProcessedChunk<RelationSet>>chunk(
+            TRACKED_CHUNKS_PER_TRANSACTION)
         .transactionManager(transactionManager)
         .reader(labelSubItemsStreamReader)
         .processor(labelSubItemsProcessor)
-        .writer(collectionItemWriter)
+        .writer(
+            durableRelationItemWriterFactory.create(
+                EntityType.LABEL, runId, chunkSize, resumed))
         .faultTolerant()
         .retryLimit(10)
         .retry(PessimisticLockingFailureException.class)
         .listener(stringNormalizingItemReadListener)
         .listener(stopWatchStepExecutionListener)
         .listener(itemCountingItemProcessListener)
+        .listener(
+            new EntityProgressStepExecutionListener(
+                importProgressStore, EntityType.LABEL, runId, chunkSize))
         .taskExecutor(taskExecutor)
         .build();
   }

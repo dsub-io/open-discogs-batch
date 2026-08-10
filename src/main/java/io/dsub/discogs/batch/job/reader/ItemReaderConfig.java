@@ -28,6 +28,7 @@ import org.springframework.context.annotation.Configuration;
 // TODO: test!
 public class ItemReaderConfig {
 
+  private static final String CHUNK_SIZE = "#{jobParameters['chunkSize']}";
   private static final String ARTIST_ETAG = "#{jobParameters['artist']}";
   private static final String LABEL_ETAG = "#{jobParameters['label']}";
   private static final String MASTER_ETAG = "#{jobParameters['master']}";
@@ -50,9 +51,11 @@ public class ItemReaderConfig {
 
   @Bean
   @StepScope
-  public SynchronizedItemStreamReader<ArtistSubItemsXML> artistSubItemsStreamReader() {
+  public SourceChunkItemStreamReader<ArtistSubItemsXML> artistSubItemsStreamReader(
+      @Value(CHUNK_SIZE) Integer chunkSize) {
     try {
-      return readerBuilder.build(ArtistSubItemsXML.class, artistDump(null));
+      return new SourceChunkItemStreamReader<>(
+          readerBuilder.build(ArtistSubItemsXML.class, artistDump(null)), chunkSize);
     } catch (Exception e) {
       throw new InitializationFailureException(
           "failed to initialize artist stream reader: " + e.getMessage());
@@ -72,9 +75,11 @@ public class ItemReaderConfig {
 
   @Bean
   @StepScope
-  public SynchronizedItemStreamReader<LabelSubItemsXML> labelSubItemsStreamReader() {
+  public SourceChunkItemStreamReader<LabelSubItemsXML> labelSubItemsStreamReader(
+      @Value(CHUNK_SIZE) Integer chunkSize) {
     try {
-      return readerBuilder.build(LabelSubItemsXML.class, labelDump(null));
+      return new SourceChunkItemStreamReader<>(
+          readerBuilder.build(LabelSubItemsXML.class, labelDump(null)), chunkSize);
     } catch (Exception e) {
       throw new InitializationFailureException(
           "failed to initialize label stream reader: " + e.getMessage());
@@ -105,9 +110,11 @@ public class ItemReaderConfig {
 
   @Bean
   @StepScope
-  public SynchronizedItemStreamReader<MasterSubItemsXML> masterSubItemsStreamReader() {
+  public SourceChunkItemStreamReader<MasterSubItemsXML> masterSubItemsStreamReader(
+      @Value(CHUNK_SIZE) Integer chunkSize) {
     try {
-      return readerBuilder.build(MasterSubItemsXML.class, masterDump(null));
+      return new SourceChunkItemStreamReader<>(
+          readerBuilder.build(MasterSubItemsXML.class, masterDump(null)), chunkSize);
     } catch (Exception e) {
       throw new InitializationFailureException(
           "failed to initialize master stream reader: " + e.getMessage());
@@ -127,9 +134,11 @@ public class ItemReaderConfig {
 
   @Bean
   @StepScope
-  public SynchronizedItemStreamReader<ReleaseItemSubItemsXML> releaseItemSubItemsStreamReader() {
+  public SourceChunkItemStreamReader<ReleaseItemSubItemsXML> releaseItemSubItemsStreamReader(
+      @Value(CHUNK_SIZE) Integer chunkSize) {
     try {
-      return readerBuilder.build(ReleaseItemSubItemsXML.class, releaseItemDump(null));
+      return new SourceChunkItemStreamReader<>(
+          readerBuilder.build(ReleaseItemSubItemsXML.class, releaseItemDump(null)), chunkSize);
     } catch (Exception e) {
       throw new InitializationFailureException(
           "failed to initialize release stream reader: " + e.getMessage());

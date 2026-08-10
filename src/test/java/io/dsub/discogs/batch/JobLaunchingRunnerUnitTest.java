@@ -1,8 +1,13 @@
 package io.dsub.discogs.batch;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.argThat;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -16,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.InjectMocks;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
@@ -24,6 +30,7 @@ import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.BatchStatus;
 import io.dsub.discogs.batch.job.ImportExecutionCoordinator;
 import io.dsub.discogs.batch.job.DownloadedFileCleanup;
+import io.dsub.discogs.batch.exception.FileDeleteException;
 import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.job.JobExecution;
 import org.springframework.batch.core.job.parameters.JobParameters;
@@ -61,7 +68,7 @@ class JobLaunchingRunnerUnitTest {
   @BeforeEach
   void setUp() throws Exception {
     MockitoAnnotations.openMocks(this);
-    doReturn(jobExecution).when(jobOperator).start(job, discogsJobParameters);
+    doReturn(jobExecution).when(jobOperator).start(eq(job), any(JobParameters.class));
     doReturn(false).when(exitStatus).isRunning();
     doReturn(false).when(jobExecution).isRunning();
     doReturn(exitStatus).when(jobExecution).getExitStatus();
@@ -79,7 +86,13 @@ class JobLaunchingRunnerUnitTest {
     runner.run(args);
 
     // then
-    verify(jobOperator, times(1)).start(job, discogsJobParameters);
+    verify(jobOperator, times(1))
+        .start(
+            eq(job),
+            argThat(
+                parameters ->
+                    parameters.getLong("import.runId") == 1L
+                        && "false".equals(parameters.getString("import.resumed"))));
     verify(importExecutionCoordinator, times(1)).prepare(discogsJobParameters);
     verify(importExecutionCoordinator, times(1)).complete(true, null);
   }
@@ -138,5 +151,108 @@ class JobLaunchingRunnerUnitTest {
     verify(jobOperator, times(0)).start(job, discogsJobParameters);
     verify(countDownLatch, times(0)).await();
     verify(downloadedFileCleanup).cleanup(discogsJobParameters);
+  }
+
+  @Test
+  void cleanupRunsOnlyAfterSuccessfulImportIsDurablyCompleted() throws Exception {
+    doReturn(true).when(downloadedFileCleanup).isEnabled();
+
+    runner.run(args);
+
+    org.mockito.InOrder order =
+        Mockito.inOrder(importExecutionCoordinator, downloadedFileCleanup);
+    order.verify(importExecutionCoordinator).complete(true, null);
+    order.verify(downloadedFileCleanup).cleanup(discogsJobParameters);
+  }
+
+  @Test
+  void cleanupFailureDoesNotReclassifySuccessfulDatabaseImport() throws Exception {
+    FileDeleteException failure =
+        new FileDeleteException("fixture cleanup failure", new IllegalStateException());
+    doReturn(true).when(downloadedFileCleanup).isEnabled();
+    doThrow(failure).when(downloadedFileCleanup).cleanup(discogsJobParameters);
+
+    assertThatThrownBy(() -> runner.run(args)).isSameAs(failure);
+
+    verify(importExecutionCoordinator, times(1)).complete(true, null);
+  }
+
+  @Test
+  void failedStatusWithoutAFrameworkExceptionStillRecordsAnAuditFailure() throws Exception {
+    doReturn(BatchStatus.FAILED).when(jobExecution).getStatus();
+
+    assertThatThrownBy(() -> runner.run(args))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessage("batch job failed");
+
+    ArgumentCaptor<Throwable> failure = ArgumentCaptor.forClass(Throwable.class);
+    verify(importExecutionCoordinator).complete(eq(false), failure.capture());
+    assertThat(failure.getValue())
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("status=FAILED");
+  }
+
+  @Test
+  void failedExitCodeCannotBeReportedAsASuccessfulRun() throws Exception {
+    doReturn("FAILED").when(exitStatus).getExitCode();
+
+    assertThatThrownBy(() -> runner.run(args))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessage("batch job failed");
+
+    verify(importExecutionCoordinator).complete(eq(false), any(Throwable.class));
+    assertThat(runner.getExitCodeGenerator(jobExecution).getExitCode()).isEqualTo(1);
+  }
+
+  @Test
+  void resumedPreparationMarksExecutionParametersAsResumed() throws Exception {
+    doReturn(ImportExecutionCoordinator.Preparation.started("a".repeat(64), 2L, 1L))
+        .when(importExecutionCoordinator)
+        .prepare(discogsJobParameters);
+
+    runner.run(args);
+
+    verify(jobOperator)
+        .start(
+            eq(job),
+            argThat(
+                parameters ->
+                    parameters.getLong("import.runId") == 2L
+                        && "true".equals(parameters.getString("import.resumed"))));
+  }
+
+  @Test
+  void frameworkFailureIsRecordedAsTheOriginalCause() throws Exception {
+    IllegalStateException failure = new IllegalStateException("framework failure");
+    doReturn(List.of(failure)).when(jobExecution).getFailureExceptions();
+
+    assertThatThrownBy(() -> runner.run(args))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessage("batch job failed")
+        .hasCause(failure);
+
+    verify(importExecutionCoordinator).complete(false, failure);
+  }
+
+  @Test
+  void launchFailureIsDurablyRecordedBeforeItEscapes() throws Exception {
+    IllegalStateException failure = new IllegalStateException("launch failure");
+    doThrow(failure).when(jobOperator).start(eq(job), any(JobParameters.class));
+
+    assertThatThrownBy(() -> runner.run(args)).isSameAs(failure);
+
+    verify(importExecutionCoordinator).complete(false, failure);
+  }
+
+  @Test
+  void skippedRunDoesNotCleanupWhenCleanupIsDisabled() throws Exception {
+    doReturn(ImportExecutionCoordinator.Preparation.skipped("a".repeat(64), 7L))
+        .when(importExecutionCoordinator)
+        .prepare(discogsJobParameters);
+    doReturn(false).when(downloadedFileCleanup).isEnabled();
+
+    runner.run(args);
+
+    verify(downloadedFileCleanup, times(0)).cleanup(discogsJobParameters);
   }
 }

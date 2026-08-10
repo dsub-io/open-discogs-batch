@@ -9,6 +9,7 @@ import io.dsub.discogs.batch.dump.service.DiscogsDumpService;
 import io.dsub.discogs.batch.testutil.LogSpy;
 import io.dsub.discogs.batch.util.FileUtil;
 import java.util.concurrent.CountDownLatch;
+import javax.sql.DataSource;
 import org.jooq.DSLContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,6 +35,7 @@ public class BatchInfrastructureConfigUnitTest {
         .withBean(CountDownLatch.class, () -> mock(CountDownLatch.class))
         .withBean(DiscogsDumpVerifier.class, () -> mock(DiscogsDumpVerifier.class))
         .withBean(DiscogsDumpService.class, () -> mock(DiscogsDumpService.class))
+        .withBean(DataSource.class, () -> mock(DataSource.class))
         .withBean(
             PlatformTransactionManager.class, () -> mock(PlatformTransactionManager.class))
         .withBean(ThreadPoolTaskExecutor.class, () -> mock(ThreadPoolTaskExecutor.class))
@@ -76,5 +78,18 @@ public class BatchInfrastructureConfigUnitTest {
         .hasSize(1)
         .first()
         .isEqualTo("cleanup option not set. downloaded files will be kept.");
+  }
+
+  @Test
+  void givenDataDirectory__ShouldUseConfiguredPath() {
+    String configuredDirectory = "/tmp/open-discogs-fixture";
+    ctx = ctx.withBean(
+        DefaultApplicationArguments.class,
+        () -> new DefaultApplicationArguments("--dataDir=" + configuredDirectory));
+
+    ctx.run(
+        context ->
+            assertThat(context.getBean(FileUtil.class).getAppDirectory())
+                .isEqualTo(configuredDirectory));
   }
 }

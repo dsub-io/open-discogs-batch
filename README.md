@@ -17,12 +17,36 @@ Discogs. The Discogs name identifies only the public data source.
   sizes, and stable identifiers as one immutable manifest.
 - A manifest that already succeeded is skipped. `--force` reruns that same
   manifest without changing the idempotent database result.
+- A failed or abandoned run resumes committed source chunks only when its
+  manifest, processor version, entity set, dump identities, and chunk size all
+  match. `--force` always starts a fresh run.
+- Canonical relation changes and their source-chunk ledger entry commit in one
+  PostgreSQL transaction. A retry parses the stream from the beginning but
+  skips the exact relation chunks already committed; core rows and any work
+  after the relation phase are safely rerun.
+- Relation rows missing from a newer representation of a root are deleted while
+  unchanged rows retain their surrogate IDs. Roots absent from the entire dump
+  are not deleted automatically.
+- The v1 schema still identifies several relation values with a 32-bit Java
+  hash. A collision within one root can merge distinct values; the measured,
+  online migration to collision-resistant identity is tracked in
+  [`open-discogs-model#43`](https://github.com/dsub-io/open-discogs-model/issues/43).
 - An older entity dump is rejected unless `--allow-downgrade` is supplied; the
   override is recorded in import history.
-- PostgreSQL advisory locks prevent concurrent runs from updating an overlapping
-  entity set. Runs with disjoint entity sets may proceed together.
+- PostgreSQL advisory locks cover both selected entities and their reference
+  dependencies. Master locks Artist and Master; Release locks Artist, Label,
+  Master, and Release because it also updates `master.main_release_id`.
+  Independent sets such as Artist and Label may still proceed together.
 - Downloads are retained by default. `--cleanup` deletes them only after a
-  successful import. Failed imports retain their files for retry.
+  successful database import. A cleanup failure is reported without
+  reclassifying the committed import, and the next invocation retries cleanup
+  through the successful-manifest skip path. Failed imports retain their files
+  for retry.
+
+The durability boundary is one source chunk, not the whole monthly snapshot.
+Readers can observe already-committed chunks while an import is running. Use a
+versioned database or replica promotion when consumers require all entities to
+switch snapshots atomically.
 
 Discogs dump paths such as `data/2026/discogs_20260701_releases.xml.gz` are used
 as stable identifiers and are paired with the same date's checksum manifest.
@@ -42,7 +66,7 @@ sdk env
 
 The build uses Gradle 9.6.1, Spring Boot 4.1, and Spring Batch 6. Dependencies
 resolve from Maven Central, including
-`io.dsub.opendiscogs:open-discogs-model-jooq:0.1.2`. No GitHub token is required
+`io.dsub.opendiscogs:open-discogs-model-jooq:0.2.1`. No GitHub token is required
 to build or run this project.
 
 ## Build and test
@@ -53,11 +77,11 @@ to build or run this project.
 ./gradlew e2eTest --no-daemon --warning-mode=fail
 ```
 
-`check` runs the deterministic unit and integration suite, generates JaCoCo
-reports, enforces 85% line and 40% branch coverage, and validates test naming.
-`e2eTest` imports the complete cross-language fixture into PostgreSQL and
-verifies reruns and entity admission rules. CI uses GitHub-hosted
-`ubuntu-latest` and does not depend on live Discogs availability.
+`check` runs the deterministic unit, integration, and E2E suites, generates a
+combined JaCoCo report, enforces 100% line and branch coverage, and validates
+test naming. `e2eTest` imports the complete cross-language fixture into
+PostgreSQL and verifies reruns and entity admission rules. CI uses
+GitHub-hosted `ubuntu-latest` and does not depend on live Discogs availability.
 
 ## Usage
 
@@ -128,6 +152,33 @@ fell from 648.549 ms to 28.997 ms (`22.4×` faster), and median maximum RSS fell
 from 163.9 MB to 64.47 MB (`60.7%` lower). The new bit-set words occupied 128
 KiB. These figures isolate the ID-cache operation; end-to-end import throughput
 still depends on dump shape, PostgreSQL, storage, and runtime limits.
+
+### Measured durable-import cost
+
+The forced idempotency path was measured against `v1.0.0` and this change on
+the same Apple M2 Pro, Java 21, PostgreSQL 18.4 Alpine tmpfs container, four
+3-record fixture dumps, `chunk-size=1000`, one worker, two consecutive imports
+per sample, two warm-ups, and 20 fresh test samples. The elapsed time for both
+imports changed from p50/p95/p99 `734/845/854 ms` to `767/916/980 ms`
+(`4.5%/8.4%/14.8%` higher). Median throughput changed from `32.7` to `31.3`
+records/s (`4.3%` lower).
+
+The added cost covers active-run fencing, exact source-chunk ledger commits,
+coverage validation, and stale-relation reconciliation. This 24-record test
+exaggerates fixed transaction cost and is not a 200-million-row throughput
+estimate. RSS and allocation deltas are not reported because the isolated test
+process includes Gradle and Testcontainers while the fixture is too small to
+represent production heap use. The implementation instead bounds live source
+chunks to `chunk-size × max-workers`; a representative production dump still
+needs a heap/RSS profile on the target hardware before sizing.
+
+Reproduce the latency sample with:
+
+```shell
+./gradlew cleanTest test \
+  --tests 'io.dsub.discogs.batch.job.PostgreSQLDiscogsJobIntegrationTest.whenSameDumpIsForcedTwice__BusinessRowsRemainIdentical' \
+  --quiet
+```
 
 Percent-encode reserved characters in the URI username or password. Never
 commit a real database URL to source control. Environment variables also remain

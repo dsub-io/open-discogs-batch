@@ -3,7 +3,6 @@ package io.dsub.discogs.batch.config;
 import io.dsub.discogs.batch.job.listener.ClearanceJobExecutionListener;
 import io.dsub.discogs.batch.job.listener.ExitSignalJobExecutionListener;
 import io.dsub.discogs.batch.job.listener.IdCachingJobExecutionListener;
-import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.job.builder.JobBuilder;
@@ -18,7 +17,7 @@ public class BatchConfig {
 
   public static final int DEFAULT_CHUNK_SIZE = 5000;
 
-  public static final String JOB_NAME = "discogs-batch-job" + LocalDateTime.now();
+  public static final String JOB_NAME = "discogs-batch-job";
   private static final String FAILED = "FAILED";
   private static final String ANY = "*";
 
@@ -45,7 +44,7 @@ public class BatchConfig {
         // from artist step
         .start(artistStep)
         .on(FAILED)
-        .end()
+        .fail()
         .from(artistStep)
         .on(ANY)
         .to(labelStep)
@@ -53,7 +52,7 @@ public class BatchConfig {
         // from label step
         .from(labelStep)
         .on(FAILED)
-        .end()
+        .fail()
         .from(labelStep)
         .on(ANY)
         .to(masterStep)
@@ -61,12 +60,15 @@ public class BatchConfig {
         // from master step
         .from(masterStep)
         .on(FAILED)
-        .end()
+        .fail()
         .from(masterStep)
         .on(ANY)
         .to(releaseStep)
 
         // from release item step
+        .from(releaseStep)
+        .on(FAILED)
+        .fail()
         .from(releaseStep)
         .on(ANY)
         .end()

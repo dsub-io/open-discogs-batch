@@ -1,5 +1,7 @@
 package io.dsub.discogs.batch.job.listener;
 
+import io.dsub.discogs.batch.job.processor.RelationSet;
+import io.dsub.discogs.batch.job.progress.ProcessedChunk;
 import java.util.Collection;
 import java.util.concurrent.atomic.AtomicLong;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +21,17 @@ public class ItemCountingItemProcessListener implements ItemProcessListener<Obje
   @Override
   public void afterProcess(Object item, Object result) {
     if (result == null) {
+      return;
+    }
+    if (result instanceof ProcessedChunk<?> processedChunk) {
+      long count =
+          processedChunk.values().stream()
+              .mapToLong(
+                  value -> value instanceof RelationSet relationSet
+                      ? relationSet.records().size()
+                      : 1L)
+              .sum();
+      itemsCounter.addAndGet(count);
       return;
     }
     if (Collection.class.isAssignableFrom(result.getClass())) {

@@ -1,8 +1,12 @@
 package io.dsub.discogs.batch.argument.validator;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import io.dsub.discogs.batch.argument.ArgType;
+import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -106,5 +110,33 @@ class MappedValueValidatorUnitTest {
             + supportedType.getSimpleName();
     assertThat(result.getIssues().size()).isEqualTo(1);
     assertThat(result.getIssues().get(0)).isEqualTo(expectedMsg);
+  }
+
+  @Test
+  void ignoresUnknownAndNullOptionCollections() {
+    ApplicationArguments unknown = new DefaultApplicationArguments("--unknown=value");
+    assertThat(validator.validate(unknown).isValid()).isTrue();
+
+    ApplicationArguments nullValues = mock(ApplicationArguments.class);
+    when(nullValues.getOptionNames()).thenReturn(Set.of("entities"));
+    when(nullValues.getOptionValues("entities")).thenReturn(null);
+    assertThat(validator.validate(nullValues).isValid()).isTrue();
+  }
+
+  @Test
+  void filtersNullAndBlankMultiValuesAndReportsRangeViolations() {
+    ValidationResult filtered =
+        validator.validate(
+            new DefaultApplicationArguments("--entities=artist,null,,release", "--cleanup=null"));
+    assertThat(filtered.isValid()).isTrue();
+
+    ValidationResult tooMany =
+        validator.validate(
+            new DefaultApplicationArguments(
+                List.of("artist", "label", "master", "release", "artist").stream()
+                    .map(value -> "--entities=" + value)
+                    .toArray(String[]::new)));
+    assertThat(tooMany.getIssues())
+        .containsExactly("entities expected value count of 1 to 4 but got 5 item");
   }
 }

@@ -8,6 +8,8 @@ import org.springframework.batch.core.job.flow.JobExecutionDecider;
 public abstract class AbstractStepConfig {
 
   protected static final String CHUNK = "#{jobParameters['chunkSize']}";
+  protected static final String RUN_ID = "#{jobParameters['import.runId']}";
+  protected static final String RESUMED = "#{jobParameters['import.resumed']}";
   protected static final String ANY = "*";
   protected static final String FAILED = "FAILED";
   protected static final String SKIPPED = "SKIPPED";
@@ -15,6 +17,7 @@ public abstract class AbstractStepConfig {
   protected static final String LABEL = "label";
   protected static final String MASTER = "master";
   protected static final String RELEASE = "release";
+  protected static final int TRACKED_CHUNKS_PER_TRANSACTION = 1;
 
   protected JobExecutionDecider executionDecider(String etagKey) {
     return (jobExecution, stepExecution) -> {
