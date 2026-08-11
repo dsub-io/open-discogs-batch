@@ -1,5 +1,29 @@
 # Changelog
 
+## [1.1.0](https://github.com/dsub-io/open-discogs-batch/compare/v1.0.2...v1.1.0) (2026-08-11)
+
+
+### Features
+
+* label exact local compressed-byte percentage, throughput, elapsed time, and
+  source ETA as `SOURCE READ`, separate from database commit progress ([#34](https://github.com/dsub-io/open-discogs-batch/pull/34))
+* emit structured `import_progress` logs with exact durable committed items,
+  resume baseline, current-run rows per second, last commit time, and explicit
+  started, running, completed, failed, and non-fatal observation-error states
+
+### Scale and Validation
+
+* avoid a full XML pre-count pass; each emitted sample performs one primary-key
+  summary read, with running observations bounded to once every five seconds
+  (`0.2 reads/second` per active entity) plus start and finish reads
+* pass the clean Gradle build with `0` missed JaCoCo instructions, branches,
+  lines, complexity, methods, and classes; the PostgreSQL E2E verifies failure,
+  partial commit, resume baseline, and completion with no residual Docker
+  resources
+* the first production-sized dump remains intentionally deferred, so no
+  200-million-row throughput, heap, or completion-time claim is inferred from
+  fixtures
+
 ## [1.0.2](https://github.com/dsub-io/open-discogs-batch/compare/v1.0.1...v1.0.2) (2026-08-11)
 
 
