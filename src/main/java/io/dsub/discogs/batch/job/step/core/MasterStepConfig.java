@@ -193,7 +193,7 @@ public class MasterStepConfig extends AbstractStepConfig {
         .listener(itemCountingItemProcessListener)
         .listener(
             new EntityProgressStepExecutionListener(
-                importProgressStore, EntityType.MASTER, runId, chunkSize))
+                importProgressStore, EntityType.MASTER, runId, chunkSize, resumed))
         .taskExecutor(taskExecutor)
         .build();
   }

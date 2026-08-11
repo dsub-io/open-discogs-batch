@@ -171,7 +171,7 @@ public class ArtistStepConfig extends AbstractStepConfig {
         .listener(itemCountingItemProcessListener)
         .listener(
             new EntityProgressStepExecutionListener(
-                importProgressStore, EntityType.ARTIST, runId, chunkSize))
+                importProgressStore, EntityType.ARTIST, runId, chunkSize, resumed))
         .taskExecutor(taskExecutor)
         .allowStartIfComplete(true)
         .build();

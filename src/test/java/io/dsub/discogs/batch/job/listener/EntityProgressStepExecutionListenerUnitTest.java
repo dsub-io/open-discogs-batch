@@ -5,10 +5,14 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import io.dsub.discogs.batch.dump.EntityType;
 import io.dsub.discogs.batch.exception.ImportExecutionException;
 import io.dsub.discogs.batch.job.progress.ImportProgressStore;
+import io.dsub.discogs.batch.job.progress.ImportProgressSnapshot;
+import java.util.Optional;
+import java.util.OptionalLong;
 import org.junit.jupiter.api.Test;
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.ExitStatus;
@@ -16,15 +20,32 @@ import org.springframework.batch.core.job.JobExecution;
 import org.springframework.batch.core.job.JobInstance;
 import org.springframework.batch.core.job.parameters.JobParameters;
 import org.springframework.batch.core.step.StepExecution;
+import org.springframework.batch.infrastructure.item.Chunk;
 
 class EntityProgressStepExecutionListenerUnitTest {
+
+  @Test
+  void startsProgressAndAcceptsPostCommitChunkCallbacks() {
+    ImportProgressStore progressStore = mock(ImportProgressStore.class);
+    when(progressStore.getProgress(6L, EntityType.MASTER))
+        .thenReturn(new ImportProgressSnapshot(0, OptionalLong.empty(), Optional.empty()));
+    EntityProgressStepExecutionListener listener =
+        new EntityProgressStepExecutionListener(
+            progressStore, EntityType.MASTER, 6L, 5, true);
+    StepExecution stepExecution = stepExecution(BatchStatus.STARTED);
+
+    listener.beforeStep(stepExecution);
+    listener.afterChunk(new Chunk<>());
+
+    verify(progressStore).getProgress(6L, EntityType.MASTER);
+  }
 
   @Test
   void incompleteStepDoesNotFinalizeEntityProgress() throws Exception {
     ImportProgressStore progressStore = mock(ImportProgressStore.class);
     StepExecution stepExecution = stepExecution(BatchStatus.FAILED);
     EntityProgressStepExecutionListener listener =
-        new EntityProgressStepExecutionListener(progressStore, EntityType.ARTIST, 7L, 5);
+        new EntityProgressStepExecutionListener(progressStore, EntityType.ARTIST, 7L, 5, false);
 
     ExitStatus result = listener.afterStep(stepExecution);
 
@@ -37,7 +58,7 @@ class EntityProgressStepExecutionListenerUnitTest {
     ImportProgressStore progressStore = mock(ImportProgressStore.class);
     StepExecution stepExecution = stepExecution(BatchStatus.COMPLETED);
     EntityProgressStepExecutionListener listener =
-        new EntityProgressStepExecutionListener(progressStore, EntityType.LABEL, 8L, 10);
+        new EntityProgressStepExecutionListener(progressStore, EntityType.LABEL, 8L, 10, false);
 
     ExitStatus result = listener.afterStep(stepExecution);
 
@@ -54,7 +75,7 @@ class EntityProgressStepExecutionListenerUnitTest {
         .completeEntityFromProgress(9L, EntityType.RELEASE, 10);
     StepExecution stepExecution = stepExecution(BatchStatus.COMPLETED);
     EntityProgressStepExecutionListener listener =
-        new EntityProgressStepExecutionListener(progressStore, EntityType.RELEASE, 9L, 10);
+        new EntityProgressStepExecutionListener(progressStore, EntityType.RELEASE, 9L, 10, false);
 
     ExitStatus result = listener.afterStep(stepExecution);
 
