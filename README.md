@@ -10,7 +10,7 @@ Discogs. The Discogs name identifies only the public data source.
 
 ## Import behavior and safety
 
-- Liquibase schema migrations and dump discovery run automatically.
+- The selected database schema, Liquibase migrations, tables, indexes, and dump discovery run automatically.
 - Artist, label, master, and release select their newest available dump
   independently unless an exact `--dump-month` is requested.
 - Every run records the selected dump dates, SHA-256 checksums, source URIs,
@@ -112,15 +112,21 @@ GitHub-hosted `ubuntu-latest` and does not depend on live Discogs availability.
 ```shell
 java -jar build/libs/open-discogs-batch-*.jar \
   --database-url 'postgresql://user:password@localhost:5432/open_discogs' \
+  --database-schema open_discogs \
   --entities artist,label,master,release
 ```
 
 Use `--dump-month=2026-07` to require that exact month. Without it, each selected
 entity uses its own latest available dump.
 
+The PostgreSQL database itself must already exist. A normal batch run needs no separate `init` command: it creates `--database-schema` when missing, then creates or migrates the canonical tables inside it. Creating a missing schema requires `CREATE` on the target database. For an existing schema, the batch role requires `USAGE` and `CREATE`, write access to imported tables, and ownership or equivalent DDL authority for migrations. If those privileges are intentionally unavailable, pre-create the schema with a DBA-managed role and grant the batch role the required schema and table privileges before running the importer.
+
+When `--database-schema` / `OPEN_DISCOGS_BATCH_DATABASE_SCHEMA` is omitted, the importer uses `public` and emits a `WARN` on every startup. This is convenient for compatibility but can mix OpenDiscogs objects with unrelated public tables, so a dedicated name such as `open_discogs` is recommended. Schema names use portable PostgreSQL identifiers: 1–63 lowercase letters, digits, or underscores, starting with a letter or underscore.
+
 | Option | Environment variable | Default | Purpose |
 | --- | --- | --- | --- |
 | `--database-url` | `OPEN_DISCOGS_BATCH_DATABASE_URL` | required | PostgreSQL URI including percent-encoded credentials |
+| `--database-schema` | `OPEN_DISCOGS_BATCH_DATABASE_SCHEMA` | `public` | Schema to create or migrate; `public` emits a startup warning |
 | `--entities`, `-e` | `OPEN_DISCOGS_BATCH_ENTITIES` | all four | Comma-separated `artist`, `label`, `master`, `release` |
 | `--dump-month`, `-m` | `OPEN_DISCOGS_BATCH_DUMP_MONTH` | latest per entity | Exact dump month in `yyyy-MM` form |
 | `--data-dir` | `OPEN_DISCOGS_BATCH_DATA_DIR` | `~/.cache/open-discogs-batch` | Download directory |
@@ -219,6 +225,7 @@ docker pull ghcr.io/dsub-io/open-discogs-batch:latest
 docker run --rm \
   --cpus=4 \
   -e OPEN_DISCOGS_BATCH_DATABASE_URL='postgresql://user:password@db:5432/open_discogs' \
+  -e OPEN_DISCOGS_BATCH_DATABASE_SCHEMA='open_discogs' \
   -e OPEN_DISCOGS_BATCH_ENTITIES='artist,label,master,release' \
   -e OPEN_DISCOGS_BATCH_DATA_DIR=/data \
   -e OPEN_DISCOGS_BATCH_MAX_WORKERS=4 \
