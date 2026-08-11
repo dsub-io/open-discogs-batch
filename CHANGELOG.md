@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.0](https://github.com/dsub-io/open-discogs-batch/compare/v1.1.1...v1.2.0) (2026-08-11)
+
+
+### Features
+
+* support configurable database schemas ([9756f20](https://github.com/dsub-io/open-discogs-batch/commit/9756f20c77f372477aad63c432999fe038584e9b))
+* support configurable database schemas ([#39](https://github.com/dsub-io/open-discogs-batch/issues/39)) ([202777a](https://github.com/dsub-io/open-discogs-batch/commit/202777a566651b4d8ce516d9ee4114521e214c0a))
+
 ## [1.1.1](https://github.com/dsub-io/open-discogs-batch/compare/v1.1.0...v1.1.1) (2026-08-11)
 
 
