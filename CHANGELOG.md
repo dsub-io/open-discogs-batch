@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.2.0](https://github.com/dsub-io/open-discogs-batch/compare/v1.1.1...v1.2.0) (2026-08-11)
+
+
+### Features
+
+* add operator-selected PostgreSQL schemas through `--database-schema` and `OPEN_DISCOGS_BATCH_DATABASE_SCHEMA` ([9756f20](https://github.com/dsub-io/open-discogs-batch/commit/9756f20c77f372477aad63c432999fe038584e9b))
+* create a missing selected schema and keep Liquibase, Spring Batch metadata, and imported catalog tables inside it
+* retain `public` as the compatibility default while warning on every startup and documenting database and role prerequisites
+
 ## [1.1.1](https://github.com/dsub-io/open-discogs-batch/compare/v1.1.0...v1.1.1) (2026-08-11)
 
 
