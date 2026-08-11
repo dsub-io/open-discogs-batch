@@ -173,7 +173,7 @@ final class RelationTableRegistry {
   record RelationTable(Table<?> table, Field<Integer> rootIdField, List<RelationKey> keys) {
 
     String deleteAllForRootsSql() {
-      return "delete from public." + table.getName() + " where "
+      return "delete from " + table.getName() + " where "
           + rootIdField.getName() + " = any (?)";
     }
 
@@ -190,7 +190,7 @@ final class RelationTableRegistry {
                       "target." + keys.get(index).field().getName()
                           + " = current_keys.key_" + index)
               .collect(Collectors.joining(" and "));
-      return "delete from public." + table.getName() + " target where target."
+      return "delete from " + table.getName() + " target where target."
           + rootIdField.getName() + " = any (?) and not exists (select 1 from unnest("
           + arrays + ") as current_keys(" + aliases + ") where " + equality + ")";
     }

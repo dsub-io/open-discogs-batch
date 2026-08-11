@@ -35,6 +35,11 @@ public enum ArgType {
           .globalName("dataDir")
           .synonyms("data-dir")
           .build()),
+  DATABASE_SCHEMA(
+      ArgumentProperty.builder()
+          .globalName("databaseSchema")
+          .synonyms("database-schema")
+          .build()),
   DUMP_MONTH(
       ArgumentProperty.builder()
           .globalName("dumpMonth")

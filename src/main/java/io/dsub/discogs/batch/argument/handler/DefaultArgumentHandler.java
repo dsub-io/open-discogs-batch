@@ -12,6 +12,7 @@ import io.dsub.discogs.batch.argument.validator.DefaultDatabaseConnectionValidat
 import io.dsub.discogs.batch.argument.validator.KnownArgumentValidator;
 import io.dsub.discogs.batch.argument.validator.MappedValueValidator;
 import io.dsub.discogs.batch.argument.validator.PositiveIntegerArgumentValidator;
+import io.dsub.discogs.batch.argument.validator.DatabaseSchemaArgumentValidator;
 import io.dsub.discogs.batch.argument.validator.TypeArgumentValidator;
 import io.dsub.discogs.batch.argument.validator.ValidationResult;
 import io.dsub.discogs.batch.argument.validator.YearMonthValidator;
@@ -67,6 +68,7 @@ public class DefaultArgumentHandler implements ArgumentHandler {
         new CompositeArgumentValidator()
             .addValidator(new DataSourceArgumentValidator())
             .addValidator(new DefaultDatabaseConnectionValidator())
+            .addValidator(new DatabaseSchemaArgumentValidator())
             .addValidator(new KnownArgumentValidator())
             .addValidator(new MappedValueValidator())
             .addValidator(new PositiveIntegerArgumentValidator())

@@ -15,6 +15,7 @@ class EnvironmentArgumentProviderUnitTest {
         new EnvironmentArgumentProvider(
             Map.of(
                 "OPEN_DISCOGS_BATCH_DATABASE_URL", "postgresql://user:pass@db:5432/discogs",
+                "OPEN_DISCOGS_BATCH_DATABASE_SCHEMA", "open_discogs",
                 "OPEN_DISCOGS_BATCH_ENTITIES", "artist,release",
                 "OPEN_DISCOGS_BATCH_DUMP_MONTH", "2026-07",
                 "OPEN_DISCOGS_BATCH_DATA_DIR", "/data",
@@ -27,6 +28,7 @@ class EnvironmentArgumentProviderUnitTest {
     assertThat(provider.apply(new String[0]))
         .containsExactlyInAnyOrder(
             "--database-url=postgresql://user:pass@db:5432/discogs",
+            "--database-schema=open_discogs",
             "--entities=artist,release",
             "--dump-month=2026-07",
             "--data-dir=/data",

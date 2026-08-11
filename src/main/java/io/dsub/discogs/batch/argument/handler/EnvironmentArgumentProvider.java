@@ -13,6 +13,7 @@ final class EnvironmentArgumentProvider {
   private static final List<Binding> BINDINGS =
       List.of(
           new Binding("DATABASE_URL", "database-url", ArgType.URL, false),
+          new Binding("DATABASE_SCHEMA", "database-schema", ArgType.DATABASE_SCHEMA, false),
           new Binding("ENTITIES", "entities", ArgType.TYPE, false),
           new Binding("DUMP_MONTH", "dump-month", ArgType.DUMP_MONTH, false),
           new Binding("DATA_DIR", "data-dir", ArgType.DATA_DIR, false),

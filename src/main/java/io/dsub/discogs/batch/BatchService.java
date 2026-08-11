@@ -12,6 +12,7 @@ public class BatchService {
       Usage: open-discogs-batch [options]
 
         --database-url <uri>       PostgreSQL URI including credentials (required)
+        --database-schema <name>   PostgreSQL schema (default: public; emits a warning)
         -e, --entities <list>      artist,label,master,release (default: all)
         -m, --dump-month <yyyy-MM> Import an exact dump month (default: latest per entity)
             --data-dir <path>      Download directory (default: ~/.cache/open-discogs-batch)
