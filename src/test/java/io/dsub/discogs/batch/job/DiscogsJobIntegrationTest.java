@@ -476,7 +476,7 @@ public abstract class DiscogsJobIntegrationTest {
                 """
                 select tablename
                 from pg_tables
-                where schemaname = 'public'
+                where schemaname = current_schema()
                   and tablename not like 'batch_%'
                   and tablename not like 'databasechangelog%'
                   and tablename not like 'discogs_%'
@@ -732,7 +732,7 @@ public abstract class DiscogsJobIntegrationTest {
                 """
                 select tablename
                 from pg_tables
-                where schemaname = 'public'
+                where schemaname = current_schema()
                   and tablename not like 'batch_%'
                   and tablename not like 'databasechangelog%'
                   and tablename not like 'discogs_%'

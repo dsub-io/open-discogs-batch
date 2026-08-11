@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="
+        http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+  <changeSet id="open-discogs-model-v001" author="state303">
+    <preConditions onFail="MARK_RAN">
+      <not>
+        <tableExists schemaName="${databaseSchema}" tableName="artist"/>
+      </not>
+    </preConditions>
+    <sqlFile
+        path="migrations/V001__initial_schema.sql"
+        relativeToChangelogFile="false"
+        splitStatements="true"/>
+    <modifySql dbms="postgresql">
+      <regExpReplace replace="public\." with="${databaseSchema}."/>
+    </modifySql>
+  </changeSet>
+
+  <changeSet id="open-discogs-model-v002" author="state303">
+    <preConditions onFail="MARK_RAN">
+      <not>
+        <tableExists schemaName="${databaseSchema}" tableName="discogs_dump"/>
+      </not>
+    </preConditions>
+    <sqlFile
+        path="migrations/V002__discogs_dump_catalog.sql"
+        relativeToChangelogFile="false"
+        splitStatements="true"/>
+    <modifySql dbms="postgresql">
+      <regExpReplace replace="public\." with="${databaseSchema}."/>
+    </modifySql>
+  </changeSet>
+
+  <changeSet id="open-discogs-model-v003" author="state303">
+    <preConditions onFail="MARK_RAN">
+      <not>
+        <tableExists schemaName="${databaseSchema}" tableName="discogs_import_run"/>
+      </not>
+    </preConditions>
+    <sqlFile
+        path="migrations/V003__discogs_import_history.sql"
+        relativeToChangelogFile="false"
+        splitStatements="true"/>
+    <modifySql dbms="postgresql">
+      <regExpReplace replace="public\." with="${databaseSchema}."/>
+    </modifySql>
+  </changeSet>
+
+  <changeSet id="open-discogs-model-v004" author="state303">
+    <sqlFile
+        path="migrations/V004__allow_reissued_dump_paths.sql"
+        relativeToChangelogFile="false"
+        splitStatements="true"/>
+    <modifySql dbms="postgresql">
+      <regExpReplace replace="public\." with="${databaseSchema}."/>
+    </modifySql>
+  </changeSet>
+
+  <changeSet id="open-discogs-model-v005" author="state303">
+    <preConditions onFail="MARK_RAN">
+      <not>
+        <columnExists
+            schemaName="${databaseSchema}"
+            tableName="discogs_import_run"
+            columnName="resumed_from_run_id"/>
+      </not>
+    </preConditions>
+    <sqlFile
+        path="migrations/V005__durable_import_progress.sql"
+        relativeToChangelogFile="false"
+        splitStatements="true"/>
+    <modifySql dbms="postgresql">
+      <regExpReplace replace="public\." with="${databaseSchema}."/>
+    </modifySql>
+  </changeSet>
+
+  <changeSet id="open-discogs-model-v006" author="state303">
+    <preConditions onFail="MARK_RAN">
+      <not>
+        <tableExists schemaName="${databaseSchema}" tableName="discogs_import_run_chunk"/>
+      </not>
+    </preConditions>
+    <sqlFile
+        path="migrations/V006__concurrent_import_progress.sql"
+        relativeToChangelogFile="false"
+        splitStatements="true"/>
+    <modifySql dbms="postgresql">
+      <regExpReplace replace="public\." with="${databaseSchema}."/>
+    </modifySql>
+  </changeSet>
+
+  <changeSet id="open-discogs-model-v007" author="state303">
+    <sqlFile
+        path="migrations/V007__api_query_indexes.sql"
+        relativeToChangelogFile="false"
+        splitStatements="true"/>
+    <modifySql dbms="postgresql">
+      <regExpReplace replace="public\." with="${databaseSchema}."/>
+    </modifySql>
+  </changeSet>
+
+  <changeSet id="spring-batch-postgresql" author="state303">
+    <preConditions onFail="MARK_RAN">
+      <not>
+        <tableExists schemaName="${databaseSchema}" tableName="batch_job_instance"/>
+      </not>
+    </preConditions>
+    <sqlFile
+        path="org/springframework/batch/core/schema-postgresql.sql"
+        relativeToChangelogFile="false"
+        splitStatements="true"/>
+  </changeSet>
+</databaseChangeLog>

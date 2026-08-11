@@ -4,6 +4,7 @@ spring:
     banner-mode: OFF
   datasource:
     hikari:
+      connection-init-sql: SET search_path TO ${databaseSchema:public}, public
       data-source-properties:
         rewriteBatchedStatements: true
     url: ${url}
