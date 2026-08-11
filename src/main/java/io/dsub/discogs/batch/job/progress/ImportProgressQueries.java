@@ -47,6 +47,14 @@ final class ImportProgressQueries {
       for update
       """;
 
+  static final String READ_PROGRESS =
+      """
+      select processed_items, total_items, last_progress_at
+      from discogs_import_run_dump
+      where import_run_id = ?
+        and entity_type = ?
+      """;
+
   static final String SUMMARIZE_PROGRESS =
       """
       select count(*) as total_chunks,

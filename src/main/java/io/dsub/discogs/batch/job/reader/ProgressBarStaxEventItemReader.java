@@ -32,7 +32,7 @@ import org.springframework.util.Assert;
 @RequiredArgsConstructor
 public class ProgressBarStaxEventItemReader<T> implements ItemStreamReader<T>, InitializingBean {
 
-  private static final String TASK_NAME_PREPEND = "READ ";
+  private static final String TASK_NAME_PREPEND = "SOURCE READ ";
 
   private final String taskName;
   private final Class<T> mappedClass;

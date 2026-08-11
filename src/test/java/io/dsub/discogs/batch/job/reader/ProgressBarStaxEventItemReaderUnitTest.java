@@ -81,7 +81,8 @@ class ProgressBarStaxEventItemReaderUnitTest {
       if (reader != null) {
         reader.close();
       }
-      assertThat(outCaptor.toString()).contains("READ " + arg.getMappedClass().getSimpleName());
+      assertThat(outCaptor.toString())
+          .contains("SOURCE READ " + arg.getMappedClass().getSimpleName());
     }
   }
 

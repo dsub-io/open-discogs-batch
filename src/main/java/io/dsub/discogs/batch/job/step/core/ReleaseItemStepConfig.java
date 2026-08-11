@@ -211,7 +211,7 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
         .listener(itemCountingItemProcessListener)
         .listener(
             new EntityProgressStepExecutionListener(
-                importProgressStore, EntityType.RELEASE, runId, chunkSize))
+                importProgressStore, EntityType.RELEASE, runId, chunkSize, resumed))
         .taskExecutor(taskExecutor)
         .build();
   }

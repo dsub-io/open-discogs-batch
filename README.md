@@ -48,6 +48,30 @@ Readers can observe already-committed chunks while an import is running. Use a
 versioned database or replica promotion when consumers require all entities to
 switch snapshots atomically.
 
+### Progress observability
+
+Download bars use the dump catalog's compressed size. `SOURCE READ` bars use the
+exact local compressed file size and report byte progress, throughput, elapsed
+time, and source-read ETA. They describe how much of the selected `.xml.gz` file
+has been consumed, not how many PostgreSQL rows have committed.
+
+Each entity also emits structured `event=import_progress` records at start,
+completion, failure, and at most once every five seconds while chunks commit.
+The records include exact durable `committed_items`, `rows_per_second`, elapsed
+time, resume state, initial committed items, and the latest committed progress
+timestamp. Observation failures are warnings and do not change import success.
+Each emitted sample performs one primary-key summary read, bounded to 0.2 reads
+per second per active entity plus the start and finish reads; it never scans the
+chunk ledger or entity tables.
+
+`committed_percent` is `unavailable` until end-of-stream coverage validation
+establishes the exact entity total; a completed entity reports `100.00`. The
+importer deliberately does not pre-scan a dump just to count roots, because
+that would add a complete gzip/XML pass before a 200-million-row import. It also
+does not synthesize one percentage across entity types whose parse and relation
+costs differ. A resumed entity whose coverage was already complete can start at
+100% while the source is reread to validate and skip committed chunks.
+
 Discogs dump paths such as `data/2026/discogs_20260701_releases.xml.gz` are used
 as stable identifiers and are paired with the same date's checksum manifest.
 When one domain is absent from a month, it does not roll the other domains back.

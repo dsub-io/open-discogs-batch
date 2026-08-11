@@ -4,7 +4,10 @@ import io.dsub.discogs.batch.dump.EntityType;
 import io.dsub.discogs.batch.exception.ImportExecutionException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.List;
+import java.util.Optional;
+import java.util.OptionalLong;
 import javax.sql.DataSource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -73,6 +76,14 @@ public class ImportProgressStore {
     }
   }
 
+  public ImportProgressSnapshot getProgress(long runId, EntityType entityType) {
+    return jdbcTemplate.queryForObject(
+        ImportProgressQueries.READ_PROGRESS,
+        (result, rowNumber) -> mapProgressSnapshot(result),
+        runId,
+        entityType.toString());
+  }
+
   public void completeEntity(
       long runId,
       EntityType entityType,
@@ -120,6 +131,16 @@ public class ImportProgressStore {
 
   private RecordedChunk mapRecordedChunk(ResultSet result) throws SQLException {
     return new RecordedChunk(result.getLong("first_item_index"), result.getInt("item_count"));
+  }
+
+  private ImportProgressSnapshot mapProgressSnapshot(ResultSet result) throws SQLException {
+    long totalItems = result.getLong("total_items");
+    OptionalLong total = result.wasNull() ? OptionalLong.empty() : OptionalLong.of(totalItems);
+    Timestamp lastProgress = result.getTimestamp("last_progress_at");
+    return new ImportProgressSnapshot(
+        result.getLong("processed_items"),
+        total,
+        Optional.ofNullable(lastProgress).map(Timestamp::toInstant));
   }
 
   private record RecordedChunk(long firstItemIndex, int itemCount) {

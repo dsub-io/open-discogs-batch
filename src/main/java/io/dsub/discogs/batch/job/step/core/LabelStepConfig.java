@@ -172,7 +172,7 @@ public class LabelStepConfig extends AbstractStepConfig {
         .listener(itemCountingItemProcessListener)
         .listener(
             new EntityProgressStepExecutionListener(
-                importProgressStore, EntityType.LABEL, runId, chunkSize))
+                importProgressStore, EntityType.LABEL, runId, chunkSize, resumed))
         .taskExecutor(taskExecutor)
         .build();
   }
