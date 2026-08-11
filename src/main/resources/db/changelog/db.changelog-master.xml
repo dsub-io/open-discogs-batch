@@ -73,6 +73,13 @@
         splitStatements="true"/>
   </changeSet>
 
+  <changeSet id="open-discogs-model-v007" author="state303">
+    <sqlFile
+        path="migrations/V007__api_query_indexes.sql"
+        relativeToChangelogFile="false"
+        splitStatements="true"/>
+  </changeSet>
+
   <changeSet id="spring-batch-postgresql" author="state303">
     <preConditions onFail="MARK_RAN">
       <not>

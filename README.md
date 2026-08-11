@@ -66,7 +66,7 @@ sdk env
 
 The build uses Gradle 9.6.1, Spring Boot 4.1, and Spring Batch 6. Dependencies
 resolve from Maven Central, including
-`io.dsub.opendiscogs:open-discogs-model-jooq:0.2.1`. No GitHub token is required
+`io.dsub.opendiscogs:open-discogs-model-jooq:0.2.2`. No GitHub token is required
 to build or run this project.
 
 ## Build and test
