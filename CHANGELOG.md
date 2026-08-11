@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.1.1](https://github.com/dsub-io/open-discogs-batch/compare/v1.1.0...v1.1.1) (2026-08-11)
+
+
+### Bug Fixes
+
+* generate the SHA-256 manifest from the copied release JAR so its entry uses
+  the portable `open-discogs-batch-<version>.jar` filename instead of the
+  repository-only `build/libs/...` path ([#37](https://github.com/dsub-io/open-discogs-batch/pull/37))
+* verify the generated checksum before upload, causing the release workflow to
+  fail before publishing inconsistent JAR and checksum assets
+
+### Validation
+
+* pass Actionlint and the release-equivalent Gradle build, PostgreSQL E2E, and
+  executable JAR version check for `1.1.1`
+* verify `sha256sum --check` succeeds with the portable filename, maintain zero
+  missed JaCoCo instructions and lines, and leave no test Docker resources
+
 ## [1.1.0](https://github.com/dsub-io/open-discogs-batch/compare/v1.0.2...v1.1.0) (2026-08-11)
 
 
