@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.0.2](https://github.com/dsub-io/open-discogs-batch/compare/v1.0.1...v1.0.2) (2026-08-11)
+
+
+### Performance Improvements
+
+* update the Maven Central model to `0.2.2` and apply canonical `V007` API query indexes through Liquibase ([e581e38](https://github.com/dsub-io/open-discogs-batch/commit/e581e38f5037a80d48adafb13f3acb5ba95b39df))
+
+### Measured Impact
+
+* on the same warm-cache PostgreSQL 18.4 synthetic dataset, deep release pagination p95 fell from `183.106 ms` to `0.038 ms` (`99.979%` lower, `4,818.6x` faster) with keyset pagination
+* indexed title-contains search p95 fell from `194.535 ms` to `0.136 ms` (`99.930%` lower, `1,430.4x` faster), and reverse artist-relation lookup p95 fell from `17.309 ms` to `0.061 ms` (`99.648%` lower, `283.8x` faster)
+* the synthetic database grew from `314,308,287` to `486,389,439` bytes (`+164.1 MiB`, `+54.7%`); full 200M+ import duration, production index size, cold I/O, and concurrent throughput remain pre-production measurements
+
+### Validation and Distribution
+
+* apply V001 through V007 plus the Spring Batch schema against actual PostgreSQL and pass durability/idempotency E2E
+* maintain `100.0%` JaCoCo coverage for instructions, branches, lines, complexity, methods, and classes, with zero residual test containers, networks, or volumes
+* publish the executable JAR and checksum plus non-root `linux/amd64` and `linux/arm64` GHCR images with post-publish architecture verification
+
 ## [1.0.1](https://github.com/dsub-io/open-discogs-batch/compare/v1.0.0...v1.0.1) (2026-08-10)
 
 
