@@ -2,10 +2,7 @@ package io.dsub.discogs.batch.dump;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import com.sun.net.httpserver.HttpExchange;
@@ -17,9 +14,7 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -68,33 +63,20 @@ class DefaultDumpSupplierBoundaryUnitTest {
   }
 
   @Test
-  void emptyIndexFallbackHandlesInterruptAndIoFailureWithoutRetryStorm() throws Exception {
-    DefaultDumpSupplier interrupted = spy(new DefaultDumpSupplier());
-    doReturn("").when(interrupted).getDiscogsDataSource("https://data.discogs.com/");
-    doThrow(new InterruptedException("fixture"))
-        .when(interrupted)
-        .getLatestCompleteDumpsFromManifests();
+  void dumpMetadataRequiresOneSuccessfulHeadWithAnExactPositiveSize() throws Exception {
+    startServer();
+    DefaultDumpSupplier supplier = new DefaultDumpSupplier(serverUri("/"));
 
-    assertThat(interrupted.get()).isEmpty();
-    assertThat(Thread.currentThread().isInterrupted()).isTrue();
-    Thread.interrupted();
-
-    DefaultDumpSupplier unavailable = spy(new DefaultDumpSupplier());
-    doReturn("").when(unavailable).getDiscogsDataSource("https://data.discogs.com/");
-    doThrow(new IOException("fixture"))
-        .when(unavailable)
-        .getLatestCompleteDumpsFromManifests();
-    assertThat(unavailable.get()).isEmpty();
-  }
-
-  @Test
-  void manifestLookbackStopsAfterTheBoundedWindow() throws Exception {
-    DefaultDumpSupplier supplier = spy(new DefaultDumpSupplier());
-    doReturn(LocalDate.of(2026, 8, 10)).when(supplier).getCurrentUtcDate();
-    doReturn(Optional.empty()).when(supplier).getDiscogsManifestSource(org.mockito.ArgumentMatchers.anyString());
-
-    assertThat(supplier.getLatestCompleteDumpsFromManifests()).isEmpty();
-    assertThat(new DefaultDumpSupplier().getCurrentUtcDate()).isEqualTo(LocalDate.now(java.time.ZoneOffset.UTC));
+    assertThat(supplier.getDiscogsDumpSize(serverUri("/size").toURL())).isEqualTo(123L);
+    assertThatThrownBy(() -> supplier.getDiscogsDumpSize(serverUri("/missing").toURL()))
+        .isInstanceOf(IOException.class)
+        .hasMessageContaining("HTTP 404");
+    assertThatThrownBy(() -> supplier.getDiscogsDumpSize(serverUri("/no-size").toURL()))
+        .isInstanceOf(IOException.class)
+        .hasMessageContaining("positive Content-Length");
+    assertThatThrownBy(() -> supplier.getDiscogsDumpSize(serverUri("/zero-size").toURL()))
+        .isInstanceOf(IOException.class)
+        .hasMessageContaining("positive Content-Length");
   }
 
   @Test
@@ -166,6 +148,26 @@ class DefaultDumpSupplierBoundaryUnitTest {
     server.createContext("/ok", exchange -> respond(exchange, 200, "fixture"));
     server.createContext("/missing", exchange -> respond(exchange, 404, "missing"));
     server.createContext("/failure", exchange -> respond(exchange, 503, "failure"));
+    server.createContext(
+        "/size",
+        exchange -> {
+          exchange.getResponseHeaders().set("Content-Length", "123");
+          exchange.sendResponseHeaders(200, -1);
+          exchange.close();
+        });
+    server.createContext(
+        "/no-size",
+        exchange -> {
+          exchange.sendResponseHeaders(200, -1);
+          exchange.close();
+        });
+    server.createContext(
+        "/zero-size",
+        exchange -> {
+          exchange.getResponseHeaders().set("Content-Length", "0");
+          exchange.sendResponseHeaders(200, -1);
+          exchange.close();
+        });
     server.start();
   }
 

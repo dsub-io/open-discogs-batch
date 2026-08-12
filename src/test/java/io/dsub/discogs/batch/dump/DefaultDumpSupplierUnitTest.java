@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -22,8 +21,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.EnumSet;
 import java.util.List;
-import java.util.Optional;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -91,8 +90,7 @@ class DefaultDumpSupplierUnitTest {
               assertThat(dump.getLastModifiedAt()).isEqualTo(LocalDate.of(2026, 7, 1));
               assertThat(dump.getSize()).isPositive();
               assertThat(dump.getUrl().toString())
-                  .startsWith(
-                      "https://discogs-data-dumps.s3.us-west-2.amazonaws.com/data/2026/");
+                  .startsWith("https://data.discogs.com/?download=data%2F2026%2F");
               assertThat(dump.getChecksumUrl().toString())
                   .isEqualTo(
                       "https://data.discogs.com/"
@@ -119,152 +117,20 @@ class DefaultDumpSupplierUnitTest {
   }
 
   @Test
-  void whenGet__ThenFetchesRootAndEveryYearIndex() throws Exception {
-    String rootIndex = readTestFile("DiscogsDataIndex.html");
-    String yearIndex = readTestFile("DiscogsData2026.html");
-    doReturn(rootIndex)
-        .when(dumpSupplier)
-        .getDiscogsDataSource("https://data.discogs.com/");
-    for (String yearUrl : dumpSupplier.parseYearIndexUrls(rootIndex)) {
-      doReturn(yearIndex).when(dumpSupplier).getDiscogsDataSource(yearUrl);
-    }
-
-    assertThat(dumpSupplier.get()).hasSize(12);
-  }
-
-  @Test
-  void whenOneYearIndexFails__ThenReturnsOtherYears() throws Exception {
-    String rootIndex = readTestFile("DiscogsDataIndex.html");
-    String yearIndex = readTestFile("DiscogsData2026.html");
-    List<String> yearUrls = dumpSupplier.parseYearIndexUrls(rootIndex);
-    doReturn(rootIndex)
-        .when(dumpSupplier)
-        .getDiscogsDataSource("https://data.discogs.com/");
-    doReturn(yearIndex).when(dumpSupplier).getDiscogsDataSource(yearUrls.get(0));
-    doThrow(new IOException("unavailable"))
-        .when(dumpSupplier)
-        .getDiscogsDataSource(yearUrls.get(1));
-    doReturn(yearIndex).when(dumpSupplier).getDiscogsDataSource(yearUrls.get(2));
-
-    assertThat(dumpSupplier.get()).hasSize(8);
-    assertThat(logSpy.getEvents())
-        .anyMatch(event -> event.getMessage().contains("failed to fetch Discogs data index"));
-  }
-
-  @Test
-  void whenRootIndexFails__ThenUsesManifestFallback() throws Exception {
-    DiscogsDump fallbackDump =
+  void whenGet__ThenDelegatesToTheBoundedLatestSelection() {
+    DiscogsDump expected =
         new DiscogsDump(
-            "data/2026/discogs_20260701_artists.xml.gz",
+            "etag",
             EntityType.ARTIST,
             "data/2026/discogs_20260701_artists.xml.gz",
-            -1L,
+            1L,
             LocalDate.of(2026, 7, 1),
             null);
-    doThrow(new IOException("unavailable"))
-        .when(dumpSupplier)
-        .getDiscogsDataSource("https://data.discogs.com/");
-    doReturn(List.of(fallbackDump))
-        .when(dumpSupplier)
-        .getLatestCompleteDumpsFromManifests();
+    EnumSet<EntityType> allTypes = EnumSet.allOf(EntityType.class);
+    doReturn(List.of(expected)).when(dumpSupplier).getLatest(allTypes);
 
-    assertThat(dumpSupplier.get()).containsExactly(fallbackDump);
-    assertThat(logSpy.getEvents())
-        .anyMatch(event -> event.getMessage().contains("failed to fetch the Discogs data index"));
-  }
-
-  @Test
-  void whenLatestManifestIsMissing__ThenUsesPreviousCompleteMonth() throws Exception {
-    String augustManifestUrl = manifestUrl("20260801");
-    String julyManifestUrl = manifestUrl("20260701");
-    doReturn(LocalDate.of(2026, 8, 1)).when(dumpSupplier).getCurrentUtcDate();
-    doReturn(Optional.empty())
-        .when(dumpSupplier)
-        .getDiscogsManifestSource(augustManifestUrl);
-    doReturn(Optional.of(completeManifest("20260701")))
-        .when(dumpSupplier)
-        .getDiscogsManifestSource(julyManifestUrl);
-
-    List<DiscogsDump> result = dumpSupplier.getLatestCompleteDumpsFromManifests();
-
-    assertThat(result)
-        .hasSize(4)
-        .extracting(DiscogsDump::getType)
-        .containsExactly(EntityType.values());
-    assertThat(result)
-        .allSatisfy(
-            dump -> {
-              assertThat(dump.getLastModifiedAt()).isEqualTo(LocalDate.of(2026, 7, 1));
-              assertThat(dump.getSize()).isEqualTo(-1L);
-              assertThat(dump.getETag()).isEqualTo(dump.getUriString());
-              assertThat(dump.getUrl().toString())
-                  .startsWith(
-                      "https://discogs-data-dumps.s3.us-west-2.amazonaws.com/data/2026/");
-              assertThat(dump.getChecksumUrl().toString()).isEqualTo(julyManifestUrl);
-            });
-    verify(dumpSupplier, times(1)).getDiscogsManifestSource(augustManifestUrl);
-    verify(dumpSupplier, times(1)).getDiscogsManifestSource(julyManifestUrl);
-  }
-
-  @Test
-  void whenLatestManifestMissesOneDomain__ThenFillsOnlyThatDomainFromPreviousMonth()
-      throws Exception {
-    String julyManifestUrl = manifestUrl("20260701");
-    String juneManifestUrl = manifestUrl("20260601");
-    doReturn(LocalDate.of(2026, 7, 31)).when(dumpSupplier).getCurrentUtcDate();
-    doReturn(
-            Optional.of(
-                completeManifest("20260701")
-                    .replace(manifestLine("20260701", EntityType.LABEL), "")))
-        .when(dumpSupplier)
-        .getDiscogsManifestSource(julyManifestUrl);
-    doReturn(Optional.of(completeManifest("20260601")))
-        .when(dumpSupplier)
-        .getDiscogsManifestSource(juneManifestUrl);
-
-    List<DiscogsDump> result = dumpSupplier.getLatestCompleteDumpsFromManifests();
-
-    assertThat(result)
-        .hasSize(4)
-        .allSatisfy(
-            dump ->
-                assertThat(dump.getLastModifiedAt())
-                    .isEqualTo(
-                        dump.getType() == EntityType.LABEL
-                            ? LocalDate.of(2026, 6, 1)
-                            : LocalDate.of(2026, 7, 1)));
-    assertThat(logSpy.getEvents())
-        .anyMatch(
-            event ->
-                event
-                    .getFormattedMessage()
-                    .contains("manifest for 2026-07-01 does not cover every unresolved entity"));
-  }
-
-  @Test
-  void whenManifestAccessIsRejected__ThenDoesNotRetryOlderMonths() throws Exception {
-    String julyManifestUrl = manifestUrl("20260701");
-    doReturn(LocalDate.of(2026, 7, 31)).when(dumpSupplier).getCurrentUtcDate();
-    doThrow(new IOException("HTTP 403"))
-        .when(dumpSupplier)
-        .getDiscogsManifestSource(julyManifestUrl);
-
-    assertThrows(IOException.class, dumpSupplier::getLatestCompleteDumpsFromManifests);
-    verify(dumpSupplier, times(1)).getDiscogsManifestSource(julyManifestUrl);
-  }
-
-  @Test
-  void whenRootIndexIsInterrupted__ThenRestoresInterruptStatus() throws Exception {
-    doThrow(new InterruptedException("interrupted"))
-        .when(dumpSupplier)
-        .getDiscogsDataSource("https://data.discogs.com/");
-
-    try {
-      assertThat(dumpSupplier.get()).isEmpty();
-      assertThat(Thread.currentThread().isInterrupted()).isTrue();
-    } finally {
-      Thread.interrupted();
-    }
+    assertThat(dumpSupplier.get()).containsExactly(expected);
+    verify(dumpSupplier).getLatest(allTypes);
   }
 
   @Test
@@ -508,28 +374,4 @@ class DefaultDumpSupplierUnitTest {
     return Files.readString(getTestFile(filename).toPath());
   }
 
-  private String completeManifest(String dateStamp) {
-    StringBuilder manifest = new StringBuilder();
-    for (EntityType type : EntityType.values()) {
-      manifest.append(manifestLine(dateStamp, type));
-    }
-    return manifest.toString();
-  }
-
-  private String manifestLine(String dateStamp, EntityType type) {
-    return "a".repeat(64)
-        + "  discogs_"
-        + dateStamp
-        + "_"
-        + type
-        + "s.xml.gz\n";
-  }
-
-  private String manifestUrl(String dateStamp) {
-    return "https://data.discogs.com/?download=data%2F"
-        + dateStamp.substring(0, 4)
-        + "%2Fdiscogs_"
-        + dateStamp
-        + "_CHECKSUM.txt";
-  }
 }

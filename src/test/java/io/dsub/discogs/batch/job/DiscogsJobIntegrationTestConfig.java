@@ -15,10 +15,12 @@ import io.dsub.discogs.batch.util.SimpleFileUtil;
 import java.io.File;
 import java.io.IOException;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.launch.JobOperator;
@@ -135,6 +137,16 @@ public class DiscogsJobIntegrationTestConfig {
 
       @Override
       public List<DiscogsDump> getAll() {
+        return null;
+      }
+
+      @Override
+      public List<DiscogsDump> resolveLatest(Set<EntityType> types) {
+        return null;
+      }
+
+      @Override
+      public List<DiscogsDump> resolveMonth(Set<EntityType> types, YearMonth month) {
         return null;
       }
     };

@@ -12,6 +12,7 @@ import org.jooq.conf.Settings;
 import org.jooq.impl.DSL;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy;
 
 /**
  * Infrastructure support for JOOQ configuration, providing the {@link DSLContext} bean.
@@ -35,7 +36,8 @@ public class JooqConfig {
                         new MappedSchema()
                             .withInput(DatabaseSchema.DEFAULT_NAME)
                             .withOutput(databaseSchema.name())));
-    return DSL.using(dataSource, details.dialect(), settings);
+    return DSL.using(
+        new TransactionAwareDataSourceProxy(dataSource), details.dialect(), settings);
   }
 
   @Bean

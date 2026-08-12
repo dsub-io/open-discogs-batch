@@ -24,12 +24,43 @@ final class ImportExecutionQueries {
       where entity_type = ?
       """;
 
+  static final String FIND_DEPENDENCY_CHECKPOINT =
+      """
+      select checkpoint.dump_date as checkpoint_date,
+             checkpoint.checksum_sha256 as checkpoint_checksum,
+             expected.dump_date as expected_date,
+             expected.checksum_sha256 as expected_checksum
+      from discogs_import_checkpoint checkpoint
+      left join lateral (
+        select dump.dump_date,
+               dump.checksum_sha256
+        from discogs_dump dump
+        where dump.entity_type = ?
+          and dump.dump_date < ?
+        order by dump.dump_date desc, dump.id desc
+        limit 1
+      ) expected on true
+      where checkpoint.entity_type = ?
+      """;
+
   static final String FIND_CURRENT_SUCCESS =
       """
       select candidate_run.id
       from discogs_import_run candidate_run
       where candidate_run.manifest_sha256 = ?
         and candidate_run.status = 'success'
+        and not exists (
+          select 1
+          from discogs_import_run_dump revision_dump
+          where revision_dump.import_run_id = candidate_run.id
+            and revision_dump.import_contract_revision is distinct from
+                case revision_dump.entity_type
+                  when 'artist' then ?
+                  when 'label' then ?
+                  when 'master' then ?
+                  when 'release' then ?
+                end
+        )
         and not exists (
           select 1
           from discogs_import_run_dump candidate_dump
@@ -69,6 +100,18 @@ final class ImportExecutionQueries {
         and import_run.processor = ?
         and import_run.processor_version = ?
         and not import_run.force_requested
+        and not exists (
+          select 1
+          from discogs_import_run_dump revision_dump
+          where revision_dump.import_run_id = import_run.id
+            and revision_dump.import_contract_revision is distinct from
+                case revision_dump.entity_type
+                  when 'artist' then ?
+                  when 'label' then ?
+                  when 'master' then ?
+                  when 'release' then ?
+                end
+        )
         and (select count(*)
              from discogs_import_run_dump run_dump
              where run_dump.import_run_id = import_run.id) = ?
@@ -111,7 +154,9 @@ final class ImportExecutionQueries {
           where failed_dump.import_run_id = import_run.id
             and (current_dump.dump_id <> failed_dump.dump_id
                  or current_run.processor <> import_run.processor
-                 or current_run.processor_version <> import_run.processor_version)
+                 or current_run.processor_version <> import_run.processor_version
+                 or current_dump.import_contract_revision
+                    <> failed_dump.import_contract_revision)
             and (checkpoint.applied_at > import_run.completed_at
                  or (checkpoint.applied_at = import_run.completed_at
                      and checkpoint.import_run_id > import_run.id))
@@ -149,8 +194,8 @@ final class ImportExecutionQueries {
   static final String INSERT_RUN_DUMP =
       """
       insert into discogs_import_run_dump
-          (import_run_id, entity_type, dump_id, chunk_size)
-      values (?, ?, ?, ?)
+          (import_run_id, entity_type, dump_id, chunk_size, import_contract_revision)
+      values (?, ?, ?, ?, ?)
       """;
 
   static final String COPY_RESUME_SUMMARIES =
@@ -222,7 +267,10 @@ final class ImportExecutionQueries {
             where failed_dump.import_run_id = failed_run.id
               and (current_dump.dump_id is distinct from failed_dump.dump_id
                    or current_run.processor is distinct from failed_run.processor
-                   or current_run.processor_version is distinct from failed_run.processor_version)
+                   or current_run.processor_version
+                      is distinct from failed_run.processor_version
+                   or current_dump.import_contract_revision
+                      is distinct from failed_dump.import_contract_revision)
           )
       )
       """;

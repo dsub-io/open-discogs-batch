@@ -37,9 +37,7 @@ class ItemReaderConfigUnitTest {
             config::labelStreamReader,
             () -> config.labelSubItemsStreamReader(5),
             config::masterStreamReader,
-            config::masterMainReleaseStreamReader,
             () -> config.masterSubItemsStreamReader(5),
-            config::releaseItemStreamReader,
             () -> config.releaseItemSubItemsStreamReader(5));
 
     for (Callable<Object> reader : readers) {

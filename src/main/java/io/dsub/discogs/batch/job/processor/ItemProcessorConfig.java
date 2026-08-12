@@ -4,18 +4,15 @@ import io.dsub.discogs.batch.domain.artist.ArtistSubItemsXML;
 import io.dsub.discogs.batch.domain.artist.ArtistXML;
 import io.dsub.discogs.batch.domain.label.LabelSubItemsXML;
 import io.dsub.discogs.batch.domain.label.LabelXML;
-import io.dsub.discogs.batch.domain.master.MasterMainReleaseXML;
 import io.dsub.discogs.batch.domain.master.MasterSubItemsXML;
 import io.dsub.discogs.batch.domain.master.MasterXML;
 import io.dsub.discogs.batch.domain.release.ReleaseItemSubItemsXML;
-import io.dsub.discogs.batch.domain.release.ReleaseItemXML;
 import io.dsub.discogs.batch.job.progress.ProcessedChunk;
 import io.dsub.discogs.batch.job.progress.SourceChunk;
 import io.dsub.discogs.batch.job.registry.DefaultEntityIdRegistry;
 import io.dsub.opendiscogs.jooq.tables.records.ArtistRecord;
 import io.dsub.opendiscogs.jooq.tables.records.LabelRecord;
 import io.dsub.opendiscogs.jooq.tables.records.MasterRecord;
-import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemRecord;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.infrastructure.item.ItemProcessor;
@@ -69,20 +66,9 @@ public class ItemProcessorConfig {
 
   @Bean
   @StepScope
-  public ItemProcessor<ReleaseItemXML, ReleaseItemRecord> releaseItemCoreProcessor() {
-    return new ReleaseItemCoreProcessor(entityIdRegistry);
-  }
-
-  @Bean
-  @StepScope
-  public ItemProcessor<SourceChunk<ReleaseItemSubItemsXML>, ProcessedChunk<RelationSet>>
+  public ItemProcessor<SourceChunk<ReleaseItemSubItemsXML>, ProcessedChunk<ReleaseRootMutation>>
   releaseItemSubItemsProcessor() {
-    return new SourceChunkItemProcessor<>(new ReleaseItemSubItemsProcessor(entityIdRegistry));
+    return new SourceChunkItemProcessor<>(new ReleaseRootMutationProcessor(entityIdRegistry));
   }
 
-  @Bean
-  @StepScope
-  public ItemProcessor<MasterMainReleaseXML, MasterRecord> masterMainReleaseItemProcessor() {
-    return new MasterMainReleaseItemProcessor(entityIdRegistry);
-  }
 }

@@ -15,6 +15,8 @@ import org.jooq.tools.jdbc.MockConnection;
 import org.jooq.tools.jdbc.MockResult;
 import io.dsub.discogs.batch.job.registry.DefaultEntityIdRegistry;
 import io.dsub.opendiscogs.jooq.tables.Master;
+import io.dsub.opendiscogs.jooq.tables.Artist;
+import io.dsub.opendiscogs.jooq.tables.Label;
 import org.junit.jupiter.api.Test;
 import org.springframework.batch.core.job.JobExecution;
 import org.springframework.batch.core.job.JobInstance;
@@ -96,6 +98,36 @@ class IdCachingJobExecutionListenerUnitTest {
 
     verify(registry).put(DefaultEntityIdRegistry.Type.MASTER, 7);
     verify(registry).put(DefaultEntityIdRegistry.Type.MASTER, 9);
+  }
+
+  @Test
+  void preCacheArtistIdsStreamsEveryDatabaseIdentifier() {
+    DSLContext resultContext = DSL.using(SQLDialect.POSTGRES);
+    var result = resultContext.newResult(Artist.ARTIST.ID);
+    result.add(resultContext.newRecord(Artist.ARTIST.ID).values(11));
+    MockConnection connection =
+        new MockConnection(context -> new MockResult[] {new MockResult(result.size(), result)});
+    DSLContext context = DSL.using(connection, SQLDialect.POSTGRES);
+    EntityIdRegistry registry = mock(EntityIdRegistry.class);
+
+    new IdCachingJobExecutionListener(registry, context).preCacheArtistIds();
+
+    verify(registry).put(DefaultEntityIdRegistry.Type.ARTIST, 11);
+  }
+
+  @Test
+  void preCacheLabelIdsStreamsEveryDatabaseIdentifier() {
+    DSLContext resultContext = DSL.using(SQLDialect.POSTGRES);
+    var result = resultContext.newResult(Label.LABEL.ID);
+    result.add(resultContext.newRecord(Label.LABEL.ID).values(13));
+    MockConnection connection =
+        new MockConnection(context -> new MockResult[] {new MockResult(result.size(), result)});
+    DSLContext context = DSL.using(connection, SQLDialect.POSTGRES);
+    EntityIdRegistry registry = mock(EntityIdRegistry.class);
+
+    new IdCachingJobExecutionListener(registry, context).preCacheLabelIds();
+
+    verify(registry).put(DefaultEntityIdRegistry.Type.LABEL, 13);
   }
 
   private IdCachingJobExecutionListener listener() {

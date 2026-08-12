@@ -1,5 +1,6 @@
 package io.dsub.discogs.batch.dump;
 
+import io.dsub.discogs.batch.exception.DumpNotFoundException;
 import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import java.io.File;
 import java.io.FileInputStream;
@@ -13,7 +14,6 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLDecoder;
-import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -23,11 +23,14 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.time.YearMonth;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeParseException;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
 import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -35,6 +38,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -81,7 +85,6 @@ public class DefaultDumpSupplier implements DumpSupplier {
               + "\\?download=([^\"']+))[\"'][^>]*>"
               + "(discogs_(\\d{8})_CHECKSUM\\.txt)</a>",
           Pattern.CASE_INSENSITIVE);
-
   private static final String CONTENTS_TAG_NAME = "Contents";
   private static final String KEY = "Key";
   private static final String ETAG = "ETag";
@@ -89,9 +92,7 @@ public class DefaultDumpSupplier implements DumpSupplier {
 
   private static final List<String> KNOWN_NODE_TYPES = List.of(KEY, ETAG, SIZE);
 
-  private static final String DISCOGS_DATA_URL = "https://data.discogs.com/";
-  private static final String DIRECT_BUCKET_URL =
-      "https://discogs-data-dumps.s3.us-west-2.amazonaws.com/";
+  private static final String DISCOGS_DATA_URL = DiscogsDumpUrls.PUBLIC_CATALOG_URI.toString();
   private static final String LEGACY_BUCKET_URL =
       "https://discogs-data.s3-us-west-2.amazonaws.com";
   private static final String USER_AGENT =
@@ -100,15 +101,18 @@ public class DefaultDumpSupplier implements DumpSupplier {
   private static final String ACCEPT_HTML =
       "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
   private static final String ACCEPT_TEXT = "text/plain,*/*;q=0.8";
-  private static final DateTimeFormatter DUMP_DATE_FORMATTER = DateTimeFormatter.BASIC_ISO_DATE;
-  private static final int MANIFEST_LOOKBACK_MONTHS = 24;
-  private static final long UNKNOWN_SIZE = -1L;
+  private static final String ACCEPT_DUMP = "application/gzip,application/octet-stream,*/*;q=0.8";
+  private static final String CONTENT_LENGTH_HEADER = "Content-Length";
+  private static final String HEAD_METHOD = "HEAD";
+  private static final int HTTP_OK = 200;
+  private static final int HTTP_NOT_FOUND = 404;
   private static final long KIBIBYTE = 1024L;
   private static final long MEBIBYTE = KIBIBYTE * 1024L;
   private static final long GIBIBYTE = MEBIBYTE * 1024L;
   private static final long TEBIBYTE = GIBIBYTE * 1024L;
 
   private final String discogsDataUrl;
+  private final URI discogsDataUri;
   private final HttpClient httpClient =
       HttpClient.newBuilder()
           .connectTimeout(Duration.ofSeconds(5))
@@ -121,14 +125,8 @@ public class DefaultDumpSupplier implements DumpSupplier {
   }
 
   protected DefaultDumpSupplier(URI discogsDataUri) {
-    if (discogsDataUri == null
-        || discogsDataUri.getHost() == null
-        || (!"http".equalsIgnoreCase(discogsDataUri.getScheme())
-            && !"https".equalsIgnoreCase(discogsDataUri.getScheme()))) {
-      throw new IllegalArgumentException("Discogs data URI must use HTTP or HTTPS");
-    }
-    String value = discogsDataUri.toString();
-    discogsDataUrl = value.endsWith("/") ? value : value + "/";
+    this.discogsDataUri = DiscogsDumpUrls.normalizeCatalogUri(discogsDataUri);
+    discogsDataUrl = this.discogsDataUri.toString();
   }
 
   private static CookieManager createCookieManager() {
@@ -137,41 +135,10 @@ public class DefaultDumpSupplier implements DumpSupplier {
     return cookieManager;
   }
 
-  /**
-   * Supplies every dump exposed by the year indexes at {@code data.discogs.com}. If the directory
-   * index is unavailable, resolves the latest complete monthly set directly from the small
-   * checksum manifests instead.
-   */
+  /** Supplies one pinned latest dump for every entity type. */
   @Override
   public List<DiscogsDump> get() {
-    List<DiscogsDump> dumps = new ArrayList<>();
-    try {
-      String rootIndex = getDiscogsDataSource(discogsDataUrl);
-      for (String yearIndexUrl : parseYearIndexUrls(rootIndex)) {
-        try {
-          dumps.addAll(parseHtmlDumpList(getDiscogsDataSource(yearIndexUrl)));
-        } catch (IOException e) {
-          log.warn("failed to fetch Discogs data index {}", yearIndexUrl, e);
-        }
-      }
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      log.warn("interrupted while fetching the Discogs data index", e);
-    } catch (IOException e) {
-      log.warn("failed to fetch the Discogs data index", e);
-    }
-
-    if (dumps.isEmpty() && !Thread.currentThread().isInterrupted()) {
-      try {
-        dumps.addAll(getLatestCompleteDumpsFromManifests());
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        log.warn("interrupted while fetching a Discogs checksum manifest", e);
-      } catch (IOException e) {
-        log.error("failed to fetch a Discogs checksum manifest", e);
-      }
-    }
-    return dumps;
+    return getLatest(EnumSet.allOf(EntityType.class));
   }
 
   @Override
@@ -179,6 +146,159 @@ public class DefaultDumpSupplier implements DumpSupplier {
     return parseDumpList(file).stream()
         .filter(Objects::nonNull)
         .collect(Collectors.toList());
+  }
+
+  @Override
+  public List<DiscogsDump> getLatest(Set<EntityType> entities) {
+    Set<EntityType> required = requireEntities(entities);
+    try {
+      List<String> yearIndexUrls =
+          parseYearIndexUrls(getDiscogsDataSource(discogsDataUrl)).stream()
+              .sorted(Comparator.reverseOrder())
+              .toList();
+      if (yearIndexUrls.isEmpty()) {
+        throw new DumpNotFoundException("Discogs dump catalog contains no years");
+      }
+
+      List<DiscogsDump> candidates = new ArrayList<>();
+      for (String yearIndexUrl : yearIndexUrls) {
+        candidates.addAll(parseHtmlDumpList(getDiscogsDataSource(yearIndexUrl)));
+        if (containsEveryType(required, candidates)) {
+          break;
+        }
+      }
+      return pinMetadata(requireComplete(required, candidates, "latest"));
+    } catch (InterruptedException exception) {
+      Thread.currentThread().interrupt();
+      throw catalogFailure("latest", exception);
+    } catch (IOException exception) {
+      throw catalogFailure("latest", exception);
+    }
+  }
+
+  @Override
+  public List<DiscogsDump> getMonth(Set<EntityType> entities, YearMonth month) {
+    Set<EntityType> required = requireEntities(entities);
+    if (month == null) {
+      throw new InvalidArgumentException("dump month cannot be null");
+    }
+    try {
+      return resolveCatalogSelection(
+          DiscogsDumpUrls.catalogYear(discogsDataUri, month.getYear()).toString(),
+          required,
+          month,
+          "month " + month);
+    } catch (InterruptedException exception) {
+      Thread.currentThread().interrupt();
+      throw catalogFailure("month " + month, exception);
+    } catch (IOException exception) {
+      throw catalogFailure("month " + month, exception);
+    }
+  }
+
+  private Set<EntityType> requireEntities(Set<EntityType> entities) {
+    if (entities == null || entities.isEmpty()) {
+      throw new InvalidArgumentException("entities cannot be empty");
+    }
+    return EnumSet.copyOf(entities);
+  }
+
+  private List<DiscogsDump> resolveCatalogSelection(
+      String yearIndexUrl,
+      Set<EntityType> entities,
+      YearMonth month,
+      String selection)
+      throws IOException, InterruptedException {
+    List<DiscogsDump> candidates = parseHtmlDumpList(getDiscogsDataSource(yearIndexUrl));
+    candidates =
+        candidates.stream()
+            .filter(dump -> YearMonth.from(dump.getLastModifiedAt()).equals(month))
+            .toList();
+    return pinMetadata(requireComplete(entities, candidates, selection));
+  }
+
+  private boolean containsEveryType(Set<EntityType> entities, Collection<DiscogsDump> candidates) {
+    EnumSet<EntityType> found = EnumSet.noneOf(EntityType.class);
+    candidates.stream()
+        .map(DiscogsDump::getType)
+        .filter(entities::contains)
+        .forEach(found::add);
+    return found.containsAll(entities);
+  }
+
+  private List<DiscogsDump> requireComplete(
+      Set<EntityType> entities, Collection<DiscogsDump> candidates, String selection) {
+    Map<EntityType, DiscogsDump> latest = new EnumMap<>(EntityType.class);
+    candidates.stream()
+        .filter(dump -> entities.contains(dump.getType()))
+        .forEach(
+            dump ->
+                latest.merge(
+                    dump.getType(),
+                    dump,
+                    (left, right) -> left.compareTo(right) >= 0 ? left : right));
+    if (!latest.keySet().containsAll(entities)) {
+      Set<EntityType> missing = EnumSet.copyOf(entities);
+      missing.removeAll(latest.keySet());
+      throw new DumpNotFoundException(
+          "Discogs dump catalog for " + selection + " is missing " + missing);
+    }
+    return entities.stream()
+        .sorted(Comparator.comparingInt(Enum::ordinal))
+        .map(latest::get)
+        .toList();
+  }
+
+  private List<DiscogsDump> pinMetadata(List<DiscogsDump> dumps)
+      throws IOException, InterruptedException {
+    Map<String, Map<String, String>> manifests = new HashMap<>();
+    List<String> checksums = new ArrayList<>(dumps.size());
+    for (DiscogsDump dump : dumps) {
+      URL manifestUrl = dump.getChecksumUrl();
+      String manifestKey = manifestUrl.toString();
+      Map<String, String> manifest = manifests.get(manifestKey);
+      if (manifest == null) {
+        String source =
+            getDiscogsManifestSource(manifestKey)
+                .orElseThrow(
+                    () ->
+                        new DumpNotFoundException(
+                            "Discogs checksum manifest not found for "
+                                + dump.getLastModifiedAt()));
+        manifest = DiscogsDumpVerifier.parseChecksums(source);
+        manifests.put(manifestKey, manifest);
+      }
+      String checksum = manifest.get(dump.getFileName());
+      if (checksum == null) {
+        throw new DumpNotFoundException(
+            "Discogs checksum manifest is missing " + dump.getFileName());
+      }
+      checksums.add(checksum);
+    }
+
+    List<DiscogsDump> pinned = new ArrayList<>(dumps.size());
+    for (int index = 0; index < dumps.size(); index++) {
+      DiscogsDump dump = dumps.get(index);
+      pinned.add(
+          new DiscogsDump(
+              dump.getETag(),
+              dump.getType(),
+              dump.getUriString(),
+              getDiscogsDumpSize(dump.getUrl()),
+              dump.getLastModifiedAt(),
+              dump.getUrl(),
+              dump.getChecksumUrl(),
+              checksums.get(index)));
+    }
+    return List.copyOf(pinned);
+  }
+
+  private DumpNotFoundException catalogFailure(String selection, Exception exception) {
+    return new DumpNotFoundException(
+        "failed to refresh Discogs dump catalog for "
+            + selection
+            + ": "
+            + exception.getMessage());
   }
 
   protected String getDiscogsDataSource(String url) throws IOException, InterruptedException {
@@ -192,54 +312,11 @@ public class DefaultDumpSupplier implements DumpSupplier {
             .build();
     HttpResponse<String> response =
         httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-    if (response.statusCode() != 200) {
+    if (response.statusCode() != HTTP_OK) {
       throw new IOException(
           "Discogs data index returned HTTP " + response.statusCode() + " for " + url);
     }
     return response.body();
-  }
-
-  /**
-   * Resolves the newest available dump independently for artists, labels, masters, and releases.
-   * Missing domains are filled from older manifests, while an access or server error aborts
-   * immediately so the fallback cannot create a burst of failing requests.
-   */
-  protected List<DiscogsDump> getLatestCompleteDumpsFromManifests()
-      throws IOException, InterruptedException {
-    LocalDate candidate = getCurrentUtcDate().withDayOfMonth(1);
-    Map<EntityType, DiscogsDump> latest = new EnumMap<>(EntityType.class);
-    for (int monthOffset = 0; monthOffset < MANIFEST_LOOKBACK_MONTHS; monthOffset++) {
-      LocalDate dumpDate = candidate.minusMonths(monthOffset);
-      String dateStamp = DUMP_DATE_FORMATTER.format(dumpDate);
-      String checksumUri =
-          "data/"
-              + dumpDate.getYear()
-              + "/discogs_"
-              + dateStamp
-              + "_CHECKSUM.txt";
-      URL checksumUrl = createManifestDownloadUrl(checksumUri);
-      Optional<String> manifestSource = getDiscogsManifestSource(checksumUrl.toString());
-      if (manifestSource.isEmpty()) {
-        continue;
-      }
-
-      createDumpSet(dumpDate, checksumUrl, manifestSource.get())
-          .forEach(dump -> latest.putIfAbsent(dump.getType(), dump));
-      if (latest.size() == EntityType.values().length) {
-        return java.util.Arrays.stream(EntityType.values())
-            .map(latest::get)
-            .toList();
-      }
-      log.warn(
-          "Discogs checksum manifest for {} does not cover every unresolved entity; "
-              + "checking the previous month",
-          dumpDate);
-    }
-    return List.of();
-  }
-
-  protected LocalDate getCurrentUtcDate() {
-    return LocalDate.now(ZoneOffset.UTC);
   }
 
   protected Optional<String> getDiscogsManifestSource(String url)
@@ -254,51 +331,37 @@ public class DefaultDumpSupplier implements DumpSupplier {
             .build();
     HttpResponse<String> response =
         httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-    if (response.statusCode() == 404) {
+    if (response.statusCode() == HTTP_NOT_FOUND) {
       return Optional.empty();
     }
-    if (response.statusCode() != 200) {
+    if (response.statusCode() != HTTP_OK) {
       throw new IOException(
           "Discogs checksum manifest returned HTTP " + response.statusCode() + " for " + url);
     }
     return Optional.of(response.body());
   }
 
-  protected List<DiscogsDump> createDumpSet(
-      LocalDate dumpDate, URL checksumUrl, String manifestSource) throws MalformedURLException {
-    Map<String, String> checksums = DiscogsDumpVerifier.parseChecksums(manifestSource);
-    String dateStamp = DUMP_DATE_FORMATTER.format(dumpDate);
-    List<DiscogsDump> dumps = new ArrayList<>();
-    for (EntityType type : EntityType.values()) {
-      String fileName = "discogs_" + dateStamp + "_" + type + "s.xml.gz";
-      if (!checksums.containsKey(fileName)) {
-        continue;
-      }
-      String uri = "data/" + dumpDate.getYear() + "/" + fileName;
-      dumps.add(
-          new DiscogsDump(
-              uri,
-              type,
-              uri,
-              UNKNOWN_SIZE,
-              dumpDate,
-              createDumpUrl(uri),
-              checksumUrl));
+  protected long getDiscogsDumpSize(URL dumpUrl) throws IOException, InterruptedException {
+    HttpRequest request =
+        HttpRequest.newBuilder()
+            .uri(URI.create(dumpUrl.toString()))
+            .timeout(Duration.ofSeconds(10))
+            .header("Accept", ACCEPT_DUMP)
+            .header("User-Agent", USER_AGENT)
+            .method(HEAD_METHOD, HttpRequest.BodyPublishers.noBody())
+            .build();
+    HttpResponse<Void> response =
+        httpClient.send(request, HttpResponse.BodyHandlers.discarding());
+    if (response.statusCode() != HTTP_OK) {
+      throw new IOException(
+          "Discogs dump metadata returned HTTP " + response.statusCode() + " for " + dumpUrl);
     }
-    return List.copyOf(dumps);
-  }
-
-  private URL createManifestDownloadUrl(String uri) throws MalformedURLException {
-    return URI.create(
-            discogsDataUrl + "?download=" + URLEncoder.encode(uri, StandardCharsets.UTF_8))
-        .toURL();
-  }
-
-  private URL createDumpUrl(String uri) throws MalformedURLException {
-    if (!DISCOGS_DATA_URL.equals(discogsDataUrl)) {
-      return createManifestDownloadUrl(uri);
+    OptionalLong contentLength = response.headers().firstValueAsLong(CONTENT_LENGTH_HEADER);
+    if (contentLength.isEmpty() || contentLength.getAsLong() <= 0L) {
+      throw new IOException(
+          "Discogs dump metadata omitted a positive Content-Length for " + dumpUrl);
     }
-    return URI.create(DIRECT_BUCKET_URL + uri).toURL();
+    return contentLength.getAsLong();
   }
 
   protected List<String> parseYearIndexUrls(String html) {
@@ -344,7 +407,7 @@ public class DefaultDumpSupplier implements DumpSupplier {
                 uri,
                 parseDisplaySize(matcher.group(1), matcher.group(2)),
                 dumpDate,
-                createDumpUrl(uri),
+                URI.create(discogsDataUrl).resolve(matcher.group(3)).toURL(),
                 checksumUrl));
       } catch (InvalidArgumentException | IllegalArgumentException | MalformedURLException e) {
         log.warn("skipping malformed Discogs dump entry {}", fileName, e);

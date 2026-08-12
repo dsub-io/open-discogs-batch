@@ -44,16 +44,21 @@ class DomainRelationValueUnitTest {
   void masterMainReleaseBuildHandlesMissingAndPresentMaster() {
     MasterMainReleaseXML value = new MasterMainReleaseXML();
     value.setReleaseId(11);
-    assertThat(value.buildRecord().getId()).isNull();
+    assertThat(value.buildRecord().targetMasterId()).isNull();
 
     MasterMainReleaseXML.Master master = new MasterMainReleaseXML.Master();
     master.setMasterId(7);
     value.setMaster(master);
+    assertThat(value.buildRecord().targetMasterId()).isNull();
+    master.setMainRelease(true);
     assertThat(value.buildRecord())
         .satisfies(
             record -> {
-              assertThat(record.getId()).isEqualTo(7);
-              assertThat(record.getMainReleaseId()).isEqualTo(11);
+              assertThat(record.targetMasterId()).isEqualTo(7);
+              assertThat(record.releaseId()).isEqualTo(11);
+              assertThat(record.releaseId()).isEqualTo(11);
+              assertThat(record.targetMasterId()).isEqualTo(7);
+              assertThat(record.observedAt()).isNotNull();
             });
   }
 

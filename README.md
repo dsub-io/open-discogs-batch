@@ -1,263 +1,180 @@
-# OpenDiscogs Batch
+# Java OpenDiscogs Batch
 
-OpenDiscogs Batch imports the public OpenDiscogs monthly dumps into PostgreSQL.
-It uses Spring Batch for orchestration and the canonical jOOQ schema model from
-[`open-discogs-model`](https://github.com/dsub-io/open-discogs-model), so the
-Java and Go importers write the same database contract.
+Stream Discogs monthly public data dumps into PostgreSQL with Spring Batch,
+bounded memory, durable progress, and idempotent recovery.
 
-This is an independent DSUB project. It is not affiliated with or endorsed by
-Discogs. The Discogs name identifies only the public data source.
+This release consumes canonical
+[`open-discogs-model`](https://github.com/dsub-io/open-discogs-model) v0.3.0.
+Java and Go therefore apply the same migration bytes and import contracts. This
+is an independent project and is not endorsed by Discogs.
 
-## Import behavior and safety
+> [!CAUTION]
+> **Production import is not approved yet.** Publish both batch implementations
+> against model v0.3.0 and complete cross-language migration, recovery, and
+> full-dump validation before starting or resuming a production import.
 
-- The selected database schema, Liquibase migrations, tables, indexes, and dump discovery run automatically.
-- Artist, label, master, and release select their newest available dump
-  independently unless an exact `--dump-month` is requested.
-- Every run records the selected dump dates, SHA-256 checksums, source URIs,
-  sizes, and stable identifiers as one immutable manifest.
-- A manifest that already succeeded is skipped. `--force` reruns that same
-  manifest without changing the idempotent database result.
-- A failed or abandoned run resumes committed source chunks only when its
-  manifest, processor version, entity set, dump identities, and chunk size all
-  match. `--force` always starts a fresh run.
-- Canonical relation changes and their source-chunk ledger entry commit in one
-  PostgreSQL transaction. A retry parses the stream from the beginning but
-  skips the exact relation chunks already committed; core rows and any work
-  after the relation phase are safely rerun.
-- Relation rows missing from a newer representation of a root are deleted while
-  unchanged rows retain their surrogate IDs. Roots absent from the entire dump
-  are not deleted automatically.
-- The v1 schema still identifies several relation values with a 32-bit Java
-  hash. A collision within one root can merge distinct values; the measured,
-  online migration to collision-resistant identity is tracked in
-  [`open-discogs-model#43`](https://github.com/dsub-io/open-discogs-model/issues/43).
-- An older entity dump is rejected unless `--allow-downgrade` is supplied; the
-  override is recorded in import history.
-- PostgreSQL advisory locks cover both selected entities and their reference
-  dependencies. Master locks Artist and Master; Release locks Artist, Label,
-  Master, and Release because it also updates `master.main_release_id`.
-  Independent sets such as Artist and Label may still proceed together.
-- Downloads are retained by default. `--cleanup` deletes them only after a
-  successful database import. A cleanup failure is reported without
-  reclassifying the committed import, and the next invocation retries cleanup
-  through the successful-manifest skip path. Failed imports retain their files
-  for retry.
+- [Import safety and recovery](docs/import-safety.md)
+- [Performance measurements](docs/performance.md)
+- [Releases](https://github.com/dsub-io/open-discogs-batch/releases)
 
-The durability boundary is one source chunk, not the whole monthly snapshot.
-Readers can observe already-committed chunks while an import is running. Use a
-versioned database or replica promotion when consumers require all entities to
-switch snapshots atomically.
+## Quick start
 
-### Progress observability
-
-Download bars use the dump catalog's compressed size. `SOURCE READ` bars use the
-exact local compressed file size and report byte progress, throughput, elapsed
-time, and source-read ETA. They describe how much of the selected `.xml.gz` file
-has been consumed, not how many PostgreSQL rows have committed.
-
-When the process is attached to an interactive console, the progress bar is the
-only live progress display. In non-interactive executions such as redirected
-output, pipelines, containers, and Kubernetes, carriage-return bars are
-suppressed and structured progress logs remain enabled.
-
-In non-interactive executions, each entity emits structured
-`event=import_progress` records at start,
-completion, failure, and at most once every five seconds while chunks commit.
-The records include exact durable `committed_items`, `rows_per_second`, elapsed
-time, resume state, initial committed items, and the latest committed progress
-timestamp. Observation failures are warnings and do not change import success.
-Each emitted sample performs one primary-key summary read, bounded to 0.2 reads
-per second per active entity plus the start and finish reads; it never scans the
-chunk ledger or entity tables.
-
-`committed_percent` is `unavailable` until end-of-stream coverage validation
-establishes the exact entity total; a completed entity reports `100.00`. The
-importer deliberately does not pre-scan a dump just to count roots, because
-that would add a complete gzip/XML pass before a 200-million-row import. It also
-does not synthesize one percentage across entity types whose parse and relation
-costs differ. A resumed entity whose coverage was already complete can start at
-100% while the source is reread to validate and skip committed chunks.
-
-Discogs dump paths such as `data/2026/discogs_20260701_releases.xml.gz` are used
-as stable identifiers and are paired with the same date's checksum manifest.
-When one domain is absent from a month, it does not roll the other domains back.
-
-## Requirements
-
-- JDK 21
-- A reachable PostgreSQL database
-- Docker for Testcontainers-based integration and E2E tests
-
-The repository includes an `.sdkmanrc` pinned to Temurin 21.0.11:
+The PostgreSQL database must already exist. The importer creates the selected
+schema when permitted, applies canonical migrations, resolves and downloads the
+selected dumps, then imports them.
 
 ```shell
-sdk env
-```
-
-The build uses Gradle 9.6.1, Spring Boot 4.1, and Spring Batch 6. Dependencies
-resolve from Maven Central, including
-`io.dsub.opendiscogs:open-discogs-model-jooq:0.2.2`. No GitHub token is required
-to build or run this project.
-
-## Build and test
-
-```shell
-./gradlew clean assemble
-./gradlew clean check --no-daemon --warning-mode=fail
-./gradlew e2eTest --no-daemon --warning-mode=fail
-```
-
-`check` runs the deterministic unit, integration, and E2E suites, generates a
-combined JaCoCo report, enforces 100% line and branch coverage, and validates
-test naming. `e2eTest` imports the complete cross-language fixture into
-PostgreSQL and verifies reruns and entity admission rules. CI uses
-GitHub-hosted `ubuntu-latest` and does not depend on live Discogs availability.
-
-## Usage
-
-```shell
-java -jar build/libs/open-discogs-batch-*.jar \
+java -jar open-discogs-batch-*.jar \
   --database-url 'postgresql://user:password@localhost:5432/open_discogs' \
   --database-schema open_discogs \
   --entities artist,label,master,release
 ```
 
-Use `--dump-month=2026-07` to require that exact month. Without it, each selected
-entity uses its own latest available dump.
+Omit `--dump-month` to select the latest dump for each entity independently.
+Use `--dump-month=2026-07` to require every selected entity from that month.
+Exact-month runs use a complete durable catalog without an upstream request;
+otherwise discovery performs the bounded request sequence documented in
+[Import safety and recovery](docs/import-safety.md#catalog-request-budget).
 
-The PostgreSQL database itself must already exist. A normal batch run needs no separate `init` command: it creates `--database-schema` when missing, then creates or migrates the canonical tables inside it. Creating a missing schema requires `CREATE` on the target database. For an existing schema, the batch role requires `USAGE` and `CREATE`, write access to imported tables, and ownership or equivalent DDL authority for migrations. If those privileges are intentionally unavailable, pre-create the schema with a DBA-managed role and grant the batch role the required schema and table privileges before running the importer.
+## Import contract
 
-When `--database-schema` / `OPEN_DISCOGS_BATCH_DATABASE_SCHEMA` is omitted, the importer uses `public` and emits a `WARN` on every startup. This is convenient for compatibility but can mix OpenDiscogs objects with unrelated public tables, so a dedicated name such as `open_discogs` is recommended. Schema names use portable PostgreSQL identifiers: 1–63 lowercase letters, digits, or underscores, starting with a letter or underscore.
+| Boundary | Behavior |
+| --- | --- |
+| Source | Monthly public dumps only; no Discogs API, live hydration, or user writes |
+| Memory | Dumps are decompressed and parsed as streams; the full dump is never held in memory |
+| Commit | Each Release root, genre/style dictionaries, supported relations, master assignment, and durable progress commit atomically |
+| Retry | Compatible interrupted runs resume verified chunks; non-Release safe core phases may rerun; `--force` restarts the same manifest from zero |
+| Convergence | Supported missing relations are removed; roots absent from a newer dump are not deleted |
+| Visibility | Readers can observe committed chunks; a complete monthly import is not an atomic snapshot switch |
+| Files | Failed-run downloads remain; `--cleanup` removes only this run's selected files after success |
 
-| Option | Environment variable | Default | Purpose |
-| --- | --- | --- | --- |
-| `--database-url` | `OPEN_DISCOGS_BATCH_DATABASE_URL` | required | PostgreSQL URI including percent-encoded credentials |
-| `--database-schema` | `OPEN_DISCOGS_BATCH_DATABASE_SCHEMA` | `public` | Schema to create or migrate; `public` emits a startup warning |
-| `--entities`, `-e` | `OPEN_DISCOGS_BATCH_ENTITIES` | all four | Comma-separated `artist`, `label`, `master`, `release` |
-| `--dump-month`, `-m` | `OPEN_DISCOGS_BATCH_DUMP_MONTH` | latest per entity | Exact dump month in `yyyy-MM` form |
-| `--data-dir` | `OPEN_DISCOGS_BATCH_DATA_DIR` | `~/.cache/open-discogs-batch` | Download directory |
-| `--chunk-size`, `-b` | `OPEN_DISCOGS_BATCH_CHUNK_SIZE` | `5000` | Import chunk size |
-| `--max-workers` | `OPEN_DISCOGS_BATCH_MAX_WORKERS` | runtime CPU allocation | Maximum concurrent import workers |
-| `--cleanup`, `-c` | `OPEN_DISCOGS_BATCH_CLEANUP` | `false` | Delete downloads after success |
-| `--force`, `-f` | `OPEN_DISCOGS_BATCH_FORCE` | `false` | Rerun an already-successful manifest |
-| `--allow-downgrade` | `OPEN_DISCOGS_BATCH_ALLOW_DOWNGRADE` | `false` | Permit and audit older entity dumps |
-| `--help`, `-h` | — | — | Show help |
-| `--version`, `-v` | — | — | Show version |
+Older dumps require `--allow-downgrade`. See
+[Import safety and recovery](docs/import-safety.md) for admission, locking,
+interruption, and resume rules.
 
-Command-line options take precedence over environment variables, which take
-precedence over defaults. The two importer implementations accept this same
-public contract. The former `url`, `username`, `password`, `type`, `year`,
-`yearMonth`, `eTag`, `mount`, `strict`, `coreCount`, and driver override options
-are no longer part of the public interface.
+### Release data scope
 
-`--max-workers` is the exact upper bound on application-managed concurrent
-import workers. When omitted, it resolves to the processor allocation visible
-to the runtime; no percentage or physical-core heuristic is applied. It is not
-a hard CPU quota. Use the container or workload scheduler's CPU limit when the
-process itself must not exceed a CPU allocation.
+| Release data | Current behavior |
+| --- | --- |
+| Imported | Core fields; release artists; labels and catalog numbers; companies; formats; genres and styles; identifiers; top-level tracks; videos; release-level credited artist ID and role |
+| Not imported | Series membership; per-track artists and extra artists; sub-track/index-track hierarchy; `anv`, `join`, and credit `tracks` metadata not represented by the canonical schema |
+| Images | The audited 2026-08 public release dump has no image elements; no separate image source is used |
 
-## Large-import resource model
+Downstream services must review the current
+[Discogs API Terms of Use](https://support.discogs.com/hc/en-us/articles/360009334593-API-Terms-of-Use)
+for every source they combine. A monthly snapshot cannot satisfy live API
+freshness by itself; attribution, refresh, caching, and redistribution remain
+the downstream operator's responsibility.
 
-The dump is decompressed and parsed as a stream; it is never loaded into memory
-as one document. Worker submission has no waiting queue: when all workers are
-busy, XML production waits until a worker becomes available. The live chunk
-count therefore cannot grow with the total dump size.
+## Database setup
 
-Integer reference IDs use a segmented concurrent bit set. Each occupied range
-of 65,536 IDs allocates 8 KiB of bit storage, so dense IDs use one bit each.
-When an import depends on entities not selected in the same run, their IDs are
-read from PostgreSQL with a 10,000-row server-side cursor rather than fetched as
-one in-memory result. Expanded relation records are also flushed to jOOQ in
-`chunk-size` batches instead of accumulating one unbounded JDBC batch.
+PostgreSQL 15 or newer is required. There is no separate `init` command, and
+the importer never creates the database.
 
-Peak working memory is driven by `chunk-size × max-workers × relation fan-out`,
-not by the total row count. Release records have the largest fan-out. For a
-large production import, set `--max-workers` explicitly to the smaller of the
-container CPU allocation and the number of database write connections reserved
-for this job, then tune `--chunk-size` separately from measured heap usage and
-database latency. Lower `chunk-size` before lowering worker count when a single
-release chunk is too large; lower `max-workers` when concurrent chunks or the
-database are the constraint.
+| Target | Required authority |
+| --- | --- |
+| Missing schema | `CREATE` on the database; the importer creates the selected schema |
+| Existing schema | `USAGE` and `CREATE` on the schema, table writes, and migration DDL authority |
+| Restricted batch role | A DBA prepares the schema, extension, and grants first |
 
-### Measured ID-cache improvement
+Model v0.3.0 migrations packaged in the model dependency are the only schema
+source of truth. Migration V007 uses
+`CREATE EXTENSION IF NOT EXISTS pg_trgm`; allow the migration role to install
+this trusted extension or have a DBA pre-install it in a stable schema visible
+to the migration role. Catalog tables are still created only in the selected
+database schema.
 
-On an Apple M2 Pro with Java 21, the previous skip-list cache and two inversion
-passes were compared with the segmented bit set using the same sequence of
-1,000,000 positive IDs. Across three fresh-process runs, median elapsed time
-fell from 648.549 ms to 28.997 ms (`22.4×` faster), and median maximum RSS fell
-from 163.9 MB to 64.47 MB (`60.7%` lower). The new bit-set words occupied 128
-KiB. These figures isolate the ID-cache operation; end-to-end import throughput
-still depends on dump shape, PostgreSQL, storage, and runtime limits.
+> [!WARNING]
+> Omitting `--database-schema` uses `public` and emits a warning on every
+> startup. Prefer a dedicated schema such as `open_discogs`.
 
-### Measured durable-import cost
+Schema names must be 1–63 lowercase letters, digits, or underscores and begin
+with a letter or underscore.
 
-The forced idempotency path was measured against `v1.0.0` and this change on
-the same Apple M2 Pro, Java 21, PostgreSQL 18.4 Alpine tmpfs container, four
-3-record fixture dumps, `chunk-size=1000`, one worker, two consecutive imports
-per sample, two warm-ups, and 20 fresh test samples. The elapsed time for both
-imports changed from p50/p95/p99 `734/845/854 ms` to `767/916/980 ms`
-(`4.5%/8.4%/14.8%` higher). Median throughput changed from `32.7` to `31.3`
-records/s (`4.3%` lower).
+## Configuration
 
-The added cost covers active-run fencing, exact source-chunk ledger commits,
-coverage validation, and stale-relation reconciliation. This 24-record test
-exaggerates fixed transaction cost and is not a 200-million-row throughput
-estimate. RSS and allocation deltas are not reported because the isolated test
-process includes Gradle and Testcontainers while the fixture is too small to
-represent production heap use. The implementation instead bounds live source
-chunks to `chunk-size × max-workers`; a representative production dump still
-needs a heap/RSS profile on the target hardware before sizing.
+Precedence is `CLI > ENV > default`.
 
-Reproduce the latency sample with:
+| CLI | Environment | Type | Default | Required | Valid values / purpose |
+| --- | --- | --- | --- | --- | --- |
+| `--database-url` | `OPEN_DISCOGS_BATCH_DATABASE_URL` | URI | none | yes | `postgres[ql]://user:password@host[:port]/database`; percent-encode credentials |
+| `--database-schema` | `OPEN_DISCOGS_BATCH_DATABASE_SCHEMA` | string | `public` | no | 1–63 lowercase letters, digits, or underscores; starts with a letter or underscore |
+| `--entities`, `-e` | `OPEN_DISCOGS_BATCH_ENTITIES` | string list | all four | no | Non-empty subset of `artist,label,master,release` |
+| `--dump-month`, `-m` | `OPEN_DISCOGS_BATCH_DUMP_MONTH` | `yyyy-MM` | latest per entity | no | `2008-03` through the current calendar month |
+| `--data-dir` | `OPEN_DISCOGS_BATCH_DATA_DIR` | path | `~/.cache/open-discogs-batch` | no | Writable download directory |
+| `--chunk-size`, `-b` | `OPEN_DISCOGS_BATCH_CHUNK_SIZE` | integer | `5000` | no | `1..2,147,483,647`; roots per transaction chunk |
+| `--max-workers` | `OPEN_DISCOGS_BATCH_MAX_WORKERS` | integer | visible CPU count | no | `1..2,147,483,647`; concurrent import workers |
+| `--cleanup`, `-c` | `OPEN_DISCOGS_BATCH_CLEANUP` | boolean | `false` | no | Remove only selected dumps after successful import |
+| `--force`, `-f` | `OPEN_DISCOGS_BATCH_FORCE` | boolean | `false` | no | Reprocess an otherwise skippable successful manifest from zero |
+| `--allow-downgrade` | `OPEN_DISCOGS_BATCH_ALLOW_DOWNGRADE` | boolean | `false` | no | Permit and audit an older dump than the entity checkpoint |
+| `--help`, `-h` | — | action | `false` | no | Show help without connecting to PostgreSQL |
+| `--version`, `-v` | — | action | `false` | no | Show version without connecting to PostgreSQL |
+
+Boolean ENV values accept `true/false`, `1/0`, `yes/no`, and `on/off`
+case-insensitively. `OPEN_DISCOGS_BATCH_ENTITIES` is comma-separated. Inject
+the database URI through a secret mechanism instead of command history.
+
+## Operations
+
+### Progress output
+
+| Runtime | Output |
+| --- | --- |
+| Interactive system console | One source-read byte-progress bar on stderr; structured progress logs are suppressed |
+| Non-interactive run | No bar; ordinary SLF4J key-value records such as `event=import_progress state=running` |
+
+The key-value records are not JSON. They report durably committed roots rather
+than merely parsed rows; `committed_percent=unavailable` remains until an exact
+entity total is stored. Default logging is console-only. Set Spring's standard
+`LOGGING_FILE_NAME` only when file logging is explicitly required.
+
+### Resources
+
+`--max-workers` limits import concurrency, not CPU usage. The default is the
+JVM's visible processor count; no percentage heuristic is applied. Use
+container or scheduler limits for a hard CPU quota.
+
+Working memory grows with `chunk-size × max-workers × relation fan-out`.
+Release has the highest fan-out. Hikari allows at most `max-workers + 3` open
+connections. Agree that budget with the DBA and reduce chunk size or workers
+under pressure.
+
+### Container
+
+The non-root image supports `linux/amd64` and `linux/arm64`.
 
 ```shell
-./gradlew cleanTest test \
-  --tests 'io.dsub.discogs.batch.job.PostgreSQLDiscogsJobIntegrationTest.whenSameDumpIsForcedTwice__BusinessRowsRemainIdentical' \
-  --quiet
-```
-
-Percent-encode reserved characters in the URI username or password. Never
-commit a real database URL to source control. Environment variables also remain
-visible to a container administrator, so provide them through the deployment
-platform's secret mechanism.
-
-## Container
-
-Release images are published from Release Please release commits for
-`linux/amd64` and `linux/arm64`:
-
-```shell
-docker pull ghcr.io/dsub-io/open-discogs-batch:latest
-docker run --rm \
-  --cpus=4 \
+docker run --rm --cpus=4 \
   -e OPEN_DISCOGS_BATCH_DATABASE_URL='postgresql://user:password@db:5432/open_discogs' \
-  -e OPEN_DISCOGS_BATCH_DATABASE_SCHEMA='open_discogs' \
-  -e OPEN_DISCOGS_BATCH_ENTITIES='artist,label,master,release' \
+  -e OPEN_DISCOGS_BATCH_DATABASE_SCHEMA=open_discogs \
+  -e OPEN_DISCOGS_BATCH_ENTITIES=artist,label,master,release \
   -e OPEN_DISCOGS_BATCH_DATA_DIR=/data \
   -e OPEN_DISCOGS_BATCH_MAX_WORKERS=4 \
   -v open-discogs-data:/data \
   ghcr.io/dsub-io/open-discogs-batch:latest
 ```
 
-The image runs as a non-root user. Mount a writable volume when downloads must
-survive container removal. Setting `OPEN_DISCOGS_BATCH_CLEANUP=true` removes
-downloads only after success. Versioned executable JARs are attached to the
-repository's GitHub Releases.
+Mount writable storage only when downloads must survive container replacement.
+Versioned executable JARs are attached to GitHub Releases. Build a local image
+with `./gradlew bootBuildImage`.
 
-For a local buildpack image instead of the published Docker image:
+## Development
+
+Source builds require JDK 21; `.sdkmanrc` selects Temurin 21.0.11. Integration
+tests label every owned Docker resource with a per-run identity and use tmpfs
+for PostgreSQL. In-process cleanup and CI's always-run teardown remove only
+those containers, networks, and volumes, then verify that residue is zero.
+Persistent test volumes and bind mounts are not allowed.
 
 ```shell
-./gradlew bootBuildImage
+sdk env
+./gradlew clean check --no-daemon --warning-mode=fail
 ```
 
-## Contributing
-
-Pull request titles and commit subjects must follow Conventional Commits.
-Allowed types are `build`, `chore`, `ci`, `docs`, `feat`, `fix`, `perf`,
-`refactor`, `revert`, `style`, and `test`. Branches must not use `agent/`,
-`codex/`, or `claude/` prefixes.
+CI verifies deterministic unit, PostgreSQL integration, dump E2E behavior,
+cleanup residue, and 100% line and branch coverage.
 
 ## License
 
-MIT. See [LICENSE](LICENSE). The `state303` attribution must be retained in
-copies or substantial portions of the software.
+MIT. See [LICENSE](LICENSE). Retain the `state303` attribution required by the
+license.

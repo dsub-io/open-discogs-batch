@@ -117,6 +117,7 @@ class ImportExecutionCoordinatorFailureUnitTest {
         .hasRootCauseInstanceOf(SQLException.class)
         .rootCause()
         .hasMessage("import run insert did not return an ID");
+    verify(statement).setNull(6, java.sql.Types.BIGINT);
   }
 
   @Test
@@ -144,7 +145,12 @@ class ImportExecutionCoordinatorFailureUnitTest {
     constructor.setAccessible(true);
     Object plannedDump =
         constructor.newInstance(
-            "artist", LocalDate.of(2026, 7, 1), "a".repeat(64), 1L, "etag", "uri");
+            io.dsub.discogs.batch.dump.EntityType.ARTIST,
+            LocalDate.of(2026, 7, 1),
+            "a".repeat(64),
+            1L,
+            "etag",
+            "uri");
 
     assertThatThrownBy(
             () -> ReflectionTestUtils.invokeMethod(coordinator, "findOrInsertDump", plannedDump))
@@ -213,7 +219,12 @@ class ImportExecutionCoordinatorFailureUnitTest {
     Constructor<?> constructor = plannedDumpClass.getDeclaredConstructors()[0];
     constructor.setAccessible(true);
     return constructor.newInstance(
-        "artist", LocalDate.of(2026, 7, 1), "a".repeat(64), 1L, "etag", "uri");
+        io.dsub.discogs.batch.dump.EntityType.ARTIST,
+        LocalDate.of(2026, 7, 1),
+        "a".repeat(64),
+        1L,
+        "etag",
+        "uri");
   }
 
   @Test

@@ -10,6 +10,7 @@ import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemStyleRecord;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
@@ -43,6 +44,7 @@ public class ReleaseItemSubItemsProcessor
       item.getCompanies().stream()
           .filter(Objects::nonNull)
           .filter(work -> isExistingLabel(work.getId()))
+          .filter(work -> hasText(work.getWork()))
           .distinct()
           .map(xml -> xml.getRecord(releaseItemId))
           .forEach(items::add);
@@ -51,6 +53,7 @@ public class ReleaseItemSubItemsProcessor
       item.getReleaseCreditedArtists().stream()
           .filter(Objects::nonNull)
           .filter(creditedArtist -> isExistingArtist(creditedArtist.getArtistId()))
+          .filter(creditedArtist -> hasText(creditedArtist.getRole()))
           .distinct()
           .map(xml -> xml.getRecord(releaseItemId))
           .forEach(items::add);
@@ -58,6 +61,7 @@ public class ReleaseItemSubItemsProcessor
     if (item.getReleaseFormats() != null) {
       item.getReleaseFormats().stream()
           .filter(Objects::nonNull)
+          .filter(this::hasFormatIdentity)
           .distinct()
           .map(xml -> xml.getRecord(releaseItemId))
           .forEach(items::add);
@@ -67,7 +71,7 @@ public class ReleaseItemSubItemsProcessor
       item.getGenres().stream()
           .filter(Objects::nonNull)
           .map(String::trim)
-          .filter(this::isExistingGenre)
+          .filter(this::hasText)
           .distinct()
           .map(
               genre ->
@@ -83,7 +87,7 @@ public class ReleaseItemSubItemsProcessor
       item.getStyles().stream()
           .filter(Objects::nonNull)
           .map(String::trim)
-          .filter(this::isExistingStyle)
+          .filter(this::hasText)
           .distinct()
           .map(
               style ->
@@ -98,6 +102,12 @@ public class ReleaseItemSubItemsProcessor
     if (item.getReleaseIdentifiers() != null) {
       item.getReleaseIdentifiers().stream()
           .filter(Objects::nonNull)
+          .filter(
+              identifier ->
+                  hasText(
+                      identifier.getType(),
+                      identifier.getDescription(),
+                      identifier.getValue()))
           .distinct()
           .map(xml -> xml.getRecord(releaseItemId))
           .forEach(items::add);
@@ -115,6 +125,8 @@ public class ReleaseItemSubItemsProcessor
     if (item.getReleaseTracks() != null) {
       item.getReleaseTracks().stream()
           .filter(Objects::nonNull)
+          .filter(
+              track -> hasText(track.getPosition(), track.getTitle(), track.getDuration()))
           .distinct()
           .map(xml -> xml.getRecord(releaseItemId))
           .forEach(items::add);
@@ -123,7 +135,7 @@ public class ReleaseItemSubItemsProcessor
     if (item.getReleaseVideos() != null) {
       item.getReleaseVideos().stream()
           .filter(Objects::nonNull)
-          .filter(vid -> vid.getUrl() != null)
+          .filter(video -> hasText(video.getTitle(), video.getDescription(), video.getUrl()))
           .distinct()
           .map(xml -> xml.getRecord(releaseItemId))
           .forEach(items::add);
@@ -147,11 +159,12 @@ public class ReleaseItemSubItemsProcessor
     return idRegistry.exists(DefaultEntityIdRegistry.Type.LABEL, id);
   }
 
-  private boolean isExistingGenre(String genre) {
-    return idRegistry.exists(DefaultEntityIdRegistry.Type.GENRE, genre);
+  private boolean hasFormatIdentity(ReleaseItemSubItemsXML.ReleaseFormat format) {
+    return hasText(format.getName(), format.getText())
+        || !Objects.requireNonNullElse(format.getDescriptions(), List.of()).isEmpty();
   }
 
-  private boolean isExistingStyle(String style) {
-    return idRegistry.exists(DefaultEntityIdRegistry.Type.STYLE, style);
+  private boolean hasText(String... values) {
+    return Arrays.stream(values).anyMatch(Objects::nonNull);
   }
 }

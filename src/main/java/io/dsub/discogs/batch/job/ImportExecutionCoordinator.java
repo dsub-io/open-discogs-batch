@@ -32,6 +32,7 @@ public class ImportExecutionCoordinator {
   static final String DEVELOPMENT_VERSION = "development";
 
   private final DataSource dataSource;
+  private final ImportDependencyPreflight dependencyPreflight = new ImportDependencyPreflight();
 
   private Connection lockConnection;
   private List<Integer> acquiredLockKeys = List.of();
@@ -51,7 +52,7 @@ public class ImportExecutionCoordinator {
     List<PlannedDump> dumps = plannedDumps(parameters);
     List<String> entityTypes =
         ImportExecution.orderedEntityTypes(
-            dumps.stream().map(PlannedDump::entityType).toList());
+            dumps.stream().map(dump -> dump.entityType().toString()).toList());
     List<String> lockEntityTypes = ImportExecution.requiredLockEntityTypes(entityTypes);
 
     try {
@@ -61,8 +62,17 @@ public class ImportExecutionCoordinator {
       lockConnection.setAutoCommit(false);
 
       markAbandonedRuns(entityTypes);
+      dependencyPreflight.validate(
+          lockConnection,
+          dumps.stream()
+              .map(
+                  dump ->
+                      new ImportDependencyPreflight.PlannedDump(
+                          dump.entityType(), dump.dumpDate()))
+              .toList());
       assertNotDowngrade(dumps, allowDowngrade);
 
+      // Admission is manifest-atomic: one incompatible entity starts every selected entity fresh.
       Long successfulRunId = findSuccessfulRun(manifestSha256);
       if (successfulRunId != null && !force) {
         lockConnection.commit();
@@ -177,7 +187,7 @@ public class ImportExecutionCoordinator {
       try {
         dumps.add(
             new PlannedDump(
-                type.toString(),
+                type,
                 LocalDate.parse(requiredParameter(parameters, ImportJobParameters.date(type))),
                 requiredParameter(parameters, ImportJobParameters.checksum(type)),
                 Long.parseLong(sizeValue),
@@ -267,7 +277,7 @@ public class ImportExecutionCoordinator {
     try (PreparedStatement statement =
         lockConnection.prepareStatement(ImportExecutionQueries.FIND_CURRENT_CHECKPOINT_DATE)) {
       for (PlannedDump dump : dumps) {
-        statement.setString(1, dump.entityType());
+        statement.setString(1, dump.entityType().toString());
         try (ResultSet result = statement.executeQuery()) {
           if (result.next()
               && ImportExecution.isDowngrade(
@@ -290,6 +300,7 @@ public class ImportExecutionCoordinator {
     try (PreparedStatement statement =
         lockConnection.prepareStatement(ImportExecutionQueries.FIND_CURRENT_SUCCESS)) {
       statement.setString(1, manifestSha256);
+      bindCurrentEntityRevisions(statement, 2);
       try (ResultSet result = statement.executeQuery()) {
         return result.next() ? result.getLong(1) : null;
       }
@@ -307,8 +318,9 @@ public class ImportExecutionCoordinator {
       statement.setString(1, manifestSha256);
       statement.setString(2, PROCESSOR);
       statement.setString(3, version);
-      statement.setInt(4, entityCount);
-      statement.setInt(5, chunkSize);
+      int nextParameter = bindCurrentEntityRevisions(statement, 4);
+      statement.setInt(nextParameter, entityCount);
+      statement.setInt(nextParameter + 1, chunkSize);
       try (ResultSet result = statement.executeQuery()) {
         return result.next() ? result.getLong(1) : null;
       }
@@ -321,7 +333,7 @@ public class ImportExecutionCoordinator {
         lockConnection.prepareStatement(ImportExecutionQueries.INSERT_DUMP)) {
       statement.setString(1, dump.etag());
       statement.setDate(2, Date.valueOf(dump.dumpDate()));
-      statement.setString(3, dump.entityType());
+      statement.setString(3, dump.entityType().toString());
       statement.setString(4, dump.checksumSha256());
       statement.setLong(5, dump.sizeBytes());
       statement.setString(6, dump.uri());
@@ -335,7 +347,7 @@ public class ImportExecutionCoordinator {
     try (PreparedStatement statement =
         lockConnection.prepareStatement(ImportExecutionQueries.FIND_DUMP)) {
       statement.setDate(1, Date.valueOf(dump.dumpDate()));
-      statement.setString(2, dump.entityType());
+      statement.setString(2, dump.entityType().toString());
       statement.setString(3, dump.checksumSha256());
       try (ResultSet result = statement.executeQuery()) {
         if (!result.next()) {
@@ -377,16 +389,31 @@ public class ImportExecutionCoordinator {
   }
 
   private void insertRunDump(
-      long runId, String entityType, long dumpId, int chunkSize)
+      long runId, EntityType entityType, long dumpId, int chunkSize)
       throws SQLException {
     try (PreparedStatement statement =
         lockConnection.prepareStatement(ImportExecutionQueries.INSERT_RUN_DUMP)) {
       statement.setLong(1, runId);
-      statement.setString(2, entityType);
+      statement.setString(2, entityType.toString());
       statement.setLong(3, dumpId);
       statement.setInt(4, chunkSize);
+      statement.setInt(5, importContractRevision(entityType));
       statement.executeUpdate();
     }
+  }
+
+  private int bindCurrentEntityRevisions(
+      PreparedStatement statement, int firstParameter)
+      throws SQLException {
+    statement.setInt(firstParameter, importContractRevision(EntityType.ARTIST));
+    statement.setInt(firstParameter + 1, importContractRevision(EntityType.LABEL));
+    statement.setInt(firstParameter + 2, importContractRevision(EntityType.MASTER));
+    statement.setInt(firstParameter + 3, importContractRevision(EntityType.RELEASE));
+    return firstParameter + EntityType.values().length;
+  }
+
+  private int importContractRevision(EntityType entityType) {
+    return ImportExecution.importContractRevision(entityType.toString());
   }
 
   private void transferResumeProgress(
@@ -540,7 +567,7 @@ public class ImportExecutionCoordinator {
   }
 
   private record PlannedDump(
-      String entityType,
+      EntityType entityType,
       LocalDate dumpDate,
       String checksumSha256,
       long sizeBytes,

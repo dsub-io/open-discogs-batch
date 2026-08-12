@@ -12,24 +12,42 @@ import org.junit.jupiter.api.Test;
 class DefaultDatabaseConnectionValidatorBoundaryUnitTest {
 
   @Test
-  void metadataRejectsUnsupportedAndOldPostgresqlVersions() throws Exception {
+  void metadataRejectsUnsupportedProduct() throws Exception {
     DefaultDatabaseConnectionValidator validator = new DefaultDatabaseConnectionValidator();
     DatabaseMetaData unsupported = metadata("unknown", 1, 0);
-    DatabaseMetaData oldMajor = metadata("PostgreSQL", 8, 9);
-    DatabaseMetaData oldMinor = metadata("PostgreSQL", 9, 4);
-    DatabaseMetaData supported = metadata("PostgreSQL", 9, 5);
-    DatabaseMetaData current = metadata("PostgreSQL", 18, 0);
 
     assertThat(validator.checkMetaData(unsupported).getIssues())
         .singleElement()
         .asString()
         .contains("unknown", "POSTGRESQL");
-    assertThat(validator.checkMetaData(oldMajor).getIssues())
-        .containsExactly("postgresql version below 9.5 is not supported.");
-    assertThat(validator.checkMetaData(oldMinor).getIssues())
-        .containsExactly("postgresql version below 9.5 is not supported.");
-    assertThat(validator.checkMetaData(supported).isValid()).isTrue();
-    assertThat(validator.checkMetaData(current).isValid()).isTrue();
+  }
+
+  @Test
+  void metadataRejectsPostgresql14() throws Exception {
+    DefaultDatabaseConnectionValidator validator = new DefaultDatabaseConnectionValidator();
+
+    ValidationResult result = validator.checkMetaData(metadata("PostgreSQL", 14, 0));
+
+    assertThat(result.getIssues())
+        .containsExactly("postgresql version below 15 is not supported.");
+  }
+
+  @Test
+  void metadataAcceptsPostgresql15() throws Exception {
+    DefaultDatabaseConnectionValidator validator = new DefaultDatabaseConnectionValidator();
+
+    ValidationResult result = validator.checkMetaData(metadata("PostgreSQL", 15, 0));
+
+    assertThat(result.isValid()).isTrue();
+  }
+
+  @Test
+  void metadataAcceptsPostgresql18() throws Exception {
+    DefaultDatabaseConnectionValidator validator = new DefaultDatabaseConnectionValidator();
+
+    ValidationResult result = validator.checkMetaData(metadata("PostgreSQL", 18, 0));
+
+    assertThat(result.isValid()).isTrue();
   }
 
   @Test

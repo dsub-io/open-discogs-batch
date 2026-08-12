@@ -1,6 +1,7 @@
 name: Build
 
 on:
+  merge_group:
   pull_request:
     types:
       - opened
@@ -22,6 +23,11 @@ jobs:
     name: Build, test, and coverage
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      OPEN_DISCOGS_TEST_RUN_ID: open-discogs-batch-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}
+      TEST_CONTAINER_OWNER_LABEL: io.dsub.test-owner
+      TEST_CONTAINER_OWNER: open-discogs-batch
+      TEST_CONTAINER_RUN_LABEL: io.dsub.test-run
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5
@@ -42,3 +48,46 @@ jobs:
           done
       - name: Build, test, and enforce coverage
         run: ./gradlew clean build --no-daemon --warning-mode=fail
+      - name: Remove owned test resources and verify no residue
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          label_filters=(
+            --filter "label=${TEST_CONTAINER_OWNER_LABEL}=${TEST_CONTAINER_OWNER}"
+            --filter "label=${TEST_CONTAINER_RUN_LABEL}=${OPEN_DISCOGS_TEST_RUN_ID}"
+          )
+
+          container_ids=()
+          while IFS= read -r resource_id; do
+            [[ -n "$resource_id" ]] && container_ids+=("$resource_id")
+          done < <(docker ps -aq "${label_filters[@]}")
+          if (( ${#container_ids[@]} > 0 )); then
+            docker rm --force --volumes "${container_ids[@]}"
+          fi
+
+          network_ids=()
+          while IFS= read -r resource_id; do
+            [[ -n "$resource_id" ]] && network_ids+=("$resource_id")
+          done < <(docker network ls -q "${label_filters[@]}")
+          if (( ${#network_ids[@]} > 0 )); then
+            docker network rm "${network_ids[@]}"
+          fi
+
+          volume_names=()
+          while IFS= read -r resource_name; do
+            [[ -n "$resource_name" ]] && volume_names+=("$resource_name")
+          done < <(docker volume ls -q "${label_filters[@]}")
+          if (( ${#volume_names[@]} > 0 )); then
+            docker volume rm --force "${volume_names[@]}"
+          fi
+
+          container_residue="$(docker ps -aq "${label_filters[@]}")"
+          network_residue="$(docker network ls -q "${label_filters[@]}")"
+          volume_residue="$(docker volume ls -q "${label_filters[@]}")"
+          if [[ -n "$container_residue" || -n "$network_residue" || -n "$volume_residue" ]]; then
+            echo "::error::Owned Docker test resources remain after cleanup."
+            printf 'containers=%s\nnetworks=%s\nvolumes=%s\n' \
+              "$container_residue" "$network_residue" "$volume_residue"
+            exit 1
+          fi

@@ -16,8 +16,6 @@ spring:
   jmx:
     enabled: false
 logging:
-  file:
-    path: ./log
   level:
     liquibase: ERROR
     io.dsub: INFO

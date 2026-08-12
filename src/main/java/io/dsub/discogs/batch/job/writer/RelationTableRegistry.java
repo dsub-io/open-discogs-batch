@@ -22,11 +22,15 @@ import io.dsub.opendiscogs.jooq.tables.ReleaseItemStyle;
 import io.dsub.opendiscogs.jooq.tables.ReleaseItemTrack;
 import io.dsub.opendiscogs.jooq.tables.ReleaseItemVideo;
 import io.dsub.opendiscogs.jooq.tables.ReleaseItemWork;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.jooq.Field;
 import org.jooq.Table;
+import org.jooq.UpdatableRecord;
 
 final class RelationTableRegistry {
 
@@ -55,11 +59,13 @@ final class RelationTableRegistry {
               table(
                   ArtistNameVariation.ARTIST_NAME_VARIATION,
                   ArtistNameVariation.ARTIST_NAME_VARIATION.ARTIST_ID,
+                  List.of(ArtistNameVariation.ARTIST_NAME_VARIATION.NAME_VARIATION),
                   integerKey(ArtistNameVariation.ARTIST_NAME_VARIATION.ARTIST_ID),
                   integerKey(ArtistNameVariation.ARTIST_NAME_VARIATION.HASH)),
               table(
                   ArtistUrl.ARTIST_URL,
                   ArtistUrl.ARTIST_URL.ARTIST_ID,
+                  List.of(ArtistUrl.ARTIST_URL.URL),
                   integerKey(ArtistUrl.ARTIST_URL.ARTIST_ID),
                   integerKey(ArtistUrl.ARTIST_URL.HASH)));
       case LABEL ->
@@ -72,6 +78,7 @@ final class RelationTableRegistry {
               table(
                   LabelUrl.LABEL_URL,
                   LabelUrl.LABEL_URL.LABEL_ID,
+                  List.of(LabelUrl.LABEL_URL.URL),
                   integerKey(LabelUrl.LABEL_URL.LABEL_ID),
                   integerKey(LabelUrl.LABEL_URL.HASH)));
       case MASTER ->
@@ -94,6 +101,10 @@ final class RelationTableRegistry {
               table(
                   MasterVideo.MASTER_VIDEO,
                   MasterVideo.MASTER_VIDEO.MASTER_ID,
+                  List.of(
+                      MasterVideo.MASTER_VIDEO.DESCRIPTION,
+                      MasterVideo.MASTER_VIDEO.TITLE,
+                      MasterVideo.MASTER_VIDEO.URL),
                   integerKey(MasterVideo.MASTER_VIDEO.MASTER_ID),
                   integerKey(MasterVideo.MASTER_VIDEO.HASH)));
       case RELEASE ->
@@ -102,7 +113,8 @@ final class RelationTableRegistry {
                   LabelReleaseItem.LABEL_RELEASE_ITEM,
                   LabelReleaseItem.LABEL_RELEASE_ITEM.RELEASE_ITEM_ID,
                   integerKey(LabelReleaseItem.LABEL_RELEASE_ITEM.RELEASE_ITEM_ID),
-                  integerKey(LabelReleaseItem.LABEL_RELEASE_ITEM.LABEL_ID)),
+                  integerKey(LabelReleaseItem.LABEL_RELEASE_ITEM.LABEL_ID),
+                  textKey(LabelReleaseItem.LABEL_RELEASE_ITEM.CATEGORY_NOTATION)),
               table(
                   ReleaseItemArtist.RELEASE_ITEM_ARTIST,
                   ReleaseItemArtist.RELEASE_ITEM_ARTIST.RELEASE_ITEM_ID,
@@ -111,13 +123,20 @@ final class RelationTableRegistry {
               table(
                   ReleaseItemCreditedArtist.RELEASE_ITEM_CREDITED_ARTIST,
                   ReleaseItemCreditedArtist.RELEASE_ITEM_CREDITED_ARTIST.RELEASE_ITEM_ID,
+                  List.of(ReleaseItemCreditedArtist.RELEASE_ITEM_CREDITED_ARTIST.ROLE),
                   integerKey(
                       ReleaseItemCreditedArtist.RELEASE_ITEM_CREDITED_ARTIST.RELEASE_ITEM_ID),
                   integerKey(ReleaseItemCreditedArtist.RELEASE_ITEM_CREDITED_ARTIST.ARTIST_ID),
                   integerKey(ReleaseItemCreditedArtist.RELEASE_ITEM_CREDITED_ARTIST.HASH)),
-              table(
+              mutableTable(
                   ReleaseItemFormat.RELEASE_ITEM_FORMAT,
                   ReleaseItemFormat.RELEASE_ITEM_FORMAT.RELEASE_ITEM_ID,
+                  List.of(
+                      ReleaseItemFormat.RELEASE_ITEM_FORMAT.DESCRIPTION,
+                      ReleaseItemFormat.RELEASE_ITEM_FORMAT.NAME,
+                      ReleaseItemFormat.RELEASE_ITEM_FORMAT.QUANTITY,
+                      ReleaseItemFormat.RELEASE_ITEM_FORMAT.TEXT),
+                  List.of(ReleaseItemFormat.RELEASE_ITEM_FORMAT.QUANTITY),
                   integerKey(ReleaseItemFormat.RELEASE_ITEM_FORMAT.RELEASE_ITEM_ID),
                   integerKey(ReleaseItemFormat.RELEASE_ITEM_FORMAT.HASH)),
               table(
@@ -128,6 +147,10 @@ final class RelationTableRegistry {
               table(
                   ReleaseItemIdentifier.RELEASE_ITEM_IDENTIFIER,
                   ReleaseItemIdentifier.RELEASE_ITEM_IDENTIFIER.RELEASE_ITEM_ID,
+                  List.of(
+                      ReleaseItemIdentifier.RELEASE_ITEM_IDENTIFIER.DESCRIPTION,
+                      ReleaseItemIdentifier.RELEASE_ITEM_IDENTIFIER.TYPE,
+                      ReleaseItemIdentifier.RELEASE_ITEM_IDENTIFIER.VALUE),
                   integerKey(ReleaseItemIdentifier.RELEASE_ITEM_IDENTIFIER.RELEASE_ITEM_ID),
                   integerKey(ReleaseItemIdentifier.RELEASE_ITEM_IDENTIFIER.HASH)),
               table(
@@ -138,25 +161,73 @@ final class RelationTableRegistry {
               table(
                   ReleaseItemTrack.RELEASE_ITEM_TRACK,
                   ReleaseItemTrack.RELEASE_ITEM_TRACK.RELEASE_ITEM_ID,
+                  List.of(
+                      ReleaseItemTrack.RELEASE_ITEM_TRACK.DURATION,
+                      ReleaseItemTrack.RELEASE_ITEM_TRACK.POSITION,
+                      ReleaseItemTrack.RELEASE_ITEM_TRACK.TITLE),
                   integerKey(ReleaseItemTrack.RELEASE_ITEM_TRACK.RELEASE_ITEM_ID),
                   integerKey(ReleaseItemTrack.RELEASE_ITEM_TRACK.HASH)),
               table(
                   ReleaseItemVideo.RELEASE_ITEM_VIDEO,
                   ReleaseItemVideo.RELEASE_ITEM_VIDEO.RELEASE_ITEM_ID,
+                  List.of(
+                      ReleaseItemVideo.RELEASE_ITEM_VIDEO.DESCRIPTION,
+                      ReleaseItemVideo.RELEASE_ITEM_VIDEO.TITLE,
+                      ReleaseItemVideo.RELEASE_ITEM_VIDEO.URL),
                   integerKey(ReleaseItemVideo.RELEASE_ITEM_VIDEO.RELEASE_ITEM_ID),
                   integerKey(ReleaseItemVideo.RELEASE_ITEM_VIDEO.HASH)),
               table(
                   ReleaseItemWork.RELEASE_ITEM_WORK,
                   ReleaseItemWork.RELEASE_ITEM_WORK.RELEASE_ITEM_ID,
+                  List.of(ReleaseItemWork.RELEASE_ITEM_WORK.WORK),
                   integerKey(ReleaseItemWork.RELEASE_ITEM_WORK.RELEASE_ITEM_ID),
                   integerKey(ReleaseItemWork.RELEASE_ITEM_WORK.LABEL_ID),
                   integerKey(ReleaseItemWork.RELEASE_ITEM_WORK.HASH)));
     };
   }
 
+  static RelationTable require(EntityType entityType, Table<?> table) {
+    return forEntity(entityType).stream()
+        .filter(candidate -> candidate.table().equals(table))
+        .findFirst()
+        .orElseThrow(
+            () ->
+                new IllegalArgumentException(
+                    "table " + table.getName() + " is not a "
+                        + entityType.name().toLowerCase() + " relation"));
+  }
+
+  static List<Field<?>> mutableFields(Table<?> table) {
+    return find(table).map(RelationTable::mutableFields).orElse(List.of());
+  }
+
+  static Optional<RelationTable> find(Table<?> table) {
+    return Arrays.stream(EntityType.values())
+        .flatMap(entityType -> forEntity(entityType).stream())
+        .filter(candidate -> candidate.table().equals(table))
+        .findFirst();
+  }
+
   private static RelationTable table(
       Table<?> table, Field<Integer> rootIdField, RelationKey... keys) {
-    return new RelationTable(table, rootIdField, List.of(keys));
+    return table(table, rootIdField, List.of(), keys);
+  }
+
+  private static RelationTable table(
+      Table<?> table,
+      Field<Integer> rootIdField,
+      List<Field<?>> payloadFields,
+      RelationKey... keys) {
+    return new RelationTable(table, rootIdField, List.of(keys), payloadFields, List.of());
+  }
+
+  private static RelationTable mutableTable(
+      Table<?> table,
+      Field<Integer> rootIdField,
+      List<Field<?>> payloadFields,
+      List<Field<?>> mutableFields,
+      RelationKey... keys) {
+    return new RelationTable(table, rootIdField, List.of(keys), payloadFields, mutableFields);
   }
 
   private static RelationKey integerKey(Field<Integer> field) {
@@ -170,7 +241,45 @@ final class RelationTableRegistry {
   private RelationTableRegistry() {
   }
 
-  record RelationTable(Table<?> table, Field<Integer> rootIdField, List<RelationKey> keys) {
+  record RelationTable(
+      Table<?> table,
+      Field<Integer> rootIdField,
+      List<RelationKey> keys,
+      List<Field<?>> payloadFields,
+      List<Field<?>> mutableFields) {
+
+    RelationTable {
+      keys = List.copyOf(keys);
+      payloadFields = List.copyOf(payloadFields);
+      mutableFields = List.copyOf(mutableFields);
+    }
+
+    RelationIdentity identity(UpdatableRecord<?> record) {
+      return new RelationIdentity(
+          table.getName(), keys.stream().map(key -> key.value(record)).toList());
+    }
+
+    List<Field<?>> conflictFields() {
+      return keys.stream().map(RelationKey::field).toList();
+    }
+
+    boolean hasSamePayload(UpdatableRecord<?> left, UpdatableRecord<?> right) {
+      return payloadFields.stream()
+          .allMatch(field -> Objects.equals(field.getValue(left), field.getValue(right)));
+    }
+
+    void requireRoot(UpdatableRecord<?> record, int rootId) {
+      if (!Objects.equals(rootIdField.getValue(record), rootId)) {
+        throw new IllegalArgumentException(
+            "relation " + table.getName() + " does not belong to root " + rootId);
+      }
+    }
+
+    String describeIdentity(UpdatableRecord<?> record) {
+      return keys.stream()
+          .map(key -> key.field().getName() + "=" + key.describeValue(record))
+          .collect(Collectors.joining(", "));
+    }
 
     String deleteAllForRootsSql() {
       return "delete from " + table.getName() + " where "
@@ -188,7 +297,7 @@ final class RelationTableRegistry {
               .mapToObj(
                   index ->
                       "target." + keys.get(index).field().getName()
-                          + " = current_keys.key_" + index)
+                          + " is not distinct from current_keys.key_" + index)
               .collect(Collectors.joining(" and "));
       return "delete from " + table.getName() + " target where target."
           + rootIdField.getName() + " = any (?) and not exists (select 1 from unnest("
@@ -197,5 +306,36 @@ final class RelationTableRegistry {
   }
 
   record RelationKey(Field<?> field, String postgresArrayType) {
+
+    RelationKeyValue value(UpdatableRecord<?> record) {
+      Object value = field.getValue(record);
+      return switch (postgresArrayType) {
+        case INTEGER_ARRAY_TYPE -> new IntegerRelationKeyValue((Integer) value);
+        case TEXT_ARRAY_TYPE -> new TextRelationKeyValue((String) value);
+        default -> throw new IllegalStateException(
+            "unsupported relation key type " + postgresArrayType);
+      };
+    }
+
+    String describeValue(UpdatableRecord<?> record) {
+      return String.valueOf(field.getValue(record));
+    }
+  }
+
+  record RelationIdentity(String tableName, List<RelationKeyValue> values) {
+
+    RelationIdentity {
+      values = List.copyOf(values);
+    }
+  }
+
+  sealed interface RelationKeyValue
+      permits IntegerRelationKeyValue, TextRelationKeyValue {
+  }
+
+  record IntegerRelationKeyValue(Integer value) implements RelationKeyValue {
+  }
+
+  record TextRelationKeyValue(String value) implements RelationKeyValue {
   }
 }

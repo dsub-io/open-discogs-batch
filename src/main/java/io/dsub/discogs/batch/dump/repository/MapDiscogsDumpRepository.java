@@ -12,10 +12,8 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.stereotype.Repository;
 import org.springframework.util.Assert;
 
-@Repository
 @RequiredArgsConstructor
 public class MapDiscogsDumpRepository implements DiscogsDumpRepository, InitializingBean {
 

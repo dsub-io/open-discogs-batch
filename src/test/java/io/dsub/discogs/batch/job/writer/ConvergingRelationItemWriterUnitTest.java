@@ -1,12 +1,15 @@
 package io.dsub.discogs.batch.job.writer;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import io.dsub.discogs.batch.dump.EntityType;
 import io.dsub.discogs.batch.job.processor.RelationSet;
+import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemTrackRecord;
 import java.util.Collection;
 import java.util.List;
 import javax.sql.DataSource;
@@ -16,6 +19,21 @@ import org.springframework.batch.infrastructure.item.Chunk;
 import org.springframework.batch.infrastructure.item.ItemWriter;
 
 class ConvergingRelationItemWriterUnitTest {
+
+  @Test
+  void releaseLabelIdentityIncludesNullableCatalogNumber() {
+    RelationTableRegistry.RelationTable labelRelease =
+        RelationTableRegistry.forEntity(EntityType.RELEASE).stream()
+            .filter(table -> table.table().getName().equals("label_release_item"))
+            .findFirst()
+            .orElseThrow();
+
+    assertThat(labelRelease.keys())
+        .extracting(key -> key.field().getName())
+        .containsExactly("release_item_id", "label_id", "category_notation");
+    assertThat(labelRelease.deleteStaleSql())
+        .contains("category_notation is not distinct from current_keys.key_2");
+  }
 
   @Test
   void emptySpringChunkDoesNothing() throws Exception {
@@ -45,5 +63,37 @@ class ConvergingRelationItemWriterUnitTest {
     assertThatThrownBy(() -> writer.write(mixed))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("multiple entity types");
+  }
+
+  @Test
+  void rejectsConflictingCanonicalPayloadBeforeDatabaseAccess() {
+    @SuppressWarnings("unchecked")
+    ItemWriter<Collection<UpdatableRecord<?>>> delegate = mock(ItemWriter.class);
+    DataSource dataSource = mock(DataSource.class);
+    ConvergingRelationItemWriter writer =
+        new ConvergingRelationItemWriter(dataSource, delegate);
+    ReleaseItemTrackRecord first = track("First");
+    ReleaseItemTrackRecord second = track("Second");
+
+    assertThatThrownBy(
+            () ->
+                writer.write(
+                    new Chunk<>(
+                        List.of(
+                            new RelationSet(
+                                EntityType.RELEASE, 2, List.of(first, second))))))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("release_item_track")
+        .hasMessageContaining("release_item_id=2")
+        .hasMessageContaining("hash=7");
+    verifyNoInteractions(dataSource, delegate);
+  }
+
+  private ReleaseItemTrackRecord track(String title) {
+    return new ReleaseItemTrackRecord()
+        .setReleaseItemId(2)
+        .setHash(7)
+        .setPosition("A1")
+        .setTitle(title);
   }
 }

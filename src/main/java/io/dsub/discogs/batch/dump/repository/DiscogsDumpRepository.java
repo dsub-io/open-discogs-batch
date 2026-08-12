@@ -5,9 +5,8 @@ import io.dsub.discogs.batch.dump.EntityType;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
-import org.springframework.beans.factory.InitializingBean;
 
-public interface DiscogsDumpRepository extends InitializingBean {
+public interface DiscogsDumpRepository {
 
   List<DiscogsDump> findAllByLastModifiedAtIsBetween(LocalDate start, LocalDate end);
 

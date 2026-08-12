@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class PostgreSQLIntegrationTestConfig extends PostgreSQLIntegrationSupport {
 
-  @Bean
+  @Bean(destroyMethod = "")
   public DataSource dataSource() {
     return dataSource;
   }
