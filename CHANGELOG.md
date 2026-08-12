@@ -1,5 +1,26 @@
 # Changelog
 
+## [1.2.1](https://github.com/dsub-io/open-discogs-batch/compare/v1.2.0...v1.2.1) (2026-08-12)
+
+
+### Bug Fixes
+
+* keep terminal progress output readable ([#41](https://github.com/dsub-io/open-discogs-batch/issues/41)) ([b00c581](https://github.com/dsub-io/open-discogs-batch/commit/b00c5812a0fb6b3004bc861857e01e3607f22a4a))
+* make an interactive invocation display only the progress bar by suppressing
+  periodic `event=import_progress` console records while the bar is active
+* suppress carriage-return progress bars in redirected output, pipelines,
+  containers, and Kubernetes while retaining structured progress logs
+
+### Measured Output and Validation
+
+* interactive structured progress falls from up to `0.2` records per second per
+  active entity to `0` (`100%` reduction)
+* non-interactive bar output falls from up to `10` renders per second to `0`
+  (`100%` reduction), while interactive refresh remains unchanged
+* the clean Gradle build and PostgreSQL E2E passed with `4,010/4,010` lines and
+  `1,309/1,309` branches covered and no residual test container, network, or
+  volume
+
 ## [1.2.0](https://github.com/dsub-io/open-discogs-batch/compare/v1.1.1...v1.2.0) (2026-08-11)
 
 
