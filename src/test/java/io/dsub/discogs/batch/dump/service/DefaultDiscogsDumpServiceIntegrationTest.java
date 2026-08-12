@@ -38,8 +38,9 @@ public class DefaultDiscogsDumpServiceIntegrationTest {
             .collect(Collectors.toList());
     dumpSupplier = Mockito.mock(DumpSupplier.class);
     when(dumpSupplier.get()).thenReturn(sampleDumpList);
-    repository = new MapDiscogsDumpRepository(dumpSupplier);
-    repository.afterPropertiesSet();
+    MapDiscogsDumpRepository mapRepository = new MapDiscogsDumpRepository(dumpSupplier);
+    mapRepository.afterPropertiesSet();
+    repository = mapRepository;
     dumpService = new DefaultDiscogsDumpService(repository, dumpSupplier);
   }
 

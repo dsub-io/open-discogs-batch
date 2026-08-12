@@ -23,9 +23,9 @@ configurations {
 ext {
     set('testcontainersVersion', '2.0.5')
     set('classGraphVersion', '4.8.186')
-    set('jooqVersion', '3.21.6')
+    set('jooqVersion', '3.21.7')
     set('pbVersion', '0.10.2')
-    set('openDiscogsModelVersion', '0.2.2')
+    set('openDiscogsModelVersion', '0.3.0')
     set('postgresqlVersion', '42.7.13')
 }
 

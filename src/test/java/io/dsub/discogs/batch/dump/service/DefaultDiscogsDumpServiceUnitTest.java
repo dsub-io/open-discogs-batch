@@ -14,20 +14,22 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import ch.qos.logback.classic.spi.ILoggingEvent;
+import io.dsub.discogs.batch.TestArguments;
 import io.dsub.discogs.batch.dump.DiscogsDump;
 import io.dsub.discogs.batch.dump.DumpSupplier;
 import io.dsub.discogs.batch.dump.EntityType;
 import io.dsub.discogs.batch.dump.repository.DiscogsDumpRepository;
 import io.dsub.discogs.batch.exception.DumpNotFoundException;
 import io.dsub.discogs.batch.exception.InitializationFailureException;
+import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import io.dsub.discogs.batch.testutil.LogSpy;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Objects;
 import java.util.Random;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import net.bytebuddy.utility.RandomString;
@@ -39,7 +41,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
-import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -55,73 +56,57 @@ class DefaultDiscogsDumpServiceUnitTest {
   DumpSupplier dumpSupplier;
   @InjectMocks
   DefaultDiscogsDumpService dumpService;
-  @Captor
-  private ArgumentCaptor<List<DiscogsDump>> dumpListCaptor;
-
   @BeforeEach
   void setUp() {
     MockitoAnnotations.openMocks(this);
   }
 
   @Test
-  void whenUpdateDB__IfMonthlyDumpCountIs4__ThenShouldNotProceedUpdate() {
-    when(repository.countItemsAfter(LocalDate.now().withDayOfMonth(1)))
-        .thenReturn(4);
+  void updateDbRefreshesAndPersistsOneLatestSelection() {
+    Set<EntityType> types = Set.of(EntityType.values());
+    List<DiscogsDump> expected =
+        List.of(EntityType.values()).stream()
+            .map(TestArguments::getRandomDumpWithType)
+            .toList();
+    when(dumpSupplier.getLatest(types)).thenReturn(expected);
+    expected.forEach(dump -> when(repository.findTopByType(dump.getType())).thenReturn(dump));
 
-    // when
     dumpService.updateDB();
 
-    // then
-    assertThat(logSpy.getEvents().get(0).getMessage())
-        .isEqualTo("repository is up to date. skipping the update...");
-    verify(dumpSupplier, never()).get();
-    verify(repository, times(1))
-        .countItemsAfter(LocalDate.now().withDayOfMonth(1));
+    verify(dumpSupplier).getLatest(types);
+    verify(repository).saveAll(expected);
   }
 
   @Test
-  void whenUpdateDB__ShouldFilterNullValues__BeforeCallDumpRepository__SaveAllMethod() {
-    List<DiscogsDump> listIncludingNull =
-        IntStream.range(0, 10 + random.nextInt(10))
-            .mapToObj(n -> n % 3 == 0 ? null : getRandomDump())
-            .collect(Collectors.toList());
+  void latestRefreshFailureFallsBackToTheDurableCatalog() {
+    Set<EntityType> types = Set.of(EntityType.ARTIST);
+    DiscogsDump cached = getRandomDumpWithType(EntityType.ARTIST);
+    when(dumpSupplier.getLatest(types)).thenThrow(new DumpNotFoundException("HTTP 429"));
+    when(repository.findTopByType(EntityType.ARTIST)).thenReturn(cached);
 
-    List<DiscogsDump> filtered =
-        listIncludingNull.stream().filter(Objects::nonNull).collect(Collectors.toList());
-
-    assertThat(listIncludingNull.contains(null)).isTrue();
-    when(dumpSupplier.get()).thenReturn(listIncludingNull);
-
-    // when
-    dumpService.updateDB();
-
-    // then
-    verify(dumpSupplier, times(1)).get();
-    verify(repository, times(1)).saveAll(dumpListCaptor.capture());
-    assertThat(dumpListCaptor.getValue())
-        .isNotNull()
-        .isNotSameAs(listIncludingNull)
-        .isEqualTo(filtered);
+    assertThat(dumpService.resolveLatest(types)).isEqualTo(List.of(cached));
+    verify(repository, never()).saveAll(any());
   }
 
   @Test
-  void whenUpdateDBWithNull__ShouldNotCallRepositoryMethod() {
-    when(dumpSupplier.get()).thenReturn(null);
-    dumpService.updateDB();
-    verify(dumpSupplier, times(1)).get();
-    verify(repository, times(0)).saveAll(any());
-    List<ILoggingEvent> logs = logSpy.getEvents();
-    assertThat(logs.size()).isEqualTo(1);
-    assertThat(logs.get(0).getMessage())
-        .isEqualTo("failed to fetch items via DumpSupplier. cancelling the update...");
+  void latestRefreshFailureWithoutDurableCatalogPreservesTheReason() {
+    Set<EntityType> types = Set.of(EntityType.RELEASE);
+    when(dumpSupplier.getLatest(types)).thenThrow(new DumpNotFoundException("HTTP 429"));
+
+    assertThat(catchThrowable(() -> dumpService.resolveLatest(types)))
+        .isInstanceOf(DumpNotFoundException.class)
+        .hasMessageContaining("HTTP 429")
+        .hasMessageContaining("durable dump catalog");
   }
 
   @Test
-  void whenUpdateDBWithEmptyList__ShouldNotPersist() {
-    when(dumpSupplier.get()).thenReturn(List.of());
+  void emptyLatestRefreshUsesTheSameDurableFallback() {
+    Set<EntityType> types = Set.of(EntityType.ARTIST);
+    DiscogsDump cached = getRandomDumpWithType(EntityType.ARTIST);
+    when(dumpSupplier.getLatest(types)).thenReturn(List.of());
+    when(repository.findTopByType(EntityType.ARTIST)).thenReturn(cached);
 
-    dumpService.updateDB();
-
+    assertThat(dumpService.resolveLatest(types)).isEqualTo(List.of(cached));
     verify(repository, never()).saveAll(any());
   }
 
@@ -134,20 +119,79 @@ class DefaultDiscogsDumpServiceUnitTest {
   }
 
   @Test
-  void whenUpdateDB__ShouldCallProperDelegatedMethodsWithValues() {
-    List<DiscogsDump> dumpList =
-        IntStream.range(0, 10 + random.nextInt(10))
-            .mapToObj(n -> getRandomDump())
-            .collect(Collectors.toList());
+  void nullLatestRefreshWithoutDurableCatalogFails() {
+    Set<EntityType> types = Set.of(EntityType.ARTIST);
+    when(dumpSupplier.getLatest(types)).thenReturn(null);
 
-    // when
-    when(dumpSupplier.get()).thenReturn(dumpList);
-    dumpService.updateDB();
+    assertThat(catchThrowable(() -> dumpService.resolveLatest(types)))
+        .isInstanceOf(DumpNotFoundException.class)
+        .hasMessageContaining("returned no selected dumps");
+  }
 
-    // then
-    verify(dumpSupplier, times(1)).get();
-    verify(repository, times(1)).saveAll(dumpListCaptor.capture());
-    assertThat(dumpListCaptor.getValue()).isEqualTo(dumpList);
+  @Test
+  void successfulLatestRefreshMustBecomeVisibleInTheDurableCatalog() {
+    Set<EntityType> types = Set.of(EntityType.ARTIST);
+    DiscogsDump selected = getRandomDumpWithType(EntityType.ARTIST);
+    when(dumpSupplier.getLatest(types)).thenReturn(List.of(selected));
+
+    assertThat(catchThrowable(() -> dumpService.resolveLatest(types)))
+        .isInstanceOf(DumpNotFoundException.class)
+        .hasMessage("failed to locate a dump for every requested entity type");
+  }
+
+  @Test
+  void exactMonthUsesTheDurableCatalogWithoutAnUpstreamRequest() {
+    Set<EntityType> types = Set.of(EntityType.ARTIST);
+    YearMonth month = YearMonth.of(2026, 7);
+    DiscogsDump cached = getRandomDumpWithType(EntityType.ARTIST, month.atDay(1));
+    when(repository.findTopByTypeAndLastModifiedAtBetween(
+            EntityType.ARTIST, month.atDay(1), month.plusMonths(1).atDay(1)))
+        .thenReturn(cached);
+
+    assertThat(dumpService.resolveMonth(types, month)).isEqualTo(List.of(cached));
+    verifyNoInteractions(dumpSupplier);
+  }
+
+  @Test
+  void freshExactMonthPersistsThePinnedSelectionBeforeReturningIt() {
+    Set<EntityType> types = Set.of(EntityType.ARTIST, EntityType.RELEASE);
+    YearMonth month = YearMonth.of(2026, 7);
+    List<DiscogsDump> selected =
+        List.of(
+            getRandomDumpWithType(EntityType.ARTIST, month.atDay(1)),
+            getRandomDumpWithType(EntityType.RELEASE, month.atDay(1)));
+    when(repository.findTopByTypeAndLastModifiedAtBetween(
+            EntityType.ARTIST, month.atDay(1), month.plusMonths(1).atDay(1)))
+        .thenReturn(null, selected.getFirst());
+    when(repository.findTopByTypeAndLastModifiedAtBetween(
+            EntityType.RELEASE, month.atDay(1), month.plusMonths(1).atDay(1)))
+        .thenReturn(null, selected.getLast());
+    when(dumpSupplier.getMonth(types, month)).thenReturn(selected);
+
+    assertThat(dumpService.resolveMonth(types, month)).isEqualTo(selected);
+    verify(repository).saveAll(selected);
+  }
+
+  @Test
+  void exactMonthFailsIfDurablePersistenceDoesNotExposeACompleteSelection() {
+    Set<EntityType> types = Set.of(EntityType.LABEL);
+    YearMonth month = YearMonth.of(2026, 7);
+    DiscogsDump selected = getRandomDumpWithType(EntityType.LABEL, month.atDay(1));
+    when(dumpSupplier.getMonth(types, month)).thenReturn(List.of(selected));
+
+    assertThat(catchThrowable(() -> dumpService.resolveMonth(types, month)))
+        .isInstanceOf(DumpNotFoundException.class)
+        .hasMessageContaining("did not persist a complete selection");
+  }
+
+  @Test
+  void selectedResolutionRejectsAmbiguousInputs() {
+    assertThat(catchThrowable(() -> dumpService.resolveLatest(null)))
+        .isInstanceOf(InvalidArgumentException.class);
+    assertThat(catchThrowable(() -> dumpService.resolveLatest(Set.of())))
+        .isInstanceOf(InvalidArgumentException.class);
+    assertThat(catchThrowable(() -> dumpService.resolveMonth(Set.of(EntityType.ARTIST), null)))
+        .isInstanceOf(InvalidArgumentException.class);
   }
 
   @Test

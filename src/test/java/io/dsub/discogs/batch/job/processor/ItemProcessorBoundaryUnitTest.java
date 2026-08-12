@@ -89,21 +89,29 @@ class ItemProcessorBoundaryUnitTest {
   }
 
   @Test
-  void masterMainReleaseProcessorRequiresBothExistingSidesAndMainFlag() throws Exception {
+  void masterMainReleaseProcessorEmitsEveryValidReleaseRootAndValidatesPositiveMappings()
+      throws Exception {
     MasterMainReleaseItemProcessor processor = new MasterMainReleaseItemProcessor(registry());
     MasterMainReleaseXML item = new MasterMainReleaseXML();
 
     assertThat(processor.process(null)).isNull();
     assertThat(processor.process(item)).isNull();
     item.setReleaseId(1);
-    assertThat(processor.process(item)).isNull();
+    assertThat(processor.process(item))
+        .satisfies(
+            record -> {
+              assertThat(record.targetMasterId()).isNull();
+              assertThat(record.releaseId()).isEqualTo(1);
+            });
 
     MasterMainReleaseXML.Master master = new MasterMainReleaseXML.Master();
     item.setMaster(master);
-    assertThat(processor.process(item)).isNull();
+    assertThat(processor.process(item).targetMasterId()).isNull();
     master.setMasterId(1);
-    assertThat(processor.process(item)).isNull();
+    assertThat(processor.process(item).targetMasterId()).isNull();
     master.setMainRelease(true);
+    master.setMasterId(null);
+    assertThat(processor.process(item)).isNull();
     master.setMasterId(2);
     assertThat(processor.process(item)).isNull();
     master.setMasterId(1);
@@ -113,8 +121,8 @@ class ItemProcessorBoundaryUnitTest {
     assertThat(processor.process(item))
         .satisfies(
             record -> {
-              assertThat(record.getId()).isEqualTo(1);
-              assertThat(record.getMainReleaseId()).isEqualTo(1);
+              assertThat(record.targetMasterId()).isEqualTo(1);
+              assertThat(record.releaseId()).isEqualTo(1);
             });
   }
 
@@ -276,7 +284,7 @@ class ItemProcessorBoundaryUnitTest {
     item.setGenres(listWithNull(" Rock ", " ", "Missing", "Rock"));
     item.setStyles(listWithNull(" House ", " ", "Missing", "House"));
 
-    assertThat(processor.process(item).records()).hasSize(10);
+    assertThat(processor.process(item).records()).hasSize(12);
   }
 
   @Test

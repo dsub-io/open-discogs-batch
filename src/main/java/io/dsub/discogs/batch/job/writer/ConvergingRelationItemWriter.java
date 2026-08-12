@@ -42,11 +42,13 @@ public class ConvergingRelationItemWriter implements ItemWriter<RelationSet> {
       }
       rootIds.add(relationSet.rootId());
     }
+    List<RelationSet> canonicalSets =
+        CanonicalRelationBatch.canonicalize(items.getItems(), entityType);
 
     for (RelationTableRegistry.RelationTable relationTable :
         RelationTableRegistry.forEntity(entityType)) {
       List<UpdatableRecord<?>> currentRecords =
-          items.getItems().stream()
+          canonicalSets.stream()
               .flatMap(relationSet -> relationSet.records().stream())
               .filter(record -> record.getTable().equals(relationTable.table()))
               .toList();
@@ -54,7 +56,7 @@ public class ConvergingRelationItemWriter implements ItemWriter<RelationSet> {
     }
 
     List<Collection<UpdatableRecord<?>>> records =
-        items.getItems().stream()
+        canonicalSets.stream()
             .map(RelationSet::records)
             .map(recordsForRoot -> (Collection<UpdatableRecord<?>>) recordsForRoot)
             .toList();

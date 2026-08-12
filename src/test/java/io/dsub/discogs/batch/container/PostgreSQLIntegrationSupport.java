@@ -2,6 +2,8 @@ package io.dsub.discogs.batch.container;
 
 import com.github.dockerjava.api.command.InspectContainerResponse;
 import com.github.dockerjava.api.model.HostConfig;
+import io.dsub.discogs.batch.config.CanonicalSchemaMigrator;
+import io.dsub.discogs.batch.config.DatabaseSchema;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -45,6 +47,9 @@ public abstract class PostgreSQLIntegrationSupport {
           .username(CONTAINER.getUsername())
           .password(CONTAINER.getPassword())
           .build();
+      new CanonicalSchemaMigrator(
+              dataSource, new DatabaseSchema(DatabaseSchema.DEFAULT_NAME))
+          .migrate();
     } catch (RuntimeException | Error failure) {
       stopAfterFailure(failure);
       throw failure;

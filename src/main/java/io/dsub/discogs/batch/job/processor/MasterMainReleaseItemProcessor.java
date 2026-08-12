@@ -1,30 +1,29 @@
 package io.dsub.discogs.batch.job.processor;
 
+import io.dsub.discogs.batch.domain.master.MasterMainReleaseAssignment;
 import io.dsub.discogs.batch.domain.master.MasterMainReleaseXML;
 import io.dsub.discogs.batch.job.registry.DefaultEntityIdRegistry;
 import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
-import io.dsub.opendiscogs.jooq.tables.records.MasterRecord;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.infrastructure.item.ItemProcessor;
 
 @RequiredArgsConstructor
 public class MasterMainReleaseItemProcessor
-    implements ItemProcessor<MasterMainReleaseXML, MasterRecord> {
+    implements ItemProcessor<MasterMainReleaseXML, MasterMainReleaseAssignment> {
 
   private final EntityIdRegistry idRegistry;
 
   @Override
-  public MasterRecord process(MasterMainReleaseXML item) throws Exception {
+  public MasterMainReleaseAssignment process(MasterMainReleaseXML item) throws Exception {
     if (item == null
-        || item.getReleaseId() == null
-        || item.getMaster() == null
-        || item.getMaster().getMasterId() == null
-        || !item.getMaster().isMainRelease()) {
+        || !idRegistry.exists(DefaultEntityIdRegistry.Type.RELEASE, item.getReleaseId())) {
       return null;
     }
 
-    if (!idRegistry.exists(DefaultEntityIdRegistry.Type.MASTER, item.getMaster().getMasterId())
-        || !idRegistry.exists(DefaultEntityIdRegistry.Type.RELEASE, item.getReleaseId())) {
+    MasterMainReleaseXML.Master master = item.getMaster();
+    if (master != null
+        && master.isMainRelease()
+        && !idRegistry.exists(DefaultEntityIdRegistry.Type.MASTER, master.getMasterId())) {
       return null;
     }
 

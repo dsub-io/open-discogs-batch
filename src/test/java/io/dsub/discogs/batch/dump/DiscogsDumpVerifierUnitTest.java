@@ -112,6 +112,39 @@ class DiscogsDumpVerifierUnitTest {
   }
 
   @Test
+  void pinnedChecksumAvoidsAnotherManifestRequestAndRejectsCorruption() throws Exception {
+    Path file = Files.writeString(tempDir.resolve("discogs_20260701_releases.xml.gz"), CONTENT);
+    DiscogsDump pinned =
+        new DiscogsDump(
+            "etag",
+            EntityType.RELEASE,
+            "data/2026/" + file.getFileName(),
+            Files.size(file),
+            LocalDate.of(2026, 7, 1),
+            file.toUri().toURL(),
+            null,
+            SHA_256.toUpperCase());
+    DiscogsDumpVerifier verifier = spy(new DiscogsDumpVerifier());
+
+    assertThat(verifier.getExpectedChecksum(pinned)).isEqualTo(SHA_256);
+    assertThat(verifier.isValid(pinned, file)).isTrue();
+
+    DiscogsDump invalid =
+        new DiscogsDump(
+            "etag",
+            EntityType.RELEASE,
+            "data/2026/" + file.getFileName(),
+            Files.size(file),
+            LocalDate.of(2026, 7, 1),
+            file.toUri().toURL(),
+            null,
+            "invalid");
+    assertThatThrownBy(() -> verifier.getExpectedChecksum(invalid))
+        .isInstanceOf(FileException.class)
+        .hasMessageContaining("invalid pinned SHA-256");
+  }
+
+  @Test
   void whenLegacyDumpHasNoChecksum__ThenExactSizeIsUsed() throws Exception {
     Path file = Files.writeString(tempDir.resolve("legacy.xml.gz"), CONTENT);
     DiscogsDump dump =
@@ -173,6 +206,15 @@ class DiscogsDumpVerifierUnitTest {
         com.sun.net.httpserver.HttpServer.create(
             new java.net.InetSocketAddress("127.0.0.1", 0), 0);
     server.createContext(
+        "/success",
+        exchange -> {
+          byte[] body = (SHA_256 + "  release.xml.gz\n").getBytes(java.nio.charset.StandardCharsets.UTF_8);
+          exchange.sendResponseHeaders(200, body.length);
+          try (var output = exchange.getResponseBody()) {
+            output.write(body);
+          }
+        });
+    server.createContext(
         "/failure",
         exchange -> {
           exchange.sendResponseHeaders(503, -1);
@@ -180,6 +222,10 @@ class DiscogsDumpVerifierUnitTest {
         });
     server.start();
     try {
+      URI success =
+          URI.create(
+              "http://127.0.0.1:" + server.getAddress().getPort() + "/success");
+      assertThat(verifier.getChecksumSource(success)).contains("release.xml.gz");
       URI failure =
           URI.create(
               "http://127.0.0.1:" + server.getAddress().getPort() + "/failure");

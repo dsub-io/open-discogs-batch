@@ -5,7 +5,6 @@ import io.dsub.discogs.batch.dump.service.DiscogsDumpService;
 import io.dsub.discogs.batch.exception.DumpNotFoundException;
 import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import java.time.YearMonth;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.Set;
@@ -27,22 +26,11 @@ public class DefaultDumpDependencyResolver implements DumpDependencyResolver {
       throws DumpNotFoundException, InvalidArgumentException {
     Set<EntityType> entities = parseEntities(args);
     if (!args.containsOption(DUMP_MONTH)) {
-      Collection<DiscogsDump> dumps = new ArrayList<>();
-      for (EntityType entity : entities) {
-        DiscogsDump dump = dumpService.getMostRecentDiscogsDumpByType(entity);
-        if (dump == null) {
-          throw new DumpNotFoundException("failed to locate latest dump for " + entity);
-        }
-        dumps.add(dump);
-      }
-      return dumps;
+      return dumpService.resolveLatest(entities);
     }
 
     YearMonth dumpMonth = YearMonth.parse(args.getOptionValues(DUMP_MONTH).getFirst());
-    return dumpService.getAllByTypeYearMonth(
-        entities.stream().sorted(java.util.Comparator.comparingInt(Enum::ordinal)).toList(),
-        dumpMonth.getYear(),
-        dumpMonth.getMonthValue());
+    return dumpService.resolveMonth(entities, dumpMonth);
   }
 
   protected Set<EntityType> parseEntities(ApplicationArguments args)

@@ -1,7 +1,6 @@
 package io.dsub.discogs.batch.domain.master;
 
 import io.dsub.discogs.batch.domain.BaseXML;
-import io.dsub.opendiscogs.jooq.tables.records.MasterRecord;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import jakarta.xml.bind.annotation.XmlAccessType;
@@ -17,7 +16,7 @@ import lombok.EqualsAndHashCode;
 @XmlRootElement(name = "release")
 @XmlAccessorType(XmlAccessType.FIELD)
 @EqualsAndHashCode(callSuper = false)
-public class MasterMainReleaseXML implements BaseXML<MasterRecord> {
+public class MasterMainReleaseXML implements BaseXML<MasterMainReleaseAssignment> {
 
   @XmlAttribute(name = "id")
   private Integer releaseId;
@@ -26,11 +25,11 @@ public class MasterMainReleaseXML implements BaseXML<MasterRecord> {
   private Master master;
 
   @Override
-  public MasterRecord buildRecord() {
-    return new MasterRecord()
-        .setId(master == null ? null : master.getMasterId())
-        .setMainReleaseId(releaseId)
-        .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()));
+  public MasterMainReleaseAssignment buildRecord() {
+    Integer targetMasterId =
+        master != null && master.isMainRelease() ? master.getMasterId() : null;
+    return new MasterMainReleaseAssignment(
+        releaseId, targetMasterId, LocalDateTime.now(Clock.systemUTC()));
   }
 
   @Data

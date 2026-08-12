@@ -5,6 +5,8 @@ import io.dsub.discogs.batch.dump.EntityType;
 import io.dsub.discogs.batch.exception.DumpNotFoundException;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
+import java.time.YearMonth;
 
 public interface DiscogsDumpService {
 
@@ -26,4 +28,9 @@ public interface DiscogsDumpService {
   List<DiscogsDump> getLatestCompleteDumpSet() throws DumpNotFoundException;
 
   List<DiscogsDump> getAll();
+
+  List<DiscogsDump> resolveLatest(Set<EntityType> types) throws DumpNotFoundException;
+
+  List<DiscogsDump> resolveMonth(Set<EntityType> types, YearMonth month)
+      throws DumpNotFoundException;
 }

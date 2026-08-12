@@ -11,6 +11,7 @@ import io.dsub.discogs.batch.TestArguments;
 import io.dsub.discogs.batch.dump.service.DiscogsDumpService;
 import io.dsub.discogs.batch.exception.DumpNotFoundException;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -35,35 +36,39 @@ class DumpDependencyResolverUnitTest {
 
   @Test
   void noEntitiesOrMonthSelectsLatestDumpIndependentlyForEveryEntity() {
-    for (EntityType type : EntityType.values()) {
-      when(dumpService.getMostRecentDiscogsDumpByType(type))
-          .thenReturn(TestArguments.getRandomDumpWithType(type, LocalDate.of(2026, type.ordinal() + 1, 1)));
-    }
+    Set<EntityType> entities = Set.of(EntityType.values());
+    List<DiscogsDump> expected =
+        List.of(EntityType.values()).stream()
+            .map(
+                type ->
+                    TestArguments.getRandomDumpWithType(
+                        type, LocalDate.of(2026, type.ordinal() + 1, 1)))
+            .toList();
+    when(dumpService.resolveLatest(entities)).thenReturn(expected);
 
     Collection<DiscogsDump> result = resolver.resolve(new DefaultApplicationArguments());
 
     assertThat(result).extracting(DiscogsDump::getType).containsExactlyElementsOf(List.of(EntityType.values()));
     assertThat(result).extracting(DiscogsDump::getLastModifiedAt).doesNotHaveDuplicates();
+    verify(dumpService).resolveLatest(entities);
   }
 
   @Test
   void entitiesSelectOnlyTheRequestedLatestDumpsWithoutAddingDependencies() {
     DiscogsDump release = TestArguments.getRandomDumpWithType(EntityType.RELEASE);
-    when(dumpService.getMostRecentDiscogsDumpByType(EntityType.RELEASE)).thenReturn(release);
+    when(dumpService.resolveLatest(Set.of(EntityType.RELEASE))).thenReturn(List.of(release));
 
     Collection<DiscogsDump> result =
         resolver.resolve(new DefaultApplicationArguments("--entities=release"));
 
     assertThat(result).containsExactly(release);
-    verify(dumpService, never()).getMostRecentDiscogsDumpByType(EntityType.ARTIST);
-    verify(dumpService, never()).getMostRecentDiscogsDumpByType(EntityType.LABEL);
-    verify(dumpService, never()).getMostRecentDiscogsDumpByType(EntityType.MASTER);
+    verify(dumpService).resolveLatest(Set.of(EntityType.RELEASE));
   }
 
   @Test
   void explicitDumpMonthRequiresThatExactMonth() {
     List<DiscogsDump> expected = List.of(TestArguments.getRandomDumpWithType(EntityType.ARTIST));
-    when(dumpService.getAllByTypeYearMonth(List.of(EntityType.ARTIST), 2026, 7))
+    when(dumpService.resolveMonth(Set.of(EntityType.ARTIST), YearMonth.of(2026, 7)))
         .thenReturn(expected);
 
     Collection<DiscogsDump> result =
@@ -71,7 +76,7 @@ class DumpDependencyResolverUnitTest {
             new DefaultApplicationArguments("--entities=artist", "--dumpMonth=2026-07"));
 
     assertThat(result).isEqualTo(expected);
-    verify(dumpService).getAllByTypeYearMonth(List.of(EntityType.ARTIST), 2026, 7);
+    verify(dumpService).resolveMonth(Set.of(EntityType.ARTIST), YearMonth.of(2026, 7));
   }
 
   @Test
@@ -85,7 +90,8 @@ class DumpDependencyResolverUnitTest {
 
   @Test
   void missingLatestEntityDumpFailsInsteadOfSilentlyRollingBack() {
-    when(dumpService.getMostRecentDiscogsDumpByType(EntityType.MASTER)).thenReturn(null);
+    when(dumpService.resolveLatest(Set.of(EntityType.MASTER)))
+        .thenThrow(new DumpNotFoundException("failed to locate latest dump for master"));
 
     assertThatThrownBy(
             () -> resolver.resolve(new DefaultApplicationArguments("--entities=master")))

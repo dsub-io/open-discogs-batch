@@ -4,11 +4,9 @@ import io.dsub.discogs.batch.domain.artist.ArtistSubItemsXML;
 import io.dsub.discogs.batch.domain.artist.ArtistXML;
 import io.dsub.discogs.batch.domain.label.LabelSubItemsXML;
 import io.dsub.discogs.batch.domain.label.LabelXML;
-import io.dsub.discogs.batch.domain.master.MasterMainReleaseXML;
 import io.dsub.discogs.batch.domain.master.MasterSubItemsXML;
 import io.dsub.discogs.batch.domain.master.MasterXML;
 import io.dsub.discogs.batch.domain.release.ReleaseItemSubItemsXML;
-import io.dsub.discogs.batch.domain.release.ReleaseItemXML;
 import io.dsub.discogs.batch.dump.DiscogsDump;
 import io.dsub.discogs.batch.dump.EntityType;
 import io.dsub.discogs.batch.dump.service.DiscogsDumpService;
@@ -99,17 +97,6 @@ public class ItemReaderConfig {
 
   @Bean
   @StepScope
-  public SynchronizedItemStreamReader<MasterMainReleaseXML> masterMainReleaseStreamReader() {
-    try {
-      return readerBuilder.build(MasterMainReleaseXML.class, releaseItemDump(null));
-    } catch (Exception e) {
-      throw new InitializationFailureException(
-          "failed to initialize master main release stream reader: " + e.getMessage());
-    }
-  }
-
-  @Bean
-  @StepScope
   public SourceChunkItemStreamReader<MasterSubItemsXML> masterSubItemsStreamReader(
       @Value(CHUNK_SIZE) Integer chunkSize) {
     try {
@@ -118,17 +105,6 @@ public class ItemReaderConfig {
     } catch (Exception e) {
       throw new InitializationFailureException(
           "failed to initialize master stream reader: " + e.getMessage());
-    }
-  }
-
-  @Bean
-  @StepScope
-  public SynchronizedItemStreamReader<ReleaseItemXML> releaseItemStreamReader() {
-    try {
-      return readerBuilder.build(ReleaseItemXML.class, releaseItemDump(null));
-    } catch (Exception e) {
-      throw new InitializationFailureException(
-          "failed to initialize release stream reader: " + e.getMessage());
     }
   }
 

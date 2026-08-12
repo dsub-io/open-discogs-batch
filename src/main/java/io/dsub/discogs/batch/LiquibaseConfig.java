@@ -1,5 +1,6 @@
 package io.dsub.discogs.batch;
 
+import io.dsub.discogs.batch.config.CanonicalSchemaMigrator;
 import io.dsub.discogs.batch.config.DatabaseSchema;
 import io.dsub.discogs.batch.config.DatabaseSchemaProvisioner;
 import java.util.Map;
@@ -38,11 +39,19 @@ public class LiquibaseConfig {
   }
 
   @Bean
+  public CanonicalSchemaMigrator canonicalSchemaMigrator(
+      DataSource dataSource, DatabaseSchema schema) {
+    return new CanonicalSchemaMigrator(dataSource, schema);
+  }
+
+  @Bean
   public SpringLiquibase liquibase(
       DataSource dataSource,
       DatabaseSchema schema,
-      DatabaseSchemaProvisioner provisioner) {
+      DatabaseSchemaProvisioner provisioner,
+      CanonicalSchemaMigrator migrator) {
     boolean created = provisioner.ensure();
+    migrator.migrate();
     log.info("database schema ready: {} (created={})", schema.name(), created);
     SpringLiquibase liquibase = new SpringLiquibase();
     liquibase.setChangeLog(schema.isPublic() ? PUBLIC_CHANGELOG : CUSTOM_SCHEMA_CHANGELOG);

@@ -22,6 +22,9 @@ public class DefaultDatabaseConnectionValidator implements DatabaseConnectionVal
   private static final String URL = "url";
   private static final String USERNAME = "username";
   private static final String PASSWORD = "password";
+  private static final int MINIMUM_SUPPORTED_POSTGRESQL_MAJOR_VERSION = 15;
+  private static final String UNSUPPORTED_DATABASE_VERSION_MESSAGE_PATTERN =
+      "%s version below %d is not supported.";
   private static final Pattern JDBC_PATTERN = Pattern.compile("jdbc:(\\w*)://.*");
 
   /**
@@ -69,7 +72,6 @@ public class DefaultDatabaseConnectionValidator implements DatabaseConnectionVal
     try {
       String productName = meta.getDatabaseProductName().toLowerCase();
       int majorVersion = meta.getDatabaseMajorVersion();
-      int minorVersion = meta.getDatabaseMinorVersion();
 
       DBType type = DBType.getTypeOf(productName);
 
@@ -77,8 +79,10 @@ public class DefaultDatabaseConnectionValidator implements DatabaseConnectionVal
         return result.withIssue(getUnsupportedProductMessage(productName));
       }
 
-      if (majorVersion < 9 || (majorVersion == 9 && minorVersion < 5)) {
-        return result.withIssue(productName + " version below 9.5 is not supported.");
+      if (majorVersion < MINIMUM_SUPPORTED_POSTGRESQL_MAJOR_VERSION) {
+        return result.withIssue(
+            UNSUPPORTED_DATABASE_VERSION_MESSAGE_PATTERN.formatted(
+                productName, MINIMUM_SUPPORTED_POSTGRESQL_MAJOR_VERSION));
       }
     } catch (SQLException e) {
       String msg = "failed to check database metadata by: " + e.getSQLState();

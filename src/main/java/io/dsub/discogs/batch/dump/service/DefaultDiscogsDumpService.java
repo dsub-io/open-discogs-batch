@@ -8,8 +8,10 @@ import io.dsub.discogs.batch.exception.DumpNotFoundException;
 import io.dsub.discogs.batch.exception.InitializationFailureException;
 import io.dsub.discogs.batch.exception.InvalidArgumentException;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.Collection;
 import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -35,39 +37,89 @@ public class DefaultDiscogsDumpService implements DiscogsDumpService, Initializi
     this.dumpSupplier = dumpSupplier;
   }
 
-  /**
-   * Fetches the entire list of discogs dump from the html page, then persist to the database via
-   * repository.
-   *
-   * @see <a href="https://data.discogs.com">https://data.discogs.com</a>
-   */
   @Override
   public void updateDB() {
-    int monthlyDumpCount = repository.countItemsAfter(LocalDate.now().withDayOfMonth(1));
+    resolveLatest(EnumSet.allOf(EntityType.class));
+  }
 
-    if (monthlyDumpCount == 4) {
-      log.info("repository is up to date. skipping the update...");
-      return;
+  @Override
+  public List<DiscogsDump> resolveLatest(Set<EntityType> types) throws DumpNotFoundException {
+    Set<EntityType> requiredTypes = requireTypes(types);
+    DumpNotFoundException refreshFailure = null;
+    try {
+      persist(dumpSupplier.getLatest(requiredTypes));
+    } catch (DumpNotFoundException exception) {
+      refreshFailure = exception;
+      log.warn("dump catalog refresh failed; trying the durable catalog: {}", exception.getMessage());
     }
 
-    List<DiscogsDump> dumpList = dumpSupplier.get();
+    List<DiscogsDump> selected =
+        findPersistedLatest(requiredTypes);
+    if (!selected.isEmpty()) {
+      return selected;
+    }
+    if (refreshFailure != null) {
+      throw new DumpNotFoundException(
+          refreshFailure.getMessage() + "; durable dump catalog has no complete selection");
+    }
+    throw new DumpNotFoundException("failed to locate a dump for every requested entity type");
+  }
 
-    if (dumpList == null || dumpList.isEmpty()) {
-      log.error("failed to fetch items via DumpSupplier. cancelling the update...");
-      return;
+  @Override
+  public List<DiscogsDump> resolveMonth(Set<EntityType> types, YearMonth month)
+      throws DumpNotFoundException {
+    Set<EntityType> requiredTypes = requireTypes(types);
+    if (month == null) {
+      throw new InvalidArgumentException("dump month cannot be null");
+    }
+    List<DiscogsDump> cached = findByMonth(requiredTypes, month);
+    if (!cached.isEmpty()) {
+      return cached;
     }
 
-    long persistedSize = repository.count();
-    if (dumpList.size() == persistedSize) { // if already up-to-date.
-      return;
+    persist(dumpSupplier.getMonth(requiredTypes, month));
+    List<DiscogsDump> selected = findByMonth(requiredTypes, month);
+    if (!selected.isEmpty()) {
+      return selected;
     }
+    throw new DumpNotFoundException(
+        "dump catalog refresh did not persist a complete selection for " + month);
+  }
 
-    log.info(
-        "repository requires update. found {} items but repository has {} items.",
-        persistedSize,
-        dumpList.size());
+  private Set<EntityType> requireTypes(Set<EntityType> types) {
+    if (types == null || types.isEmpty()) {
+      throw new InvalidArgumentException("entities cannot be empty");
+    }
+    return EnumSet.copyOf(types);
+  }
 
-    repository.saveAll(dumpList.stream().filter(Objects::nonNull).collect(Collectors.toList()));
+  private List<DiscogsDump> findByMonth(Set<EntityType> types, YearMonth month) {
+    LocalDate start = month.atDay(1);
+    LocalDate end = start.plusMonths(1);
+    List<DiscogsDump> selected =
+        types.stream()
+            .sorted(java.util.Comparator.comparingInt(Enum::ordinal))
+            .map(type -> repository.findTopByTypeAndLastModifiedAtBetween(type, start, end))
+            .filter(Objects::nonNull)
+            .toList();
+    return selected.size() == types.size() ? selected : List.of();
+  }
+
+  private List<DiscogsDump> findPersistedLatest(Set<EntityType> types) {
+    List<DiscogsDump> selected =
+        types.stream()
+            .sorted(java.util.Comparator.comparingInt(Enum::ordinal))
+            .map(repository::findTopByType)
+            .filter(Objects::nonNull)
+            .toList();
+    return selected.size() == types.size() ? selected : List.of();
+  }
+
+  private void persist(List<DiscogsDump> dumps) {
+    if (dumps == null || dumps.isEmpty()) {
+      throw new DumpNotFoundException("Discogs dump catalog returned no selected dumps");
+    }
+    repository.saveAll(dumps);
   }
 
   @Override

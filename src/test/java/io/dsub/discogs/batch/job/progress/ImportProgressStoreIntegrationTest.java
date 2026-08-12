@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.dsub.discogs.batch.container.PostgreSQLIntegrationSupport;
 import io.dsub.discogs.batch.dump.EntityType;
+import io.dsub.opendiscogs.model.manifest.ImportExecution;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import org.junit.jupiter.api.BeforeAll;
@@ -287,13 +288,15 @@ class ImportProgressStoreIntegrationTest extends PostgreSQLIntegrationSupport {
     jdbcTemplate.update(
         """
         insert into discogs_import_run_dump
-            (import_run_id, entity_type, dump_id, chunk_size)
-        values (?, ?, ?, ?)
+            (import_run_id, entity_type, dump_id, chunk_size,
+             import_contract_revision)
+        values (?, ?, ?, ?, ?)
         """,
         runId,
         entityType.toString(),
         dumpId,
-        CHUNK_SIZE);
+        CHUNK_SIZE,
+        ImportExecution.importContractRevision(entityType.toString()));
     return runId;
   }
 }

@@ -6,11 +6,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import io.dsub.discogs.batch.container.PostgreSQLIntegrationSupport;
 import io.dsub.discogs.batch.dump.EntityType;
 import io.dsub.discogs.batch.exception.ImportExecutionException;
+import io.dsub.opendiscogs.model.manifest.ImportExecution;
 import io.dsub.opendiscogs.model.manifest.ImportManifest;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,11 +21,15 @@ import org.springframework.batch.core.job.parameters.JobParameters;
 import org.springframework.batch.core.job.parameters.JobParametersBuilder;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
+import org.springframework.test.util.ReflectionTestUtils;
 
 class ImportExecutionCoordinatorIntegrationTest extends PostgreSQLIntegrationSupport {
 
   private static final LocalDate JULY_DUMP = LocalDate.of(2026, 7, 1);
   private static final int CHUNK_SIZE = 5;
+  private static final int LEGACY_IMPORT_CONTRACT_REVISION = 1;
+  private static final String GO_PROCESSOR = "go-open-discogs-batch";
+  private static final String GO_PROCESSOR_VERSION = "2.3.6";
 
   @BeforeAll
   static void migrateDatabase() throws Exception {
@@ -33,6 +39,7 @@ class ImportExecutionCoordinatorIntegrationTest extends PostgreSQLIntegrationSup
                 .getMetaData()
                 .getTables(null, "public", "discogs_import_run", new String[] {"TABLE"})) {
       if (tables.next()) {
+        addImportContractRevisionFixture();
         return;
       }
     }
@@ -45,6 +52,18 @@ class ImportExecutionCoordinatorIntegrationTest extends PostgreSQLIntegrationSup
             new ClassPathResource("migrations/V005__durable_import_progress.sql"),
             new ClassPathResource("migrations/V006__concurrent_import_progress.sql"));
     migrations.execute(dataSource);
+    addImportContractRevisionFixture();
+  }
+
+  private static void addImportContractRevisionFixture() throws Exception {
+    try (Connection connection = dataSource.getConnection();
+        Statement statement = connection.createStatement()) {
+      statement.execute(
+          """
+          alter table discogs_import_run_dump
+          add column if not exists import_contract_revision integer not null default 1
+          """);
+    }
   }
 
   @BeforeEach
@@ -63,6 +82,34 @@ class ImportExecutionCoordinatorIntegrationTest extends PostgreSQLIntegrationSup
   }
 
   @Test
+  void partialReleaseRequiresSuccessfulDependencyCheckpoints() {
+    ImportExecutionCoordinator coordinator = new ImportExecutionCoordinator(dataSource);
+
+    assertThatThrownBy(
+            () ->
+                coordinator.prepare(
+                    parameters(EntityType.RELEASE, JULY_DUMP, 'e', false, false)))
+        .isInstanceOf(ImportExecutionException.class)
+        .hasMessageContaining("successful artist checkpoint")
+        .hasMessageContaining("release");
+  }
+
+  @Test
+  void dependencyCheckpointAtTheNextMonthBoundaryIsCompatible() throws Exception {
+    ImportExecutionCoordinator coordinator = new ImportExecutionCoordinator(dataSource);
+    ImportExecutionCoordinator.Preparation artist =
+        coordinator.prepare(
+            parameters(EntityType.ARTIST, JULY_DUMP.plusMonths(1), 'a', false, false));
+    completeSuccessfully(coordinator, artist.runId());
+
+    ImportExecutionCoordinator.Preparation master =
+        coordinator.prepare(parameters(EntityType.MASTER, JULY_DUMP, 'c', false, false));
+
+    assertThat(master.skipped()).isFalse();
+    coordinator.complete(false, new IllegalStateException("test cleanup"));
+  }
+
+  @Test
   void successfulManifestSkipsByDefaultAndForceCreatesAnotherSuccessfulRun()
       throws Exception {
     ImportExecutionCoordinator coordinator = new ImportExecutionCoordinator(dataSource);
@@ -70,6 +117,8 @@ class ImportExecutionCoordinatorIntegrationTest extends PostgreSQLIntegrationSup
 
     ImportExecutionCoordinator.Preparation first = coordinator.prepare(normal);
     assertThat(first.skipped()).isFalse();
+    assertThat(importContractRevision(first.runId(), EntityType.ARTIST))
+        .isEqualTo(currentImportContractRevision(EntityType.ARTIST));
     completeSuccessfully(coordinator, first.runId());
 
     ImportExecutionCoordinator.Preparation skipped = coordinator.prepare(normal);
@@ -79,6 +128,8 @@ class ImportExecutionCoordinatorIntegrationTest extends PostgreSQLIntegrationSup
     JobParameters forced = parameters(EntityType.ARTIST, JULY_DUMP, 'a', true, false);
     ImportExecutionCoordinator.Preparation second = coordinator.prepare(forced);
     assertThat(second.skipped()).isFalse();
+    assertThat(importContractRevision(second.runId(), EntityType.ARTIST))
+        .isEqualTo(currentImportContractRevision(EntityType.ARTIST));
     completeSuccessfully(coordinator, second.runId());
 
     assertThat(longQuery("select count(*) from discogs_import_run where status = 'success'"))
@@ -86,6 +137,68 @@ class ImportExecutionCoordinatorIntegrationTest extends PostgreSQLIntegrationSup
     assertThat(stringQuery(
         "select dump_date::text from discogs_import_checkpoint where entity_type = 'artist'"))
         .isEqualTo("2026-07-01");
+  }
+
+  @Test
+  void legacyReleaseSuccessDoesNotSkipAndIsReprocessedAtTheCurrentRevision()
+      throws Exception {
+    ImportExecutionCoordinator coordinator = new ImportExecutionCoordinator(dataSource);
+    JobParameters parameters =
+        parametersWithDependencies(EntityType.RELEASE, JULY_DUMP, 'e', false, false);
+    ImportExecutionCoordinator.Preparation legacy = coordinator.prepare(parameters);
+    completeSuccessfully(coordinator, legacy.runId());
+    setRunDumpRevision(legacy.runId(), EntityType.RELEASE, LEGACY_IMPORT_CONTRACT_REVISION);
+    setRunProcessor(legacy.runId(), ImportExecutionCoordinator.PROCESSOR, "1.2.1");
+
+    ImportExecutionCoordinator.Preparation current = coordinator.prepare(parameters);
+
+    assertThat(current.skipped()).isFalse();
+    assertThat(current.resumedFromRunId()).isNull();
+    assertThat(importContractRevision(current.runId(), EntityType.RELEASE))
+        .isEqualTo(currentImportContractRevision(EntityType.RELEASE));
+    coordinator.complete(false, new IllegalStateException("test cleanup"));
+  }
+
+  @Test
+  void legacyReleaseRevisionMakesTheWholeSelectedManifestRunFresh() throws Exception {
+    ImportExecutionCoordinator coordinator = new ImportExecutionCoordinator(dataSource);
+    JobParameters allEntities = allEntityParameters(JULY_DUMP, false, false);
+    ImportExecutionCoordinator.Preparation legacy = coordinator.prepare(allEntities);
+    completeSuccessfully(coordinator, legacy.runId());
+
+    ImportExecutionCoordinator.Preparation currentMap = coordinator.prepare(allEntities);
+    assertThat(currentMap.skipped()).isTrue();
+    assertThat(currentMap.priorSuccessfulRunId()).isEqualTo(legacy.runId());
+
+    setRunDumpRevision(legacy.runId(), EntityType.RELEASE, LEGACY_IMPORT_CONTRACT_REVISION);
+
+    ImportExecutionCoordinator.Preparation fresh = coordinator.prepare(allEntities);
+
+    assertThat(fresh.skipped()).isFalse();
+    assertThat(fresh.resumedFromRunId()).isNull();
+    assertThat(longQuery(
+        "select count(*) from discogs_import_run_dump where import_run_id = "
+            + fresh.runId())).isEqualTo(EntityType.values().length);
+    for (EntityType entityType : EntityType.values()) {
+      assertThat(importContractRevision(fresh.runId(), entityType))
+          .isEqualTo(currentImportContractRevision(entityType));
+    }
+    coordinator.complete(false, new IllegalStateException("test cleanup"));
+  }
+
+  @Test
+  void currentSuccessfulRunSkipsAcrossProcessorImplementationsAndVersions()
+      throws Exception {
+    ImportExecutionCoordinator coordinator = new ImportExecutionCoordinator(dataSource);
+    JobParameters parameters = parameters(EntityType.LABEL, JULY_DUMP, 'b', false, false);
+    ImportExecutionCoordinator.Preparation goRun = coordinator.prepare(parameters);
+    completeSuccessfully(coordinator, goRun.runId());
+    setRunProcessor(goRun.runId(), GO_PROCESSOR, GO_PROCESSOR_VERSION);
+
+    ImportExecutionCoordinator.Preparation skipped = coordinator.prepare(parameters);
+
+    assertThat(skipped.skipped()).isTrue();
+    assertThat(skipped.priorSuccessfulRunId()).isEqualTo(goRun.runId());
   }
 
   @Test
@@ -253,7 +366,7 @@ class ImportExecutionCoordinatorIntegrationTest extends PostgreSQLIntegrationSup
 
     ImportExecutionCoordinator.Preparation release =
         releaseCoordinator.prepare(
-            parameters(EntityType.RELEASE, JULY_DUMP, 'e', false, false));
+            parametersWithDependencies(EntityType.RELEASE, JULY_DUMP, 'e', false, false));
 
     assertThatThrownBy(
             () ->
@@ -282,6 +395,8 @@ class ImportExecutionCoordinatorIntegrationTest extends PostgreSQLIntegrationSup
         .hasMessageContaining("--allow-downgrade");
 
     coordinator.prepare(parameters(EntityType.ARTIST, older, 'b', true, true));
+    assertThat(importContractRevision(activeRunId(EntityType.ARTIST), EntityType.ARTIST))
+        .isEqualTo(currentImportContractRevision(EntityType.ARTIST));
     completeSuccessfully(coordinator, activeRunId(EntityType.ARTIST));
 
     assertThat(stringQuery(
@@ -359,10 +474,10 @@ class ImportExecutionCoordinatorIntegrationTest extends PostgreSQLIntegrationSup
   }
 
   @Test
-  void matchingFailureTransfersChunkProgressAtomically() throws Exception {
+  void matchingJavaFailureTransfersChunkProgressAtomically() throws Exception {
     ImportExecutionCoordinator coordinator = new ImportExecutionCoordinator(dataSource);
     JobParameters parameters =
-        parameters(EntityType.RELEASE, JULY_DUMP, 'e', false, false);
+        parametersWithDependencies(EntityType.RELEASE, JULY_DUMP, 'e', false, false);
     ImportExecutionCoordinator.Preparation failed = coordinator.prepare(parameters);
     recordChunk(failed.runId(), EntityType.RELEASE, 0, 0, CHUNK_SIZE);
     coordinator.complete(false, new IllegalStateException("interrupted"));
@@ -380,16 +495,119 @@ class ImportExecutionCoordinatorIntegrationTest extends PostgreSQLIntegrationSup
   }
 
   @Test
+  void currentGoFailureNeverResumesInJava() throws Exception {
+    ImportExecutionCoordinator coordinator = new ImportExecutionCoordinator(dataSource);
+    JobParameters parameters =
+        parametersWithDependencies(EntityType.RELEASE, JULY_DUMP, 'e', false, false);
+    ImportExecutionCoordinator.Preparation goRun = coordinator.prepare(parameters);
+    recordChunk(goRun.runId(), EntityType.RELEASE, 0, 0, CHUNK_SIZE);
+    coordinator.complete(false, new IllegalStateException("interrupted"));
+    setRunProcessor(goRun.runId(), GO_PROCESSOR, GO_PROCESSOR_VERSION);
+
+    ImportExecutionCoordinator.Preparation javaRun = coordinator.prepare(parameters);
+
+    assertThat(javaRun.resumedFromRunId()).isNull();
+    assertThat(longQuery(
+        "select count(*) from discogs_import_run_chunk where import_run_id = "
+            + goRun.runId())).isEqualTo(1);
+    coordinator.complete(false, new IllegalStateException("test cleanup"));
+  }
+
+  @Test
+  void differentJavaVersionFailureNeverResumes() throws Exception {
+    ImportExecutionCoordinator coordinator = new ImportExecutionCoordinator(dataSource);
+    JobParameters parameters =
+        parametersWithDependencies(EntityType.RELEASE, JULY_DUMP, 'e', false, false);
+    ImportExecutionCoordinator.Preparation oldVersion = coordinator.prepare(parameters);
+    recordChunk(oldVersion.runId(), EntityType.RELEASE, 0, 0, CHUNK_SIZE);
+    coordinator.complete(false, new IllegalStateException("interrupted"));
+    setRunProcessor(oldVersion.runId(), ImportExecutionCoordinator.PROCESSOR, "1.2.1");
+
+    ImportExecutionCoordinator.Preparation currentVersion = coordinator.prepare(parameters);
+
+    assertThat(currentVersion.resumedFromRunId()).isNull();
+    assertThat(longQuery(
+        "select count(*) from discogs_import_run_chunk where import_run_id = "
+            + oldVersion.runId())).isEqualTo(1);
+    coordinator.complete(false, new IllegalStateException("test cleanup"));
+  }
+
+  @Test
+  void legacyFailedRunNeverResumesEvenWhenManifestAndChunkShapeMatch()
+      throws Exception {
+    ImportExecutionCoordinator coordinator = new ImportExecutionCoordinator(dataSource);
+    JobParameters parameters =
+        parametersWithDependencies(EntityType.RELEASE, JULY_DUMP, 'e', false, false);
+    ImportExecutionCoordinator.Preparation legacy = coordinator.prepare(parameters);
+    recordChunk(legacy.runId(), EntityType.RELEASE, 0, 0, CHUNK_SIZE);
+    coordinator.complete(false, new IllegalStateException("interrupted"));
+    setRunDumpRevision(legacy.runId(), EntityType.RELEASE, LEGACY_IMPORT_CONTRACT_REVISION);
+
+    ImportExecutionCoordinator.Preparation current = coordinator.prepare(parameters);
+
+    assertThat(current.resumedFromRunId()).isNull();
+    assertThat(longQuery(
+        "select count(*) from discogs_import_run_chunk where import_run_id = "
+            + legacy.runId())).isEqualTo(1);
+    assertThat(importContractRevision(current.runId(), EntityType.RELEASE))
+        .isEqualTo(currentImportContractRevision(EntityType.RELEASE));
+    coordinator.complete(false, new IllegalStateException("test cleanup"));
+  }
+
+  @Test
+  void currentJavaAbandonedRunResumesWithTheSameVersion() throws Exception {
+    ImportExecutionCoordinator interrupted = new ImportExecutionCoordinator(dataSource);
+    JobParameters parameters =
+        parametersWithDependencies(EntityType.MASTER, JULY_DUMP, 'c', false, false);
+    ImportExecutionCoordinator.Preparation abandoned = interrupted.prepare(parameters);
+    recordChunk(abandoned.runId(), EntityType.MASTER, 0, 0, CHUNK_SIZE);
+    ReflectionTestUtils.invokeMethod(interrupted, "releaseEntityLocks");
+
+    ImportExecutionCoordinator coordinator = new ImportExecutionCoordinator(dataSource);
+    ImportExecutionCoordinator.Preparation resumed = coordinator.prepare(parameters);
+
+    assertThat(resumed.resumedFromRunId()).isEqualTo(abandoned.runId());
+    assertThat(stringQuery(
+        "select status from discogs_import_run where id = " + abandoned.runId()))
+        .isEqualTo("failed");
+    coordinator.complete(false, new IllegalStateException("test cleanup"));
+  }
+
+  @Test
+  void legacyAbandonedRunIsFailedButNeverResumed() throws Exception {
+    ImportExecutionCoordinator interrupted = new ImportExecutionCoordinator(dataSource);
+    JobParameters parameters =
+        parametersWithDependencies(EntityType.RELEASE, JULY_DUMP, 'e', false, false);
+    ImportExecutionCoordinator.Preparation abandoned = interrupted.prepare(parameters);
+    recordChunk(abandoned.runId(), EntityType.RELEASE, 0, 0, CHUNK_SIZE);
+    setRunDumpRevision(
+        abandoned.runId(), EntityType.RELEASE, LEGACY_IMPORT_CONTRACT_REVISION);
+    ReflectionTestUtils.invokeMethod(interrupted, "releaseEntityLocks");
+
+    ImportExecutionCoordinator coordinator = new ImportExecutionCoordinator(dataSource);
+    ImportExecutionCoordinator.Preparation fresh = coordinator.prepare(parameters);
+
+    assertThat(fresh.resumedFromRunId()).isNull();
+    assertThat(stringQuery(
+        "select status from discogs_import_run where id = " + abandoned.runId()))
+        .isEqualTo("failed");
+    assertThat(longQuery(
+        "select count(*) from discogs_import_run_chunk where import_run_id = "
+            + abandoned.runId())).isEqualTo(1);
+    coordinator.complete(false, new IllegalStateException("test cleanup"));
+  }
+
+  @Test
   void forceStartsFreshInsteadOfReusingFailedProgress() throws Exception {
     ImportExecutionCoordinator coordinator = new ImportExecutionCoordinator(dataSource);
     JobParameters normal =
-        parameters(EntityType.RELEASE, JULY_DUMP, 'e', false, false);
+        parametersWithDependencies(EntityType.RELEASE, JULY_DUMP, 'e', false, false);
     ImportExecutionCoordinator.Preparation failed = coordinator.prepare(normal);
     recordChunk(failed.runId(), EntityType.RELEASE, 0, 0, CHUNK_SIZE);
     coordinator.complete(false, new IllegalStateException("interrupted"));
 
     JobParameters forced =
-        parameters(EntityType.RELEASE, JULY_DUMP, 'e', true, false);
+        parametersWithDependencies(EntityType.RELEASE, JULY_DUMP, 'e', true, false);
     ImportExecutionCoordinator.Preparation fresh = coordinator.prepare(forced);
 
     assertThat(fresh.resumedFromRunId()).isNull();
@@ -410,7 +628,8 @@ class ImportExecutionCoordinatorIntegrationTest extends PostgreSQLIntegrationSup
   void successfulCompletionRejectsIncompleteEntityProgress() throws Exception {
     ImportExecutionCoordinator coordinator = new ImportExecutionCoordinator(dataSource);
     ImportExecutionCoordinator.Preparation preparation =
-        coordinator.prepare(parameters(EntityType.MASTER, JULY_DUMP, 'd', false, false));
+        coordinator.prepare(
+            parametersWithDependencies(EntityType.MASTER, JULY_DUMP, 'd', false, false));
 
     assertThatThrownBy(() -> coordinator.complete(true, null))
         .isInstanceOf(ImportExecutionException.class)
@@ -446,29 +665,91 @@ class ImportExecutionCoordinatorIntegrationTest extends PostgreSQLIntegrationSup
       char checksumCharacter,
       boolean force,
       boolean allowDowngrade) {
-    String checksum = String.valueOf(checksumCharacter).repeat(64);
-    String manifest =
-        ImportManifest.fingerprint(
-            List.of(new ImportManifest.Dump(type.toString(), dumpDate, checksum)));
-    return new JobParametersBuilder()
-        .addString(type.toString(), type + "-etag-" + dumpDate)
-        .addString(ImportJobParameters.MANIFEST_SHA256, manifest)
+    return parameters(
+        List.of(new SelectedDump(type, dumpDate, checksumCharacter)), force, allowDowngrade);
+  }
+
+  private JobParameters parametersWithDependencies(
+      EntityType type,
+      LocalDate dumpDate,
+      char checksumCharacter,
+      boolean force,
+      boolean allowDowngrade)
+      throws Exception {
+    List<SelectedDump> dependencies =
+        switch (type) {
+          case ARTIST, LABEL -> List.of();
+          case MASTER -> List.of(new SelectedDump(EntityType.ARTIST, dumpDate, 'a'));
+          case RELEASE ->
+              List.of(
+                  new SelectedDump(EntityType.ARTIST, dumpDate, 'a'),
+                  new SelectedDump(EntityType.LABEL, dumpDate, 'b'),
+                  new SelectedDump(EntityType.MASTER, dumpDate, 'c'));
+        };
+    if (!dependencies.isEmpty()
+        && longQuery(
+                "select count(*) from discogs_import_checkpoint where entity_type in ("
+                    + dependencies.stream()
+                        .map(dependency -> "'" + dependency.entityType() + "'")
+                        .reduce((left, right) -> left + "," + right)
+                        .orElseThrow()
+                    + ")")
+            != dependencies.size()) {
+      ImportExecutionCoordinator dependencyCoordinator =
+          new ImportExecutionCoordinator(dataSource);
+      ImportExecutionCoordinator.Preparation dependencyPreparation =
+          dependencyCoordinator.prepare(parameters(dependencies, false, false));
+      completeSuccessfully(dependencyCoordinator, dependencyPreparation.runId());
+    }
+    return parameters(type, dumpDate, checksumCharacter, force, allowDowngrade);
+  }
+
+  private JobParameters allEntityParameters(
+      LocalDate dumpDate, boolean force, boolean allowDowngrade) {
+    List<SelectedDump> selectedDumps = new ArrayList<>(EntityType.values().length);
+    for (EntityType entityType : EntityType.values()) {
+      selectedDumps.add(
+          new SelectedDump(
+              entityType,
+              dumpDate,
+              (char) ('a' + entityType.ordinal())));
+    }
+    return parameters(selectedDumps, force, allowDowngrade);
+  }
+
+  private JobParameters parameters(
+      List<SelectedDump> selectedDumps, boolean force, boolean allowDowngrade) {
+    List<ImportManifest.Dump> manifestDumps = new ArrayList<>(selectedDumps.size());
+    JobParametersBuilder parameters =
+        new JobParametersBuilder()
         .addString(ImportJobParameters.CHUNK_SIZE, String.valueOf(CHUNK_SIZE))
         .addString(ImportJobParameters.FORCE, String.valueOf(force))
         .addString(
             ImportJobParameters.ALLOW_DOWNGRADE,
-            String.valueOf(allowDowngrade))
-        .addString(ImportJobParameters.checksum(type), checksum)
-        .addString(ImportJobParameters.date(type), dumpDate.toString())
-        .addString(ImportJobParameters.etag(type), type + "-etag-" + dumpDate)
-        .addString(ImportJobParameters.size(type), "1024")
+            String.valueOf(allowDowngrade));
+    for (SelectedDump selectedDump : selectedDumps) {
+      EntityType type = selectedDump.entityType();
+      LocalDate dumpDate = selectedDump.dumpDate();
+      String checksum = Character.toString(selectedDump.checksumCharacter()).repeat(64);
+      manifestDumps.add(new ImportManifest.Dump(type.toString(), dumpDate, checksum));
+      parameters
+          .addString(type.toString(), type + "-etag-" + dumpDate)
+          .addString(ImportJobParameters.checksum(type), checksum)
+          .addString(ImportJobParameters.date(type), dumpDate.toString())
+          .addString(ImportJobParameters.etag(type), type + "-etag-" + dumpDate)
+          .addString(ImportJobParameters.size(type), "1024")
+          .addString(
+              ImportJobParameters.uri(type),
+              "data/2026/discogs_"
+                  + dumpDate.toString().replace("-", "")
+                  + "_"
+                  + type
+                  + "s.xml.gz");
+    }
+    return parameters
         .addString(
-            ImportJobParameters.uri(type),
-            "data/2026/discogs_"
-                + dumpDate.toString().replace("-", "")
-                + "_"
-                + type
-                + "s.xml.gz")
+            ImportJobParameters.MANIFEST_SHA256,
+            ImportManifest.fingerprint(manifestDumps))
         .toJobParameters();
   }
 
@@ -526,6 +807,58 @@ class ImportExecutionCoordinatorIntegrationTest extends PostgreSQLIntegrationSup
         order by import_run.id desc
         limit 1
         """.formatted(type));
+  }
+
+  private int importContractRevision(long runId, EntityType entityType) throws Exception {
+    return Math.toIntExact(
+        longQuery(
+            "select import_contract_revision from discogs_import_run_dump where import_run_id = "
+                + runId
+                + " and entity_type = '"
+                + entityType
+                + "'"));
+  }
+
+  private int currentImportContractRevision(EntityType entityType) {
+    return ImportExecution.importContractRevision(entityType.toString());
+  }
+
+  private void setRunDumpRevision(long runId, EntityType entityType, int revision)
+      throws Exception {
+    try (Connection connection = dataSource.getConnection();
+        java.sql.PreparedStatement statement =
+            connection.prepareStatement(
+                """
+                update discogs_import_run_dump
+                set import_contract_revision = ?
+                where import_run_id = ? and entity_type = ?
+                """)) {
+      statement.setInt(1, revision);
+      statement.setLong(2, runId);
+      statement.setString(3, entityType.toString());
+      assertThat(statement.executeUpdate()).isEqualTo(1);
+    }
+  }
+
+  private void setRunProcessor(long runId, String processor, String processorVersion)
+      throws Exception {
+    try (Connection connection = dataSource.getConnection();
+        java.sql.PreparedStatement statement =
+            connection.prepareStatement(
+                """
+                update discogs_import_run
+                set processor = ?, processor_version = ?
+                where id = ?
+                """)) {
+      statement.setString(1, processor);
+      statement.setString(2, processorVersion);
+      statement.setLong(3, runId);
+      assertThat(statement.executeUpdate()).isEqualTo(1);
+    }
+  }
+
+  private record SelectedDump(
+      EntityType entityType, LocalDate dumpDate, char checksumCharacter) {
   }
 
   private long longQuery(String sql) throws Exception {

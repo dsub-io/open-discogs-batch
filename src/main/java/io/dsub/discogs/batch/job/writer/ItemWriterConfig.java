@@ -1,6 +1,5 @@
 package io.dsub.discogs.batch.job.writer;
 
-import io.dsub.opendiscogs.jooq.tables.records.MasterRecord;
 import io.dsub.discogs.batch.job.ImportJobParameters;
 import io.dsub.discogs.batch.job.progress.ImportProgressStore;
 import javax.sql.DataSource;
@@ -40,17 +39,18 @@ public class ItemWriterConfig {
   }
 
   @Bean
-  @StepScope
-  public ItemWriter<MasterRecord> postgresJooqMasterMainReleaseItemWriter(
-      ImportProgressStore progressStore,
-      @Value("#{jobParameters['" + ImportJobParameters.RUN_ID + "']}") Long runId) {
-    return new ActiveRunItemWriter<>(
-        new DefaultJooqMasterMainReleaseItemWriter(context), progressStore, runId);
-  }
-
-  @Bean
   public DurableRelationItemWriterFactory durableRelationItemWriterFactory(
       ImportProgressStore progressStore) {
     return new DurableRelationItemWriterFactory(dataSource, jooqItemWriter(), progressStore);
+  }
+
+  @Bean
+  public DurableReleaseItemWriterFactory durableReleaseItemWriterFactory(
+      ImportProgressStore progressStore) {
+    return new DurableReleaseItemWriterFactory(
+        dataSource,
+        jooqItemWriter(),
+        new DefaultJooqMasterMainReleaseItemWriter(context),
+        progressStore);
   }
 }

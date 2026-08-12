@@ -20,6 +20,7 @@ import io.dsub.discogs.batch.exception.FileException;
 import io.dsub.discogs.batch.testutil.LogSpy;
 import io.dsub.discogs.batch.util.FileUtil;
 import io.dsub.discogs.batch.util.SimpleFileUtil;
+import io.dsub.opendiscogs.model.manifest.ImportExecution;
 import io.dsub.opendiscogs.model.manifest.ImportManifest;
 import java.io.File;
 import java.io.IOException;
@@ -319,12 +320,25 @@ public abstract class DiscogsJobIntegrationTest {
   }
 
   @Test
-  void retryRerunsPostRelationWorkAfterReleaseChunksWereAlreadyCompleted()
+  void retryReplaysAtomicReleaseChunkAfterMainAssignmentFailure()
       throws Exception {
     ImportExecutionCoordinator importExecutionCoordinator =
         new ImportExecutionCoordinator(dataSource);
-    JobParameters parameters = coordinatedParameters(1, EntityType.MASTER, EntityType.RELEASE);
+    JobParameters parameters =
+        coordinatedParameters(
+            1,
+            EntityType.ARTIST,
+            EntityType.LABEL,
+            EntityType.MASTER,
+            EntityType.RELEASE);
     executeSql("update master set main_release_id = null");
+    executeSql(
+        """
+        insert into release_item (id, created_at, last_modified_at, title)
+        values (1, now(), now(), 'rollback sentinel')
+        on conflict (id) do update set title = excluded.title
+        """);
+    executeSql("delete from release_item_video where release_item_id = 1");
     ImportExecutionCoordinator.Preparation firstPreparation =
         importExecutionCoordinator.prepare(parameters);
 
@@ -351,6 +365,15 @@ public abstract class DiscogsJobIntegrationTest {
               and processed_items = total_items
             """,
             firstPreparation.runId()),
+        is(0L));
+    assertThat(
+        scalarLong("select count(*) from release_item where id = 1 and title = 'rollback sentinel'"),
+        is(1L));
+    assertThat(
+        scalarLong("select count(*) from release_item_video where release_item_id = 1"),
+        is(0L));
+    assertThat(
+        scalarLong("select count(*) from master where id = 1 and main_release_id is null"),
         is(1L));
     importExecutionCoordinator.complete(false, new IllegalStateException("interrupted"));
 
@@ -358,7 +381,6 @@ public abstract class DiscogsJobIntegrationTest {
         importExecutionCoordinator.prepare(parameters);
     assertThat(resumedPreparation.resumedFromRunId(), is(firstPreparation.runId()));
 
-    createCompletedChunkRewriteGuard();
     try {
       JobExecution resumedExecution =
           jobOperator.start(
@@ -367,10 +389,15 @@ public abstract class DiscogsJobIntegrationTest {
       assertThat(resumedExecution.getStatus(), is(BatchStatus.COMPLETED));
       importExecutionCoordinator.complete(true, null);
     } finally {
-      dropCompletedChunkRewriteGuard();
       importExecutionCoordinator.complete(false, new IllegalStateException("test cleanup"));
     }
 
+    assertThat(
+        scalarLong("select count(*) from release_item where id = 1 and title = 'rollback sentinel'"),
+        is(0L));
+    assertThat(
+        scalarLong("select count(*) from release_item_video where release_item_id = 1"),
+        is(6L));
     assertThat(
         scalarLong("select count(*) from master where id = 1 and main_release_id = 1"),
         is(1L));
@@ -480,6 +507,7 @@ public abstract class DiscogsJobIntegrationTest {
                   and tablename not like 'batch_%'
                   and tablename not like 'databasechangelog%'
                   and tablename not like 'discogs_%'
+                  and tablename <> 'open_discogs_schema_migration'
                 order by tablename
                 """)) {
       while (tableNames.next()) {
@@ -552,13 +580,16 @@ public abstract class DiscogsJobIntegrationTest {
             connection.prepareStatement(
                 """
                 insert into discogs_import_run_dump
-                    (import_run_id, entity_type, dump_id, chunk_size)
-                values (?, ?, ?, ?)
+                    (import_run_id, entity_type, dump_id, chunk_size,
+                     import_contract_revision)
+                values (?, ?, ?, ?, ?)
                 """)) {
           insertRunDump.setLong(1, runId);
           insertRunDump.setString(2, entityType.toString());
           insertRunDump.setLong(3, dumpId);
           insertRunDump.setInt(4, chunkSize);
+          insertRunDump.setInt(
+              5, ImportExecution.importContractRevision(entityType.toString()));
           insertRunDump.executeUpdate();
         }
       }
@@ -736,6 +767,7 @@ public abstract class DiscogsJobIntegrationTest {
                   and tablename not like 'batch_%'
                   and tablename not like 'databasechangelog%'
                   and tablename not like 'discogs_%'
+                  and tablename <> 'open_discogs_schema_migration'
                 order by tablename
                 """)) {
       while (tableNames.next()) {

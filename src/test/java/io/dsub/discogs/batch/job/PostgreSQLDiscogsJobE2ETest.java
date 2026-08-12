@@ -31,7 +31,7 @@ public class PostgreSQLDiscogsJobE2ETest extends DiscogsJobIntegrationTest {
         .isTrue();
     assertThat(
             jdbc.queryForObject(
-                "select to_regclass('public.artist') is null", Boolean.class))
-        .isTrue();
+                "select count(*) from public.artist", Long.class))
+        .isZero();
   }
 }

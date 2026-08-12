@@ -17,6 +17,7 @@ public class DiscogsDump implements Comparable<DiscogsDump> {
   private final LocalDate lastModifiedAt;
   private final URL url;
   private final URL checksumUrl;
+  private final String checksumSha256;
 
   public DiscogsDump(
       String eTag,
@@ -25,7 +26,7 @@ public class DiscogsDump implements Comparable<DiscogsDump> {
       Long size,
       LocalDate lastModifiedAt,
       URL url) {
-    this(eTag, type, uriString, size, lastModifiedAt, url, null);
+    this(eTag, type, uriString, size, lastModifiedAt, url, null, null);
   }
 
   public DiscogsDump(
@@ -36,6 +37,18 @@ public class DiscogsDump implements Comparable<DiscogsDump> {
       LocalDate lastModifiedAt,
       URL url,
       URL checksumUrl) {
+    this(eTag, type, uriString, size, lastModifiedAt, url, checksumUrl, null);
+  }
+
+  public DiscogsDump(
+      String eTag,
+      EntityType type,
+      String uriString,
+      Long size,
+      LocalDate lastModifiedAt,
+      URL url,
+      URL checksumUrl,
+      String checksumSha256) {
     this.eTag = eTag;
     this.type = type;
     this.uriString = uriString;
@@ -43,6 +56,7 @@ public class DiscogsDump implements Comparable<DiscogsDump> {
     this.lastModifiedAt = lastModifiedAt;
     this.url = url;
     this.checksumUrl = checksumUrl;
+    this.checksumSha256 = checksumSha256;
   }
 
   public InputStream getInputStream() throws IOException {

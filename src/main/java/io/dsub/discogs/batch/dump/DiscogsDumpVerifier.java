@@ -29,6 +29,8 @@ public class DiscogsDumpVerifier {
       Pattern.compile(
           "(?m)^([a-f\\d]{64})[ \\t]+\\*?(?:.*/)?([^/\\r\\n]+\\.xml\\.gz)[ \\t]*$",
           Pattern.CASE_INSENSITIVE);
+  private static final Pattern SHA_256_PATTERN =
+      Pattern.compile("^[a-f\\d]{64}$", Pattern.CASE_INSENSITIVE);
   private static final String USER_AGENT = "open-discogs-batch/0.1";
 
   private final HttpClient httpClient =
@@ -40,22 +42,23 @@ public class DiscogsDumpVerifier {
    * checksum URL fall back to their exact object size.
    */
   public boolean isValid(DiscogsDump dump, Path file) throws FileException {
-    if (dump.getChecksumUrl() == null) {
+    if (dump.getChecksumSha256() == null && dump.getChecksumUrl() == null) {
       return matchesLegacySize(dump, file);
     }
-
-    String expected = getChecksums(dump.getChecksumUrl()).get(dump.getFileName());
-    if (expected == null) {
-      throw new FileException(
-          "checksum for " + dump.getFileName() + " is missing from " + dump.getChecksumUrl());
-    }
-    return expected.equalsIgnoreCase(calculateSha256(file));
+    return getExpectedChecksum(dump).equalsIgnoreCase(calculateSha256(file));
   }
 
   /**
    * Returns the normalized SHA-256 value that identifies a dump before it is downloaded.
    */
   public String getExpectedChecksum(DiscogsDump dump) throws FileException {
+    if (dump.getChecksumSha256() != null) {
+      String pinned = dump.getChecksumSha256().toLowerCase(Locale.ROOT);
+      if (!SHA_256_PATTERN.matcher(pinned).matches()) {
+        throw new FileException("invalid pinned SHA-256 for " + dump.getFileName());
+      }
+      return pinned;
+    }
     if (dump.getChecksumUrl() == null) {
       throw new FileException(
           "SHA-256 manifest is required for idempotent import: " + dump.getFileName());

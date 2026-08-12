@@ -1,8 +1,6 @@
 package io.dsub.discogs.batch.domain;
 
-import org.jooq.UpdatableRecord;
-
-public interface BaseXML<T extends UpdatableRecord<T>> {
+public interface BaseXML<T> {
 
   T buildRecord();
 }

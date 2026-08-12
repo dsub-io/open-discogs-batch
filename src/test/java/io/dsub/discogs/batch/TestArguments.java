@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import jakarta.xml.bind.annotation.XmlAccessorType;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import net.bytebuddy.utility.RandomString;
@@ -46,6 +47,7 @@ public class TestArguments {
       XML_CLASSES = scanResult.getAllClasses().stream()
           .filter(classInfo -> !classInfo.isAbstract())
           .map(ClassInfo::loadClass)
+          .filter(xmlClass -> xmlClass.isAnnotationPresent(XmlAccessorType.class))
           .collect(Collectors.toList());
     }
   }
