@@ -28,6 +28,8 @@ import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 class ConvergingRelationItemWriterIntegrationTest extends PostgreSQLIntegrationSupport {
 
   private static final int BATCH_SIZE = 5;
+  private static final String DELETE_GUARD_FUNCTION = "reject_new_relation_root_delete";
+  private static final String DELETE_GUARD_TRIGGER = "guard_new_relation_root_delete";
 
   private final JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
 
@@ -102,6 +104,42 @@ class ConvergingRelationItemWriterIntegrationTest extends PostgreSQLIntegrationS
 
     assertThat(jdbcTemplate.queryForObject("select count(*) from label_url", Long.class))
         .isZero();
+  }
+
+  @Test
+  void newRelationRootDoesNotIssueAStaleDelete() throws Exception {
+    String url = "https://new.example";
+    jdbcTemplate.execute(
+        """
+        create function reject_new_relation_root_delete() returns trigger
+        language plpgsql as $$
+        begin
+          raise exception 'new relation root must not issue delete';
+        end;
+        $$
+        """);
+    jdbcTemplate.execute(
+        """
+        create trigger guard_new_relation_root_delete
+        before delete on label_url
+        for each statement execute function reject_new_relation_root_delete()
+        """);
+
+    try {
+      writer().write(
+          new Chunk<>(
+              List.of(
+                  new RelationSet(
+                      EntityType.LABEL,
+                      1,
+                      List.of(labelUrl(1, url))))));
+    } finally {
+      jdbcTemplate.execute("drop trigger " + DELETE_GUARD_TRIGGER + " on label_url");
+      jdbcTemplate.execute("drop function " + DELETE_GUARD_FUNCTION + "()");
+    }
+
+    assertThat(jdbcTemplate.queryForObject("select count(*) from label_url", Long.class))
+        .isOne();
   }
 
   private ItemWriter<RelationSet> writer() {

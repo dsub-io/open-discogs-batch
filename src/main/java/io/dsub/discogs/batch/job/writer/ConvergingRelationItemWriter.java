@@ -2,14 +2,14 @@ package io.dsub.discogs.batch.job.writer;
 
 import io.dsub.discogs.batch.dump.EntityType;
 import io.dsub.discogs.batch.job.processor.RelationSet;
-import java.util.Collection;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
 import java.sql.Array;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 import javax.sql.DataSource;
 import org.jooq.UpdatableRecord;
 import org.springframework.batch.infrastructure.item.Chunk;
@@ -20,12 +20,14 @@ import org.springframework.jdbc.core.JdbcTemplate;
 public class ConvergingRelationItemWriter implements ItemWriter<RelationSet> {
 
   private final JdbcTemplate jdbcTemplate;
+  private final ExistingRelationRootsReader existingRelationRootsReader;
   private final ItemWriter<Collection<UpdatableRecord<?>>> delegate;
 
   public ConvergingRelationItemWriter(
       DataSource dataSource,
       ItemWriter<Collection<UpdatableRecord<?>>> delegate) {
     this.jdbcTemplate = new JdbcTemplate(dataSource);
+    this.existingRelationRootsReader = new ExistingRelationRootsReader(dataSource);
     this.delegate = delegate;
   }
 
@@ -44,15 +46,21 @@ public class ConvergingRelationItemWriter implements ItemWriter<RelationSet> {
     }
     List<RelationSet> canonicalSets =
         CanonicalRelationBatch.canonicalize(items.getItems(), entityType);
+    ExistingRelationRoots existingRoots = existingRelationRootsReader.find(entityType, rootIds);
 
     for (RelationTableRegistry.RelationTable relationTable :
         RelationTableRegistry.forEntity(entityType)) {
+      Set<Integer> existingRootIds = existingRoots.forTable(relationTable);
+      if (existingRootIds.isEmpty()) {
+        continue;
+      }
       List<UpdatableRecord<?>> currentRecords =
           canonicalSets.stream()
               .flatMap(relationSet -> relationSet.records().stream())
               .filter(record -> record.getTable().equals(relationTable.table()))
+              .filter(record -> existingRootIds.contains(relationTable.rootId(record)))
               .toList();
-      deleteStaleRelations(relationTable, rootIds, currentRecords);
+      deleteStaleRelations(relationTable, existingRootIds, currentRecords);
     }
 
     List<Collection<UpdatableRecord<?>>> records =

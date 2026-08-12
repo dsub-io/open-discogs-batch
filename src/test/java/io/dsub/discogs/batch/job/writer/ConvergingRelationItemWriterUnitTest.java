@@ -12,6 +12,7 @@ import io.dsub.discogs.batch.job.processor.RelationSet;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemTrackRecord;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 import javax.sql.DataSource;
 import org.jooq.UpdatableRecord;
 import org.junit.jupiter.api.Test;
@@ -45,6 +46,18 @@ class ConvergingRelationItemWriterUnitTest {
     writer.write(new Chunk<>());
 
     verify(delegate, never()).write(org.mockito.ArgumentMatchers.any());
+  }
+
+  @Test
+  void emptyRootLookupDoesNotOpenADatabaseConnection() {
+    DataSource dataSource = mock(DataSource.class);
+    ExistingRelationRoots roots =
+        new ExistingRelationRootsReader(dataSource).find(EntityType.ARTIST, Set.of());
+
+    assertThat(
+            roots.forTable(RelationTableRegistry.forEntity(EntityType.ARTIST).getFirst()))
+        .isEmpty();
+    verifyNoInteractions(dataSource);
   }
 
   @Test

@@ -277,6 +277,10 @@ final class RelationTableRegistry {
       }
     }
 
+    int rootId(UpdatableRecord<?> record) {
+      return rootIdField.getValue(record);
+    }
+
     String describeIdentity(UpdatableRecord<?> record) {
       return keys.stream()
           .map(key -> key.field().getName() + "=" + key.describeValue(record))
@@ -286,6 +290,13 @@ final class RelationTableRegistry {
     String deleteAllForRootsSql() {
       return "delete from " + table.getName() + " where "
           + rootIdField.getName() + " = any (?)";
+    }
+
+    String existingRootsSelectSql() {
+      return "select '" + table.getName() + "' as relation_table, target."
+          + rootIdField.getName() + " as root_id from " + table.getName()
+          + " target join incoming_roots roots on roots.root_id = target."
+          + rootIdField.getName() + " group by target." + rootIdField.getName();
     }
 
     String deleteStaleSql() {
