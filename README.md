@@ -55,7 +55,13 @@ exact local compressed file size and report byte progress, throughput, elapsed
 time, and source-read ETA. They describe how much of the selected `.xml.gz` file
 has been consumed, not how many PostgreSQL rows have committed.
 
-Each entity also emits structured `event=import_progress` records at start,
+When the process is attached to an interactive console, the progress bar is the
+only live progress display. In non-interactive executions such as redirected
+output, pipelines, containers, and Kubernetes, carriage-return bars are
+suppressed and structured progress logs remain enabled.
+
+In non-interactive executions, each entity emits structured
+`event=import_progress` records at start,
 completion, failure, and at most once every five seconds while chunks commit.
 The records include exact durable `committed_items`, `rows_per_second`, elapsed
 time, resume state, initial committed items, and the latest committed progress

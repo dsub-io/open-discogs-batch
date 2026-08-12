@@ -7,6 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import io.dsub.discogs.batch.util.ToggleProgressBarConsumer;
+
 import io.dsub.discogs.batch.TestArguments;
 import io.dsub.discogs.batch.domain.artist.ArtistSubItemsXML;
 import io.dsub.discogs.batch.job.processor.ArtistSubItemsProcessor;
@@ -70,7 +72,10 @@ class ProgressBarStaxEventItemReaderUnitTest {
     ProgressBarStaxEventItemReader<?> reader = null;
 
     try {
-      reader = new ProgressBarStaxEventItemReader<>(arg.getMappedClass(), arg.getXmlPath(),
+      reader = new ProgressBarStaxEventItemReader<>(
+          arg.getMappedClass(),
+          arg.getXmlPath(),
+          ToggleProgressBarConsumer.interactive(System.err),
           arg.getRootElementName());
       reader.open(new ExecutionContext());
       Object item = reader.read();
