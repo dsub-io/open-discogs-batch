@@ -82,7 +82,7 @@ class ImportExecutionCoordinatorIntegrationTest extends PostgreSQLIntegrationSup
   }
 
   @Test
-  void partialReleaseRequiresSuccessfulDependencyCheckpoints() {
+  void partialReleaseRequiresCompletedDependencyCheckpoints() {
     ImportExecutionCoordinator coordinator = new ImportExecutionCoordinator(dataSource);
 
     assertThatThrownBy(
@@ -90,8 +90,39 @@ class ImportExecutionCoordinatorIntegrationTest extends PostgreSQLIntegrationSup
                 coordinator.prepare(
                     parameters(EntityType.RELEASE, JULY_DUMP, 'e', false, false)))
         .isInstanceOf(ImportExecutionException.class)
-        .hasMessageContaining("successful artist checkpoint")
+        .hasMessageContaining("completed artist checkpoint")
         .hasMessageContaining("release");
+  }
+
+  @Test
+  void partialReleaseReusesCompletedDependenciesFromAFailedRun() throws Exception {
+    ImportExecutionCoordinator dependencies = new ImportExecutionCoordinator(dataSource);
+    ImportExecutionCoordinator.Preparation completed =
+        dependencies.prepare(
+            parameters(
+                List.of(
+                    new SelectedDump(EntityType.ARTIST, JULY_DUMP, 'a'),
+                    new SelectedDump(EntityType.LABEL, JULY_DUMP, 'b'),
+                    new SelectedDump(EntityType.MASTER, JULY_DUMP, 'c')),
+                false,
+                false));
+    completeSuccessfully(dependencies, completed.runId());
+    try (Connection connection = dataSource.getConnection();
+        Statement statement = connection.createStatement()) {
+      statement.executeUpdate(
+          """
+          update discogs_import_run
+          set status = 'failed', failure_message = 'release failed after dependencies completed'
+          where id = %d
+          """.formatted(completed.runId()));
+    }
+
+    ImportExecutionCoordinator release = new ImportExecutionCoordinator(dataSource);
+    ImportExecutionCoordinator.Preparation preparation =
+        release.prepare(parameters(EntityType.RELEASE, JULY_DUMP, 'd', false, false));
+
+    assertThat(preparation.skipped()).isFalse();
+    release.complete(false, new IllegalStateException("test cleanup"));
   }
 
   @Test

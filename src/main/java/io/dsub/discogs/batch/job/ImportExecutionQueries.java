@@ -26,11 +26,28 @@ final class ImportExecutionQueries {
 
   static final String FIND_DEPENDENCY_CHECKPOINT =
       """
+      with completed_checkpoint as (
+        select dump.dump_date,
+               dump.checksum_sha256
+        from discogs_import_run_dump run_dump
+        join discogs_dump dump
+          on dump.id = run_dump.dump_id
+         and dump.entity_type = run_dump.entity_type
+        where run_dump.entity_type = ?
+          and run_dump.import_contract_revision = ?
+          and run_dump.completed_at is not null
+          and run_dump.chunk_size is not null
+          and run_dump.total_items is not null
+          and run_dump.total_chunks is not null
+          and run_dump.processed_items = run_dump.total_items
+        order by run_dump.completed_at desc, run_dump.import_run_id desc
+        limit 1
+      )
       select checkpoint.dump_date as checkpoint_date,
              checkpoint.checksum_sha256 as checkpoint_checksum,
              expected.dump_date as expected_date,
              expected.checksum_sha256 as expected_checksum
-      from discogs_import_checkpoint checkpoint
+      from completed_checkpoint checkpoint
       left join lateral (
         select dump.dump_date,
                dump.checksum_sha256
@@ -40,7 +57,6 @@ final class ImportExecutionQueries {
         order by dump.dump_date desc, dump.id desc
         limit 1
       ) expected on true
-      where checkpoint.entity_type = ?
       """;
 
   static final String FIND_CURRENT_SUCCESS =

@@ -63,10 +63,11 @@ Java imports cannot write concurrently. Schema migration takes the same shared
 lock family, so migration cannot race an active importer.
 
 A partial Master or Release import is admitted only when each omitted reference
-entity has a compatible successful checkpoint. A missing checkpoint, a stale
-checkpoint, or a same-date dump reissued with a different checksum fails before
-the batch writes data. Selecting the dependency in the same run satisfies this
-preflight.
+entity has a compatible completed checkpoint at the current import contract
+revision. Entity completion remains durable when a later entity makes the
+parent run fail or the process exits before final run completion. A missing,
+incomplete, stale, or same-date reissued checkpoint fails before the batch
+writes data. Selecting the dependency in the same run satisfies this preflight.
 
 ## Atomicity and idempotency
 

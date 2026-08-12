@@ -15,7 +15,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
 
-/** Verifies that partial imports reference compatible successful dependency snapshots. */
+/** Verifies that partial imports reference compatible completed dependency snapshots. */
 final class ImportDependencyPreflight {
 
   void validate(Connection connection, List<PlannedDump> dumps)
@@ -60,12 +60,14 @@ final class ImportDependencyPreflight {
   private void validate(PreparedStatement statement, Requirement requirement)
       throws SQLException, ImportExecutionException {
     statement.setString(1, requirement.entityType().toString());
-    statement.setDate(2, Date.valueOf(requirement.horizonExclusive()));
+    statement.setInt(
+        2, ImportExecution.importContractRevision(requirement.entityType().toString()));
     statement.setString(3, requirement.entityType().toString());
+    statement.setDate(4, Date.valueOf(requirement.horizonExclusive()));
     try (ResultSet result = statement.executeQuery()) {
       if (!result.next()) {
         throw new ImportExecutionException(
-            "partial import requires a successful "
+            "partial import requires a completed "
                 + requirement.entityType()
                 + " checkpoint for "
                 + requirement.requiredByText());
