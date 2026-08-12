@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.2.2](https://github.com/dsub-io/open-discogs-batch/compare/v1.2.1...v1.2.2) (2026-08-12)
+
+
+### Bug Fixes
+
+* harden canonical dump recovery ([d0a3ee2](https://github.com/dsub-io/open-discogs-batch/commit/d0a3ee21c5b22a2443bf187586f9d618770d3867))
+* make canonical dump recovery atomic ([#43](https://github.com/dsub-io/open-discogs-batch/issues/43)) ([a3101c8](https://github.com/dsub-io/open-discogs-batch/commit/a3101c8d8ed5769b27ae384f2c27629e1e63aaec))
+* preserve release label catalog identities ([a6f72e7](https://github.com/dsub-io/open-discogs-batch/commit/a6f72e7514785c4b2e51f77c240a7e6e8531491b))
+* restore 1.2.1 release state ([b687dec](https://github.com/dsub-io/open-discogs-batch/commit/b687decefff44659314b5d2fe69002d06c37dc04))
+* restore 1.2.1 release state ([#46](https://github.com/dsub-io/open-discogs-batch/issues/46)) ([3c2d4df](https://github.com/dsub-io/open-discogs-batch/commit/3c2d4dfe280b2d954d17b65d187418c3e1b6efb9))
+
 ## [1.2.1](https://github.com/dsub-io/open-discogs-batch/compare/v1.2.0...v1.2.1) (2026-08-12)
 
 
