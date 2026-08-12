@@ -9,6 +9,37 @@
 * make canonical dump recovery atomic ([#43](https://github.com/dsub-io/open-discogs-batch/issues/43)) ([a3101c8](https://github.com/dsub-io/open-discogs-batch/commit/a3101c8d8ed5769b27ae384f2c27629e1e63aaec))
 * preserve release label catalog identities ([a6f72e7](https://github.com/dsub-io/open-discogs-batch/commit/a6f72e7514785c4b2e51f77c240a7e6e8531491b))
 
+### Reliability and Data Correctness
+
+* consume the exact migration bytes, checksums, lock graph, and per-entity
+  import revisions from `open-discogs-model` `0.3.0`, including verified
+  adoption of compatible legacy Liquibase state
+* commit each Release root, genre/style dictionaries, supported relations,
+  `master.main_release_id` assignment, durable ledger entry, and item counter
+  in one PostgreSQL transaction; interruption rolls the whole active chunk back
+* reject partial Master or Release imports before writing when an omitted
+  Artist, Label, or Master checkpoint is missing, stale, or was reissued with a
+  different checksum
+* pin one complete immutable dump selection before download. A cached exact
+  month uses `0` upstream metadata requests; an uncached 2021+ exact month uses
+  exactly `1` checksum-manifest request
+* preserve catalog number in the Release-label identity. The bounded 2026-08
+  dump audit found `1,380,015` same-release/label pairs with distinct catalog
+  numbers that the old key could collapse, plus `7,706` exact duplicates that
+  remain safely deduplicated
+
+### Validation and Distribution
+
+* pass the full Gradle build, PostgreSQL recovery/idempotency E2E, and CodeQL
+  with `5,121/5,121` lines and `1,647/1,647` branches covered
+* verify tests leave no owned container, network, or volume behind on success,
+  failure, or interruption
+* publish a signed versioned JAR and checksum plus verified `linux/amd64` and
+  `linux/arm64` GHCR manifests; Release Please commits are GPG-signed
+* no production-sized throughput or memory improvement is claimed: this release
+  changes correctness and recovery boundaries, and the first full import
+  remains intentionally blocked pending cross-language validation
+
 ## [1.2.1](https://github.com/dsub-io/open-discogs-batch/compare/v1.2.0...v1.2.1) (2026-08-12)
 
 
