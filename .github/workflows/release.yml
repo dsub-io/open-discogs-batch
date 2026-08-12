@@ -244,7 +244,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4
 
-      - name: Publish release container
+      - name: Publish versioned release container
         id: image
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
@@ -253,9 +253,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           build-args: |
             VERSION=${{ needs.release-please.outputs.version }}
-          tags: |
-            ghcr.io/dsub-io/open-discogs-batch:${{ needs.release-please.outputs.version }}
-            ghcr.io/dsub-io/open-discogs-batch:latest
+          tags: ghcr.io/dsub-io/open-discogs-batch:${{ needs.release-please.outputs.version }}
           labels: |
             org.opencontainers.image.source=https://github.com/dsub-io/open-discogs-batch
             org.opencontainers.image.revision=${{ needs.release-please.outputs.sha }}
@@ -264,15 +262,30 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Verify published architectures
+      - name: Inspect versioned release container
         shell: bash
         env:
           IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
+          IMAGE_REPOSITORY: ghcr.io/dsub-io/open-discogs-batch
+          RELEASE_SHA: ${{ needs.release-please.outputs.sha }}
+          RELEASE_VERSION: ${{ needs.release-please.outputs.version }}
         run: |
           set -euo pipefail
+          image_reference="${IMAGE_REPOSITORY}:${RELEASE_VERSION}"
+          published_digest="$(
+            docker buildx imagetools inspect \
+              --format '{{.Manifest.Digest}}' \
+              "$image_reference"
+          )"
+          if [[ "$published_digest" != "$IMAGE_DIGEST" ]]; then
+            echo "::error::Versioned image digest does not match the build output."
+            exit 1
+          fi
+
           manifest="$(
-            docker buildx imagetools inspect --raw \
-              "ghcr.io/dsub-io/open-discogs-batch@${IMAGE_DIGEST}"
+            docker buildx imagetools inspect \
+              --format '{{json .Manifest}}' \
+              "${IMAGE_REPOSITORY}@${IMAGE_DIGEST}"
           )"
           jq -e '
             ([
@@ -284,3 +297,119 @@ jobs:
               | (.os + "/" + .architecture)
             ] | unique) == ["linux/amd64", "linux/arm64"]
           ' <<<"$manifest"
+
+          image_configs="$(
+            docker buildx imagetools inspect \
+              --format '{{json .Image}}' \
+              "${IMAGE_REPOSITORY}@${IMAGE_DIGEST}"
+          )"
+          jq -e \
+            --arg revision "$RELEASE_SHA" \
+            --arg version "$RELEASE_VERSION" \
+            '(
+              keys | sort
+            ) == ["linux/amd64", "linux/arm64"] and all(
+              .[];
+              .config.Labels["org.opencontainers.image.revision"] == $revision and
+              .config.Labels["org.opencontainers.image.version"] == $version and
+              .config.User == "65532:65532"
+            )' <<<"$image_configs"
+
+      - name: Smoke test versioned release container
+        shell: bash
+        env:
+          IMAGE_REPOSITORY: ghcr.io/dsub-io/open-discogs-batch
+          RELEASE_VERSION: ${{ needs.release-please.outputs.version }}
+        run: |
+          set -euo pipefail
+          image_reference="${IMAGE_REPOSITORY}:${RELEASE_VERSION}"
+          docker pull --platform linux/amd64 "$image_reference"
+
+          configured_user="$(
+            docker image inspect --format '{{.Config.User}}' "$image_reference"
+          )"
+          if [[ "$configured_user" != "65532:65532" ]]; then
+            echo "::error::Release image does not configure the expected non-root user."
+            exit 1
+          fi
+
+          reported_version="$(
+            docker run --rm \
+              --label "${TEST_CONTAINER_OWNER_LABEL}=${TEST_CONTAINER_OWNER}" \
+              --label "${TEST_CONTAINER_RUN_LABEL}=${OPEN_DISCOGS_TEST_RUN_ID}" \
+              --read-only \
+              --network none \
+              --cap-drop ALL \
+              --security-opt no-new-privileges=true \
+              "$image_reference" \
+              --version
+          )"
+          if [[ "$reported_version" != "open-discogs-batch $RELEASE_VERSION" ]]; then
+            echo "::error::Container version $reported_version does not match $RELEASE_VERSION."
+            exit 1
+          fi
+
+      - name: Remove owned release smoke resources and verify no residue
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          label_filters=(
+            --filter "label=${TEST_CONTAINER_OWNER_LABEL}=${TEST_CONTAINER_OWNER}"
+            --filter "label=${TEST_CONTAINER_RUN_LABEL}=${OPEN_DISCOGS_TEST_RUN_ID}"
+          )
+
+          container_ids=()
+          while IFS= read -r resource_id; do
+            [[ -n "$resource_id" ]] && container_ids+=("$resource_id")
+          done < <(docker ps -aq "${label_filters[@]}")
+          if (( ${#container_ids[@]} > 0 )); then
+            docker rm --force --volumes "${container_ids[@]}"
+          fi
+
+          network_ids=()
+          while IFS= read -r resource_id; do
+            [[ -n "$resource_id" ]] && network_ids+=("$resource_id")
+          done < <(docker network ls -q "${label_filters[@]}")
+          if (( ${#network_ids[@]} > 0 )); then
+            docker network rm "${network_ids[@]}"
+          fi
+
+          volume_names=()
+          while IFS= read -r resource_name; do
+            [[ -n "$resource_name" ]] && volume_names+=("$resource_name")
+          done < <(docker volume ls -q "${label_filters[@]}")
+          if (( ${#volume_names[@]} > 0 )); then
+            docker volume rm --force "${volume_names[@]}"
+          fi
+
+          container_residue="$(docker ps -aq "${label_filters[@]}")"
+          network_residue="$(docker network ls -q "${label_filters[@]}")"
+          volume_residue="$(docker volume ls -q "${label_filters[@]}")"
+          if [[ -n "$container_residue" || -n "$network_residue" || -n "$volume_residue" ]]; then
+            echo "::error::Owned Docker release smoke resources remain after cleanup."
+            printf 'containers=%s\nnetworks=%s\nvolumes=%s\n' \
+              "$container_residue" "$network_residue" "$volume_residue"
+            exit 1
+          fi
+
+      - name: Promote validated container to latest
+        shell: bash
+        env:
+          IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
+          IMAGE_REPOSITORY: ghcr.io/dsub-io/open-discogs-batch
+        run: |
+          set -euo pipefail
+          docker buildx imagetools create \
+            --tag "${IMAGE_REPOSITORY}:latest" \
+            "${IMAGE_REPOSITORY}@${IMAGE_DIGEST}"
+
+          latest_digest="$(
+            docker buildx imagetools inspect \
+              --format '{{.Manifest.Digest}}' \
+              "${IMAGE_REPOSITORY}:latest"
+          )"
+          if [[ "$latest_digest" != "$IMAGE_DIGEST" ]]; then
+            echo "::error::Latest tag does not reference the validated release digest."
+            exit 1
+          fi

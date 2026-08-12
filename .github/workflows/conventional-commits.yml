@@ -1,6 +1,7 @@
 name: Conventional Commits
 
 on:
+  merge_group:
   pull_request:
     types:
       - opened
@@ -32,6 +33,8 @@ jobs:
           PR_HEAD_REF: ${{ github.head_ref }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          MERGE_GROUP_BASE_SHA: ${{ github.event.merge_group.base_sha }}
+          MERGE_GROUP_HEAD_SHA: ${{ github.event.merge_group.head_sha }}
           PUSH_BEFORE_SHA: ${{ github.event.before }}
           PUSH_HEAD_SHA: ${{ github.sha }}
         run: |
@@ -58,6 +61,8 @@ jobs:
               failed=1
             fi
             range="$PR_BASE_SHA..$PR_HEAD_SHA"
+          elif [[ "$EVENT_NAME" == "merge_group" ]]; then
+            range="$MERGE_GROUP_BASE_SHA..$MERGE_GROUP_HEAD_SHA"
           elif [[ "$PUSH_BEFORE_SHA" != "0000000000000000000000000000000000000000" ]] &&
             git cat-file -e "$PUSH_BEFORE_SHA^{commit}" 2>/dev/null &&
             git merge-base --is-ancestor "$PUSH_BEFORE_SHA" "$PUSH_HEAD_SHA"; then
