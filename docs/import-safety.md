@@ -99,6 +99,11 @@ Several relation identities still use signed 32-bit Java hashes. Distinct
 values can collide within one root; collision-resistant identity is tracked in
 [`open-discogs-model#43`](https://github.com/dsub-io/open-discogs-model/issues/43).
 
+Release format identity includes name, reduced descriptions, quantity, and
+text. Discogs release `48967` contains otherwise identical `CD`/`Compilation`
+formats with quantities `1` and `2`; both rows must be retained. Go and Java
+use the same null-aware, field-delimited hash source for this relation.
+
 ## Interruption and resume
 
 Graceful shutdown cancels active work and rolls back the active transaction.

@@ -82,6 +82,23 @@ class DomainRelationValueUnitTest {
   }
 
   @Test
+  void releaseFormatIdentityPreservesQuantityVariants() {
+    ReleaseItemSubItemsXML.ReleaseFormat quantityOne = new ReleaseItemSubItemsXML.ReleaseFormat();
+    quantityOne.setName("CD");
+    quantityOne.setQuantity(1);
+    quantityOne.setDescriptions(List.of("Compilation"));
+
+    ReleaseItemSubItemsXML.ReleaseFormat quantityTwo = new ReleaseItemSubItemsXML.ReleaseFormat();
+    quantityTwo.setName("CD");
+    quantityTwo.setQuantity(2);
+    quantityTwo.setDescriptions(List.of("Compilation"));
+
+    assertThat(quantityOne.getHashValue()).isNotEqualTo(quantityTwo.getHashValue());
+    assertThat(quantityOne.getRecord(48967).getHash()).isEqualTo(quantityOne.getHashValue());
+    assertThat(quantityTwo.getRecord(48967).getHash()).isEqualTo(quantityTwo.getHashValue());
+  }
+
+  @Test
   void releaseRoleAndWorkHashesUseFallbackOnlyForMissingValues() {
     ReleaseItemSubItemsXML.ReleaseCreditedArtist artist =
         new ReleaseItemSubItemsXML.ReleaseCreditedArtist();

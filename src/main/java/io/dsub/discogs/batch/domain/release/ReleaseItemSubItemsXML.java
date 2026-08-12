@@ -183,6 +183,9 @@ public class ReleaseItemSubItemsXML {
   @XmlAccessorType(XmlAccessType.FIELD)
   public static class ReleaseFormat implements HashXML<ReleaseItemFormatRecord> {
 
+    private static final String HASH_FIELD_SEPARATOR = "\0";
+    private static final String HASH_NULL_VALUE = "\1";
+
     @XmlAttribute(name = "name")
     String name;
 
@@ -199,7 +202,13 @@ public class ReleaseItemSubItemsXML {
     @Override
     public int getHashValue() {
       String reducedDescription = getReducedDescription();
-      return makeHash(new String[]{name, reducedDescription, text});
+      return String.join(
+              HASH_FIELD_SEPARATOR,
+              hashString(name),
+              hashString(reducedDescription),
+              hashInteger(quantity),
+              hashString(text))
+          .hashCode();
     }
 
     @Override
@@ -227,6 +236,14 @@ public class ReleaseItemSubItemsXML {
               .map(desc -> "[d:" + desc + "]")
               .collect(Collectors.joining(","));
       return description.isBlank() ? null : description;
+    }
+
+    private String hashString(String value) {
+      return value == null ? HASH_NULL_VALUE : value;
+    }
+
+    private String hashInteger(Integer value) {
+      return value == null ? HASH_NULL_VALUE : value.toString();
     }
   }
 

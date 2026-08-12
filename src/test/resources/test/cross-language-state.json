@@ -856,7 +856,7 @@
   ],
   "release_item_format": [
     {
-      "hash": 378769137,
+      "hash": -15904827,
       "name": "CD",
       "text": null,
       "quantity": 1,
@@ -864,7 +864,7 @@
       "release_item_id": 3
     },
     {
-      "hash": 841342679,
+      "hash": 1962154093,
       "name": "Vinyl",
       "text": null,
       "quantity": 1,
@@ -872,7 +872,7 @@
       "release_item_id": 2
     },
     {
-      "hash": 841342679,
+      "hash": 1962155054,
       "name": "Vinyl",
       "text": null,
       "quantity": 2,

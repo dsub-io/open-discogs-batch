@@ -45,7 +45,7 @@ class ReleaseRelationNormalizationUnitTest {
   }
 
   @Test
-  void formatQuantityDoesNotChangeTheNormalizedIdentityHash() {
+  void formatQuantityChangesTheNormalizedIdentityHash() {
     ReleaseItemSubItemsXML.ReleaseFormat first = format(" Vinyl ", " LP ");
     first.setQuantity(1);
     ReleaseItemSubItemsXML.ReleaseFormat second = format("Vinyl", "LP");
@@ -54,7 +54,7 @@ class ReleaseRelationNormalizationUnitTest {
     ReflectionUtil.normalizeStringFields(second);
 
     assertThat(first.getRecord(RELEASE_ID).getHash())
-        .isEqualTo(second.getRecord(RELEASE_ID).getHash());
+        .isNotEqualTo(second.getRecord(RELEASE_ID).getHash());
     assertThat(first.getRecord(RELEASE_ID).getQuantity()).isEqualTo(1);
     assertThat(second.getRecord(RELEASE_ID).getQuantity()).isEqualTo(2);
   }
