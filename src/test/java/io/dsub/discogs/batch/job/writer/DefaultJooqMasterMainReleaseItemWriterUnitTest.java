@@ -21,9 +21,17 @@ class DefaultJooqMasterMainReleaseItemWriterUnitTest {
     assertThat(DefaultJooqMasterMainReleaseItemWriter.LOCK_MASTER_ROWS_SQL)
         .contains("with candidate_master_ids")
         .contains("current.main_release_id = any")
-        .contains("existing.id = any")
+        .doesNotContain("release_item")
         .doesNotContain("where target.id = any")
         .doesNotContain(" or ");
+  }
+
+  @Test
+  void masterMutationsUseFixedSetBasedStatements() {
+    assertThat(DefaultJooqMasterMainReleaseItemWriter.CLEAR_STALE_MAPPINGS_SQL)
+        .contains("unnest(?::integer[], ?::integer[], ?::timestamp[])");
+    assertThat(DefaultJooqMasterMainReleaseItemWriter.SET_CURRENT_MAPPINGS_SQL)
+        .contains("unnest(?::integer[], ?::integer[], ?::timestamp[])");
   }
 
   @Test

@@ -124,6 +124,18 @@ class DefaultJooqMasterMainReleaseItemWriterIntegrationTest
   }
 
   @Test
+  void rejectsMultipleMainReleasesForOneMasterInOneChunk() {
+    assertThatThrownBy(
+            () ->
+                writer.write(
+                    chunk(
+                        assignment(RELEASE_A, MASTER_B),
+                        assignment(RELEASE_B, MASTER_B))))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("multiple main releases target master");
+  }
+
+  @Test
   void rollsBackAnInterruptedChunkAndConvergesOnRetry() {
     TransactionTemplate transaction =
         new TransactionTemplate(new DataSourceTransactionManager(dataSource));
