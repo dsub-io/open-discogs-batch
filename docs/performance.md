@@ -1,7 +1,9 @@
 # Performance measurements
 
 These measurements isolate named changes. They are not estimates of full-dump
-throughput on other hardware.
+throughput on other hardware. See the [README](../README.md) for sizing guidance
+and [Import safety and recovery](import-safety.md) for the guarantees whose cost
+is measured here.
 
 ## Reference ID cache
 

@@ -1,6 +1,19 @@
 # Import safety and recovery
 
-This document defines the operational boundary behind the shorter README.
+This is the detailed contract for dump selection, concurrent runs, commits,
+recovery, and reader visibility. For normal setup, start with the
+[README](../README.md).
+
+## At a glance
+
+| Event | Result |
+| --- | --- |
+| Same successful manifest | Skip unless `--force` is set |
+| Compatible interrupted run | Resume verified relation chunks; rerun safe core phases |
+| Different manifest or `--force` | Start from zero |
+| Older entity dump | Reject unless `--allow-downgrade` is set |
+| Failed import | Keep downloaded files and durable progress |
+| Successful import with `--cleanup` | Remove only files selected by that import |
 
 ## Dump discovery
 
@@ -17,22 +30,27 @@ with the checksum manifest from the same date.
 A successful manifest is skipped unless `--force` requests a fresh run.
 PostgreSQL advisory locks cover selected entities and their references:
 
-- Artist locks Artist.
-- Label locks Label.
-- Master locks Artist and Master.
-- Release locks Artist, Label, Master, and Release because it also updates
-  `master.main_release_id`.
+| Import | Locks |
+| --- | --- |
+| Artist | Artist |
+| Label | Label |
+| Master | Artist, Master |
+| Release | Artist, Label, Master, Release |
+
+Release takes the full set because it also updates `master.main_release_id`.
 
 Independent sets such as Artist and Label may run together. Overlapping Go and
 Java imports cannot write concurrently.
 
 ## Commit and convergence boundary
 
-Canonical relation changes and the source-chunk ledger entry share one
-PostgreSQL transaction. A retry reads the stream from the beginning, skips
+One PostgreSQL transaction contains the canonical relation changes and their
+source-chunk ledger entry. A retry reads the stream from the beginning, skips
 exact committed relation chunks, and safely reruns core rows and post-relation
-work. Missing relations are deleted, changed values are updated, and unchanged
-rows retain their surrogate IDs. Root rows are upserted; roots absent from the
+work.
+
+Missing relations are deleted, changed values are updated, and unchanged rows
+retain their surrogate IDs. Root rows are upserted; roots absent from the
 complete dump are not currently deleted.
 
 An entity completes only after end-of-stream validation confirms its exact
@@ -46,9 +64,14 @@ identity is tracked in
 
 ## Interruption and resume
 
-A failed or abandoned run resumes only when manifest, processor version,
-entity set, dump identities, and chunk size match. `--force` always starts from
-zero. Failed imports retain their files.
+A failed or abandoned run resumes only when all of these match:
+
+- manifest;
+- processor version;
+- entity set and dump identities;
+- chunk size.
+
+`--force` always starts from zero. Failed imports retain their files.
 
 Cleanup runs only after a successful database import. Cleanup failure is
 reported without changing committed import success, and the next invocation
