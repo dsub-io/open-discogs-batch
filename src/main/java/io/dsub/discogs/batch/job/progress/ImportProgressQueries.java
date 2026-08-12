@@ -11,6 +11,15 @@ final class ImportProgressQueries {
         and chunk_index = ?
       """;
 
+  static final String FIND_COMPLETED_CHUNKS =
+      """
+      select chunk_index, first_item_index, item_count
+      from discogs_import_run_chunk
+      where import_run_id = ?
+        and entity_type = ?
+      order by chunk_index
+      """;
+
   static final String RECORD_CHUNK =
       """
       with active_run as (

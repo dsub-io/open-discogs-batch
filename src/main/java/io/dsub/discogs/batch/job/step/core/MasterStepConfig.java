@@ -15,6 +15,7 @@ import io.dsub.discogs.batch.job.listener.StopWatchStepExecutionListener;
 import io.dsub.discogs.batch.job.listener.StringNormalizingItemReadListener;
 import io.dsub.discogs.batch.job.step.AbstractStepConfig;
 import io.dsub.discogs.batch.job.processor.RelationSet;
+import io.dsub.discogs.batch.job.processor.ResumeAwareSourceChunkItemProcessor;
 import io.dsub.discogs.batch.job.progress.ImportProgressStore;
 import io.dsub.discogs.batch.job.progress.ProcessedChunk;
 import io.dsub.discogs.batch.job.progress.SourceChunk;
@@ -181,7 +182,10 @@ public class MasterStepConfig extends AbstractStepConfig {
             TRACKED_CHUNKS_PER_TRANSACTION)
         .transactionManager(transactionManager)
         .reader(masterSubItemsStreamReader)
-        .processor(masterSubItemsProcessor)
+        .processor(
+            new ResumeAwareSourceChunkItemProcessor<>(
+                masterSubItemsProcessor,
+                importProgressStore.loadCompletedChunks(runId, EntityType.MASTER, resumed)))
         .writer(
             durableRelationItemWriterFactory.create(
                 EntityType.MASTER, runId, chunkSize, resumed))

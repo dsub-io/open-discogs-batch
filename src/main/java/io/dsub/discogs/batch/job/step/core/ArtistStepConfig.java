@@ -15,6 +15,7 @@ import io.dsub.discogs.batch.job.listener.StopWatchStepExecutionListener;
 import io.dsub.discogs.batch.job.listener.StringNormalizingItemReadListener;
 import io.dsub.discogs.batch.job.step.AbstractStepConfig;
 import io.dsub.discogs.batch.job.processor.RelationSet;
+import io.dsub.discogs.batch.job.processor.ResumeAwareSourceChunkItemProcessor;
 import io.dsub.discogs.batch.job.progress.ImportProgressStore;
 import io.dsub.discogs.batch.job.progress.ProcessedChunk;
 import io.dsub.discogs.batch.job.progress.SourceChunk;
@@ -159,7 +160,10 @@ public class ArtistStepConfig extends AbstractStepConfig {
             TRACKED_CHUNKS_PER_TRANSACTION)
         .transactionManager(transactionManager)
         .reader(artistSubItemsStreamReader)
-        .processor(artistSubItemsProcessor)
+        .processor(
+            new ResumeAwareSourceChunkItemProcessor<>(
+                artistSubItemsProcessor,
+                importProgressStore.loadCompletedChunks(runId, EntityType.ARTIST, resumed)))
         .writer(
             durableRelationItemWriterFactory.create(
                 EntityType.ARTIST, runId, chunkSize, resumed))

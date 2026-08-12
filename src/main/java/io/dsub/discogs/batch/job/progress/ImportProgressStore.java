@@ -6,6 +6,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
 import javax.sql.DataSource;
@@ -42,6 +43,27 @@ public class ImportProgressStore {
               + " does not match the source range");
     }
     return true;
+  }
+
+  public CompletedChunkInventory loadCompletedChunks(
+      long runId, EntityType entityType, boolean resumed) {
+    if (!resumed) {
+      return new CompletedChunkInventory(entityType, Map.of());
+    }
+    List<ChunkRange> chunks =
+        jdbcTemplate.query(
+            ImportProgressQueries.FIND_COMPLETED_CHUNKS,
+            (result, rowNumber) ->
+                new ChunkRange(
+                    result.getLong("chunk_index"),
+                    result.getLong("first_item_index"),
+                    result.getInt("item_count")),
+            runId,
+            entityType.toString());
+    return new CompletedChunkInventory(
+        entityType,
+        chunks.stream().collect(java.util.stream.Collectors.toUnmodifiableMap(
+            ChunkRange::index, chunk -> chunk)));
   }
 
   public void recordCompletedChunk(

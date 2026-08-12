@@ -11,6 +11,7 @@ import io.dsub.discogs.batch.job.listener.ItemCountingItemProcessListener;
 import io.dsub.discogs.batch.job.listener.NestedStepFailurePropagatingListener;
 import io.dsub.discogs.batch.job.listener.StopWatchStepExecutionListener;
 import io.dsub.discogs.batch.job.processor.ReleaseRootMutation;
+import io.dsub.discogs.batch.job.processor.ResumeAwareSourceChunkItemProcessor;
 import io.dsub.discogs.batch.job.progress.ImportProgressStore;
 import io.dsub.discogs.batch.job.progress.ProcessedChunk;
 import io.dsub.discogs.batch.job.progress.SourceChunk;
@@ -122,7 +123,10 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
             TRACKED_CHUNKS_PER_TRANSACTION)
         .transactionManager(transactionManager)
         .reader(releaseItemSubItemsStreamReader)
-        .processor(releaseItemSubItemsProcessor)
+        .processor(
+            new ResumeAwareSourceChunkItemProcessor<>(
+                releaseItemSubItemsProcessor,
+                importProgressStore.loadCompletedChunks(runId, EntityType.RELEASE, resumed)))
         .writer(
             durableReleaseItemWriterFactory.create(runId, chunkSize, resumed))
         .faultTolerant()
