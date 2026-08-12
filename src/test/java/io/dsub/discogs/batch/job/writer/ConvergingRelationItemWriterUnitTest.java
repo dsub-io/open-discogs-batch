@@ -1,6 +1,7 @@
 package io.dsub.discogs.batch.job.writer;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -16,6 +17,21 @@ import org.springframework.batch.infrastructure.item.Chunk;
 import org.springframework.batch.infrastructure.item.ItemWriter;
 
 class ConvergingRelationItemWriterUnitTest {
+
+  @Test
+  void releaseLabelIdentityIncludesNullableCatalogNumber() {
+    RelationTableRegistry.RelationTable labelRelease =
+        RelationTableRegistry.forEntity(EntityType.RELEASE).stream()
+            .filter(table -> table.table().getName().equals("label_release_item"))
+            .findFirst()
+            .orElseThrow();
+
+    assertThat(labelRelease.keys())
+        .extracting(key -> key.field().getName())
+        .containsExactly("release_item_id", "label_id", "category_notation");
+    assertThat(labelRelease.deleteStaleSql())
+        .contains("category_notation is not distinct from current_keys.key_2");
+  }
 
   @Test
   void emptySpringChunkDoesNothing() throws Exception {

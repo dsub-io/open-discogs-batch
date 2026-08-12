@@ -102,7 +102,8 @@ final class RelationTableRegistry {
                   LabelReleaseItem.LABEL_RELEASE_ITEM,
                   LabelReleaseItem.LABEL_RELEASE_ITEM.RELEASE_ITEM_ID,
                   integerKey(LabelReleaseItem.LABEL_RELEASE_ITEM.RELEASE_ITEM_ID),
-                  integerKey(LabelReleaseItem.LABEL_RELEASE_ITEM.LABEL_ID)),
+                  integerKey(LabelReleaseItem.LABEL_RELEASE_ITEM.LABEL_ID),
+                  textKey(LabelReleaseItem.LABEL_RELEASE_ITEM.CATEGORY_NOTATION)),
               table(
                   ReleaseItemArtist.RELEASE_ITEM_ARTIST,
                   ReleaseItemArtist.RELEASE_ITEM_ARTIST.RELEASE_ITEM_ID,
@@ -188,7 +189,7 @@ final class RelationTableRegistry {
               .mapToObj(
                   index ->
                       "target." + keys.get(index).field().getName()
-                          + " = current_keys.key_" + index)
+                          + " is not distinct from current_keys.key_" + index)
               .collect(Collectors.joining(" and "));
       return "delete from " + table.getName() + " target where target."
           + rootIdField.getName() + " = any (?) and not exists (select 1 from unnest("

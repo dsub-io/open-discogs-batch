@@ -279,6 +279,26 @@ class ItemProcessorBoundaryUnitTest {
     assertThat(processor.process(item).records()).hasSize(10);
   }
 
+  @Test
+  void releaseLabelsPreserveDistinctCatalogNumbers() {
+    ReleaseItemSubItemsProcessor processor = new ReleaseItemSubItemsProcessor(registry());
+    ReleaseItemSubItemsXML item = new ReleaseItemSubItemsXML();
+    item.setId(2);
+    ReleaseItemSubItemsXML.LabelItemRelease spaced =
+        new ReleaseItemSubItemsXML.LabelItemRelease();
+    spaced.setLabelId(1);
+    spaced.setCategoryNotation("SK 026");
+    ReleaseItemSubItemsXML.LabelItemRelease compact =
+        new ReleaseItemSubItemsXML.LabelItemRelease();
+    compact.setLabelId(1);
+    compact.setCategoryNotation(" SK026 ");
+    item.setLabelReleaseLabels(List.of(spaced, compact));
+
+    assertThat(processor.process(item).records())
+        .extracting(record -> record.get("category_notation"))
+        .containsExactly("SK 026", "SK026");
+  }
+
   private EntityIdRegistry registry() {
     EntityIdRegistry registry = mock(EntityIdRegistry.class);
     when(registry.exists(any(EntityIdRegistry.Type.class), nullable(Integer.class)))
