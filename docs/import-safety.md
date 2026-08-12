@@ -62,6 +62,12 @@ Independent sets such as Artist and Label may run together; overlapping Go and
 Java imports cannot write concurrently. Schema migration takes the same shared
 lock family, so migration cannot race an active importer.
 
+Concurrent Release chunks may affect the same Master. Each chunk unions
+candidate IDs through indexed `master.id`, `master.main_release_id`, and
+`release_item.id` lookups, then locks the resulting Master rows in ascending
+order before updates. Do not combine those lookup paths with `OR`: PostgreSQL
+may otherwise scan the entire Master table once per worker.
+
 A partial Master or Release import is admitted only when each omitted reference
 entity has a compatible completed checkpoint at the current import contract
 revision. Entity completion remains durable when a later entity makes the

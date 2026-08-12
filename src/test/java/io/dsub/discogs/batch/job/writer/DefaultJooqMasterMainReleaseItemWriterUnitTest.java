@@ -1,5 +1,6 @@
 package io.dsub.discogs.batch.job.writer;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -14,6 +15,16 @@ import org.junit.jupiter.api.Test;
 import org.springframework.batch.infrastructure.item.Chunk;
 
 class DefaultJooqMasterMainReleaseItemWriterUnitTest {
+
+  @Test
+  void masterLocksUseIndexedCandidateSets() {
+    assertThat(DefaultJooqMasterMainReleaseItemWriter.LOCK_MASTER_ROWS_SQL)
+        .contains("with candidate_master_ids")
+        .contains("current.main_release_id = any")
+        .contains("existing.id = any")
+        .doesNotContain("where target.id = any")
+        .doesNotContain(" or ");
+  }
 
   @Test
   void emptyChunkDoesNotAcquireAConnection() {
