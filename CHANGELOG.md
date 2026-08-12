@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/dsub-io/open-discogs-batch/compare/v1.2.0...v1.2.1) (2026-08-12)
+
+
+### Bug Fixes
+
+* keep terminal progress output readable ([#41](https://github.com/dsub-io/open-discogs-batch/issues/41)) ([b00c581](https://github.com/dsub-io/open-discogs-batch/commit/b00c5812a0fb6b3004bc861857e01e3607f22a4a))
+
 ## [1.2.0](https://github.com/dsub-io/open-discogs-batch/compare/v1.1.1...v1.2.0) (2026-08-11)
 
 
