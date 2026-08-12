@@ -84,7 +84,7 @@ public class ConvergingRelationItemWriter implements ItemWriter<RelationSet> {
                   RelationTableRegistry.RelationKey key = relationTable.keys().get(keyIndex);
                   Object[] values =
                       currentRecords.stream()
-                          .map(record -> key.field().getValue(record))
+                          .map(key::arrayValue)
                           .toArray();
                   Array keyArray = connection.createArrayOf(key.postgresArrayType(), values);
                   arrays.add(keyArray);

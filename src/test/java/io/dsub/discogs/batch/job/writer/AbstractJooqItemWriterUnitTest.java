@@ -103,8 +103,8 @@ class AbstractJooqItemWriterUnitTest {
     assertThat(names(writer.updateFields(video))).containsExactly("last_modified_at");
     assertThat(names(writer.businessUpdateFields(video))).isEmpty();
     assertThat(names(writer.updateFields(format)))
-        .containsExactly("last_modified_at", "quantity");
-    assertThat(names(writer.businessUpdateFields(format))).containsExactly("quantity");
+        .containsExactly("last_modified_at");
+    assertThat(names(writer.businessUpdateFields(format))).isEmpty();
     assertThat(writer.updateFields(format)).isSameAs(writer.updateFields(format));
   }
 

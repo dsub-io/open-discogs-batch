@@ -1,15 +1,21 @@
 package io.dsub.discogs.batch.job.processor;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.dsub.discogs.batch.domain.master.MasterMainReleaseXML;
 import io.dsub.discogs.batch.domain.master.MasterSubItemsXML;
 import io.dsub.discogs.batch.domain.release.ReleaseItemSubItemsXML;
+import jakarta.xml.bind.JAXBContext;
+import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class DomainRelationValueUnitTest {
+
+  private static final String OVERSIZED_FORMAT_QUANTITY =
+      "1010487400000000000000000000000000000000000000000000";
 
   @Test
   void hashContractHandlesAbsentBlankAndPopulatedValues() {
@@ -85,17 +91,77 @@ class DomainRelationValueUnitTest {
   void releaseFormatIdentityPreservesQuantityVariants() {
     ReleaseItemSubItemsXML.ReleaseFormat quantityOne = new ReleaseItemSubItemsXML.ReleaseFormat();
     quantityOne.setName("CD");
-    quantityOne.setQuantity(1);
+    quantityOne.setQuantity("1");
     quantityOne.setDescriptions(List.of("Compilation"));
 
     ReleaseItemSubItemsXML.ReleaseFormat quantityTwo = new ReleaseItemSubItemsXML.ReleaseFormat();
     quantityTwo.setName("CD");
-    quantityTwo.setQuantity(2);
+    quantityTwo.setQuantity("2");
     quantityTwo.setDescriptions(List.of("Compilation"));
 
     assertThat(quantityOne.getHashValue()).isNotEqualTo(quantityTwo.getHashValue());
     assertThat(quantityOne.getRecord(48967).getHash()).isEqualTo(quantityOne.getHashValue());
     assertThat(quantityTwo.getRecord(48967).getHash()).isEqualTo(quantityTwo.getHashValue());
+  }
+
+  @Test
+  void releaseFormatPreservesOversizedDiscogsQuantityAsCanonicalDecimal() {
+    ReleaseItemSubItemsXML.ReleaseFormat format = new ReleaseItemSubItemsXML.ReleaseFormat();
+    format.setName("File");
+    format.setQuantity(OVERSIZED_FORMAT_QUANTITY);
+
+    var record = format.getRecord(6662697);
+    assertThat(record.getQuantity()).isNull();
+    assertThat(record.getQuantityText()).isEqualTo(OVERSIZED_FORMAT_QUANTITY);
+    assertThat(record.getIdentitySha256()).hasSize(32);
+  }
+
+  @Test
+  void releaseXmlParsesTheKnownOversizedQuantityWithoutIntegerCoercion() throws Exception {
+    String xml =
+        "<release id=\"6662697\"><formats><format name=\"File\" qty=\""
+            + OVERSIZED_FORMAT_QUANTITY
+            + "\"/></formats></release>";
+    ReleaseItemSubItemsXML release =
+        (ReleaseItemSubItemsXML)
+            JAXBContext.newInstance(ReleaseItemSubItemsXML.class)
+                .createUnmarshaller()
+                .unmarshal(new StringReader(xml));
+
+    assertThat(release.getReleaseFormats()).singleElement().satisfies(
+        format -> {
+          assertThat(format.getQuantity()).isEqualTo(OVERSIZED_FORMAT_QUANTITY);
+          assertThat(format.getRecord(6_662_697).getQuantity()).isNull();
+          assertThat(format.getRecord(6_662_697).getQuantityText())
+              .isEqualTo(OVERSIZED_FORMAT_QUANTITY);
+        });
+  }
+
+  @Test
+  void releaseFormatCanonicalizesAndRejectsInvalidQuantities() {
+    ReleaseItemSubItemsXML.ReleaseFormat format = new ReleaseItemSubItemsXML.ReleaseFormat();
+    format.setName("CD");
+    format.setQuantity("0002");
+    assertThat(format.getRecord(1).getQuantity()).isEqualTo(2);
+    assertThat(format.getRecord(1).getQuantityText()).isEqualTo("2");
+
+    format.setQuantity(" \u3000");
+    assertThat(format.getRecord(1).getQuantity()).isNull();
+    assertThat(format.getRecord(1).getQuantityText()).isNull();
+
+    format.setQuantity("2147483647");
+    assertThat(format.getRecord(1).getQuantity()).isEqualTo(Integer.MAX_VALUE);
+    format.setQuantity("2147483648");
+    assertThat(format.getRecord(1).getQuantity()).isNull();
+    format.setQuantity("10000000000");
+    assertThat(format.getRecord(1).getQuantity()).isNull();
+
+    for (String invalid : List.of("-1", "not-a-number")) {
+      format.setQuantity(invalid);
+      assertThatThrownBy(() -> format.getRecord(1))
+          .isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("invalid non-negative release format quantity");
+    }
   }
 
   @Test

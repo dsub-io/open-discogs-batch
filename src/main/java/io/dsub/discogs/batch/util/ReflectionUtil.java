@@ -8,6 +8,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Predicate;
+import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 
@@ -15,25 +16,29 @@ import lombok.extern.slf4j.Slf4j;
 public class ReflectionUtil {
 
   public static void normalizeStringFields(Object target) {
+    normalizeStringFields(target, ReflectionUtil::normalizeLegacyString);
+  }
+
+  public static void normalizeReleaseStringFields(Object target) {
+    normalizeStringFields(target, DiscogsStringNormalizer::normalizeNullable);
+  }
+
+  private static void normalizeStringFields(Object target, UnaryOperator<String> normalizer) {
     if (target == null) {
       return;
     }
     List<Field> fields = getDeclaredFields(target);
-    fields.forEach(field -> doNormalizeString(field, target));
+    fields.forEach(field -> doNormalizeString(field, target, normalizer));
   }
 
-  private static void doNormalizeString(Field field, Object target) {
+  private static void doNormalizeString(
+      Field field, Object target, UnaryOperator<String> normalizer) {
     Object o = getValue(target, field);
     if (o == null) {
       return;
     }
     if (o instanceof String) {
-      String val = ((String) o).trim();
-      if (val.isBlank()) {
-        setFieldValue(target, field, null);
-      } else {
-        setFieldValue(target, field, val);
-      }
+      setFieldValue(target, field, normalizer.apply((String) o));
     } else if (List.class.isAssignableFrom(o.getClass())) {
       List<?> list = (List<?>) o;
       if (list.isEmpty()) {
@@ -46,19 +51,24 @@ public class ReflectionUtil {
             list.stream()
                 .filter(Objects::nonNull)
                 .map(String.class::cast)
-                .map(String::trim)
-                .filter(value -> !value.isBlank())
+                .map(normalizer)
+                .filter(Objects::nonNull)
                 .collect(Collectors.toList());
         setFieldValue(target, field, normalized.isEmpty() ? null : normalized);
       } else {
-        list.forEach(ReflectionUtil::normalizeStringFields);
+        list.forEach(value -> normalizeStringFields(value, normalizer));
       }
     } else {
       List<Field> subItemFields = getDeclaredFields(o);
       for (Field subItemField : subItemFields) {
-        doNormalizeString(subItemField, o);
+        doNormalizeString(subItemField, o, normalizer);
       }
     }
+  }
+
+  private static String normalizeLegacyString(String value) {
+    String normalized = value.trim();
+    return normalized.isBlank() ? null : normalized;
   }
 
   public static List<Field> getDeclaredFields(Object target) {

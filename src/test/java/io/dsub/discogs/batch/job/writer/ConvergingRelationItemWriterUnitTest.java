@@ -66,14 +66,13 @@ class ConvergingRelationItemWriterUnitTest {
   }
 
   @Test
-  void rejectsConflictingCanonicalPayloadBeforeDatabaseAccess() {
+  void rejectsMissingLegacyHashBeforeDatabaseAccess() {
     @SuppressWarnings("unchecked")
     ItemWriter<Collection<UpdatableRecord<?>>> delegate = mock(ItemWriter.class);
     DataSource dataSource = mock(DataSource.class);
     ConvergingRelationItemWriter writer =
         new ConvergingRelationItemWriter(dataSource, delegate);
-    ReleaseItemTrackRecord first = track("First");
-    ReleaseItemTrackRecord second = track("Second");
+    ReleaseItemTrackRecord incomplete = track("Track").setHash(null);
 
     assertThatThrownBy(
             () ->
@@ -81,11 +80,10 @@ class ConvergingRelationItemWriterUnitTest {
                     new Chunk<>(
                         List.of(
                             new RelationSet(
-                                EntityType.RELEASE, 2, List.of(first, second))))))
+                                EntityType.RELEASE, 2, List.of(incomplete))))))
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("release_item_track")
-        .hasMessageContaining("release_item_id=2")
-        .hasMessageContaining("hash=7");
+        .hasMessageContaining("release relation identity is incomplete")
+        .hasMessageContaining("release_item_track");
     verifyNoInteractions(dataSource, delegate);
   }
 
@@ -93,6 +91,7 @@ class ConvergingRelationItemWriterUnitTest {
     return new ReleaseItemTrackRecord()
         .setReleaseItemId(2)
         .setHash(7)
+        .setIdentitySha256(new byte[32])
         .setPosition("A1")
         .setTitle(title);
   }

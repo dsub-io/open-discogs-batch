@@ -12,8 +12,8 @@ import io.dsub.opendiscogs.jooq.tables.records.LabelReleaseItemRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemFormatRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemGenreRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemStyleRecord;
-import java.util.List;
 import java.util.Arrays;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class ReleaseRelationNormalizationUnitTest {
@@ -47,11 +47,11 @@ class ReleaseRelationNormalizationUnitTest {
   @Test
   void formatQuantityChangesTheNormalizedIdentityHash() {
     ReleaseItemSubItemsXML.ReleaseFormat first = format(" Vinyl ", " LP ");
-    first.setQuantity(1);
+    first.setQuantity("1");
     ReleaseItemSubItemsXML.ReleaseFormat second = format("Vinyl", "LP");
-    second.setQuantity(2);
-    ReflectionUtil.normalizeStringFields(first);
-    ReflectionUtil.normalizeStringFields(second);
+    second.setQuantity("2");
+    ReflectionUtil.normalizeReleaseStringFields(first);
+    ReflectionUtil.normalizeReleaseStringFields(second);
 
     assertThat(first.getRecord(RELEASE_ID).getHash())
         .isNotEqualTo(second.getRecord(RELEASE_ID).getHash());

@@ -5,6 +5,7 @@ import io.dsub.discogs.batch.dump.EntityType;
 import io.dsub.discogs.batch.job.registry.DefaultEntityIdRegistry;
 import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
 import io.dsub.discogs.batch.util.ReflectionUtil;
+import io.dsub.discogs.batch.util.DiscogsStringNormalizer;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemGenreRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemStyleRecord;
 import java.time.Clock;
@@ -28,7 +29,7 @@ public class ReleaseItemSubItemsProcessor
     if (item.getId() == null || item.getId() < 1) {
       return null;
     }
-    ReflectionUtil.normalizeStringFields(item);
+    ReflectionUtil.normalizeReleaseStringFields(item);
     List<UpdatableRecord<?>> items = new ArrayList<>();
     int releaseItemId = item.getId();
 
@@ -70,7 +71,8 @@ public class ReleaseItemSubItemsProcessor
     if (item.getGenres() != null) {
       item.getGenres().stream()
           .filter(Objects::nonNull)
-          .map(String::trim)
+          .map(DiscogsStringNormalizer::normalizeNullable)
+          .filter(Objects::nonNull)
           .filter(this::hasText)
           .distinct()
           .map(
@@ -86,7 +88,8 @@ public class ReleaseItemSubItemsProcessor
     if (item.getStyles() != null) {
       item.getStyles().stream()
           .filter(Objects::nonNull)
-          .map(String::trim)
+          .map(DiscogsStringNormalizer::normalizeNullable)
+          .filter(Objects::nonNull)
           .filter(this::hasText)
           .distinct()
           .map(

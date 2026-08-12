@@ -3,7 +3,7 @@
 These are bounded measurements of named changes, not forecasts for a full dump
 or different hardware. They also do not approve a production import: both
 batch implementations still require release and cross-language validation
-against canonical `open-discogs-model` v0.3.0.
+against canonical `open-discogs-model` v0.3.1.
 
 ## Results at a glance
 
@@ -11,6 +11,7 @@ against canonical `open-discogs-model` v0.3.0.
 | --- | --- | --- |
 | Reference ID cache | 22.4× lower median time; 60.7% lower maximum RSS | 1,000,000 positive IDs |
 | Durable import contract | +4.5% p50 and 4.3% lower median throughput | 24-record forced-idempotency fixture |
+| Format quantity parser | 89.3–95.0% lower Go median time; Java not timed | Typical and 52-digit values |
 
 Do not compare the two rows directly. Their harnesses and measured paths are
 different.
@@ -45,6 +46,23 @@ fixture exaggerates fixed transaction cost and cannot represent a full import.
 RSS and allocation deltas are not reported because the isolated process
 includes Gradle and Testcontainers while the fixture is too small to represent
 production memory.
+
+## Release format quantity parser
+
+The release dump contains 19,810,850 format rows, and release `6662697` has a
+quantity beyond signed 32-bit storage. Both importers replaced repeated
+arbitrary-precision parsing with the same digit scan, zero trimming, and
+lexical int32 boundary.
+
+The checked-in Go benchmark ran on an Apple M2 Pro with five samples per path.
+For `0002`, median time fell from 152.5 ns to 16.36 ns (89.3%, 9.3×), bytes
+from 48 B to 4 B, and allocations from four to one. For the 52-digit dump
+value, median time fell from 587.1 ns to 29.58 ns (95.0%, 19.8×), while 280 B
+and six allocations fell to zero.
+
+Those numbers isolate the Go parser. They do not measure the JVM, complete
+format transformation, database throughput, or a full dump. The Java path has
+the same bounded algorithm but no numerical JVM claim is made.
 
 ## Validation and reproduction limits
 

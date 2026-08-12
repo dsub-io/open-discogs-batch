@@ -16,6 +16,7 @@ final class CanonicalRelationBatch {
 
   static List<RelationSet> canonicalize(
       List<? extends RelationSet> relationSets, EntityType entityType) {
+    ReleaseRelationSlotAllocator.allocate(relationSets, entityType);
     List<List<UpdatableRecord<?>>> canonicalRecords = new ArrayList<>(relationSets.size());
     for (int index = 0; index < relationSets.size(); index++) {
       canonicalRecords.add(new ArrayList<>());

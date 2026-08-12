@@ -74,7 +74,6 @@ public abstract class AbstractJooqItemWriter<T extends UpdatableRecord<?>> imple
         table,
         uncachedTable -> {
           List<Field<?>> constraintFields = getConstraintFields(uncachedTable);
-          List<Field<?>> mutableFields = RelationTableRegistry.mutableFields(uncachedTable);
           boolean hashIdentity = uncachedTable.field("hash") != null;
           return Arrays.stream(uncachedTable.fields())
               .filter(field -> !constraintFields.contains(field))
@@ -87,8 +86,7 @@ public abstract class AbstractJooqItemWriter<T extends UpdatableRecord<?>> imple
               .filter(
                   field ->
                       !hashIdentity
-                          || field.getName().equals("last_modified_at")
-                          || mutableFields.contains(field))
+                          || field.getName().equals("last_modified_at"))
               .toList();
         });
   }

@@ -25,7 +25,7 @@ public class ReleaseItemCoreProcessor implements ItemProcessor<ReleaseItemXML, R
       return null;
     }
 
-    ReflectionUtil.normalizeStringFields(release);
+    ReflectionUtil.normalizeReleaseStringFields(release);
 
     Integer masterId = null;
 

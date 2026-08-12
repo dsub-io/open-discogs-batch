@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.zaxxer.hikari.HikariDataSource;
 import io.dsub.discogs.batch.container.PostgreSQLIntegrationSupport;
 import io.dsub.discogs.batch.dump.EntityType;
+import io.dsub.discogs.batch.domain.release.ReleaseRelationIdentity;
 import io.dsub.discogs.batch.job.processor.RelationSet;
 import io.dsub.opendiscogs.jooq.tables.records.LabelReleaseItemRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemArtistRecord;
@@ -48,6 +49,11 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
   private static final String TEST_SCHEMA = "release_relation_writer_test";
   private static final String CARDINALITY_VIOLATION_SQL_STATE = "21000";
   private static final int RELEASE_ID = 2;
+  private static final int KNOWN_COLLISION_RELEASE_ID = 4_846_884;
+  private static final int KNOWN_COLLISION_HASH = 86_171;
+  private static final int OVERSIZED_QUANTITY_RELEASE_ID = 6_662_697;
+  private static final String OVERSIZED_QUANTITY =
+      "1010487400000000000000000000000000000000000000000000";
   private static final int ARTIST_ID = 5;
   private static final int LABEL_ID = 5;
   private static final LocalDateTime FIRST_WRITE = LocalDateTime.of(2026, 8, 1, 0, 0);
@@ -62,8 +68,25 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
     JdbcTemplate root = new JdbcTemplate(dataSource);
     root.execute("drop schema if exists " + TEST_SCHEMA + " cascade");
     root.execute("create schema " + TEST_SCHEMA);
-    executeMigration(root, "migrations/V001__initial_schema.sql");
-    executeMigration(root, "migrations/V008__label_release_catalog_identity.sql");
+    for (String resource : List.of(
+        "migrations/V001__initial_schema.sql",
+        "migrations/V002__discogs_dump_catalog.sql",
+        "migrations/V003__discogs_import_history.sql",
+        "migrations/V004__allow_reissued_dump_paths.sql",
+        "migrations/V005__durable_import_progress.sql",
+        "migrations/V006__concurrent_import_progress.sql",
+        "migrations/V007__api_query_indexes.sql",
+        "migrations/V008__label_release_catalog_identity.sql",
+        "migrations/V009__release_convergence_contract.sql",
+        "migrations/V010__release_credited_artist_identity.sql",
+        "migrations/V011__release_format_identity.sql",
+        "migrations/V012__release_identifier_identity.sql",
+        "migrations/V013__release_image_identity.sql",
+        "migrations/V014__release_track_identity.sql",
+        "migrations/V015__release_video_identity.sql",
+        "migrations/V016__release_work_identity.sql")) {
+      executeMigration(root, resource);
+    }
 
     String containerJdbcUrl = CONTAINER.getJdbcUrl();
     String delimiter = containerJdbcUrl.contains("?") ? "&" : "?";
@@ -104,6 +127,14 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
         "insert into release_item (id, created_at, last_modified_at, title) values (?, now(), now(), ?)",
         RELEASE_ID,
         "Release");
+    jdbcTemplate.update(
+        "insert into release_item (id, created_at, last_modified_at, title) values (?, now(), now(), ?)",
+        KNOWN_COLLISION_RELEASE_ID,
+        "Known collision release");
+    jdbcTemplate.update(
+        "insert into release_item (id, created_at, last_modified_at, title) values (?, now(), now(), ?)",
+        OVERSIZED_QUANTITY_RELEASE_ID,
+        "Known oversized quantity release");
   }
 
   @Test
@@ -136,7 +167,7 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
 
     assertRelationCounts();
     assertThat(jdbcTemplate.queryForObject("select id from release_item_format", Integer.class))
-        .isEqualTo(formatId);
+        .isNotEqualTo(formatId);
     assertThat(
             jdbcTemplate.queryForObject(
                 "select quantity from release_item_format", Integer.class))
@@ -149,6 +180,200 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
             jdbcTemplate.queryForList(
                 "select category_notation from label_release_item order by id", String.class))
         .containsExactly(null, "SK 026", "SK026");
+  }
+
+  @Test
+  void knownDiscogsTrackHashCollisionPersistsBothRowsAndRetriesIdempotently() throws Exception {
+    ItemWriter<RelationSet> writer = writer();
+    List<ReleaseItemTrackRecord> tracks = knownCollisionTracks();
+
+    writer.write(
+        new Chunk<>(
+            List.of(
+                new RelationSet(
+                    EntityType.RELEASE,
+                    KNOWN_COLLISION_RELEASE_ID,
+                    List.copyOf(tracks)))));
+
+    List<Integer> firstIds =
+        jdbcTemplate.queryForList(
+            "select id from release_item_track where release_item_id = ? order by id",
+            Integer.class,
+            KNOWN_COLLISION_RELEASE_ID);
+    assertThat(firstIds).hasSize(2);
+    assertThat(
+            jdbcTemplate.queryForList(
+                "select hash from release_item_track where release_item_id = ? order by hash",
+                Integer.class,
+                KNOWN_COLLISION_RELEASE_ID))
+        .containsExactly(-947_370_883, KNOWN_COLLISION_HASH);
+
+    writer.write(
+        new Chunk<>(
+            List.of(
+                new RelationSet(
+                    EntityType.RELEASE,
+                    KNOWN_COLLISION_RELEASE_ID,
+                    List.copyOf(knownCollisionTracks())))));
+
+    assertThat(
+            jdbcTemplate.queryForList(
+                "select id from release_item_track where release_item_id = ? order by id",
+                Integer.class,
+                KNOWN_COLLISION_RELEASE_ID))
+        .containsExactlyElementsOf(firstIds);
+  }
+
+  @Test
+  void legacyNullDigestIsReplacedOnceAndThenRetainsItsPhysicalId() throws Exception {
+    int legacyId =
+        jdbcTemplate.queryForObject(
+            """
+            insert into release_item_track
+                (created_at, last_modified_at, release_item_id, hash, position, title, duration)
+            values (?, ?, ?, ?, ?, ?, ?)
+            returning id
+            """,
+            Integer.class,
+            FIRST_WRITE,
+            FIRST_WRITE,
+            KNOWN_COLLISION_RELEASE_ID,
+            KNOWN_COLLISION_HASH,
+            "6",
+            "Яд",
+            null);
+    ItemWriter<RelationSet> writer = writer();
+
+    writer.write(
+        new Chunk<>(
+            List.of(
+                new RelationSet(
+                    EntityType.RELEASE,
+                    KNOWN_COLLISION_RELEASE_ID,
+                    List.copyOf(knownCollisionTracks())))));
+
+    List<Integer> backfilledIds =
+        jdbcTemplate.queryForList(
+            "select id from release_item_track where release_item_id = ? order by id",
+            Integer.class,
+            KNOWN_COLLISION_RELEASE_ID);
+    assertThat(backfilledIds).hasSize(2).doesNotContain(legacyId);
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "select count(*) from release_item_track where release_item_id = ? and octet_length(identity_sha256) = 32",
+                Integer.class,
+                KNOWN_COLLISION_RELEASE_ID))
+        .isEqualTo(2);
+
+    writer.write(
+        new Chunk<>(
+            List.of(
+                new RelationSet(
+                    EntityType.RELEASE,
+                    KNOWN_COLLISION_RELEASE_ID,
+                    List.copyOf(knownCollisionTracks())))));
+
+    assertThat(
+            jdbcTemplate.queryForList(
+                "select id from release_item_track where release_item_id = ? order by id",
+                Integer.class,
+                KNOWN_COLLISION_RELEASE_ID))
+        .containsExactlyElementsOf(backfilledIds);
+  }
+
+  @Test
+  void remainingCollisionRowMovesBackToItsLegacySlotAndThenStabilizes() throws Exception {
+    ItemWriter<RelationSet> writer = writer();
+    writer.write(
+        new Chunk<>(
+            List.of(
+                new RelationSet(
+                    EntityType.RELEASE,
+                    KNOWN_COLLISION_RELEASE_ID,
+                    List.copyOf(knownCollisionTracks())))));
+    int collidedId =
+        jdbcTemplate.queryForObject(
+            "select id from release_item_track where release_item_id = ? and title = ?",
+            Integer.class,
+            KNOWN_COLLISION_RELEASE_ID,
+            "Ад");
+
+    writer.write(
+        new Chunk<>(
+            List.of(
+                new RelationSet(
+                    EntityType.RELEASE,
+                    KNOWN_COLLISION_RELEASE_ID,
+                    List.of(knownCollisionTracks().get(1))))));
+
+    int reassignedId =
+        jdbcTemplate.queryForObject(
+            "select id from release_item_track where release_item_id = ?",
+            Integer.class,
+            KNOWN_COLLISION_RELEASE_ID);
+    assertThat(reassignedId).isNotEqualTo(collidedId);
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "select hash from release_item_track where id = ?", Integer.class, reassignedId))
+        .isEqualTo(KNOWN_COLLISION_HASH);
+
+    writer.write(
+        new Chunk<>(
+            List.of(
+                new RelationSet(
+                    EntityType.RELEASE,
+                    KNOWN_COLLISION_RELEASE_ID,
+                    List.of(knownCollisionTracks().get(1))))));
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "select id from release_item_track where release_item_id = ?",
+                Integer.class,
+                KNOWN_COLLISION_RELEASE_ID))
+        .isEqualTo(reassignedId);
+  }
+
+  @Test
+  void oversizedFormatQuantityPersistsAndRetriesIdempotently() throws Exception {
+    ItemWriter<RelationSet> writer = writer();
+    writer.write(
+        new Chunk<>(
+            List.of(
+                new RelationSet(
+                    EntityType.RELEASE,
+                    OVERSIZED_QUANTITY_RELEASE_ID,
+                    List.of(oversizedQuantityFormat())))));
+
+    int firstId =
+        jdbcTemplate.queryForObject(
+            "select id from release_item_format where release_item_id = ?",
+            Integer.class,
+            OVERSIZED_QUANTITY_RELEASE_ID);
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "select quantity_text from release_item_format where id = ?",
+                String.class,
+                firstId))
+        .isEqualTo(OVERSIZED_QUANTITY);
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "select quantity is null from release_item_format where id = ?",
+                Boolean.class,
+                firstId))
+        .isTrue();
+
+    writer.write(
+        new Chunk<>(
+            List.of(
+                new RelationSet(
+                    EntityType.RELEASE,
+                    OVERSIZED_QUANTITY_RELEASE_ID,
+                    List.of(oversizedQuantityFormat())))));
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "select id from release_item_format where release_item_id = ?",
+                Integer.class,
+                OVERSIZED_QUANTITY_RELEASE_ID))
+        .isEqualTo(firstId);
   }
 
   private static void executeMigration(JdbcTemplate template, String resource) throws Exception {
@@ -277,6 +502,11 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
         .setDescription("[d:LP]")
         .setText("Limited")
         .setQuantity(quantity)
+        .setQuantityText(Integer.toString(quantity))
+        .setIdentitySha256(
+            ReleaseRelationIdentity.digest(
+                ReleaseRelationIdentity.Relation.FORMAT,
+                "Vinyl", "[d:LP]", Integer.toString(quantity), "Limited"))
         .setCreatedAt(FIRST_WRITE)
         .setLastModifiedAt(modifiedAt);
   }
@@ -288,8 +518,46 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
         .setPosition("A1")
         .setTitle("Track")
         .setDuration("3:00")
+        .setIdentitySha256(
+            ReleaseRelationIdentity.digest(
+                ReleaseRelationIdentity.Relation.TRACK, "A1", "Track", "3:00"))
         .setCreatedAt(FIRST_WRITE)
         .setLastModifiedAt(modifiedAt);
+  }
+
+  private List<ReleaseItemTrackRecord> knownCollisionTracks() {
+    return List.of(
+        collisionTrack("6", "Яд"),
+        collisionTrack("7", "Ад"));
+  }
+
+  private ReleaseItemTrackRecord collisionTrack(String position, String title) {
+    return new ReleaseItemTrackRecord()
+        .setReleaseItemId(KNOWN_COLLISION_RELEASE_ID)
+        .setHash(KNOWN_COLLISION_HASH)
+        .setPosition(position)
+        .setTitle(title)
+        .setDuration(null)
+        .setIdentitySha256(
+            ReleaseRelationIdentity.digest(
+                ReleaseRelationIdentity.Relation.TRACK, position, title, null))
+        .setCreatedAt(FIRST_WRITE)
+        .setLastModifiedAt(FIRST_WRITE);
+  }
+
+  private ReleaseItemFormatRecord oversizedQuantityFormat() {
+    return new ReleaseItemFormatRecord()
+        .setReleaseItemId(OVERSIZED_QUANTITY_RELEASE_ID)
+        .setHash(700)
+        .setName("File")
+        .setQuantity(null)
+        .setQuantityText(OVERSIZED_QUANTITY)
+        .setIdentitySha256(
+            ReleaseRelationIdentity.digest(
+                ReleaseRelationIdentity.Relation.FORMAT,
+                "File", null, OVERSIZED_QUANTITY, null))
+        .setCreatedAt(FIRST_WRITE)
+        .setLastModifiedAt(FIRST_WRITE);
   }
 
   private ReleaseItemIdentifierRecord identifier(LocalDateTime modifiedAt) {
@@ -299,6 +567,9 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
         .setType("Barcode")
         .setDescription("Text")
         .setValue("123")
+        .setIdentitySha256(
+            ReleaseRelationIdentity.digest(
+                ReleaseRelationIdentity.Relation.IDENTIFIER, "Barcode", "Text", "123"))
         .setCreatedAt(FIRST_WRITE)
         .setLastModifiedAt(modifiedAt);
   }
@@ -309,6 +580,9 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
         .setLabelId(LABEL_ID)
         .setHash(104)
         .setWork("Pressed By")
+        .setIdentitySha256(
+            ReleaseRelationIdentity.digest(
+                ReleaseRelationIdentity.Relation.WORK, "Pressed By"))
         .setCreatedAt(FIRST_WRITE)
         .setLastModifiedAt(modifiedAt);
   }
@@ -320,6 +594,10 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
         .setTitle("Video")
         .setDescription("Description")
         .setUrl("https://video.example")
+        .setIdentitySha256(
+            ReleaseRelationIdentity.digest(
+                ReleaseRelationIdentity.Relation.VIDEO,
+                "Video", "Description", "https://video.example"))
         .setCreatedAt(FIRST_WRITE)
         .setLastModifiedAt(modifiedAt);
   }
@@ -330,6 +608,9 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
         .setArtistId(ARTIST_ID)
         .setHash(106)
         .setRole("Producer")
+        .setIdentitySha256(
+            ReleaseRelationIdentity.digest(
+                ReleaseRelationIdentity.Relation.CREDITED_ARTIST, "Producer"))
         .setCreatedAt(FIRST_WRITE)
         .setLastModifiedAt(modifiedAt);
   }
