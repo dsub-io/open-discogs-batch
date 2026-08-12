@@ -1,5 +1,6 @@
 package io.dsub.discogs.batch.job.progress;
 
+import io.dsub.discogs.batch.util.TerminalSupport;
 import java.util.Locale;
 import lombok.extern.slf4j.Slf4j;
 
@@ -16,9 +17,21 @@ public final class Slf4jImportProgressSink implements ImportProgressSink {
       "event={} state={} entity={} committed_items={} committed_percent={} "
           + "rows_per_second={} elapsed_seconds={} resumed={} "
           + "initial_committed_items={} last_committed_progress_at={} observation_error={}";
+  private final boolean enabled;
+
+  public Slf4jImportProgressSink() {
+    this(TerminalSupport.isNonInteractive());
+  }
+
+  Slf4jImportProgressSink(boolean enabled) {
+    this.enabled = enabled;
+  }
 
   @Override
   public void write(ImportProgressRecord record) {
+    if (!enabled) {
+      return;
+    }
     String percent =
         record.committedPercent().isPresent()
             ? String.format(

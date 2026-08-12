@@ -8,7 +8,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.zip.GZIPInputStream;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import me.tongfei.progressbar.ProgressBar;
 import me.tongfei.progressbar.wrapped.ProgressBarWrappedInputStream;
@@ -29,7 +28,6 @@ import org.springframework.util.Assert;
  * @param <T> type to be read.
  */
 @Slf4j
-@RequiredArgsConstructor
 public class ProgressBarStaxEventItemReader<T> implements ItemStreamReader<T>, InitializingBean {
 
   private static final String TASK_NAME_PREPEND = "SOURCE READ ";
@@ -37,15 +35,28 @@ public class ProgressBarStaxEventItemReader<T> implements ItemStreamReader<T>, I
   private final String taskName;
   private final Class<T> mappedClass;
   private final Path filePath;
-  private final ToggleProgressBarConsumer pbConsumer = new ToggleProgressBarConsumer(System.err);
+  private final ToggleProgressBarConsumer pbConsumer;
   private String[] fragmentRootElements;
   private StaxEventItemReader<T> nestedReader;
 
   public ProgressBarStaxEventItemReader(
       Class<T> mappedClass, Path filePath, String... fragmentRootElements) throws Exception {
+    this(
+        mappedClass,
+        filePath,
+        new ToggleProgressBarConsumer(System.err),
+        fragmentRootElements);
+  }
+
+  ProgressBarStaxEventItemReader(
+      Class<T> mappedClass,
+      Path filePath,
+      ToggleProgressBarConsumer progressConsumer,
+      String... fragmentRootElements) throws Exception {
     this.mappedClass = mappedClass;
     this.filePath = filePath;
     this.taskName = TASK_NAME_PREPEND + mappedClass.getSimpleName();
+    this.pbConsumer = progressConsumer;
     this.pbConsumer.off();
     this.fragmentRootElements =
         Arrays.stream(fragmentRootElements)

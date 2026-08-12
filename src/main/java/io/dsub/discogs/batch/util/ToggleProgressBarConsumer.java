@@ -8,7 +8,9 @@ import me.tongfei.progressbar.ConsoleProgressBarConsumer;
  */
 public class ToggleProgressBarConsumer extends ConsoleProgressBarConsumer {
 
+  private final boolean interactive;
   private boolean print = false;
+  private boolean rendered = false;
 
   /**
    * Constructor to be used with designated {@link PrintStream}.
@@ -16,7 +18,20 @@ public class ToggleProgressBarConsumer extends ConsoleProgressBarConsumer {
    * @param out {@link PrintStream} to print progress bar.
    */
   public ToggleProgressBarConsumer(PrintStream out) {
+    this(out, TerminalSupport.isInteractive());
+  }
+
+  public static ToggleProgressBarConsumer interactive(PrintStream out) {
+    return new ToggleProgressBarConsumer(out, true);
+  }
+
+  public static ToggleProgressBarConsumer nonInteractive(PrintStream out) {
+    return new ToggleProgressBarConsumer(out, false);
+  }
+
+  private ToggleProgressBarConsumer(PrintStream out, boolean interactive) {
     super(out, 150);
+    this.interactive = interactive;
   }
 
   /**
@@ -26,7 +41,15 @@ public class ToggleProgressBarConsumer extends ConsoleProgressBarConsumer {
   @Override
   public void accept(String str) {
     if (this.print) {
+      this.rendered = true;
       super.accept(str);
+    }
+  }
+
+  @Override
+  public void close() {
+    if (this.rendered) {
+      super.close();
     }
   }
 
@@ -34,7 +57,7 @@ public class ToggleProgressBarConsumer extends ConsoleProgressBarConsumer {
    * Simple on method to activate print.
    */
   public void on() {
-    this.print = true;
+    this.print = interactive;
   }
 
   /**

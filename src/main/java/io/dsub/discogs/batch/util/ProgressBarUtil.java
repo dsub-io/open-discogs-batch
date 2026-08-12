@@ -1,7 +1,6 @@
 package io.dsub.discogs.batch.util;
 
 import java.time.temporal.ChronoUnit;
-import me.tongfei.progressbar.ConsoleProgressBarConsumer;
 import me.tongfei.progressbar.ProgressBar;
 import me.tongfei.progressbar.ProgressBarBuilder;
 import me.tongfei.progressbar.ProgressBarConsumer;
@@ -18,7 +17,9 @@ public class ProgressBarUtil {
   }
 
   public static ProgressBar get(String taskName, long initialMax) {
-    return get(taskName, initialMax, new ConsoleProgressBarConsumer(System.err, 150));
+    ToggleProgressBarConsumer consumer = new ToggleProgressBarConsumer(System.err);
+    consumer.on();
+    return get(taskName, initialMax, consumer);
   }
 
   public static ProgressBar get(String taskName, long initialMax, ProgressBarConsumer consumer) {

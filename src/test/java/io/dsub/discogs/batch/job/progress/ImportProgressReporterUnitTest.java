@@ -171,6 +171,19 @@ class ImportProgressReporterUnitTest {
             0,
             Optional.empty(),
             Optional.of("fixture")));
+
+    new Slf4jImportProgressSink(false).write(
+        new ImportProgressRecord(
+            ImportProgressState.RUNNING,
+            EntityType.MASTER,
+            0,
+            OptionalDouble.empty(),
+            0,
+            Duration.ZERO,
+            false,
+            0,
+            Optional.empty(),
+            Optional.empty()));
   }
 
   private ImportProgressSnapshot snapshot(
