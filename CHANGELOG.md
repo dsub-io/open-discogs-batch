@@ -1,5 +1,41 @@
 # Changelog
 
+## [2.0.0](https://github.com/dsub-io/open-discogs-batch/compare/v1.2.2...v2.0.0) (2026-08-12)
+
+
+### ⚠ BREAKING CHANGES
+
+* replace legacy Java runtime options with the shared OpenDiscogs Batch contract. Add exact max-workers control, bounded chunk handoff, segmented ID caches, streamed dependency IDs, bounded relation writes, and multi-architecture GitHub/GHCR release publication.
+
+### Features
+
+* expose durable import progress ([1380699](https://github.com/dsub-io/open-discogs-batch/commit/13806998207e9faebba4bc1e2fc69d0aad2a04c8))
+* expose durable import progress ([#34](https://github.com/dsub-io/open-discogs-batch/issues/34)) ([2fa3f97](https://github.com/dsub-io/open-discogs-batch/commit/2fa3f9789e7bc37e847f0c18ed5020003244f9e1))
+* support configurable database schemas ([9756f20](https://github.com/dsub-io/open-discogs-batch/commit/9756f20c77f372477aad63c432999fe038584e9b))
+* support configurable database schemas ([#39](https://github.com/dsub-io/open-discogs-batch/issues/39)) ([202777a](https://github.com/dsub-io/open-discogs-batch/commit/202777a566651b4d8ce516d9ee4114521e214c0a))
+* unify runtime options and optimize large imports ([#24](https://github.com/dsub-io/open-discogs-batch/issues/24)) ([8673730](https://github.com/dsub-io/open-discogs-batch/commit/8673730146501d77c15470586bbf24597fde3229))
+
+
+### Bug Fixes
+
+* close batch correctness and coverage gaps ([eeeae1a](https://github.com/dsub-io/open-discogs-batch/commit/eeeae1a747fb0ee47fd337848bb6d451ca152f7f))
+* harden canonical dump recovery ([d0a3ee2](https://github.com/dsub-io/open-discogs-batch/commit/d0a3ee21c5b22a2443bf187586f9d618770d3867))
+* keep terminal progress output readable ([#41](https://github.com/dsub-io/open-discogs-batch/issues/41)) ([b00c581](https://github.com/dsub-io/open-discogs-batch/commit/b00c5812a0fb6b3004bc861857e01e3607f22a4a))
+* make canonical dump recovery atomic ([#43](https://github.com/dsub-io/open-discogs-batch/issues/43)) ([a3101c8](https://github.com/dsub-io/open-discogs-batch/commit/a3101c8d8ed5769b27ae384f2c27629e1e63aaec))
+* make release checksum portable ([3789aa2](https://github.com/dsub-io/open-discogs-batch/commit/3789aa252a08fa971ffa9b31a4b9731b2680c62c))
+* make release checksum portable ([#37](https://github.com/dsub-io/open-discogs-batch/issues/37)) ([c959172](https://github.com/dsub-io/open-discogs-batch/commit/c95917210b0c268e9c36bcf26de141928fc7fb67))
+* make snapshot imports durable and convergent ([7d93c07](https://github.com/dsub-io/open-discogs-batch/commit/7d93c077f1c51cbcf16cb38beceb220c2432e5ad))
+* make snapshot imports durable and convergent ([#26](https://github.com/dsub-io/open-discogs-batch/issues/26)) ([ec2f6a0](https://github.com/dsub-io/open-discogs-batch/commit/ec2f6a0476a6af3bcf25a77e62fbe423f33f1434))
+* preserve release label catalog identities ([a6f72e7](https://github.com/dsub-io/open-discogs-batch/commit/a6f72e7514785c4b2e51f77c240a7e6e8531491b))
+* restore unreleased 1.0.1 metadata ([265505f](https://github.com/dsub-io/open-discogs-batch/commit/265505f0a3b13282d5e0dcbc46f22f4f84053533))
+* restore unreleased 1.0.1 metadata ([#29](https://github.com/dsub-io/open-discogs-batch/issues/29)) ([dd19ff9](https://github.com/dsub-io/open-discogs-batch/commit/dd19ff9043e2e3a879b6c0119c0648bd7bf76217))
+
+
+### Performance Improvements
+
+* apply indexed model schema ([e581e38](https://github.com/dsub-io/open-discogs-batch/commit/e581e38f5037a80d48adafb13f3acb5ba95b39df))
+* apply indexed model schema ([#32](https://github.com/dsub-io/open-discogs-batch/issues/32)) ([fde37de](https://github.com/dsub-io/open-discogs-batch/commit/fde37de1b79321cc1becaafc2e73b43acbf404a9))
+
 ## [1.2.2](https://github.com/dsub-io/open-discogs-batch/compare/v1.2.1...v1.2.2) (2026-08-12)
 
 
