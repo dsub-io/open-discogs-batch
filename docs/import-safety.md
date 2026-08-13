@@ -2,7 +2,7 @@
 
 This is the operational contract for dump discovery, admission, commits,
 recovery, and reader visibility. The schema contract is canonical
-[`open-discogs-model`](https://github.com/dsub-io/open-discogs-model) v0.3.1,
+[`open-discogs-model`](https://github.com/dsub-io/open-discogs-model) v0.3.2,
 shared with the Go importer.
 
 > [!CAUTION]
