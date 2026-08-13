@@ -37,6 +37,7 @@ import org.jooq.UpdatableRecord;
 
 final class RelationTableRegistry {
 
+  private static final String HASH_FIELD_NAME = "hash";
   private static final String IDENTITY_FIELD_NAME = "identity_sha256";
 
   static List<RelationTable> forEntity(EntityType entityType) {
@@ -256,10 +257,25 @@ final class RelationTableRegistry {
       return RelationIdentity.create(table, keys, record);
     }
 
+    RelationIdentity semanticIdentity(UpdatableRecord<?> record) {
+      return RelationIdentity.create(table, semanticKeys(), record);
+    }
+
     List<Field<?>> conflictFields() {
       return keys.stream()
           .map(RelationKey::field)
           .filter(field -> !field.getName().equals(IDENTITY_FIELD_NAME))
+          .toList();
+    }
+
+    private List<RelationKey> semanticKeys() {
+      boolean hasDigest =
+          keys.stream().anyMatch(key -> key.field().getName().equals(IDENTITY_FIELD_NAME));
+      if (!hasDigest) {
+        return keys;
+      }
+      return keys.stream()
+          .filter(key -> !key.field().getName().equals(HASH_FIELD_NAME))
           .toList();
     }
 
@@ -280,7 +296,15 @@ final class RelationTableRegistry {
     }
 
     String describeIdentity(UpdatableRecord<?> record) {
-      return keys.stream()
+      return describeIdentity(keys, record);
+    }
+
+    String describeSemanticIdentity(UpdatableRecord<?> record) {
+      return describeIdentity(semanticKeys(), record);
+    }
+
+    private String describeIdentity(List<RelationKey> identityKeys, UpdatableRecord<?> record) {
+      return identityKeys.stream()
           .map(key -> key.field().getName() + "=" + key.describeValue(record))
           .collect(Collectors.joining(", "));
     }
@@ -373,6 +397,7 @@ final class RelationTableRegistry {
 
   sealed interface RelationIdentity
       permits IntegerPairIdentity,
+          IntegerBinaryIdentity,
           IntegerTextIdentity,
           IntegerIntegerTextIdentity,
           IntegerIntegerBinaryIdentity,
@@ -398,7 +423,9 @@ final class RelationTableRegistry {
         case TEXT ->
             new IntegerTextIdentity(
                 table, keys.get(0).integerValue(record), keys.get(1).textValue(record));
-        case BINARY -> throw unsupportedShape();
+        case BINARY ->
+            new IntegerBinaryIdentity(
+                table, keys.get(0).integerValue(record), keys.get(1).binaryValue(record));
       };
     }
 
@@ -449,6 +476,10 @@ final class RelationTableRegistry {
   }
 
   record IntegerPairIdentity(Table<?> table, Integer first, Integer second)
+      implements RelationIdentity {
+  }
+
+  record IntegerBinaryIdentity(Table<?> table, Integer first, BinaryKey second)
       implements RelationIdentity {
   }
 

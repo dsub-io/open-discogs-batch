@@ -78,14 +78,16 @@ class CanonicalRelationBatchUnitTest {
 
   @Test
   void allocatesDistinctSlotsForTheKnownDiscogsTrackCollision() {
-    ReleaseItemTrackRecord first = track("Яд").setPosition("6").setHash(86171);
+    ReleaseItemTrackRecord first =
+        track("Яд").setPosition("6").setDuration(null).setHash(86_171);
     first.setIdentitySha256(
         ReleaseRelationIdentity.digest(
-            ReleaseRelationIdentity.Relation.TRACK, "6", "Яд", "3:00"));
-    ReleaseItemTrackRecord second = track("Ад").setPosition("7").setHash(86171);
+            ReleaseRelationIdentity.Relation.TRACK, "6", "Яд", null));
+    ReleaseItemTrackRecord second =
+        track("Ад").setPosition("7").setDuration(null).setHash(86_171);
     second.setIdentitySha256(
         ReleaseRelationIdentity.digest(
-            ReleaseRelationIdentity.Relation.TRACK, "7", "Ад", "3:00"));
+            ReleaseRelationIdentity.Relation.TRACK, "7", "Ад", null));
 
     List<RelationSet> result =
         CanonicalRelationBatch.canonicalize(
@@ -93,33 +95,30 @@ class CanonicalRelationBatchUnitTest {
             EntityType.RELEASE);
 
     assertThat(result.getFirst().records()).hasSize(2);
-    assertThat(first.getHash()).isNotEqualTo(second.getHash());
+    assertThat(first.getHash()).isEqualTo(86_171);
+    assertThat(second.getHash()).isEqualTo(-947_370_883);
   }
 
   @Test
-  void rejectsDifferentLegacyHashesForOneDigest() {
-    ReleaseItemTrackRecord first = track("Яд").setPosition("6").setHash(86_171);
-    first.setIdentitySha256(
-        ReleaseRelationIdentity.digest(
-            ReleaseRelationIdentity.Relation.TRACK, "6", "Яд", "3:00"));
-    ReleaseItemTrackRecord second = track("Яд").setPosition("6").setHash(86_172);
-    second.setIdentitySha256(first.getIdentitySha256());
+  void collapsesOneSemanticIdentityBeforeConsideringDifferentLegacyHashes() {
+    ReleaseItemTrackRecord first = track("Track").setHash(86_171);
+    ReleaseItemTrackRecord second = track("Track").setHash(86_172);
 
-    assertThatThrownBy(
-            () ->
-                CanonicalRelationBatch.canonicalize(
-                    List.of(
-                        new RelationSet(
-                            EntityType.RELEASE, RELEASE_ID, List.of(first, second))),
-                    EntityType.RELEASE))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("conflicting legacy hashes");
+    List<RelationSet> canonical =
+        CanonicalRelationBatch.canonicalize(
+            List.of(
+                new RelationSet(
+                    EntityType.RELEASE, RELEASE_ID, List.of(first, second))),
+            EntityType.RELEASE);
+
+    assertThat(canonical.getFirst().records()).containsExactly(first);
+    assertThat(first.getHash()).isEqualTo(86_171);
   }
 
   @Test
   void rejectsDifferentPayloadForOneCanonicalIdentity() {
     ReleaseItemFormatRecord first = format(1, "Vinyl");
-    ReleaseItemFormatRecord second = format(1, "Vinyl").setQuantity(2);
+    ReleaseItemFormatRecord second = format(1, "Vinyl").setHash(102).setQuantity(2);
 
     assertThatThrownBy(
             () ->
@@ -131,6 +130,25 @@ class CanonicalRelationBatchUnitTest {
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("conflicting persisted payload")
         .hasMessageContaining("identity_sha256");
+  }
+
+  @Test
+  void derivesFormatDigestFromCompatibilityQuantityWhenCanonicalTextIsAbsent() {
+    ReleaseItemFormatRecord record = format(2, "Vinyl").setQuantityText(null);
+
+    ReleaseRelationSlotAllocator.assignCanonicalDigests(
+        List.of(
+            new RelationSet(EntityType.RELEASE, RELEASE_ID, List.of(record))),
+        EntityType.RELEASE);
+
+    assertThat(record.getIdentitySha256())
+        .containsExactly(
+            ReleaseRelationIdentity.digest(
+                ReleaseRelationIdentity.Relation.FORMAT,
+                "Vinyl",
+                "LP",
+                "2",
+                "Limited"));
   }
 
   @Test
@@ -202,11 +220,10 @@ class CanonicalRelationBatchUnitTest {
                     ReleaseItemFormat.RELEASE_ITEM_FORMAT, List.of(integer), record))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("unsupported canonical relation key shape");
-    assertThatThrownBy(
-            () ->
-                RelationTableRegistry.RelationIdentity.create(
-                    ReleaseItemFormat.RELEASE_ITEM_FORMAT, List.of(integer, binary), record))
-        .isInstanceOf(IllegalStateException.class);
+    assertThat(
+            RelationTableRegistry.RelationIdentity.create(
+                ReleaseItemFormat.RELEASE_ITEM_FORMAT, List.of(integer, binary), record))
+        .isInstanceOf(RelationTableRegistry.IntegerBinaryIdentity.class);
     assertThatThrownBy(
             () ->
                 RelationTableRegistry.RelationIdentity.create(

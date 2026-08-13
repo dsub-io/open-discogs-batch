@@ -9,7 +9,7 @@ import java.util.Map;
 import org.jooq.Table;
 import org.jooq.UpdatableRecord;
 
-/** Validates and collapses relation rows by their canonical PostgreSQL conflict target. */
+/** Canonicalizes semantic identities before validating PostgreSQL storage identities. */
 final class CanonicalRelationBatch {
 
   private CanonicalRelationBatch() {
@@ -22,7 +22,28 @@ final class CanonicalRelationBatch {
 
   static CanonicalBatch prepare(
       List<? extends RelationSet> relationSets, EntityType entityType) {
-    ReleaseRelationSlotAllocator.allocate(relationSets, entityType);
+    ReleaseRelationSlotAllocator.assignCanonicalDigests(relationSets, entityType);
+    List<RelationSet> semanticSets =
+        collapseByIdentity(relationSets, entityType, IdentityKind.SEMANTIC);
+    ReleaseRelationSlotAllocator.allocateAssignedDigests(semanticSets, entityType);
+    List<RelationSet> physicalSets =
+        collapseByIdentity(semanticSets, entityType, IdentityKind.PHYSICAL);
+
+    Map<Table<?>, List<UpdatableRecord<?>>> recordsByTable = new LinkedHashMap<>();
+    physicalSets.stream()
+        .flatMap(relationSet -> relationSet.records().stream())
+        .forEach(
+            record ->
+                recordsByTable
+                    .computeIfAbsent(record.getTable(), ignored -> new ArrayList<>())
+                    .add(record));
+    return new CanonicalBatch(physicalSets, recordsByTable);
+  }
+
+  private static List<RelationSet> collapseByIdentity(
+      List<? extends RelationSet> relationSets,
+      EntityType entityType,
+      IdentityKind identityKind) {
     List<List<UpdatableRecord<?>>> canonicalRecords = new ArrayList<>(relationSets.size());
     for (int index = 0; index < relationSets.size(); index++) {
       canonicalRecords.add(new ArrayList<>());
@@ -30,25 +51,22 @@ final class CanonicalRelationBatch {
 
     Map<RelationTableRegistry.RelationIdentity, CanonicalRecord> recordsByIdentity =
         new LinkedHashMap<>();
-    Map<Table<?>, List<UpdatableRecord<?>>> recordsByTable = new LinkedHashMap<>();
     for (int setIndex = 0; setIndex < relationSets.size(); setIndex++) {
       RelationSet relationSet = relationSets.get(setIndex);
       for (UpdatableRecord<?> record : relationSet.records()) {
         RelationTableRegistry.RelationTable relationTable =
             RelationTableRegistry.require(entityType, record.getTable());
         relationTable.requireRoot(record, relationSet.rootId());
-        RelationTableRegistry.RelationIdentity identity = relationTable.identity(record);
+        RelationTableRegistry.RelationIdentity identity =
+            identityKind.identity(relationTable, record);
         CanonicalRecord existing = recordsByIdentity.get(identity);
         if (existing == null) {
           recordsByIdentity.put(identity, new CanonicalRecord(record));
           canonicalRecords.get(setIndex).add(record);
-          recordsByTable
-              .computeIfAbsent(record.getTable(), ignored -> new ArrayList<>())
-              .add(record);
         } else if (!relationTable.hasSamePayload(existing.record(), record)) {
           throw new IllegalArgumentException(
               "conflicting persisted payload for " + relationTable.table().getName()
-                  + " (" + relationTable.describeIdentity(record) + ")");
+                  + " (" + identityKind.describe(relationTable, record) + ")");
         }
       }
     }
@@ -59,7 +77,7 @@ final class CanonicalRelationBatch {
       canonicalSets.add(
           new RelationSet(source.entityType(), source.rootId(), canonicalRecords.get(index)));
     }
-    return new CanonicalBatch(canonicalSets, recordsByTable);
+    return List.copyOf(canonicalSets);
   }
 
   record CanonicalBatch(
@@ -78,5 +96,40 @@ final class CanonicalRelationBatch {
   }
 
   private record CanonicalRecord(UpdatableRecord<?> record) {
+  }
+
+  private enum IdentityKind {
+    SEMANTIC {
+      @Override
+      RelationTableRegistry.RelationIdentity identity(
+          RelationTableRegistry.RelationTable relationTable, UpdatableRecord<?> record) {
+        return relationTable.semanticIdentity(record);
+      }
+
+      @Override
+      String describe(
+          RelationTableRegistry.RelationTable relationTable, UpdatableRecord<?> record) {
+        return relationTable.describeSemanticIdentity(record);
+      }
+    },
+    PHYSICAL {
+      @Override
+      RelationTableRegistry.RelationIdentity identity(
+          RelationTableRegistry.RelationTable relationTable, UpdatableRecord<?> record) {
+        return relationTable.identity(record);
+      }
+
+      @Override
+      String describe(
+          RelationTableRegistry.RelationTable relationTable, UpdatableRecord<?> record) {
+        return relationTable.describeIdentity(record);
+      }
+    };
+
+    abstract RelationTableRegistry.RelationIdentity identity(
+        RelationTableRegistry.RelationTable relationTable, UpdatableRecord<?> record);
+
+    abstract String describe(
+        RelationTableRegistry.RelationTable relationTable, UpdatableRecord<?> record);
   }
 }

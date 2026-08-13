@@ -37,11 +37,13 @@ final class ReleaseRelationSlotAllocator {
           RELEASE_ITEM_FORMAT.getName(),
               new RelationDescriptor(
                   ReleaseRelationIdentity.Relation.FORMAT,
-                  List.of(
-                      RELEASE_ITEM_FORMAT.NAME,
-                      RELEASE_ITEM_FORMAT.DESCRIPTION,
-                      RELEASE_ITEM_FORMAT.QUANTITY_TEXT,
-                      RELEASE_ITEM_FORMAT.TEXT)),
+                  record ->
+                      new String[] {
+                          RELEASE_ITEM_FORMAT.NAME.getValue(record),
+                          RELEASE_ITEM_FORMAT.DESCRIPTION.getValue(record),
+                          canonicalFormatQuantity(record),
+                          RELEASE_ITEM_FORMAT.TEXT.getValue(record)
+                      }),
           RELEASE_ITEM_IDENTIFIER.getName(),
               new RelationDescriptor(
                   ReleaseRelationIdentity.Relation.IDENTIFIER,
@@ -72,7 +74,8 @@ final class ReleaseRelationSlotAllocator {
   }
 
   static void allocate(List<? extends RelationSet> relationSets, EntityType entityType) {
-    allocate(
+    assignCanonicalDigests(relationSets, entityType);
+    allocateAssignedDigests(
         relationSets,
         entityType,
         UNSIGNED_INT_COUNT,
@@ -80,6 +83,48 @@ final class ReleaseRelationSlotAllocator {
   }
 
   static void allocate(
+      List<? extends RelationSet> relationSets,
+      EntityType entityType,
+      long attemptCount,
+      CompatibilitySlotGenerator slotGenerator) {
+    assignCanonicalDigests(relationSets, entityType);
+    allocateAssignedDigests(relationSets, entityType, attemptCount, slotGenerator);
+  }
+
+  static void assignCanonicalDigests(
+      List<? extends RelationSet> relationSets, EntityType entityType) {
+    if (entityType != EntityType.RELEASE) {
+      return;
+    }
+    for (RelationSet relationSet : relationSets) {
+      for (UpdatableRecord<?> record : relationSet.records()) {
+        RelationDescriptor descriptor = RELATIONS.get(record.getTable().getName());
+        if (descriptor == null) {
+          continue;
+        }
+        Field<Integer> hashField = record.getTable().field(HASH_FIELD, Integer.class);
+        Field<byte[]> identityField = record.getTable().field(IDENTITY_FIELD, byte[].class);
+        Integer legacyHash = hashField.getValue(record);
+        if (legacyHash == null) {
+          throw new IllegalArgumentException(
+              "release relation identity is incomplete for " + record.getTable().getName());
+        }
+        byte[] digest = descriptor.digest(record);
+        record.set(identityField, digest);
+      }
+    }
+  }
+
+  static void allocateAssignedDigests(
+      List<? extends RelationSet> relationSets, EntityType entityType) {
+    allocateAssignedDigests(
+        relationSets,
+        entityType,
+        UNSIGNED_INT_COUNT,
+        ReleaseRelationIdentity::compatibilitySlot);
+  }
+
+  private static void allocateAssignedDigests(
       List<? extends RelationSet> relationSets,
       EntityType entityType,
       long attemptCount,
@@ -97,12 +142,11 @@ final class ReleaseRelationSlotAllocator {
         Field<Integer> hashField = record.getTable().field(HASH_FIELD, Integer.class);
         Field<byte[]> identityField = record.getTable().field(IDENTITY_FIELD, byte[].class);
         Integer legacyHash = hashField.getValue(record);
-        if (legacyHash == null) {
+        byte[] digest = identityField.getValue(record);
+        if (legacyHash == null || digest == null || digest.length != 32) {
           throw new IllegalArgumentException(
               "release relation identity is incomplete for " + record.getTable().getName());
         }
-        byte[] digest = descriptor.digest(record);
-        record.set(identityField, digest);
         RelationTableRegistry.RelationTable relationTable =
             RelationTableRegistry.require(entityType, record.getTable());
         List<Object> scopeValues =
@@ -130,17 +174,36 @@ final class ReleaseRelationSlotAllocator {
   }
 
   private record RelationDescriptor(
-      ReleaseRelationIdentity.Relation relation, List<Field<String>> identityFields) {
+      ReleaseRelationIdentity.Relation relation, IdentityFieldValues identityFieldValues) {
 
-    RelationDescriptor {
-      identityFields = List.copyOf(identityFields);
+    RelationDescriptor(
+        ReleaseRelationIdentity.Relation relation, List<Field<String>> identityFields) {
+      this(
+          relation,
+          record ->
+              identityFields.stream()
+                  .map(field -> field.getValue(record))
+                  .toArray(String[]::new));
     }
 
     byte[] digest(UpdatableRecord<?> record) {
-      String[] fields =
-          identityFields.stream().map(field -> field.getValue(record)).toArray(String[]::new);
-      return ReleaseRelationIdentity.digest(relation, fields);
+      return ReleaseRelationIdentity.digest(relation, identityFieldValues.values(record));
     }
+  }
+
+  @FunctionalInterface
+  private interface IdentityFieldValues {
+
+    String[] values(UpdatableRecord<?> record);
+  }
+
+  private static String canonicalFormatQuantity(UpdatableRecord<?> record) {
+    String quantityText = RELEASE_ITEM_FORMAT.QUANTITY_TEXT.getValue(record);
+    if (quantityText != null) {
+      return quantityText;
+    }
+    Integer quantity = RELEASE_ITEM_FORMAT.QUANTITY.getValue(record);
+    return quantity == null ? null : Integer.toString(quantity);
   }
 
   private static final class ScopeRows {
@@ -150,7 +213,7 @@ final class ReleaseRelationSlotAllocator {
     private final CompatibilitySlotGenerator slotGenerator;
     private final Set<Integer> reserved = new HashSet<>();
     private final Map<Integer, Map<DigestKey, List<Row>>> groups = new HashMap<>();
-    private final Map<DigestKey, Integer> legacyHashesByDigest = new HashMap<>();
+    private final Set<DigestKey> semanticIdentities = new HashSet<>();
 
     private ScopeRows(
         ReleaseRelationIdentity.Relation relation,
@@ -163,10 +226,9 @@ final class ReleaseRelationSlotAllocator {
 
     private void add(Row row) {
       DigestKey digest = new DigestKey(row.digest());
-      Integer previousHash = legacyHashesByDigest.putIfAbsent(digest, row.legacyHash());
-      if (previousHash != null && previousHash != row.legacyHash()) {
-        throw new IllegalArgumentException(
-            "release relation identity has conflicting legacy hashes");
+      if (!semanticIdentities.add(digest)) {
+        throw new IllegalStateException(
+            "release relation semantic identities must be canonicalized before slot allocation");
       }
       reserved.add(row.legacyHash());
       groups.computeIfAbsent(row.legacyHash(), ignored -> new LinkedHashMap<>())
