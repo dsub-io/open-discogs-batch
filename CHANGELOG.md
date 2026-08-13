@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.3](https://github.com/dsub-io/open-discogs-batch/compare/v1.2.2...v1.2.3) (2026-08-13)
+
+
+### Bug Fixes
+
+* preserve canonical dump data and bound full imports ([#48](https://github.com/dsub-io/open-discogs-batch/issues/48)) ([30bde02](https://github.com/dsub-io/open-discogs-batch/commit/30bde020b0975051c831131ba8da4aa560bbd43e))
+
 ## [1.2.2](https://github.com/dsub-io/open-discogs-batch/compare/v1.2.1...v1.2.2) (2026-08-12)
 
 
