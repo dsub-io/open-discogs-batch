@@ -37,9 +37,6 @@ import org.jooq.UpdatableRecord;
 
 final class RelationTableRegistry {
 
-  private static final String INTEGER_ARRAY_TYPE = "integer";
-  private static final String TEXT_ARRAY_TYPE = "varchar";
-  private static final String BYTEA_ARRAY_TYPE = "bytea";
   private static final String IDENTITY_FIELD_NAME = "identity_sha256";
 
   static List<RelationTable> forEntity(EntityType entityType) {
@@ -230,15 +227,15 @@ final class RelationTableRegistry {
   }
 
   private static RelationKey integerKey(Field<Integer> field) {
-    return new RelationKey(field, INTEGER_ARRAY_TYPE);
+    return new RelationKey(field, RelationKeyType.INTEGER);
   }
 
   private static RelationKey textKey(Field<String> field) {
-    return new RelationKey(field, TEXT_ARRAY_TYPE);
+    return new RelationKey(field, RelationKeyType.TEXT);
   }
 
   private static RelationKey byteaKey(Field<byte[]> field) {
-    return new RelationKey(field, BYTEA_ARRAY_TYPE);
+    return new RelationKey(field, RelationKeyType.BINARY);
   }
 
   private RelationTableRegistry() {
@@ -256,8 +253,7 @@ final class RelationTableRegistry {
     }
 
     RelationIdentity identity(UpdatableRecord<?> record) {
-      return new RelationIdentity(
-          table.getName(), keys.stream().map(key -> key.value(record)).toList());
+      return RelationIdentity.create(table, keys, record);
     }
 
     List<Field<?>> conflictFields() {
@@ -328,7 +324,7 @@ final class RelationTableRegistry {
     }
   }
 
-  record RelationKey(Field<?> field, String postgresArrayType) {
+  record RelationKey(Field<?> field, RelationKeyType type) {
 
     void bind(PreparedStatement statement, int parameterIndex, UpdatableRecord<?> record)
         throws SQLException {
@@ -337,34 +333,31 @@ final class RelationTableRegistry {
         statement.setNull(parameterIndex, jdbcType());
         return;
       }
-      switch (postgresArrayType) {
-        case INTEGER_ARRAY_TYPE -> statement.setInt(parameterIndex, (Integer) value);
-        case TEXT_ARRAY_TYPE -> statement.setString(parameterIndex, (String) value);
-        case BYTEA_ARRAY_TYPE -> statement.setBytes(parameterIndex, (byte[]) value);
-        default -> throw new IllegalStateException(
-            "unsupported relation key type " + postgresArrayType);
+      switch (type) {
+        case INTEGER -> statement.setInt(parameterIndex, (Integer) value);
+        case TEXT -> statement.setString(parameterIndex, (String) value);
+        case BINARY -> statement.setBytes(parameterIndex, (byte[]) value);
       }
     }
 
     private int jdbcType() {
-      return switch (postgresArrayType) {
-        case INTEGER_ARRAY_TYPE -> Types.INTEGER;
-        case TEXT_ARRAY_TYPE -> Types.VARCHAR;
-        case BYTEA_ARRAY_TYPE -> Types.BINARY;
-        default -> throw new IllegalStateException(
-            "unsupported relation key type " + postgresArrayType);
+      return switch (type) {
+        case INTEGER -> Types.INTEGER;
+        case TEXT -> Types.VARCHAR;
+        case BINARY -> Types.BINARY;
       };
     }
 
-    RelationKeyValue value(UpdatableRecord<?> record) {
-      Object value = field.getValue(record);
-      return switch (postgresArrayType) {
-        case INTEGER_ARRAY_TYPE -> new IntegerRelationKeyValue((Integer) value);
-        case TEXT_ARRAY_TYPE -> new TextRelationKeyValue((String) value);
-        case BYTEA_ARRAY_TYPE -> new ByteArrayRelationKeyValue((byte[]) value);
-        default -> throw new IllegalStateException(
-            "unsupported relation key type " + postgresArrayType);
-      };
+    Integer integerValue(UpdatableRecord<?> record) {
+      return (Integer) field.getValue(record);
+    }
+
+    String textValue(UpdatableRecord<?> record) {
+      return (String) field.getValue(record);
+    }
+
+    BinaryKey binaryValue(UpdatableRecord<?> record) {
+      return new BinaryKey((byte[]) field.getValue(record));
     }
 
     String describeValue(UpdatableRecord<?> record) {
@@ -372,28 +365,117 @@ final class RelationTableRegistry {
     }
   }
 
-  record RelationIdentity(String tableName, List<RelationKeyValue> values) {
+  enum RelationKeyType {
+    INTEGER,
+    TEXT,
+    BINARY
+  }
 
-    RelationIdentity {
-      values = List.copyOf(values);
+  sealed interface RelationIdentity
+      permits IntegerPairIdentity,
+          IntegerTextIdentity,
+          IntegerIntegerTextIdentity,
+          IntegerIntegerBinaryIdentity,
+          IntegerTripleBinaryIdentity {
+
+    static RelationIdentity create(
+        Table<?> table, List<RelationKey> keys, UpdatableRecord<?> record) {
+      return switch (keys.size()) {
+        case 2 -> twoKeyIdentity(table, keys, record);
+        case 3 -> threeKeyIdentity(table, keys, record);
+        case 4 -> fourKeyIdentity(table, keys, record);
+        default -> throw unsupportedShape();
+      };
+    }
+
+    private static RelationIdentity twoKeyIdentity(
+        Table<?> table, List<RelationKey> keys, UpdatableRecord<?> record) {
+      requireType(keys.get(0), RelationKeyType.INTEGER);
+      return switch (keys.get(1).type()) {
+        case INTEGER ->
+            new IntegerPairIdentity(
+                table, keys.get(0).integerValue(record), keys.get(1).integerValue(record));
+        case TEXT ->
+            new IntegerTextIdentity(
+                table, keys.get(0).integerValue(record), keys.get(1).textValue(record));
+        case BINARY -> throw unsupportedShape();
+      };
+    }
+
+    private static RelationIdentity threeKeyIdentity(
+        Table<?> table, List<RelationKey> keys, UpdatableRecord<?> record) {
+      requireType(keys.get(0), RelationKeyType.INTEGER);
+      requireType(keys.get(1), RelationKeyType.INTEGER);
+      return switch (keys.get(2).type()) {
+        case TEXT ->
+            new IntegerIntegerTextIdentity(
+                table,
+                keys.get(0).integerValue(record),
+                keys.get(1).integerValue(record),
+                keys.get(2).textValue(record));
+        case BINARY ->
+            new IntegerIntegerBinaryIdentity(
+                table,
+                keys.get(0).integerValue(record),
+                keys.get(1).integerValue(record),
+                keys.get(2).binaryValue(record));
+        case INTEGER -> throw unsupportedShape();
+      };
+    }
+
+    private static RelationIdentity fourKeyIdentity(
+        Table<?> table, List<RelationKey> keys, UpdatableRecord<?> record) {
+      requireType(keys.get(0), RelationKeyType.INTEGER);
+      requireType(keys.get(1), RelationKeyType.INTEGER);
+      requireType(keys.get(2), RelationKeyType.INTEGER);
+      requireType(keys.get(3), RelationKeyType.BINARY);
+      return new IntegerTripleBinaryIdentity(
+          table,
+          keys.get(0).integerValue(record),
+          keys.get(1).integerValue(record),
+          keys.get(2).integerValue(record),
+          keys.get(3).binaryValue(record));
+    }
+
+    private static void requireType(RelationKey key, RelationKeyType required) {
+      if (key.type() != required) {
+        throw unsupportedShape();
+      }
+    }
+
+    private static IllegalStateException unsupportedShape() {
+      return new IllegalStateException("unsupported canonical relation key shape");
     }
   }
 
-  sealed interface RelationKeyValue
-      permits ByteArrayRelationKeyValue, IntegerRelationKeyValue, TextRelationKeyValue {
+  record IntegerPairIdentity(Table<?> table, Integer first, Integer second)
+      implements RelationIdentity {
   }
 
-  record IntegerRelationKeyValue(Integer value) implements RelationKeyValue {
+  record IntegerTextIdentity(Table<?> table, Integer first, String second)
+      implements RelationIdentity {
   }
 
-  record TextRelationKeyValue(String value) implements RelationKeyValue {
+  record IntegerIntegerTextIdentity(
+      Table<?> table, Integer first, Integer second, String third)
+      implements RelationIdentity {
   }
 
-  static final class ByteArrayRelationKeyValue implements RelationKeyValue {
+  record IntegerIntegerBinaryIdentity(
+      Table<?> table, Integer first, Integer second, BinaryKey third)
+      implements RelationIdentity {
+  }
+
+  record IntegerTripleBinaryIdentity(
+      Table<?> table, Integer first, Integer second, Integer third, BinaryKey fourth)
+      implements RelationIdentity {
+  }
+
+  static final class BinaryKey {
 
     private final byte[] value;
 
-    ByteArrayRelationKeyValue(byte[] value) {
+    BinaryKey(byte[] value) {
       this.value = value == null ? null : value.clone();
     }
 
@@ -403,13 +485,13 @@ final class RelationTableRegistry {
 
     @Override
     public boolean equals(Object candidate) {
-      return candidate instanceof ByteArrayRelationKeyValue other
-          && Arrays.equals(value, other.value);
+      return candidate instanceof BinaryKey other
+          && java.util.Arrays.equals(value, other.value);
     }
 
     @Override
     public int hashCode() {
-      return Arrays.hashCode(value);
+      return java.util.Arrays.hashCode(value);
     }
   }
 }

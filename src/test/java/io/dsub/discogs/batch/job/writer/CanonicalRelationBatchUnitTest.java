@@ -185,6 +185,45 @@ class CanonicalRelationBatchUnitTest {
   }
 
   @Test
+  void rejectsUnsupportedTypedIdentityShapes() {
+    ReleaseItemFormatRecord record = format(1, "Vinyl");
+    RelationTableRegistry.RelationKey integer =
+        new RelationTableRegistry.RelationKey(
+            ReleaseItemFormat.RELEASE_ITEM_FORMAT.RELEASE_ITEM_ID,
+            RelationTableRegistry.RelationKeyType.INTEGER);
+    RelationTableRegistry.RelationKey binary =
+        new RelationTableRegistry.RelationKey(
+            ReleaseItemFormat.RELEASE_ITEM_FORMAT.IDENTITY_SHA256,
+            RelationTableRegistry.RelationKeyType.BINARY);
+
+    assertThatThrownBy(
+            () ->
+                RelationTableRegistry.RelationIdentity.create(
+                    ReleaseItemFormat.RELEASE_ITEM_FORMAT, List.of(integer), record))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("unsupported canonical relation key shape");
+    assertThatThrownBy(
+            () ->
+                RelationTableRegistry.RelationIdentity.create(
+                    ReleaseItemFormat.RELEASE_ITEM_FORMAT, List.of(integer, binary), record))
+        .isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(
+            () ->
+                RelationTableRegistry.RelationIdentity.create(
+                    ReleaseItemFormat.RELEASE_ITEM_FORMAT,
+                    List.of(integer, integer, integer),
+                    record))
+        .isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(
+            () ->
+                RelationTableRegistry.RelationIdentity.create(
+                    ReleaseItemFormat.RELEASE_ITEM_FORMAT,
+                    List.of(binary, integer, integer, binary),
+                    record))
+        .isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
   void validatesRelationOwnershipAndRegisteredTable() throws Exception {
     assertThatThrownBy(
             () ->
@@ -211,23 +250,7 @@ class CanonicalRelationBatchUnitTest {
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("is not a release relation");
 
-    RelationTableRegistry.RelationKey unsupported =
-        new RelationTableRegistry.RelationKey(
-            ReleaseItemFormat.RELEASE_ITEM_FORMAT.HASH, "unsupported");
-    assertThatThrownBy(() -> unsupported.value(format(1, "Vinyl")))
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("unsupported relation key type");
-
     PreparedStatement statement = mock(PreparedStatement.class);
-    ReleaseItemFormatRecord unsupportedValueFormat = format(1, "Vinyl");
-    assertThatThrownBy(() -> unsupported.bind(statement, 1, unsupportedValueFormat))
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("unsupported relation key type");
-    ReleaseItemFormatRecord unsupportedNullFormat = format(1, "Vinyl").setHash(null);
-    assertThatThrownBy(() -> unsupported.bind(statement, 1, unsupportedNullFormat))
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("unsupported relation key type");
-
     RelationTableRegistry.RelationTable formatTable =
         RelationTableRegistry.require(EntityType.RELEASE, ReleaseItemFormat.RELEASE_ITEM_FORMAT);
     RelationTableRegistry.RelationKey identityKey =
@@ -251,19 +274,17 @@ class CanonicalRelationBatchUnitTest {
     labelTable.keys().getLast().bind(statement, 4, label(null));
     verify(statement).setNull(4, Types.VARCHAR);
 
-    assertThat(new RelationTableRegistry.ByteArrayRelationKeyValue((byte[]) null).value()).isNull();
+    assertThat(new RelationTableRegistry.BinaryKey(null).value()).isNull();
     byte[] source = new byte[] {1};
-    RelationTableRegistry.ByteArrayRelationKeyValue binary =
-        new RelationTableRegistry.ByteArrayRelationKeyValue(source);
+    RelationTableRegistry.BinaryKey binary = new RelationTableRegistry.BinaryKey(source);
     source[0] = 2;
     byte[] copy = binary.value();
     copy[0] = 3;
     assertThat(binary.value()).containsExactly(1);
-    RelationTableRegistry.ByteArrayRelationKeyValue same =
-        new RelationTableRegistry.ByteArrayRelationKeyValue(new byte[] {1});
+    RelationTableRegistry.BinaryKey same = new RelationTableRegistry.BinaryKey(new byte[] {1});
     assertThat(binary)
         .isEqualTo(same)
-        .isNotEqualTo(new RelationTableRegistry.ByteArrayRelationKeyValue(new byte[] {2}))
+        .isNotEqualTo(new RelationTableRegistry.BinaryKey(new byte[] {2}))
         .isNotEqualTo("not binary");
     assertThat(binary.hashCode()).isEqualTo(same.hashCode());
   }
