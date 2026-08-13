@@ -64,13 +64,15 @@ final class RelationTableRegistry {
                   ArtistNameVariation.ARTIST_NAME_VARIATION.ARTIST_ID,
                   List.of(ArtistNameVariation.ARTIST_NAME_VARIATION.NAME_VARIATION),
                   integerKey(ArtistNameVariation.ARTIST_NAME_VARIATION.ARTIST_ID),
-                  integerKey(ArtistNameVariation.ARTIST_NAME_VARIATION.HASH)),
+                  integerKey(ArtistNameVariation.ARTIST_NAME_VARIATION.HASH),
+                  byteaKey(ArtistNameVariation.ARTIST_NAME_VARIATION.IDENTITY_SHA256)),
               table(
                   ArtistUrl.ARTIST_URL,
                   ArtistUrl.ARTIST_URL.ARTIST_ID,
                   List.of(ArtistUrl.ARTIST_URL.URL),
                   integerKey(ArtistUrl.ARTIST_URL.ARTIST_ID),
-                  integerKey(ArtistUrl.ARTIST_URL.HASH)));
+                  integerKey(ArtistUrl.ARTIST_URL.HASH),
+                  byteaKey(ArtistUrl.ARTIST_URL.IDENTITY_SHA256)));
       case LABEL ->
           List.of(
               table(
@@ -83,7 +85,8 @@ final class RelationTableRegistry {
                   LabelUrl.LABEL_URL.LABEL_ID,
                   List.of(LabelUrl.LABEL_URL.URL),
                   integerKey(LabelUrl.LABEL_URL.LABEL_ID),
-                  integerKey(LabelUrl.LABEL_URL.HASH)));
+                  integerKey(LabelUrl.LABEL_URL.HASH),
+                  byteaKey(LabelUrl.LABEL_URL.IDENTITY_SHA256)));
       case MASTER ->
           List.of(
               table(
@@ -109,7 +112,8 @@ final class RelationTableRegistry {
                       MasterVideo.MASTER_VIDEO.TITLE,
                       MasterVideo.MASTER_VIDEO.URL),
                   integerKey(MasterVideo.MASTER_VIDEO.MASTER_ID),
-                  integerKey(MasterVideo.MASTER_VIDEO.HASH)));
+                  integerKey(MasterVideo.MASTER_VIDEO.HASH),
+                  byteaKey(MasterVideo.MASTER_VIDEO.IDENTITY_SHA256)));
       case RELEASE ->
           List.of(
               table(
@@ -282,6 +286,12 @@ final class RelationTableRegistry {
     boolean hasSamePayload(TableRecord<?> left, TableRecord<?> right) {
       return payloadFields.stream()
           .allMatch(field -> Objects.equals(field.getValue(left), field.getValue(right)));
+    }
+
+    boolean hasSameLegacyHash(TableRecord<?> left, TableRecord<?> right) {
+      return keys.stream()
+          .filter(key -> key.field().getName().equals(HASH_FIELD_NAME))
+          .allMatch(key -> Objects.equals(key.field().getValue(left), key.field().getValue(right)));
     }
 
     void requireRoot(TableRecord<?> record, int rootId) {

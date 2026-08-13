@@ -130,6 +130,14 @@ seconds with zero duplicate or non-monotonic roots. The corrected allocator
 accepted every root, including four conflicting identifier rows and 14
 conflicting track rows that the legacy 32-bit keys could not distinguish.
 
+The model-defined non-release relation identity applies the same collision-resistant
+transition to artist name variations and URLs, label URLs, and master videos.
+Artist `33476` contains `Al Thompson` and `C. Thompson`; both have Java hash
+`-1130078775` and must survive as distinct SHA-256 identities. The Java importer
+reads the Artist, Label, and Master contract revisions from the canonical model
+artifact, so checkpoints and interrupted progress created with the earlier hash
+semantics are not reused.
+
 ## Interruption and resume
 
 Graceful shutdown cancels active work and rolls back the active transaction.

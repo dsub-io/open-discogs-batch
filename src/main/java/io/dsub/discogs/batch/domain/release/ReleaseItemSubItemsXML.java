@@ -1,5 +1,6 @@
 package io.dsub.discogs.batch.domain.release;
 
+import io.dsub.discogs.batch.domain.CanonicalRelationIdentity;
 import io.dsub.discogs.batch.domain.HashXML;
 import io.dsub.discogs.batch.domain.SubItemXML;
 import io.dsub.discogs.batch.util.DiscogsStringNormalizer;
@@ -150,8 +151,8 @@ public class ReleaseItemSubItemsXML {
           .setRole(role)
           .setHash(getHashValue())
           .setIdentitySha256(
-              ReleaseRelationIdentity.digest(
-                  ReleaseRelationIdentity.Relation.CREDITED_ARTIST, role))
+              CanonicalRelationIdentity.digest(
+                  CanonicalRelationIdentity.Relation.CREDITED_ARTIST, role))
           .setLastModifiedAt(observedAt);
     }
   }
@@ -228,8 +229,8 @@ public class ReleaseItemSubItemsXML {
           .setDescription(reducedDescription)
           .setHash(hashValue(reducedDescription, canonicalQuantity))
           .setIdentitySha256(
-              ReleaseRelationIdentity.digest(
-                  ReleaseRelationIdentity.Relation.FORMAT,
+              CanonicalRelationIdentity.digest(
+                  CanonicalRelationIdentity.Relation.FORMAT,
                   name,
                   reducedDescription,
                   canonicalQuantity,
@@ -314,8 +315,8 @@ public class ReleaseItemSubItemsXML {
           .setDuration(duration)
           .setHash(getHashValue())
           .setIdentitySha256(
-              ReleaseRelationIdentity.digest(
-                  ReleaseRelationIdentity.Relation.TRACK, position, title, duration))
+              CanonicalRelationIdentity.digest(
+                  CanonicalRelationIdentity.Relation.TRACK, position, title, duration))
           .setLastModifiedAt(observedAt);
     }
   }
@@ -347,8 +348,8 @@ public class ReleaseItemSubItemsXML {
           .setValue(value)
           .setHash(getHashValue())
           .setIdentitySha256(
-              ReleaseRelationIdentity.digest(
-                  ReleaseRelationIdentity.Relation.IDENTIFIER, type, description, value))
+              CanonicalRelationIdentity.digest(
+                  CanonicalRelationIdentity.Relation.IDENTIFIER, type, description, value))
           .setLastModifiedAt(observedAt);
     }
   }
@@ -375,8 +376,8 @@ public class ReleaseItemSubItemsXML {
           .setWork(work)
           .setHash(getHashValue())
           .setIdentitySha256(
-              ReleaseRelationIdentity.digest(
-                  ReleaseRelationIdentity.Relation.WORK, work))
+              CanonicalRelationIdentity.digest(
+                  CanonicalRelationIdentity.Relation.WORK, work))
           .setLabelId(id)
           .setLastModifiedAt(observedAt);
     }
@@ -409,8 +410,8 @@ public class ReleaseItemSubItemsXML {
           .setUrl(url)
           .setHash(getHashValue())
           .setIdentitySha256(
-              ReleaseRelationIdentity.digest(
-                  ReleaseRelationIdentity.Relation.VIDEO, title, description, url))
+              CanonicalRelationIdentity.digest(
+                  CanonicalRelationIdentity.Relation.VIDEO, title, description, url))
           .setLastModifiedAt(observedAt);
     }
   }

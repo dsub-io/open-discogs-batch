@@ -22,10 +22,10 @@ final class CanonicalRelationBatch {
 
   static CanonicalBatch prepare(
       List<? extends RelationSet> relationSets, EntityType entityType) {
-    ReleaseRelationSlotAllocator.assignCanonicalDigests(relationSets, entityType);
+    RelationSlotAllocator.assignCanonicalDigests(relationSets, entityType);
     List<RelationSet> semanticSets =
         collapseByIdentity(relationSets, entityType, IdentityKind.SEMANTIC);
-    ReleaseRelationSlotAllocator.allocateAssignedDigests(semanticSets, entityType);
+    RelationSlotAllocator.allocateAssignedDigests(semanticSets, entityType);
     List<RelationSet> physicalSets =
         collapseByIdentity(semanticSets, entityType, IdentityKind.PHYSICAL);
 
@@ -66,6 +66,11 @@ final class CanonicalRelationBatch {
         } else if (!relationTable.hasSamePayload(existing.record(), record)) {
           throw new IllegalArgumentException(
               "conflicting persisted payload for " + relationTable.table().getName()
+                  + " (" + relationTable.describeSemanticIdentity(record) + ")");
+        } else if (identityKind == IdentityKind.SEMANTIC
+            && !relationTable.hasSameLegacyHash(existing.record(), record)) {
+          throw new IllegalArgumentException(
+              "conflicting legacy hash for " + relationTable.table().getName()
                   + " (" + relationTable.describeSemanticIdentity(record) + ")");
         }
       }

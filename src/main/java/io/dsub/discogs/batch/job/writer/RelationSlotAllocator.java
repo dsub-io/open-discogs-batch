@@ -1,5 +1,9 @@
 package io.dsub.discogs.batch.job.writer;
 
+import static io.dsub.opendiscogs.jooq.tables.ArtistNameVariation.ARTIST_NAME_VARIATION;
+import static io.dsub.opendiscogs.jooq.tables.ArtistUrl.ARTIST_URL;
+import static io.dsub.opendiscogs.jooq.tables.LabelUrl.LABEL_URL;
+import static io.dsub.opendiscogs.jooq.tables.MasterVideo.MASTER_VIDEO;
 import static io.dsub.opendiscogs.jooq.tables.ReleaseItemCreditedArtist.RELEASE_ITEM_CREDITED_ARTIST;
 import static io.dsub.opendiscogs.jooq.tables.ReleaseItemFormat.RELEASE_ITEM_FORMAT;
 import static io.dsub.opendiscogs.jooq.tables.ReleaseItemIdentifier.RELEASE_ITEM_IDENTIFIER;
@@ -7,7 +11,7 @@ import static io.dsub.opendiscogs.jooq.tables.ReleaseItemTrack.RELEASE_ITEM_TRAC
 import static io.dsub.opendiscogs.jooq.tables.ReleaseItemVideo.RELEASE_ITEM_VIDEO;
 import static io.dsub.opendiscogs.jooq.tables.ReleaseItemWork.RELEASE_ITEM_WORK;
 
-import io.dsub.discogs.batch.domain.release.ReleaseRelationIdentity;
+import io.dsub.discogs.batch.domain.CanonicalRelationIdentity;
 import io.dsub.discogs.batch.dump.EntityType;
 import io.dsub.discogs.batch.job.processor.RelationSet;
 import java.util.ArrayList;
@@ -21,56 +25,82 @@ import java.util.Set;
 import org.jooq.Field;
 import org.jooq.TableRecord;
 
-/** Allocates deterministic legacy hash slots for distinct SHA-256 relation identities. */
-final class ReleaseRelationSlotAllocator {
+/** Assigns canonical digests and deterministic compatibility slots to hash-keyed relations. */
+final class RelationSlotAllocator {
 
   private static final String HASH_FIELD = "hash";
   private static final String IDENTITY_FIELD = "identity_sha256";
   private static final long UNSIGNED_INT_COUNT = 1L << Integer.SIZE;
 
   private static final Map<String, RelationDescriptor> RELATIONS =
-      Map.of(
-          RELEASE_ITEM_CREDITED_ARTIST.getName(),
+      Map.ofEntries(
+          Map.entry(
+              ARTIST_NAME_VARIATION.getName(),
               new RelationDescriptor(
-                  ReleaseRelationIdentity.Relation.CREDITED_ARTIST,
-                  List.of(RELEASE_ITEM_CREDITED_ARTIST.ROLE)),
-          RELEASE_ITEM_FORMAT.getName(),
+                  CanonicalRelationIdentity.Relation.ARTIST_NAME_VARIATION,
+                  List.of(ARTIST_NAME_VARIATION.NAME_VARIATION))),
+          Map.entry(
+              ARTIST_URL.getName(),
               new RelationDescriptor(
-                  ReleaseRelationIdentity.Relation.FORMAT,
+                  CanonicalRelationIdentity.Relation.ARTIST_URL,
+                  List.of(ARTIST_URL.URL))),
+          Map.entry(
+              LABEL_URL.getName(),
+              new RelationDescriptor(
+                  CanonicalRelationIdentity.Relation.LABEL_URL,
+                  List.of(LABEL_URL.URL))),
+          Map.entry(
+              MASTER_VIDEO.getName(),
+              new RelationDescriptor(
+                  CanonicalRelationIdentity.Relation.MASTER_VIDEO,
+                  List.of(MASTER_VIDEO.TITLE, MASTER_VIDEO.DESCRIPTION, MASTER_VIDEO.URL))),
+          Map.entry(
+              RELEASE_ITEM_CREDITED_ARTIST.getName(),
+              new RelationDescriptor(
+                  CanonicalRelationIdentity.Relation.CREDITED_ARTIST,
+                  List.of(RELEASE_ITEM_CREDITED_ARTIST.ROLE))),
+          Map.entry(
+              RELEASE_ITEM_FORMAT.getName(),
+              new RelationDescriptor(
+                  CanonicalRelationIdentity.Relation.FORMAT,
                   record ->
                       new String[] {
                           RELEASE_ITEM_FORMAT.NAME.getValue(record),
                           RELEASE_ITEM_FORMAT.DESCRIPTION.getValue(record),
                           canonicalFormatQuantity(record),
                           RELEASE_ITEM_FORMAT.TEXT.getValue(record)
-                      }),
-          RELEASE_ITEM_IDENTIFIER.getName(),
+                      })),
+          Map.entry(
+              RELEASE_ITEM_IDENTIFIER.getName(),
               new RelationDescriptor(
-                  ReleaseRelationIdentity.Relation.IDENTIFIER,
+                  CanonicalRelationIdentity.Relation.IDENTIFIER,
                   List.of(
                       RELEASE_ITEM_IDENTIFIER.TYPE,
                       RELEASE_ITEM_IDENTIFIER.DESCRIPTION,
-                      RELEASE_ITEM_IDENTIFIER.VALUE)),
-          RELEASE_ITEM_TRACK.getName(),
+                      RELEASE_ITEM_IDENTIFIER.VALUE))),
+          Map.entry(
+              RELEASE_ITEM_TRACK.getName(),
               new RelationDescriptor(
-                  ReleaseRelationIdentity.Relation.TRACK,
+                  CanonicalRelationIdentity.Relation.TRACK,
                   List.of(
                       RELEASE_ITEM_TRACK.POSITION,
                       RELEASE_ITEM_TRACK.TITLE,
-                      RELEASE_ITEM_TRACK.DURATION)),
-          RELEASE_ITEM_VIDEO.getName(),
+                      RELEASE_ITEM_TRACK.DURATION))),
+          Map.entry(
+              RELEASE_ITEM_VIDEO.getName(),
               new RelationDescriptor(
-                  ReleaseRelationIdentity.Relation.VIDEO,
+                  CanonicalRelationIdentity.Relation.VIDEO,
                   List.of(
                       RELEASE_ITEM_VIDEO.TITLE,
                       RELEASE_ITEM_VIDEO.DESCRIPTION,
-                      RELEASE_ITEM_VIDEO.URL)),
-          RELEASE_ITEM_WORK.getName(),
+                      RELEASE_ITEM_VIDEO.URL))),
+          Map.entry(
+              RELEASE_ITEM_WORK.getName(),
               new RelationDescriptor(
-                  ReleaseRelationIdentity.Relation.WORK,
-                  List.of(RELEASE_ITEM_WORK.WORK)));
+                  CanonicalRelationIdentity.Relation.WORK,
+                  List.of(RELEASE_ITEM_WORK.WORK))));
 
-  private ReleaseRelationSlotAllocator() {
+  private RelationSlotAllocator() {
   }
 
   static void allocate(
@@ -84,11 +114,9 @@ final class ReleaseRelationSlotAllocator {
 
   static void assignCanonicalDigests(
       List<? extends RelationSet> relationSets, EntityType entityType) {
-    if (entityType != EntityType.RELEASE) {
-      return;
-    }
     for (RelationSet relationSet : relationSets) {
       for (TableRecord<?> record : relationSet.records()) {
+        RelationTableRegistry.require(entityType, record.getTable());
         RelationDescriptor descriptor = RELATIONS.get(record.getTable().getName());
         if (descriptor == null) {
           continue;
@@ -98,7 +126,7 @@ final class ReleaseRelationSlotAllocator {
         Integer legacyHash = hashField.getValue(record);
         if (legacyHash == null) {
           throw new IllegalArgumentException(
-              "release relation identity is incomplete for " + record.getTable().getName());
+              "relation identity is incomplete for " + record.getTable().getName());
         }
         byte[] digest = descriptor.digest(record);
         record.set(identityField, digest);
@@ -112,7 +140,7 @@ final class ReleaseRelationSlotAllocator {
         relationSets,
         entityType,
         UNSIGNED_INT_COUNT,
-        ReleaseRelationIdentity::compatibilitySlot);
+        CanonicalRelationIdentity::compatibilitySlot);
   }
 
   private static void allocateAssignedDigests(
@@ -120,9 +148,6 @@ final class ReleaseRelationSlotAllocator {
       EntityType entityType,
       long attemptCount,
       CompatibilitySlotGenerator slotGenerator) {
-    if (entityType != EntityType.RELEASE) {
-      return;
-    }
     Map<Scope, ScopeRows> scopes = new LinkedHashMap<>();
     for (RelationSet relationSet : relationSets) {
       for (TableRecord<?> record : relationSet.records()) {
@@ -136,7 +161,7 @@ final class ReleaseRelationSlotAllocator {
         byte[] digest = identityField.getValue(record);
         if (legacyHash == null || digest == null || digest.length != 32) {
           throw new IllegalArgumentException(
-              "release relation identity is incomplete for " + record.getTable().getName());
+              "relation identity is incomplete for " + record.getTable().getName());
         }
         RelationTableRegistry.RelationTable relationTable =
             RelationTableRegistry.require(entityType, record.getTable());
@@ -165,10 +190,10 @@ final class ReleaseRelationSlotAllocator {
   }
 
   private record RelationDescriptor(
-      ReleaseRelationIdentity.Relation relation, IdentityFieldValues identityFieldValues) {
+      CanonicalRelationIdentity.Relation relation, IdentityFieldValues identityFieldValues) {
 
     RelationDescriptor(
-        ReleaseRelationIdentity.Relation relation, List<Field<String>> identityFields) {
+        CanonicalRelationIdentity.Relation relation, List<Field<String>> identityFields) {
       this(
           relation,
           record ->
@@ -178,7 +203,7 @@ final class ReleaseRelationSlotAllocator {
     }
 
     byte[] digest(TableRecord<?> record) {
-      return ReleaseRelationIdentity.digest(relation, identityFieldValues.values(record));
+      return CanonicalRelationIdentity.digest(relation, identityFieldValues.values(record));
     }
   }
 
@@ -199,7 +224,7 @@ final class ReleaseRelationSlotAllocator {
 
   private static final class ScopeRows {
 
-    private final ReleaseRelationIdentity.Relation relation;
+    private final CanonicalRelationIdentity.Relation relation;
     private final long attemptCount;
     private final CompatibilitySlotGenerator slotGenerator;
     private final Set<Integer> reserved = new HashSet<>();
@@ -207,7 +232,7 @@ final class ReleaseRelationSlotAllocator {
     private final Set<DigestKey> semanticIdentities = new HashSet<>();
 
     private ScopeRows(
-        ReleaseRelationIdentity.Relation relation,
+        CanonicalRelationIdentity.Relation relation,
         long attemptCount,
         CompatibilitySlotGenerator slotGenerator) {
       this.relation = relation;
@@ -219,7 +244,7 @@ final class ReleaseRelationSlotAllocator {
       DigestKey digest = new DigestKey(row.digest());
       if (!semanticIdentities.add(digest)) {
         throw new IllegalStateException(
-            "release relation semantic identities must be canonicalized before slot allocation");
+            "relation semantic identities must be canonicalized before slot allocation");
       }
       reserved.add(row.legacyHash());
       groups.computeIfAbsent(row.legacyHash(), ignored -> new LinkedHashMap<>())
@@ -250,7 +275,7 @@ final class ReleaseRelationSlotAllocator {
             break;
           }
           if (!allocated) {
-            throw new IllegalStateException("signed 32-bit release relation slot space exhausted");
+            throw new IllegalStateException("signed 32-bit relation slot space exhausted");
           }
         }
       }
@@ -298,6 +323,6 @@ final class ReleaseRelationSlotAllocator {
   @FunctionalInterface
   interface CompatibilitySlotGenerator {
 
-    int generate(ReleaseRelationIdentity.Relation relation, byte[] digest, int attempt);
+    int generate(CanonicalRelationIdentity.Relation relation, byte[] digest, int attempt);
   }
 }

@@ -6,7 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.zaxxer.hikari.HikariDataSource;
 import io.dsub.discogs.batch.container.PostgreSQLIntegrationSupport;
 import io.dsub.discogs.batch.dump.EntityType;
-import io.dsub.discogs.batch.domain.release.ReleaseRelationIdentity;
+import io.dsub.discogs.batch.domain.CanonicalRelationIdentity;
 import io.dsub.discogs.batch.job.processor.RelationSet;
 import io.dsub.opendiscogs.jooq.tables.records.ArtistRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ArtistUrlRecord;
@@ -97,7 +97,8 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
         "migrations/V016__release_work_identity.sql",
         "migrations/V017__remove_relation_created_at.sql",
         "migrations/V018__catalog_readiness_state.sql",
-        "migrations/V019__remove_relation_surrogate_ids.sql")) {
+        "migrations/V019__remove_relation_surrogate_ids.sql",
+        "migrations/V021__non_release_relation_identity.sql")) {
       executeMigration(root, resource);
     }
 
@@ -579,8 +580,8 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
         .setQuantity(quantity)
         .setQuantityText(Integer.toString(quantity))
         .setIdentitySha256(
-            ReleaseRelationIdentity.digest(
-                ReleaseRelationIdentity.Relation.FORMAT,
+            CanonicalRelationIdentity.digest(
+                CanonicalRelationIdentity.Relation.FORMAT,
                 "Vinyl", "[d:LP]", Integer.toString(quantity), "Limited"))
         .setLastModifiedAt(modifiedAt);
   }
@@ -593,8 +594,8 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
         .setTitle("Track")
         .setDuration("3:00")
         .setIdentitySha256(
-            ReleaseRelationIdentity.digest(
-                ReleaseRelationIdentity.Relation.TRACK, "A1", "Track", "3:00"))
+            CanonicalRelationIdentity.digest(
+                CanonicalRelationIdentity.Relation.TRACK, "A1", "Track", "3:00"))
         .setLastModifiedAt(modifiedAt);
   }
 
@@ -612,8 +613,8 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
         .setTitle(title)
         .setDuration(null)
         .setIdentitySha256(
-            ReleaseRelationIdentity.digest(
-                ReleaseRelationIdentity.Relation.TRACK, position, title, null))
+            CanonicalRelationIdentity.digest(
+                CanonicalRelationIdentity.Relation.TRACK, position, title, null))
         .setLastModifiedAt(FIRST_WRITE);
   }
 
@@ -625,8 +626,8 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
         .setQuantity(null)
         .setQuantityText(OVERSIZED_QUANTITY)
         .setIdentitySha256(
-            ReleaseRelationIdentity.digest(
-                ReleaseRelationIdentity.Relation.FORMAT,
+            CanonicalRelationIdentity.digest(
+                CanonicalRelationIdentity.Relation.FORMAT,
                 "File", null, OVERSIZED_QUANTITY, null))
         .setLastModifiedAt(FIRST_WRITE);
   }
@@ -639,8 +640,8 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
         .setDescription("Text")
         .setValue("123")
         .setIdentitySha256(
-            ReleaseRelationIdentity.digest(
-                ReleaseRelationIdentity.Relation.IDENTIFIER, "Barcode", "Text", "123"))
+            CanonicalRelationIdentity.digest(
+                CanonicalRelationIdentity.Relation.IDENTIFIER, "Barcode", "Text", "123"))
         .setLastModifiedAt(modifiedAt);
   }
 
@@ -651,8 +652,8 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
         .setHash(104)
         .setWork("Pressed By")
         .setIdentitySha256(
-            ReleaseRelationIdentity.digest(
-                ReleaseRelationIdentity.Relation.WORK, "Pressed By"))
+            CanonicalRelationIdentity.digest(
+                CanonicalRelationIdentity.Relation.WORK, "Pressed By"))
         .setLastModifiedAt(modifiedAt);
   }
 
@@ -664,8 +665,8 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
         .setDescription("Description")
         .setUrl("https://video.example")
         .setIdentitySha256(
-            ReleaseRelationIdentity.digest(
-                ReleaseRelationIdentity.Relation.VIDEO,
+            CanonicalRelationIdentity.digest(
+                CanonicalRelationIdentity.Relation.VIDEO,
                 "Video", "Description", "https://video.example"))
         .setLastModifiedAt(modifiedAt);
   }
@@ -677,8 +678,8 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
         .setHash(106)
         .setRole("Producer")
         .setIdentitySha256(
-            ReleaseRelationIdentity.digest(
-                ReleaseRelationIdentity.Relation.CREDITED_ARTIST, "Producer"))
+            CanonicalRelationIdentity.digest(
+                CanonicalRelationIdentity.Relation.CREDITED_ARTIST, "Producer"))
         .setLastModifiedAt(modifiedAt);
   }
 }

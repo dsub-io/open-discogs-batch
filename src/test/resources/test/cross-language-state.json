@@ -9,15 +9,15 @@
     },
     {
       "id": 2,
-      "name": "Mr. James Barth \u0026 A.D.",
+      "name": "Mr. James Barth & A.D.",
       "profile": null,
-      "real_name": "Cari Lekebusch \u0026 Alexi Delano",
+      "real_name": "Cari Lekebusch & Alexi Delano",
       "data_quality": "Correct"
     },
     {
       "id": 3,
       "name": "Josh Wink",
-      "profile": "After forming [l=Ovum Recordings] as an independent label in October 1994 with former\n      partner [a=King Britt], Josh recorded the cult classic \"Liquid Summer.\" \r\n      \r\n      He went on to release singles for a wide variety of revered European labels ranging from\n      Belgium's [l=R \u0026 S Records] to England's [l=XL Recordings]. In 1995, Wink became one of\n      the first DJ-producers to translate his hard work into mainstream success when he unleashed a\n      string of classics including \"Don't Laugh,\" \"I'm Ready,\" and \"Higher State of Consciousness,\"\n      that topped charts worldwide. More recently he has had massive club hits such as \"How's Your\n      Evening So Far,\" and \"Superfreak,\" but he has also gained a lot of attention through his\n      remixes for [a=FC Kahuna], [a=Paul Oakenfold], [a=Ladytron], [a=Clint Mansell], [a=Sting] and\n      [a=Depeche Mode], among others.",
+      "profile": "After forming [l=Ovum Recordings] as an independent label in October 1994 with former\n      partner [a=King Britt], Josh recorded the cult classic \"Liquid Summer.\" \r\n      \r\n      He went on to release singles for a wide variety of revered European labels ranging from\n      Belgium's [l=R & S Records] to England's [l=XL Recordings]. In 1995, Wink became one of\n      the first DJ-producers to translate his hard work into mainstream success when he unleashed a\n      string of classics including \"Don't Laugh,\" \"I'm Ready,\" and \"Higher State of Consciousness,\"\n      that topped charts worldwide. More recently he has had massive club hits such as \"How's Your\n      Evening So Far,\" and \"Superfreak,\" but he has also gained a lot of attention through his\n      remixes for [a=FC Kahuna], [a=Paul Oakenfold], [a=Ladytron], [a=Clint Mansell], [a=Sting] and\n      [a=Depeche Mode], among others.",
       "real_name": "Joshua Winkelman",
       "data_quality": "Needs Vote"
     }
@@ -48,259 +48,310 @@
     {
       "hash": -108841848,
       "artist_id": 3,
-      "name_variation": "J. Winkelman"
+      "name_variation": "J. Winkelman",
+      "identity_sha256": "\\xf72df781044b0f23ff6bc899105f55890946a93e0ae33f60b953af1e1a99f5c8"
     },
     {
       "hash": -1151638115,
       "artist_id": 3,
-      "name_variation": "Josh Wink (DJ Wink)"
+      "name_variation": "Josh Wink (DJ Wink)",
+      "identity_sha256": "\\x802e8db81d7b1b8ba2388604df72b7d35bc42df2462abc916d79b4338de4e792"
     },
     {
       "hash": -1275716287,
       "artist_id": 2,
-      "name_variation": "Mr. Barth \u0026 A.D."
+      "name_variation": "Mr. Barth & A.D.",
+      "identity_sha256": "\\x61d155d86b8114a157e6770442b8bb61280291d8b0e6a17bd1a2870f8577b131"
     },
     {
       "hash": -1432653649,
       "artist_id": 1,
-      "name_variation": "Persuader"
+      "name_variation": "Persuader",
+      "identity_sha256": "\\x9713514f6af4ddcf341bd2a5ffa5b08a38243725c515394a71326090902cc241"
     },
     {
       "hash": -1514976674,
       "artist_id": 3,
-      "name_variation": "Josh Winkelman"
+      "name_variation": "Josh Winkelman",
+      "identity_sha256": "\\x54ad1f047ec266de4672e8ac603a4ac1f60112d61cbc54164e9eaa9b85088f62"
     },
     {
       "hash": -1695014485,
       "artist_id": 3,
-      "name_variation": "J. Wink"
+      "name_variation": "J. Wink",
+      "identity_sha256": "\\xae4f39c3f989f0bc30028f5ddf2208f021cff8864c86ac190906f1074d3e92fe"
     },
     {
       "hash": -1923453047,
       "artist_id": 3,
-      "name_variation": "DJ Wink"
+      "name_variation": "DJ Wink",
+      "identity_sha256": "\\xe3b54cdb6d7a12e1e94e13a7a8cb586ac3c3efd4f74a3ef69b833de9e1e0d3f2"
     },
     {
       "hash": -2131231917,
       "artist_id": 3,
-      "name_variation": "J.Wink"
+      "name_variation": "J.Wink",
+      "identity_sha256": "\\x2e944503871b6b092ba2f33f83ab3f8c190f8823d9b02c106737ed1ee129ebde"
     },
     {
       "hash": -2132887720,
       "artist_id": 3,
-      "name_variation": "J. Wnk"
+      "name_variation": "J. Wnk",
+      "identity_sha256": "\\xc38b74a4454cb274d4ff63f76bfa586ee8d0277edb9e81e23493c238eef639a9"
     },
     {
       "hash": -2144161211,
       "artist_id": 3,
-      "name_variation": "J Wink"
+      "name_variation": "J Wink",
+      "identity_sha256": "\\x8a6131af9e00f3067ee5d3373e478924bbe9a331172996e3d94d867cdf9e8807"
     },
     {
       "hash": -336875354,
       "artist_id": 1,
-      "name_variation": "The Presuader"
+      "name_variation": "The Presuader",
+      "identity_sha256": "\\x1eceb594a904ba775486d6c448496095c3d309596ec6cc6c6414d2fbf7f78ebd"
     },
     {
       "hash": -476011505,
       "artist_id": 3,
-      "name_variation": "Dosh Wink"
+      "name_variation": "Dosh Wink",
+      "identity_sha256": "\\x697f776142163ece9847262f86bd877adeded9fc8b7af87ba9153be88f35f3f9"
     },
     {
       "hash": -520191267,
       "artist_id": 3,
-      "name_variation": "Wink, Josh"
+      "name_variation": "Wink, Josh",
+      "identity_sha256": "\\x7febe9baf8049e71f2a432d112a338a799c11937cce9595c8dfaefadffc093f2"
     },
     {
       "hash": -582380539,
       "artist_id": 2,
-      "name_variation": "Mr Barth \u0026 A.D."
+      "name_variation": "Mr Barth & A.D.",
+      "identity_sha256": "\\x9fd1588b3d9324e74f8b5eef5f26f62f0916daa93c0dafa5e4e9bd3637d33a09"
     },
     {
       "hash": -72025349,
       "artist_id": 3,
-      "name_variation": "DJ Josh Wink"
+      "name_variation": "DJ Josh Wink",
+      "identity_sha256": "\\x541e33e0f062a0c08aa9124ae014486fcab419fdce0b9251f43ad306f931f85e"
     },
     {
       "hash": 1103154064,
       "artist_id": 3,
-      "name_variation": "Josh Wink \"DJ Wink\""
+      "name_variation": "Josh Wink \"DJ Wink\"",
+      "identity_sha256": "\\xd244f7b618ded2b681ff8abf0a160a5bf6c83dee3390a249868d7b195f0f34b6"
     },
     {
       "hash": 110708147,
       "artist_id": 3,
-      "name_variation": "J. Wink (DJ Wink)"
+      "name_variation": "J. Wink (DJ Wink)",
+      "identity_sha256": "\\x91d5838817ff799605ccd80dde85427f7b2654d3cd6b8ce2df4bb38af3228d36"
     },
     {
       "hash": 1244431614,
       "artist_id": 3,
-      "name_variation": "Josh Winks"
+      "name_variation": "Josh Winks",
+      "identity_sha256": "\\x66bf08614749d91837e295af8d4b3b552ab169653444d8977329788a61821b2f"
     },
     {
       "hash": 1276483187,
       "artist_id": 2,
-      "name_variation": "MR JAMES BARTH \u0026 A. D."
+      "name_variation": "MR JAMES BARTH & A. D.",
+      "identity_sha256": "\\xdae7714b2fe941a78d4ff98612b17ab2d4685601f6ac382df58c47259871698d"
     },
     {
       "hash": 1478676304,
       "artist_id": 3,
-      "name_variation": "Josh Wink (Dj Winx)"
+      "name_variation": "Josh Wink (Dj Winx)",
+      "identity_sha256": "\\x67f068997724160fa675e5a0eebc53e26046d5745f9fa38714c33fca34ad1804"
     },
     {
       "hash": 1564163618,
       "artist_id": 3,
-      "name_variation": "Josh Winx"
+      "name_variation": "Josh Winx",
+      "identity_sha256": "\\xcdf1b981a973078e6413e601302015a35a3aa064e4000f51324c2f94fc5c4d2f"
     },
     {
       "hash": 1697719264,
       "artist_id": 3,
-      "name_variation": "J.Winkelman"
+      "name_variation": "J.Winkelman",
+      "identity_sha256": "\\xe1c7453bf2723f7090f7cc7817b3e21fe64da61deb74af6c6d3812a895259b63"
     },
     {
       "hash": 2314874,
       "artist_id": 3,
-      "name_variation": "Josh"
+      "name_variation": "Josh",
+      "identity_sha256": "\\xcf5901be62ba1e2b728b24987c6843f233f1d6cdaffa866ef3239ab615b004b4"
     },
     {
       "hash": 2368551,
       "artist_id": 3,
-      "name_variation": "Linx"
+      "name_variation": "Linx",
+      "identity_sha256": "\\x8e85afb33434d21b459a368e4cd7eb76907a2c3fffb76ac331c8d74159e1020e"
     },
     {
       "hash": 2381,
       "artist_id": 3,
-      "name_variation": "JW"
+      "name_variation": "JW",
+      "identity_sha256": "\\xe296920a4a165027c66f470bc407d326d4a3e3b748f04a7b0968bd5b9190ea75"
     },
     {
       "hash": 2696231,
       "artist_id": 3,
-      "name_variation": "Winc"
+      "name_variation": "Winc",
+      "identity_sha256": "\\xd2f254dce2481f7395ee8cdc50f0e5115bb28ef17c447411b3511c0ba479df89"
     },
     {
       "hash": 2696235,
       "artist_id": 3,
-      "name_variation": "Wing"
+      "name_variation": "Wing",
+      "identity_sha256": "\\xd9efdd27fa02d637b1f52c997f484f79ccbc9944abc51f84fe32cafe2460a0bf"
     },
     {
       "hash": 2696239,
       "artist_id": 3,
-      "name_variation": "Wink"
+      "name_variation": "Wink",
+      "identity_sha256": "\\x595bca6f4afa6c3f09827b4a32e8a0931974142888267452a8fa948def6b715a"
     },
     {
       "hash": 2696252,
       "artist_id": 3,
-      "name_variation": "Winx"
+      "name_variation": "Winx",
+      "identity_sha256": "\\x3cca4dee1a44ec0cb4760bbd0703b257ea32b226a228596f0475288189243bb9"
     },
     {
       "hash": 280363472,
       "artist_id": 3,
-      "name_variation": "Josh Winkelmann"
+      "name_variation": "Josh Winkelmann",
+      "identity_sha256": "\\xe06804c4844679ee4593c98bf3427c29de6a9fe512362bc724060f557de63043"
     },
     {
       "hash": 41562583,
       "artist_id": 2,
-      "name_variation": "Mr. James Barth \u0026 A. D."
+      "name_variation": "Mr. James Barth & A. D.",
+      "identity_sha256": "\\x217a534f821f727a78bca69f9d754a7c6a07859602891f1d4b0600362ac0e90b"
     },
     {
       "hash": 83581172,
       "artist_id": 3,
-      "name_variation": "Win X"
+      "name_variation": "Win X",
+      "identity_sha256": "\\x74b6666295874e76f16e4c060484594012004bc4e55cac2f2afd9cec33f2afda"
     },
     {
       "hash": 83583400,
       "artist_id": 3,
-      "name_variation": "Wings"
+      "name_variation": "Wings",
+      "identity_sha256": "\\xf6a04aa8e60a71471b676d7f481a56cf466b6645d05c273a1552e86d16fd19c0"
     },
     {
       "hash": 83583524,
       "artist_id": 3,
-      "name_variation": "Winks"
+      "name_variation": "Winks",
+      "identity_sha256": "\\xf11cc958884a88206374875ca2ff0fc61d3c19dc8751e355672c334b76f7a817"
     },
     {
       "hash": 83583927,
       "artist_id": 3,
-      "name_variation": "Winxs"
+      "name_variation": "Winxs",
+      "identity_sha256": "\\xd61146400b17104c1d3a835b2e22cb5b8444300ced45c8808d69be4a518a2edb"
     },
     {
       "hash": 920870118,
       "artist_id": 3,
-      "name_variation": "J. Winkelmann"
+      "name_variation": "J. Winkelmann",
+      "identity_sha256": "\\x00774ba6d6c885e92b546ea1a14dd32d99591a97bd2e8c1c58ad5a14669c491c"
     }
   ],
   "artist_url": [
     {
       "url": "http://en.wikipedia.org/wiki/Josh_Wink",
       "hash": 743222058,
-      "artist_id": 3
+      "artist_id": 3,
+      "identity_sha256": "\\x8d4ac50cc18dbf2c4033a2255045b01187b730c8c65a63174cbebf1a7b18ab92"
     },
     {
       "url": "http://instagram.com/joshwink1",
       "hash": -77563572,
-      "artist_id": 3
+      "artist_id": 3,
+      "identity_sha256": "\\x141178f2d4f53ea63829682959cb6e8ad4c16fd4b407c41c01a22d71bfddab94"
     },
     {
       "url": "http://myspace.com/joshwink",
       "hash": 926862813,
-      "artist_id": 3
+      "artist_id": 3,
+      "identity_sha256": "\\xd70e8309d82b1f496459a2696b8accb5a01240442b24787e0a4061cc7e4c11ca"
     },
     {
       "url": "http://myspace.com/ovumrecordings",
       "hash": 1314730517,
-      "artist_id": 3
+      "artist_id": 3,
+      "identity_sha256": "\\x434f4ed90399bbeb02008c5e568e780b4c2496cec9b91c74385650b9f784a1db"
     },
     {
       "url": "http://soundcloud.com/joshwinkofficial",
       "hash": 1522532408,
-      "artist_id": 3
+      "artist_id": 3,
+      "identity_sha256": "\\x84e4a63377cb728afbd7e90d4f884ba67a5b3b27f098f666ae6f3cfc84f3a0fc"
     },
     {
       "url": "http://twitter.com/joshwink1",
       "hash": -1828107827,
-      "artist_id": 3
+      "artist_id": 3,
+      "identity_sha256": "\\x440b4b5a6bb3c3c5631e611bfea4d93e7e196906b0a0f002910e2a3701b3f237"
     },
     {
       "url": "http://www.dailymotion.com/JoshWink-vevo",
       "hash": -1241547722,
-      "artist_id": 3
+      "artist_id": 3,
+      "identity_sha256": "\\x2e10b3cc967f7734d080049f2bf411d11b9f2c1b8669320c7e54be674098b32c"
     },
     {
       "url": "http://www.facebook.com/JoshWinkOfficial",
       "hash": -1593393471,
-      "artist_id": 3
+      "artist_id": 3,
+      "identity_sha256": "\\x6a848a4b9742e5905fd80fbcfc1c2816aea790260516e001eec2a3e872b130fd"
     },
     {
       "url": "http://www.joshwink.com",
       "hash": -1842671483,
-      "artist_id": 3
+      "artist_id": 3,
+      "identity_sha256": "\\xa619eca000cfa9be5683d63b266584e0de135fe6eef1aac988dfa399fa7d35ea"
     },
     {
       "url": "http://www.ovumrecordings.com/artists/josh-wink/",
       "hash": 683121410,
-      "artist_id": 3
+      "artist_id": 3,
+      "identity_sha256": "\\xf8a942103686f53f8d09bc900c45531e1227fa468a7a7dbaaa2d67341b5a9318"
     },
     {
       "url": "http://www.songkick.com/artists/250682-josh-wink",
       "hash": 140487763,
-      "artist_id": 3
+      "artist_id": 3,
+      "identity_sha256": "\\x96e2748a0d27e9e7e7e720e5ed61c62f8d832505e7354c2090b08370ed60390c"
     },
     {
       "url": "http://www.whosampled.com/Josh-Wink",
       "hash": 981567531,
-      "artist_id": 3
+      "artist_id": 3,
+      "identity_sha256": "\\xc5d9c82cabc8e7408578e82b0b70c4ba1a02d2013b54b08778dce286e0836d3d"
     },
     {
       "url": "http://www.youtube.com/user/JoshWinkVEVO",
       "hash": 230796051,
-      "artist_id": 3
+      "artist_id": 3,
+      "identity_sha256": "\\xc233ca4466066a2fcc683ed52c2909d4a1ca43200f4bdd806c371320ddaebc06"
     },
     {
       "url": "https://en.wikipedia.org/wiki/Jesper_Dahlbäck",
       "hash": 877791006,
-      "artist_id": 1
+      "artist_id": 1,
+      "identity_sha256": "\\xd5203dd02ad11555a4498cff9391405360aab3f939cfdff803aa71bf85050214"
     },
     {
       "url": "https://joshwink.bandcamp.com",
       "hash": 2044061375,
-      "artist_id": 3
+      "artist_id": 3,
+      "identity_sha256": "\\x063280f3cc1886f4fc1afbe5987aa187477a9b21c92834e73d73a66fe25cfccb"
     }
   ],
   "genre": [
@@ -367,127 +418,152 @@
     {
       "url": "http://en.wikipedia.org/wiki/Planet_E_Communications",
       "hash": -1636191180,
-      "label_id": 1
+      "label_id": 1,
+      "identity_sha256": "\\x15840d9c581549ff05b7d42b10e05c2ec8f75e22ec47a4febe97054bb7a73b48"
     },
     {
       "url": "http://myspace.com/planetecom",
       "hash": 824049672,
-      "label_id": 1
+      "label_id": 1,
+      "identity_sha256": "\\x535444a0a3acd929b536089951cc4c57892dcfe1939008aeeea59338efd8e975"
     },
     {
       "url": "http://myspace.com/planetedetroit",
       "hash": -1761827390,
-      "label_id": 1
+      "label_id": 1,
+      "identity_sha256": "\\x18993331c72ee8961e01db9ef3907a4add3ad9830749b2c567da555db8df8a13"
     },
     {
       "url": "http://planet-e.net",
       "hash": 866183985,
-      "label_id": 1
+      "label_id": 1,
+      "identity_sha256": "\\xf0852aa371a3c10c1f4ed3d369e567f278e9f5fb68af5c31e84c746288e32f64"
     },
     {
       "url": "http://planetecommunications.bandcamp.com",
       "hash": 1685522527,
-      "label_id": 1
+      "label_id": 1,
+      "identity_sha256": "\\xe9e2dad6572692cb16eed3525144e86959e2631d67cba7e67904f8c88dc3fa49"
     },
     {
       "url": "http://plus.google.com/100841702106447505236",
       "hash": 980168207,
-      "label_id": 1
+      "label_id": 1,
+      "identity_sha256": "\\xf41225c4ee8ea9b1ea9154cbac9f38bdc0fc681937e31d957343422758dca97f"
     },
     {
       "url": "http://soundcloud.com/planetedetroit",
       "hash": 220907058,
-      "label_id": 1
+      "label_id": 1,
+      "identity_sha256": "\\x391fe9eba9a5282e390f7cdadcc27440b5b110d1becab21db8c657fd864dcb85"
     },
     {
       "url": "http://soundcloud.com/siestarecords",
       "hash": 1622163405,
-      "label_id": 4
+      "label_id": 4,
+      "identity_sha256": "\\x37281170d5131d8651b91781b0e0585059f6789daec816385abdb955fa32cd5e"
     },
     {
       "url": "http://twitter.com/planetedetroit",
       "hash": -996488823,
-      "label_id": 1
+      "label_id": 1,
+      "identity_sha256": "\\xe152c00021f83f26b4758d7a637509e314741a52ad5d229db4dd3e775322a4c3"
     },
     {
       "url": "http://vimeo.com/user1265384",
       "hash": -37213798,
-      "label_id": 1
+      "label_id": 1,
+      "identity_sha256": "\\xafbcf154e99a7398b20a30257dabdf30725d232e00ef597289ab65ad951da5cd"
     },
     {
       "url": "http://www.facebook.com/pages/Siesta-Records-Gear/154910143836?sk=app_167097993346860",
       "hash": -2051311220,
-      "label_id": 4
+      "label_id": 4,
+      "identity_sha256": "\\x979d48fc7ff8183c7317f61bfcbd10859a298f788e598ff0c4830707458f8844"
     },
     {
       "url": "http://www.facebook.com/planetedetroit",
       "hash": 1702100635,
-      "label_id": 1
+      "label_id": 1,
+      "identity_sha256": "\\xdfed8529417027408c797f56bea6ecf990921f25316658a3b54f0caf1cafa7f0"
     },
     {
       "url": "http://www.flickr.com/photos/planetedetroit",
       "hash": -1587555664,
-      "label_id": 1
+      "label_id": 1,
+      "identity_sha256": "\\x1ec8858edd9d8ae8c01706af88d628f404397a10e8f5011bbce33acc5291274f"
     },
     {
       "url": "http://www.instagram.com/carlcraignet",
       "hash": 354837016,
-      "label_id": 1
+      "label_id": 1,
+      "identity_sha256": "\\xa644a74283b12624c265673d3069f3cb04185ea402723a41fab40819065a7153"
     },
     {
       "url": "http://www.myspace.com/siestarecords",
       "hash": 923190694,
-      "label_id": 4
+      "label_id": 4,
+      "identity_sha256": "\\xd5242c747068ba0746c747df864902b95344cc319592ef1f6c51a0f2d160372b"
     },
     {
       "url": "http://www.seasonsrecordings.com",
       "hash": 1551024444,
-      "label_id": 3
+      "label_id": 3,
+      "identity_sha256": "\\x2709e46fb044bc7024a1ac713001de79282f5591bf2b44966c4a00c1e50ed083"
     },
     {
       "url": "http://www.seasonsrecordings.com/",
       "hash": 837117555,
-      "label_id": 2
+      "label_id": 2,
+      "identity_sha256": "\\x79966f67fcc4f846b731dd1a82851d2fe4a3b53027506a20856a92354e6467fa"
     },
     {
       "url": "http://www.youtube.com/user/planetedetroit",
       "hash": 272605200,
-      "label_id": 1
+      "label_id": 1,
+      "identity_sha256": "\\x961b782e3d76fb78cc009ca743ce01b6bb2acc9f08239504de14354c30372d77"
     },
     {
       "url": "https://seasonsrecordings.bigcartel.com/",
       "hash": -2104698560,
-      "label_id": 3
+      "label_id": 3,
+      "identity_sha256": "\\x77ce25e8ddce720de2b67ee7a709035be929f4cb61e0d314a031ae375dfd227a"
     },
     {
       "url": "https://soundcloud.com/seasonsrecords",
       "hash": -1391605607,
-      "label_id": 3
+      "label_id": 3,
+      "identity_sha256": "\\x2886d60b82d4af668d87902af838192a7092f9b7b89dc90f509a2886ad2b8ab5"
     },
     {
       "url": "https://twitter.com/SeasonsRecords",
       "hash": 20437514,
-      "label_id": 3
+      "label_id": 3,
+      "identity_sha256": "\\xbc73fccad019e13e28de34ed54725eb8ee15b2a3249bfcfdb785690fc88433f3"
     },
     {
       "url": "https://twitter.com/siestarecords",
       "hash": 1362842489,
-      "label_id": 4
+      "label_id": 4,
+      "identity_sha256": "\\x65959c992fe032ff2104cd243783e6b7e91ffb9b25eed24c36c8fe6084dcefab"
     },
     {
       "url": "https://www.facebook.com/SEASONS-RECORDINGS-160164731945/",
       "hash": -2085178872,
-      "label_id": 3
+      "label_id": 3,
+      "identity_sha256": "\\x4ef8516b0222c0bf49e1ad0fed558d7a05e1a13e0fa83344d44ed0d527fc67aa"
     },
     {
       "url": "https://www.youtube.com/channel/UClv7-8Gfk2Uc47ly6fTWmvQ",
       "hash": -1339245870,
-      "label_id": 3
+      "label_id": 3,
+      "identity_sha256": "\\xcf5c384a0e42937c1f160f4df22afa1d4eeec689610acb6657ab242396e2edd7"
     },
     {
       "url": "www.siestarecords.com",
       "hash": 1816347565,
-      "label_id": 4
+      "label_id": 4,
+      "identity_sha256": "\\xee698b53f95da06d18899cab6932afd6de221a2e22270fae7a6b9d3f28a71b79"
     }
   ],
   "master": [
@@ -581,196 +657,224 @@
       "hash": -1962557807,
       "title": "Mystical Rhythm (Lush Mix)",
       "master_id": 1,
-      "description": "Provided to YouTube by EPM Online\n\n          Mystical Rhythm (Lush Mix) · Vince Watson · Vince Watson\n\n          Alola Vol 2\n\n          ℗ Westbury Music Ltd / Spherecom Music\n\n          Released on: 2001-07-02\n\n          Mixer: Vince Watson\n\n          Auto-generated by YouTube."
+      "description": "Provided to YouTube by EPM Online\n\n          Mystical Rhythm (Lush Mix) · Vince Watson · Vince Watson\n\n          Alola Vol 2\n\n          ℗ Westbury Music Ltd / Spherecom Music\n\n          Released on: 2001-07-02\n\n          Mixer: Vince Watson\n\n          Auto-generated by YouTube.",
+      "identity_sha256": "\\xb4d515f17846b9da8aa9eb79467442b248f1061eb5dcab6091bae07fb862e9d1"
     },
     {
       "url": "https://www.youtube.com/watch?v=1ZW_Aw124dc",
       "hash": -1406228927,
       "title": "Vince Watson : Bubbles",
       "master_id": 2,
-      "description": "Biologique,1999"
+      "description": "Biologique,1999",
+      "identity_sha256": "\\x6251ea4a312c131affca8b480e6f2fa40c0c50d2c24dc4eb3b325450b1fb09f2"
     },
     {
       "url": "https://www.youtube.com/watch?v=6cjCI-cdz0Y",
       "hash": -538561345,
       "title": "Blue Arsed Fly - Tired Ears (B1)",
       "master_id": 3,
-      "description": "Blue Arsed Fly ‎– Knackered EP\n          Label: Tresor ‎– Tresor 60\n          Format: Vinyl, 12, EP, 33 ⅓ RPM\n          Country: Germany\n          Released: 13 Jan 1997\n          Genre: Electronic\n          Style: Techno\n\n          https://www.discogs.com/Blue-Arsed-Fly-Knackered-EP/release/5415"
+      "description": "Blue Arsed Fly ‎– Knackered EP\n          Label: Tresor ‎– Tresor 60\n          Format: Vinyl, 12, EP, 33 ⅓ RPM\n          Country: Germany\n          Released: 13 Jan 1997\n          Genre: Electronic\n          Style: Techno\n\n          https://www.discogs.com/Blue-Arsed-Fly-Knackered-EP/release/5415",
+      "identity_sha256": "\\x6cbbdddaf168f4c9d45d5844a8fff254e742eab5aed3d1bf302083a4a833d0ed"
     },
     {
       "url": "https://www.youtube.com/watch?v=6mpMPTC4AUQ",
       "hash": 2032883964,
       "title": "Vince Watson - Biologique",
       "master_id": 2,
-      "description": "http://www.discogs.com/Vince-Watson-Biologique/release/42056"
+      "description": "http://www.discogs.com/Vince-Watson-Biologique/release/42056",
+      "identity_sha256": "\\x0ee89b46eb71a9de074f1fbfb10ccafe53bdd3758fc597f49749ed699194cdd3"
     },
     {
       "url": "https://www.youtube.com/watch?v=6mrJ8MNqSkU",
       "hash": 432165428,
       "title": "Vince Watson - Inertia [Ibadan Records, IRC046-2_10]",
       "master_id": 1,
-      "description": "Title :: Inertia\n          Artist :: Vince Watson\n          Cat. No :: IRC046-2_10\n          Label :: Ibadan Records\n          Buy ::\n\n          More info on Ibadan Records:\n          www.music.ibadanrecords.com\n          www.facebook.com/ibadanrecords\n          www.instagram.com/ibadanrecords\n          www.soundcloud.com/ibadan\n\n          © Ibadan R"
+      "description": "Title :: Inertia\n          Artist :: Vince Watson\n          Cat. No :: IRC046-2_10\n          Label :: Ibadan Records\n          Buy ::\n\n          More info on Ibadan Records:\n          www.music.ibadanrecords.com\n          www.facebook.com/ibadanrecords\n          www.instagram.com/ibadanrecords\n          www.soundcloud.com/ibadan\n\n          © Ibadan R",
+      "identity_sha256": "\\x8a7291712b3745154b6848f277276d9f9865b77341afbfd4a0e923249f2ded68"
     },
     {
       "url": "https://www.youtube.com/watch?v=6udG-UFtoTE",
       "hash": -1130396972,
       "title": "Vince Watson - A New Day [Ibadan Records, IRC046-2_11]",
       "master_id": 1,
-      "description": "Title :: A New Day\n          Artist :: Vince Watson\n          Cat. No :: IRC046-4_11\n          Label :: Ibadan Records\n          Buy ::\n\n          More info on Ibadan Records:\n          www.music.ibadanrecords.com\n          www.facebook.com/ibadanrecords\n          www.instagram.com/ibadanrecords\n          www.soundcloud.com/ibadan\n\n          © Ibadan"
+      "description": "Title :: A New Day\n          Artist :: Vince Watson\n          Cat. No :: IRC046-4_11\n          Label :: Ibadan Records\n          Buy ::\n\n          More info on Ibadan Records:\n          www.music.ibadanrecords.com\n          www.facebook.com/ibadanrecords\n          www.instagram.com/ibadanrecords\n          www.soundcloud.com/ibadan\n\n          © Ibadan",
+      "identity_sha256": "\\x46ce070dd6167c3541462794ee68dad9b57393227925539fbd292656c9eed22c"
     },
     {
       "url": "https://www.youtube.com/watch?v=9Vm2AcMdSoA",
       "hash": 1406153627,
       "title": "vince watson - mystical rhythm",
       "master_id": 1,
-      "description": "vince watson - biologique (1999)"
+      "description": "vince watson - biologique (1999)",
+      "identity_sha256": "\\x0904952c0c470fc834aaa9478e072d71f9a99031f891b1cd604979283ab2cf8c"
     },
     {
       "url": "https://www.youtube.com/watch?v=9Vm2AcMdSoA",
       "hash": 1406153627,
       "title": "vince watson - mystical rhythm",
       "master_id": 2,
-      "description": "vince watson - biologique (1999)"
+      "description": "vince watson - biologique (1999)",
+      "identity_sha256": "\\x0904952c0c470fc834aaa9478e072d71f9a99031f891b1cd604979283ab2cf8c"
     },
     {
       "url": "https://www.youtube.com/watch?v=CYvoQdT0oQQ",
       "hash": -388188766,
       "title": "Rephlexions",
       "master_id": 1,
-      "description": "Provided to YouTube by EPM Online\n\n          Rephlexions · Vince Watson\n\n          Alola Vol 2\n\n          ℗ Westbury Music Ltd / Spherecom Music\n\n          Released on: 2001-07-02\n\n          Auto-generated by YouTube."
+      "description": "Provided to YouTube by EPM Online\n\n          Rephlexions · Vince Watson\n\n          Alola Vol 2\n\n          ℗ Westbury Music Ltd / Spherecom Music\n\n          Released on: 2001-07-02\n\n          Auto-generated by YouTube.",
+      "identity_sha256": "\\x32791feac3f15c3cd9bf16d033a43a29dc85635345bb90e048dafc2ba2ceb683"
     },
     {
       "url": "https://www.youtube.com/watch?v=DihO4e1pwDc",
       "hash": 516834657,
       "title": "vince watson - euphorate",
       "master_id": 2,
-      "description": "vince watson - biologique ( 1999 )\n          \r\n          \r-uploaded in HD at http://www.TunesToTube.com"
+      "description": "vince watson - biologique ( 1999 )\n          \r\n          \r-uploaded in HD at http://www.TunesToTube.com",
+      "identity_sha256": "\\x56671404459decf9ba5a8aa89e26de5161505cde5a71e93c223830c041f223ac"
     },
     {
       "url": "https://www.youtube.com/watch?v=GOffv3rh1cU",
       "hash": 2066095798,
       "title": "Blue Arsed Fly - Big Ron (B2)",
       "master_id": 3,
-      "description": "Blue Arsed Fly ‎– Knackered EP\n          Label: Tresor ‎– Tresor 60\n          Format: Vinyl, 12, EP, 33 ⅓ RPM\n          Country: Germany\n          Released: 13 Jan 1997\n          Genre: Electronic\n          Style: Techno\n\n          https://www.discogs.com/Blue-Arsed-Fly-Knackered-EP/release/5415"
+      "description": "Blue Arsed Fly ‎– Knackered EP\n          Label: Tresor ‎– Tresor 60\n          Format: Vinyl, 12, EP, 33 ⅓ RPM\n          Country: Germany\n          Released: 13 Jan 1997\n          Genre: Electronic\n          Style: Techno\n\n          https://www.discogs.com/Blue-Arsed-Fly-Knackered-EP/release/5415",
+      "identity_sha256": "\\x34f6ab980316d385f83e5a8fca66da3636e23624c60e6f1eba05952dc7072808"
     },
     {
       "url": "https://www.youtube.com/watch?v=HxIAtSgCfJ4",
       "hash": 266274178,
       "title": "Bubbles",
       "master_id": 1,
-      "description": "Provided to YouTube by EPM Online\n\n          Bubbles · Vince Watson\n\n          Alola Vol 1\n\n          ℗ Westbury Music Ltd / Spherecom Music\n\n          Released on: 1999-05-02\n\n          Auto-generated by YouTube."
+      "description": "Provided to YouTube by EPM Online\n\n          Bubbles · Vince Watson\n\n          Alola Vol 1\n\n          ℗ Westbury Music Ltd / Spherecom Music\n\n          Released on: 1999-05-02\n\n          Auto-generated by YouTube.",
+      "identity_sha256": "\\xf4292be4b45b2b5fcf3804e58fe733b0e2b5abc2d12bac10b389e776c8b23a5c"
     },
     {
       "url": "https://www.youtube.com/watch?v=IujTdFV3vuM",
       "hash": 669951510,
       "title": "Simplicity",
       "master_id": 1,
-      "description": "Provided to YouTube by EPM Online\n\n          Simplicity · Vince Watson\n\n          Alola Vol 2\n\n          ℗ Westbury Music Ltd / Spherecom Music\n\n          Released on: 2001-07-02\n\n          Auto-generated by YouTube."
+      "description": "Provided to YouTube by EPM Online\n\n          Simplicity · Vince Watson\n\n          Alola Vol 2\n\n          ℗ Westbury Music Ltd / Spherecom Music\n\n          Released on: 2001-07-02\n\n          Auto-generated by YouTube.",
+      "identity_sha256": "\\xfb3deee2be958085bddcdb71141eec1261644bd78843d0a9a083857fd5c39107"
     },
     {
       "url": "https://www.youtube.com/watch?v=QbqM-ty0gTE",
       "hash": 343075263,
       "title": "Vince Watson - Inertia",
       "master_id": 2,
-      "description": "http://www.discogs.com/Vince-Watson-Biologique/release/42056"
+      "description": "http://www.discogs.com/Vince-Watson-Biologique/release/42056",
+      "identity_sha256": "\\x2e745ec9e77fcb129331126f256acf090e5509f3f46f8af34b419d50a460c2e9"
     },
     {
       "url": "https://www.youtube.com/watch?v=QbxOt3C12DY",
       "hash": -1948158821,
       "title": "Beneath the Sound",
       "master_id": 1,
-      "description": "Provided to YouTube by EPM Online\n\n          Beneath the Sound · Vince Watson\n\n          Alola Vol 2\n\n          ℗ Westbury Music Ltd / Spherecom Music\n\n          Released on: 2001-07-02\n\n          Auto-generated by YouTube."
+      "description": "Provided to YouTube by EPM Online\n\n          Beneath the Sound · Vince Watson\n\n          Alola Vol 2\n\n          ℗ Westbury Music Ltd / Spherecom Music\n\n          Released on: 2001-07-02\n\n          Auto-generated by YouTube.",
+      "identity_sha256": "\\x078f58230487be250a6f48f16c8078da21887af9a0db6e3fed45c48ffe548354"
     },
     {
       "url": "https://www.youtube.com/watch?v=RVLbjJv-KVI",
       "hash": -630920364,
       "title": "Vince Watson - Moments In Time",
       "master_id": 1,
-      "description": "http://www.beatport.com/track/moments-in-time-original-mix/209664"
+      "description": "http://www.beatport.com/track/moments-in-time-original-mix/209664",
+      "identity_sha256": "\\x7b2c2e1899dd4045980a83ac6e1ab00bd11d6e8edc44d54f9e72fc4a95d7b307"
     },
     {
       "url": "https://www.youtube.com/watch?v=Rs6111Vf91Y",
       "hash": 2142264979,
       "title": "Vince Watson - Jazz Satelite [Alola]",
       "master_id": 2,
-      "description": "http://www.discogs.com/Vince-Watson-Biologique/release/42056\n          Artist:Vince Watson\n          Album: Biologique\n          Label: Alola\n          Cat.No: ALOCD004\n          year:1999\n          Genre: Deep House, House\n          SUPPORT THE ARTIST AND BUY THIS TRACK"
+      "description": "http://www.discogs.com/Vince-Watson-Biologique/release/42056\n          Artist:Vince Watson\n          Album: Biologique\n          Label: Alola\n          Cat.No: ALOCD004\n          year:1999\n          Genre: Deep House, House\n          SUPPORT THE ARTIST AND BUY THIS TRACK",
+      "identity_sha256": "\\xce2a430f6b900f56f57f909fd5b3aa3b858bf26bfdaceda377b2fe96ee70603d"
     },
     {
       "url": "https://www.youtube.com/watch?v=ULxN8k8FtW4",
       "hash": 1445714184,
       "title": "Vince Watson - Astral Gruve",
       "master_id": 2,
-      "description": "https://www.discogs.com/Vince-Watson-Biologique/master/114"
+      "description": "https://www.discogs.com/Vince-Watson-Biologique/master/114",
+      "identity_sha256": "\\xa669c71692d93292eefe393d7e146146bfe49ba69b9878145818e1cb74272daa"
     },
     {
       "url": "https://www.youtube.com/watch?v=YmGYDyjfanY",
       "hash": 1313966942,
       "title": "Silhouettes",
       "master_id": 1,
-      "description": "Provided to YouTube by EPM Online\n\n          Silhouettes · Vince Watson\n\n          Alola Vol 2\n\n          ℗ Westbury Music Ltd / Spherecom Music\n\n          Released on: 2001-07-02\n\n          Auto-generated by YouTube."
+      "description": "Provided to YouTube by EPM Online\n\n          Silhouettes · Vince Watson\n\n          Alola Vol 2\n\n          ℗ Westbury Music Ltd / Spherecom Music\n\n          Released on: 2001-07-02\n\n          Auto-generated by YouTube.",
+      "identity_sha256": "\\x4b15e00a7113b3eae4c0c3de0a7af7899cfce628e35fa25e85f5027e242cdcc6"
     },
     {
       "url": "https://www.youtube.com/watch?v=_M20bObcvXo",
       "hash": 1925484139,
       "title": "Vince Watson - My Subconscious",
       "master_id": 1,
-      "description": "http://www.discogs.com/Vince-Watson-Moments-In-Time/master/113"
+      "description": "http://www.discogs.com/Vince-Watson-Moments-In-Time/master/113",
+      "identity_sha256": "\\x9d16a220a5af6a3fe0f4d7d7a8c0872c262b175b5d0bf0090db51c364170d60b"
     },
     {
       "url": "https://www.youtube.com/watch?v=cjlHl664I9U",
       "hash": 761424899,
       "title": "Vince Watson - Rainbow Funk (Music Video)",
       "master_id": 2,
-      "description": "Buy here: http://www.juno.co.uk/products/biologique/48291-01/\n\n          Vince Watson - Biologique LP\n\n          Label: Alola\n\n          Released: 18/10/1999a\n\n          Genre: Techno"
+      "description": "Buy here: http://www.juno.co.uk/products/biologique/48291-01/\n\n          Vince Watson - Biologique LP\n\n          Label: Alola\n\n          Released: 18/10/1999a\n\n          Genre: Techno",
+      "identity_sha256": "\\x95c581c53c2d80d220c395109876601875d4e986feacb58a9fc0b42d6be60226"
     },
     {
       "url": "https://www.youtube.com/watch?v=fYMa0n5-99A",
       "hash": -96398355,
       "title": "Depth Soul",
       "master_id": 1,
-      "description": "Provided to YouTube by EPM Online\n\n          Depth Soul · Vince Watson · Ben Sims\n\n          Alola Vol 2\n\n          ℗ Westbury Music Ltd / Spherecom Music\n\n          Released on: 2001-07-02\n\n          Mixer: Ben Sims\n\n          Auto-generated by YouTube."
+      "description": "Provided to YouTube by EPM Online\n\n          Depth Soul · Vince Watson · Ben Sims\n\n          Alola Vol 2\n\n          ℗ Westbury Music Ltd / Spherecom Music\n\n          Released on: 2001-07-02\n\n          Mixer: Ben Sims\n\n          Auto-generated by YouTube.",
+      "identity_sha256": "\\x45339d30465e675a9ba72ed8660c12d94ca7579e9f58d75199c5a4fb212c7aa1"
     },
     {
       "url": "https://www.youtube.com/watch?v=lmYrZZ97w58",
       "hash": -1743126957,
       "title": "Blue Arsed Fly - Bucket (A1)",
       "master_id": 3,
-      "description": "Blue Arsed Fly ‎– Knackered EP\n          Label: Tresor ‎– Tresor 60\n          Format: Vinyl, 12, EP, 33 ⅓ RPM\n          Country: Germany\n          Released: 13 Jan 1997\n          Genre: Electronic\n          Style: Techno\n\n          https://www.discogs.com/Blue-Arsed-Fly-Knackered-EP/release/5415"
+      "description": "Blue Arsed Fly ‎– Knackered EP\n          Label: Tresor ‎– Tresor 60\n          Format: Vinyl, 12, EP, 33 ⅓ RPM\n          Country: Germany\n          Released: 13 Jan 1997\n          Genre: Electronic\n          Style: Techno\n\n          https://www.discogs.com/Blue-Arsed-Fly-Knackered-EP/release/5415",
+      "identity_sha256": "\\xd9aaac09c47d4fc9ae6a2313afb3a5f6e0aa669e75396fa2b9f366e401f8cb56"
     },
     {
       "url": "https://www.youtube.com/watch?v=ndrHFMbEr7k",
       "hash": -617363659,
       "title": "Vince Watson - Into Beyond",
       "master_id": 1,
-      "description": "Label: Alola\r\n          \r\n          Released: 2002\r\n          Genre: Electronic"
+      "description": "Label: Alola\r\n          \r\n          Released: 2002\r\n          Genre: Electronic",
+      "identity_sha256": "\\x7d963d7e22708fb21fdc238c15b1860573ecc9b5e7de0f6d111e1935ad65e153"
     },
     {
       "url": "https://www.youtube.com/watch?v=o3FI1qAOCwE",
       "hash": 747765467,
       "title": "Vince Watson - Into The Deep",
       "master_id": 2,
-      "description": "Track from Alola"
+      "description": "Track from Alola",
+      "identity_sha256": "\\xae6c5819c108659d958c267000008b8f6da7209275fa29a06a4f9c0b286848c0"
     },
     {
       "url": "https://www.youtube.com/watch?v=yVcm18a2GG8",
       "hash": -1086311167,
       "title": "Vince Watson - Spaceclouds",
       "master_id": 2,
-      "description": "http://www.discogs.com/Vince-Watson-Biologique/release/42056"
+      "description": "http://www.discogs.com/Vince-Watson-Biologique/release/42056",
+      "identity_sha256": "\\xe56c8aa1259411591e7fa869d56259e3bbd7907b374215f1de334a0bcff12883"
     },
     {
       "url": "https://www.youtube.com/watch?v=yoraJcl7MzM",
       "hash": 1054888733,
       "title": "Vince Watson - Lunar Visions",
       "master_id": 2,
-      "description": "Label: Alola ‎-- ALO LP004\n          Country: UK\n          Released: 18 Oct 1999\n          Style: Techno, Tech House"
+      "description": "Label: Alola ‎-- ALO LP004\n          Country: UK\n          Released: 18 Oct 1999\n          Style: Techno, Tech House",
+      "identity_sha256": "\\x3cc4b2b6e200ccef90857a1a7c452a365929c7571308a04e538d9a68c87edc2e"
     },
     {
       "url": "https://www.youtube.com/watch?v=ysZL7WrbYpE",
       "hash": 363946724,
       "title": "Vince Watson - Mystical Rhythm",
       "master_id": 2,
-      "description": "Vince Watson - Mystical Rhythm"
+      "description": "Vince Watson - Mystical Rhythm",
+      "identity_sha256": "\\x9abef6551f66e77fe57ba339c2f5cd0728581255ed9326b655854070ad112492"
     }
   ],
   "release_item": [
@@ -1210,7 +1314,7 @@
     {
       "url": "https://www.youtube.com/watch?v=LgLchSRehhc",
       "hash": -161244417,
-      "title": "Mr. James Barth \u0026 A.D. - Dutchmaster",
+      "title": "Mr. James Barth & A.D. - Dutchmaster",
       "description": "Follow Mr. James Barth: https://www.facebook.com/CariLekebuschOfficial\r\n          Buy Record: http://www.discogs.com/Mr-James-Barth-AD-Knockin-Boots-Vol-2-Of-2/release/2\r\n          More Music: https://www.facebook.com/DoFunkk\r\n          \r\n          Copyright Notice:\r\n          I do not own the rights of",
       "identity_sha256": "\\xa22b12e5e52aa4bd4a82a726557fcf85509cb5681bbc0ec25ad43d5511275fae",
       "release_item_id": 2
@@ -1218,7 +1322,7 @@
     {
       "url": "https://www.youtube.com/watch?v=MIgQNVhYILA",
       "hash": -2132270639,
-      "title": "Mr. James Barth \u0026 A.D. - A Sea Apart",
+      "title": "Mr. James Barth & A.D. - A Sea Apart",
       "description": "Follow Mr. James Barth: https://www.facebook.com/CariLekebuschOfficial\r\n          Buy Record: http://www.discogs.com/Mr-James-Barth-AD-Knockin-Boots-Vol-2-Of-2/release/2\r\n          More Music: https://www.facebook.com/DoFunkk\r\n          \r\n          Copyright Notice:\r\n          I do not own the rights of",
       "identity_sha256": "\\x1471d1cc1555611f0c98db91c923995cf8551772a3e5d19f718a5a7a7d523037",
       "release_item_id": 2
@@ -1274,7 +1378,7 @@
     {
       "url": "https://www.youtube.com/watch?v=iaqHaULlqqg",
       "hash": 1951684427,
-      "title": "Mr. James Barth \u0026 A.D. - Inner City Lullaby",
+      "title": "Mr. James Barth & A.D. - Inner City Lullaby",
       "description": "Follow Mr. James Barth: https://www.facebook.com/CariLekebuschOfficial\n          Buy Record: http://www.discogs.com/Mr-James-Barth-AD-Knockin-Boots-Vol-2-Of-2/release/2\n          More Music: https://www.facebook.com/DoFunkk\n\n          Copyright Notice:\n          I do not own the rights of this",
       "identity_sha256": "\\x575ec211d570cb86c1ffe729de94f979aa0179befe63029cd76ac3955d057f99",
       "release_item_id": 2
@@ -1282,7 +1386,7 @@
     {
       "url": "https://www.youtube.com/watch?v=x_Os7b-iWKs",
       "hash": 174713691,
-      "title": "Mr. James Barth \u0026 A.D. - Yeah Kid!",
+      "title": "Mr. James Barth & A.D. - Yeah Kid!",
       "description": "Follow Mr. James Barth: https://www.facebook.com/CariLekebuschOfficial\r\n          Buy Record: http://www.discogs.com/Mr-James-Barth-AD-Knockin-Boots-Vol-2-Of-2/release/2\r\n          More Music: https://www.facebook.com/DoFunkk\r\n          \r\n          Copyright Notice:\r\n          I do not own the rights of",
       "identity_sha256": "\\xcd63da52062fb5907aa70121e7a1b2890dd0306bd852857a835bde171715f26f",
       "release_item_id": 2

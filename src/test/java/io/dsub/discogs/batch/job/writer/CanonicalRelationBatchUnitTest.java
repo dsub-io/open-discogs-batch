@@ -5,13 +5,16 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
+import io.dsub.discogs.batch.domain.CanonicalRelationIdentity;
 import io.dsub.discogs.batch.dump.EntityType;
-import io.dsub.discogs.batch.domain.release.ReleaseRelationIdentity;
 import io.dsub.discogs.batch.job.processor.RelationSet;
 import io.dsub.opendiscogs.jooq.tables.LabelReleaseItem;
 import io.dsub.opendiscogs.jooq.tables.ReleaseItemFormat;
+import io.dsub.opendiscogs.jooq.tables.records.ArtistNameVariationRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ArtistUrlRecord;
+import io.dsub.opendiscogs.jooq.tables.records.LabelUrlRecord;
 import io.dsub.opendiscogs.jooq.tables.records.LabelReleaseItemRecord;
+import io.dsub.opendiscogs.jooq.tables.records.MasterVideoRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemArtistRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemCreditedArtistRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemFormatRecord;
@@ -77,17 +80,56 @@ class CanonicalRelationBatchUnitTest {
   }
 
   @Test
+  void assignsSha256IdentityToEveryCatalogRelationThatRetainsALegacyHash() {
+    ArtistNameVariationRecord nameVariation =
+        new ArtistNameVariationRecord()
+            .setArtistId(1)
+            .setHash("Name".hashCode())
+            .setNameVariation("Name");
+    ArtistUrlRecord artistUrl =
+        new ArtistUrlRecord()
+            .setArtistId(1)
+            .setHash("https://artist".hashCode())
+            .setUrl("https://artist");
+    LabelUrlRecord labelUrl =
+        new LabelUrlRecord()
+            .setLabelId(2)
+            .setHash("https://label".hashCode())
+            .setUrl("https://label");
+    MasterVideoRecord masterVideo =
+        new MasterVideoRecord()
+            .setMasterId(3)
+            .setHash("TitleDescriptionhttps://video".hashCode())
+            .setTitle("Title")
+            .setDescription("Description")
+            .setUrl("https://video");
+
+    CanonicalRelationBatch.canonicalize(
+        List.of(new RelationSet(EntityType.ARTIST, 1, List.of(nameVariation, artistUrl))),
+        EntityType.ARTIST);
+    CanonicalRelationBatch.canonicalize(
+        List.of(new RelationSet(EntityType.LABEL, 2, List.of(labelUrl))), EntityType.LABEL);
+    CanonicalRelationBatch.canonicalize(
+        List.of(new RelationSet(EntityType.MASTER, 3, List.of(masterVideo))), EntityType.MASTER);
+
+    assertThat(nameVariation.getIdentitySha256()).hasSize(32);
+    assertThat(artistUrl.getIdentitySha256()).hasSize(32);
+    assertThat(labelUrl.getIdentitySha256()).hasSize(32);
+    assertThat(masterVideo.getIdentitySha256()).hasSize(32);
+  }
+
+  @Test
   void allocatesDistinctSlotsForTheKnownDiscogsTrackCollision() {
     ReleaseItemTrackRecord first =
         track("Яд").setPosition("6").setDuration(null).setHash(86_171);
     first.setIdentitySha256(
-        ReleaseRelationIdentity.digest(
-            ReleaseRelationIdentity.Relation.TRACK, "6", "Яд", null));
+        CanonicalRelationIdentity.digest(
+            CanonicalRelationIdentity.Relation.TRACK, "6", "Яд", null));
     ReleaseItemTrackRecord second =
         track("Ад").setPosition("7").setDuration(null).setHash(86_171);
     second.setIdentitySha256(
-        ReleaseRelationIdentity.digest(
-            ReleaseRelationIdentity.Relation.TRACK, "7", "Ад", null));
+        CanonicalRelationIdentity.digest(
+            CanonicalRelationIdentity.Relation.TRACK, "7", "Ад", null));
 
     List<RelationSet> result =
         CanonicalRelationBatch.canonicalize(
@@ -100,19 +142,20 @@ class CanonicalRelationBatchUnitTest {
   }
 
   @Test
-  void collapsesOneSemanticIdentityBeforeConsideringDifferentLegacyHashes() {
+  void rejectsOneSemanticIdentityWithDifferentIncomingLegacyHashes() {
     ReleaseItemTrackRecord first = track("Track").setHash(86_171);
     ReleaseItemTrackRecord second = track("Track").setHash(86_172);
 
-    List<RelationSet> canonical =
-        CanonicalRelationBatch.canonicalize(
-            List.of(
-                new RelationSet(
-                    EntityType.RELEASE, RELEASE_ID, List.of(first, second))),
-            EntityType.RELEASE);
-
-    assertThat(canonical.getFirst().records()).containsExactly(first);
-    assertThat(first.getHash()).isEqualTo(86_171);
+    assertThatThrownBy(
+            () ->
+                CanonicalRelationBatch.canonicalize(
+                    List.of(
+                        new RelationSet(
+                            EntityType.RELEASE, RELEASE_ID, List.of(first, second))),
+                    EntityType.RELEASE))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("conflicting legacy hash")
+        .hasMessageContaining("release_item_track");
   }
 
   @Test
@@ -136,15 +179,15 @@ class CanonicalRelationBatchUnitTest {
   void derivesFormatDigestFromCompatibilityQuantityWhenCanonicalTextIsAbsent() {
     ReleaseItemFormatRecord record = format(2, "Vinyl").setQuantityText(null);
 
-    ReleaseRelationSlotAllocator.assignCanonicalDigests(
+    RelationSlotAllocator.assignCanonicalDigests(
         List.of(
             new RelationSet(EntityType.RELEASE, RELEASE_ID, List.of(record))),
         EntityType.RELEASE);
 
     assertThat(record.getIdentitySha256())
         .containsExactly(
-            ReleaseRelationIdentity.digest(
-                ReleaseRelationIdentity.Relation.FORMAT,
+            CanonicalRelationIdentity.digest(
+                CanonicalRelationIdentity.Relation.FORMAT,
                 "Vinyl",
                 "LP",
                 "2",
@@ -155,7 +198,7 @@ class CanonicalRelationBatchUnitTest {
   void validatesAssignedReleaseDigests() {
     ReleaseItemFormatRecord absentQuantity =
         format(1, "Vinyl").setQuantity(null).setQuantityText(null);
-    ReleaseRelationSlotAllocator.assignCanonicalDigests(
+    RelationSlotAllocator.assignCanonicalDigests(
         List.of(new RelationSet(EntityType.RELEASE, RELEASE_ID, List.of(absentQuantity))),
         EntityType.RELEASE);
     assertThat(absentQuantity.getIdentitySha256()).hasSize(32);
@@ -166,7 +209,7 @@ class CanonicalRelationBatchUnitTest {
     for (ReleaseItemFormatRecord invalid : List.of(missingDigest, missingHash, shortDigest)) {
       assertThatThrownBy(
               () ->
-                  ReleaseRelationSlotAllocator.allocateAssignedDigests(
+                  RelationSlotAllocator.allocateAssignedDigests(
                       List.of(
                           new RelationSet(EntityType.RELEASE, RELEASE_ID, List.of(invalid))),
                       EntityType.RELEASE))
@@ -178,7 +221,7 @@ class CanonicalRelationBatchUnitTest {
     ReleaseItemFormatRecord duplicateSecond = format(1, "Vinyl");
     assertThatThrownBy(
             () ->
-                ReleaseRelationSlotAllocator.allocateAssignedDigests(
+                RelationSlotAllocator.allocateAssignedDigests(
                     List.of(
                         new RelationSet(
                             EntityType.RELEASE,
@@ -198,7 +241,7 @@ class CanonicalRelationBatchUnitTest {
         List.of(
             new RelationSet(EntityType.RELEASE, RELEASE_ID, List.of(first, second, third)));
 
-    ReleaseRelationSlotAllocator.allocate(
+    RelationSlotAllocator.allocate(
         relationSets,
         EntityType.RELEASE,
         3,
@@ -215,7 +258,7 @@ class CanonicalRelationBatchUnitTest {
     ReleaseItemTrackRecord exhaustedSecond = track("second").setHash(102);
     assertThatThrownBy(
             () ->
-                ReleaseRelationSlotAllocator.allocate(
+                RelationSlotAllocator.allocate(
                     List.of(
                         new RelationSet(
                             EntityType.RELEASE,
@@ -230,12 +273,12 @@ class CanonicalRelationBatchUnitTest {
 
   @Test
   void digestKeyUsesByteContentEquality() {
-    ReleaseRelationSlotAllocator.DigestKey first =
-        new ReleaseRelationSlotAllocator.DigestKey(new byte[] {1});
-    ReleaseRelationSlotAllocator.DigestKey same =
-        new ReleaseRelationSlotAllocator.DigestKey(new byte[] {1});
-    ReleaseRelationSlotAllocator.DigestKey different =
-        new ReleaseRelationSlotAllocator.DigestKey(new byte[] {2});
+    RelationSlotAllocator.DigestKey first =
+        new RelationSlotAllocator.DigestKey(new byte[] {1});
+    RelationSlotAllocator.DigestKey same =
+        new RelationSlotAllocator.DigestKey(new byte[] {1});
+    RelationSlotAllocator.DigestKey different =
+        new RelationSlotAllocator.DigestKey(new byte[] {2});
 
     assertThat(first).isEqualTo(same).isNotEqualTo(different).isNotEqualTo("not a digest");
   }
@@ -383,8 +426,8 @@ class CanonicalRelationBatchUnitTest {
         .setQuantity(quantity)
         .setQuantityText(Integer.toString(quantity))
         .setIdentitySha256(
-            ReleaseRelationIdentity.digest(
-                ReleaseRelationIdentity.Relation.FORMAT,
+            CanonicalRelationIdentity.digest(
+                CanonicalRelationIdentity.Relation.FORMAT,
                 name,
                 "LP",
                 Integer.toString(quantity),
@@ -399,8 +442,8 @@ class CanonicalRelationBatchUnitTest {
         .setTitle(title)
         .setDuration("3:00")
         .setIdentitySha256(
-            ReleaseRelationIdentity.digest(
-                ReleaseRelationIdentity.Relation.TRACK, "A1", title, "3:00"));
+            CanonicalRelationIdentity.digest(
+                CanonicalRelationIdentity.Relation.TRACK, "A1", title, "3:00"));
   }
 
   private ReleaseItemIdentifierRecord identifier(String value) {
@@ -411,8 +454,8 @@ class CanonicalRelationBatchUnitTest {
         .setDescription("Text")
         .setValue(value)
         .setIdentitySha256(
-            ReleaseRelationIdentity.digest(
-                ReleaseRelationIdentity.Relation.IDENTIFIER, "Barcode", "Text", value));
+            CanonicalRelationIdentity.digest(
+                CanonicalRelationIdentity.Relation.IDENTIFIER, "Barcode", "Text", value));
   }
 
   private ReleaseItemWorkRecord work(String work) {
@@ -422,7 +465,7 @@ class CanonicalRelationBatchUnitTest {
         .setHash(104)
         .setWork(work)
         .setIdentitySha256(
-            ReleaseRelationIdentity.digest(ReleaseRelationIdentity.Relation.WORK, work));
+            CanonicalRelationIdentity.digest(CanonicalRelationIdentity.Relation.WORK, work));
   }
 
   private ReleaseItemVideoRecord video(String title) {
@@ -433,8 +476,8 @@ class CanonicalRelationBatchUnitTest {
         .setDescription("Description")
         .setUrl("https://video.example")
         .setIdentitySha256(
-            ReleaseRelationIdentity.digest(
-                ReleaseRelationIdentity.Relation.VIDEO,
+            CanonicalRelationIdentity.digest(
+                CanonicalRelationIdentity.Relation.VIDEO,
                 title,
                 "Description",
                 "https://video.example"));
@@ -447,7 +490,7 @@ class CanonicalRelationBatchUnitTest {
         .setHash(106)
         .setRole(role)
         .setIdentitySha256(
-            ReleaseRelationIdentity.digest(
-                ReleaseRelationIdentity.Relation.CREDITED_ARTIST, role));
+            CanonicalRelationIdentity.digest(
+                CanonicalRelationIdentity.Relation.CREDITED_ARTIST, role));
   }
 }

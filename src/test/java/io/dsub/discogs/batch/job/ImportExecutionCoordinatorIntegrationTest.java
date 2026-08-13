@@ -29,6 +29,8 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.batch.core.job.parameters.JobParameters;
 import org.springframework.batch.core.job.parameters.JobParametersBuilder;
 import org.springframework.batch.infrastructure.item.Chunk;
@@ -41,6 +43,7 @@ class ImportExecutionCoordinatorIntegrationTest extends PostgreSQLIntegrationSup
   private static final LocalDate JULY_DUMP = LocalDate.of(2026, 7, 1);
   private static final int CHUNK_SIZE = 5;
   private static final int LEGACY_IMPORT_CONTRACT_REVISION = 1;
+  private static final int COLLISION_IDENTITY_IMPORT_CONTRACT_REVISION = 2;
   private static final String GO_PROCESSOR = "go-open-discogs-batch";
   private static final String GO_PROCESSOR_VERSION = "2.3.6";
   private static final Duration PROCESS_KILL_TIMEOUT = Duration.ofSeconds(10);
@@ -275,6 +278,51 @@ class ImportExecutionCoordinatorIntegrationTest extends PostgreSQLIntegrationSup
     assertThat(current.resumedFromRunId()).isNull();
     assertThat(importContractRevision(current.runId(), EntityType.RELEASE))
         .isEqualTo(currentImportContractRevision(EntityType.RELEASE));
+    coordinator.complete(false, new IllegalStateException("test cleanup"));
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = EntityType.class, names = {"ARTIST", "LABEL", "MASTER"})
+  void collisionIdentityRevisionInvalidatesPriorSuccessfulEntityCheckpoint(EntityType entityType)
+      throws Exception {
+    ImportExecutionCoordinator coordinator = new ImportExecutionCoordinator(dataSource);
+    JobParameters parameters =
+        parametersWithDependencies(entityType, JULY_DUMP, checksumCharacter(entityType), false, false);
+    ImportExecutionCoordinator.Preparation legacy = coordinator.prepare(parameters);
+    completeSuccessfully(coordinator, legacy.runId());
+    setRunDumpRevision(legacy.runId(), entityType, priorImportContractRevision(entityType));
+
+    ImportExecutionCoordinator.Preparation current = coordinator.prepare(parameters);
+
+    assertThat(current.skipped()).isFalse();
+    assertThat(current.resumedFromRunId()).isNull();
+    assertThat(importContractRevision(current.runId(), entityType))
+        .isEqualTo(currentImportContractRevision(entityType));
+    coordinator.complete(false, new IllegalStateException("test cleanup"));
+  }
+
+  @ParameterizedTest
+  @EnumSource(value = EntityType.class, names = {"ARTIST", "LABEL", "MASTER"})
+  void collisionIdentityRevisionInvalidatesPriorInterruptedProgress(EntityType entityType)
+      throws Exception {
+    ImportExecutionCoordinator coordinator = new ImportExecutionCoordinator(dataSource);
+    JobParameters parameters =
+        parametersWithDependencies(entityType, JULY_DUMP, checksumCharacter(entityType), false, false);
+    ImportExecutionCoordinator.Preparation legacy = coordinator.prepare(parameters);
+    recordChunk(legacy.runId(), entityType, 0, 0, CHUNK_SIZE);
+    coordinator.complete(false, new IllegalStateException("interrupted"));
+    setRunDumpRevision(legacy.runId(), entityType, priorImportContractRevision(entityType));
+
+    ImportExecutionCoordinator.Preparation current = coordinator.prepare(parameters);
+
+    assertThat(current.resumedFromRunId()).isNull();
+    assertThat(
+            longQuery(
+                "select count(*) from discogs_import_run_chunk where import_run_id = "
+                    + legacy.runId()))
+        .isOne();
+    assertThat(importContractRevision(current.runId(), entityType))
+        .isEqualTo(currentImportContractRevision(entityType));
     coordinator.complete(false, new IllegalStateException("test cleanup"));
   }
 
@@ -1077,6 +1125,23 @@ class ImportExecutionCoordinatorIntegrationTest extends PostgreSQLIntegrationSup
 
   private int currentImportContractRevision(EntityType entityType) {
     return ImportExecution.importContractRevision(entityType.toString());
+  }
+
+  private int priorImportContractRevision(EntityType entityType) {
+    int current = currentImportContractRevision(entityType);
+    assertThat(current)
+        .as(entityType + " collision identity revision from canonical model")
+        .isEqualTo(COLLISION_IDENTITY_IMPORT_CONTRACT_REVISION);
+    return LEGACY_IMPORT_CONTRACT_REVISION;
+  }
+
+  private char checksumCharacter(EntityType entityType) {
+    return switch (entityType) {
+      case ARTIST -> 'a';
+      case LABEL -> 'b';
+      case MASTER -> 'c';
+      case RELEASE -> 'e';
+    };
   }
 
   private void setRunDumpRevision(long runId, EntityType entityType, int revision)

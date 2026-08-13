@@ -1,33 +1,28 @@
-package io.dsub.discogs.batch.domain.release;
+package io.dsub.discogs.batch.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.dsub.discogs.batch.domain.CanonicalRelationIdentity;
-import io.dsub.discogs.batch.domain.release.ReleaseItemSubItemsXML.ReleaseFormat;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import org.junit.jupiter.api.Test;
 
-class ReleaseRelationIdentityContractUnitTest {
+class NonReleaseRelationIdentityContractUnitTest {
 
   private static final String VECTOR_RESOURCE =
-      "/contracts/release-relation-identity-v1.tsv";
+      "/contracts/non-release-relation-identity-v1.tsv";
   private static final String VECTOR_NULL = "null";
   private static final String VECTOR_UNUSED = "-";
   private static final String VECTOR_HEX_PREFIX = "hex:";
-  private static final int VECTOR_COLUMN_COUNT = 11;
+  private static final int VECTOR_COLUMN_COUNT = 10;
   private static final List<String> VECTOR_HEADER =
       List.of(
           "kind",
@@ -36,43 +31,33 @@ class ReleaseRelationIdentityContractUnitTest {
           "field_1",
           "field_2",
           "field_3",
-          "field_4",
           "identity_sha256",
           "attempt",
           "slot",
-          "expected");
+          "legacy_java_hash");
   private static final Map<String, Integer> FIELD_COUNTS =
       Map.of(
-          "credited_artist", 1,
-          "format", 4,
-          "identifier", 3,
-          "image", 1,
-          "track", 3,
-          "video", 3,
-          "work", 1);
+          "artist_name_variation", 1,
+          "artist_url", 1,
+          "label_url", 1,
+          "master_video", 3);
 
   @Test
   void matchesCanonicalModelVectors() throws IOException {
-    List<Vector> vectors = readVectors();
-    Set<String> digestRelations = new HashSet<>();
-    for (Vector vector : vectors) {
+    for (Vector vector : readVectors()) {
       switch (vector.kind()) {
-        case "digest" -> {
-          digestRelations.add(vector.relation());
-          assertDigest(vector);
-        }
+        case "digest" -> assertDigest(vector);
         case "slot" -> assertSlot(vector);
-        case "description" -> assertDescription(vector);
-        default -> throw new IllegalArgumentException(
-            "unknown vector kind " + vector.kind() + " for " + vector.id());
+        default ->
+            throw new IllegalArgumentException(
+                "unknown vector kind " + vector.kind() + " for " + vector.id());
       }
     }
-    assertThat(digestRelations).containsExactlyInAnyOrderElementsOf(FIELD_COUNTS.keySet());
   }
 
   private static List<Vector> readVectors() throws IOException {
     InputStream input =
-        ReleaseRelationIdentityContractUnitTest.class.getResourceAsStream(VECTOR_RESOURCE);
+        NonReleaseRelationIdentityContractUnitTest.class.getResourceAsStream(VECTOR_RESOURCE);
     assertThat(input).as(VECTOR_RESOURCE).isNotNull();
     try (input;
         BufferedReader reader =
@@ -91,11 +76,11 @@ class ReleaseRelationIdentityContractUnitTest {
                 columns[0],
                 columns[1],
                 columns[2],
-                List.of(columns[3], columns[4], columns[5], columns[6]),
+                List.of(columns[3], columns[4], columns[5]),
+                columns[6],
                 columns[7],
                 columns[8],
-                columns[9],
-                columns[10]));
+                columns[9]));
       }
       return List.copyOf(vectors);
     }
@@ -118,24 +103,20 @@ class ReleaseRelationIdentityContractUnitTest {
     assertThat(HexFormat.of().formatHex(actual))
         .as(vector.id())
         .isEqualTo(vector.identitySha256());
+    if (!VECTOR_UNUSED.equals(vector.legacyJavaHash())) {
+      assertThat(fields.getFirst().hashCode())
+          .as(vector.id() + " legacy Java hash")
+          .isEqualTo(Integer.parseInt(vector.legacyJavaHash()));
+    }
   }
 
   private static void assertSlot(Vector vector) {
-    byte[] digest = HexFormat.of().parseHex(vector.identitySha256());
     int actual =
         CanonicalRelationIdentity.compatibilitySlot(
-            relation(vector.relation()), digest, Integer.parseUnsignedInt(vector.attempt()));
+            relation(vector.relation()),
+            HexFormat.of().parseHex(vector.identitySha256()),
+            Integer.parseUnsignedInt(vector.attempt()));
     assertThat(actual).as(vector.id()).isEqualTo(Integer.parseInt(vector.slot()));
-  }
-
-  private static void assertDescription(Vector vector) {
-    List<String> values = vector.fields().stream()
-        .map(value -> decodeValue(vector.id(), value))
-        .toList();
-    ReleaseFormat format = new ReleaseFormat();
-    format.setDescriptions(values);
-    String actual = format.getRecord(1, LocalDateTime.MIN).getDescription();
-    assertThat(actual).as(vector.id()).isEqualTo(decodeValue(vector.id(), vector.expected()));
   }
 
   private static CanonicalRelationIdentity.Relation relation(String canonicalName) {
@@ -150,8 +131,9 @@ class ReleaseRelationIdentityContractUnitTest {
       throw new IllegalArgumentException(
           "vector " + id + " value is not null or hex: " + encoded);
     }
-    byte[] value = HexFormat.of().parseHex(encoded.substring(VECTOR_HEX_PREFIX.length()));
-    return new String(value, StandardCharsets.UTF_8);
+    return new String(
+        HexFormat.of().parseHex(encoded.substring(VECTOR_HEX_PREFIX.length())),
+        StandardCharsets.UTF_8);
   }
 
   private record Vector(
@@ -162,6 +144,6 @@ class ReleaseRelationIdentityContractUnitTest {
       String identitySha256,
       String attempt,
       String slot,
-      String expected) {
+      String legacyJavaHash) {
   }
 }
