@@ -32,8 +32,12 @@ class ConvergingRelationItemWriterUnitTest {
     assertThat(labelRelease.keys())
         .extracting(key -> key.field().getName())
         .containsExactly("release_item_id", "label_id", "category_notation");
-    assertThat(labelRelease.deleteStaleSql())
+    assertThat(labelRelease.deleteStaleSql(2))
+        .contains("(?, ?, ?), (?, ?, ?)")
         .contains("category_notation is not distinct from current_keys.key_2");
+    assertThatThrownBy(() -> labelRelease.deleteStaleSql(0))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("row count");
   }
 
   @Test

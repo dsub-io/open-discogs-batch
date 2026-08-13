@@ -22,8 +22,10 @@ import io.dsub.opendiscogs.jooq.tables.ReleaseItemStyle;
 import io.dsub.opendiscogs.jooq.tables.ReleaseItemTrack;
 import io.dsub.opendiscogs.jooq.tables.ReleaseItemVideo;
 import io.dsub.opendiscogs.jooq.tables.ReleaseItemWork;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Types;
 import java.util.Arrays;
-import java.util.HexFormat;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -299,12 +301,20 @@ final class RelationTableRegistry {
           + rootIdField.getName() + " group by target." + rootIdField.getName();
     }
 
-    String deleteStaleSql() {
+    String deleteStaleSql(int rowCount) {
+      if (rowCount < 1) {
+        throw new IllegalArgumentException("stale relation row count must be positive");
+      }
       String aliases =
           IntStream.range(0, keys.size())
               .mapToObj(index -> "key_" + index)
               .collect(Collectors.joining(", "));
-      String arrays = keys.stream().map(ignored -> "?").collect(Collectors.joining(", "));
+      String rowPlaceholders =
+          "(" + keys.stream().map(ignored -> "?").collect(Collectors.joining(", ")) + ")";
+      String values =
+          IntStream.range(0, rowCount)
+              .mapToObj(ignored -> rowPlaceholders)
+              .collect(Collectors.joining(", "));
       String equality =
           IntStream.range(0, keys.size())
               .mapToObj(
@@ -313,19 +323,37 @@ final class RelationTableRegistry {
                           + " is not distinct from current_keys.key_" + index)
               .collect(Collectors.joining(" and "));
       return "delete from " + table.getName() + " target where target."
-          + rootIdField.getName() + " = any (?) and not exists (select 1 from unnest("
-          + arrays + ") as current_keys(" + aliases + ") where " + equality + ")";
+          + rootIdField.getName() + " = any (?) and not exists (select 1 from (values "
+          + values + ") as current_keys(" + aliases + ") where " + equality + ")";
     }
   }
 
   record RelationKey(Field<?> field, String postgresArrayType) {
 
-    Object arrayValue(UpdatableRecord<?> record) {
+    void bind(PreparedStatement statement, int parameterIndex, UpdatableRecord<?> record)
+        throws SQLException {
       Object value = field.getValue(record);
-      if (BYTEA_ARRAY_TYPE.equals(postgresArrayType) && value != null) {
-        return "\\x" + HexFormat.of().formatHex((byte[]) value);
+      if (value == null) {
+        statement.setNull(parameterIndex, jdbcType());
+        return;
       }
-      return value;
+      switch (postgresArrayType) {
+        case INTEGER_ARRAY_TYPE -> statement.setInt(parameterIndex, (Integer) value);
+        case TEXT_ARRAY_TYPE -> statement.setString(parameterIndex, (String) value);
+        case BYTEA_ARRAY_TYPE -> statement.setBytes(parameterIndex, (byte[]) value);
+        default -> throw new IllegalStateException(
+            "unsupported relation key type " + postgresArrayType);
+      }
+    }
+
+    private int jdbcType() {
+      return switch (postgresArrayType) {
+        case INTEGER_ARRAY_TYPE -> Types.INTEGER;
+        case TEXT_ARRAY_TYPE -> Types.VARCHAR;
+        case BYTEA_ARRAY_TYPE -> Types.BINARY;
+        default -> throw new IllegalStateException(
+            "unsupported relation key type " + postgresArrayType);
+      };
     }
 
     RelationKeyValue value(UpdatableRecord<?> record) {
@@ -361,10 +389,27 @@ final class RelationTableRegistry {
   record TextRelationKeyValue(String value) implements RelationKeyValue {
   }
 
-  record ByteArrayRelationKeyValue(String hex) implements RelationKeyValue {
+  static final class ByteArrayRelationKeyValue implements RelationKeyValue {
+
+    private final byte[] value;
 
     ByteArrayRelationKeyValue(byte[] value) {
-      this(value == null ? null : HexFormat.of().formatHex(value));
+      this.value = value == null ? null : value.clone();
+    }
+
+    byte[] value() {
+      return value == null ? null : value.clone();
+    }
+
+    @Override
+    public boolean equals(Object candidate) {
+      return candidate instanceof ByteArrayRelationKeyValue other
+          && Arrays.equals(value, other.value);
+    }
+
+    @Override
+    public int hashCode() {
+      return Arrays.hashCode(value);
     }
   }
 }

@@ -2,10 +2,13 @@ package io.dsub.discogs.batch.job.writer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 import io.dsub.discogs.batch.dump.EntityType;
 import io.dsub.discogs.batch.domain.release.ReleaseRelationIdentity;
 import io.dsub.discogs.batch.job.processor.RelationSet;
+import io.dsub.opendiscogs.jooq.tables.LabelReleaseItem;
 import io.dsub.opendiscogs.jooq.tables.ReleaseItemFormat;
 import io.dsub.opendiscogs.jooq.tables.records.ArtistUrlRecord;
 import io.dsub.opendiscogs.jooq.tables.records.LabelReleaseItemRecord;
@@ -18,9 +21,12 @@ import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemStyleRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemTrackRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemVideoRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemWorkRecord;
+import java.sql.PreparedStatement;
+import java.sql.Types;
 import java.util.List;
 import org.jooq.UpdatableRecord;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 class CanonicalRelationBatchUnitTest {
 
@@ -53,10 +59,11 @@ class CanonicalRelationBatchUnitTest {
             creditedArtist("Producer"),
             creditedArtist("Producer"));
 
-    List<RelationSet> result =
-        CanonicalRelationBatch.canonicalize(
+    CanonicalRelationBatch.CanonicalBatch batch =
+        CanonicalRelationBatch.prepare(
             List.of(new RelationSet(EntityType.RELEASE, RELEASE_ID, records)),
             EntityType.RELEASE);
+    List<RelationSet> result = batch.relationSets();
 
     assertThat(result).hasSize(1);
     assertThat(result.getFirst().records()).hasSize(12);
@@ -64,6 +71,9 @@ class CanonicalRelationBatchUnitTest {
         .filteredOn(record -> record instanceof LabelReleaseItemRecord)
         .extracting(record -> record.get("category_notation"))
         .containsExactly(null, "SK 026", "SK026");
+    RelationTableRegistry.RelationTable labels =
+        RelationTableRegistry.require(EntityType.RELEASE, LabelReleaseItem.LABEL_RELEASE_ITEM);
+    assertThat(batch.recordsFor(labels)).hasSize(3);
   }
 
   @Test
@@ -175,7 +185,7 @@ class CanonicalRelationBatchUnitTest {
   }
 
   @Test
-  void validatesRelationOwnershipAndRegisteredTable() {
+  void validatesRelationOwnershipAndRegisteredTable() throws Exception {
     assertThatThrownBy(
             () ->
                 CanonicalRelationBatch.canonicalize(
@@ -208,6 +218,16 @@ class CanonicalRelationBatchUnitTest {
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("unsupported relation key type");
 
+    PreparedStatement statement = mock(PreparedStatement.class);
+    ReleaseItemFormatRecord unsupportedValueFormat = format(1, "Vinyl");
+    assertThatThrownBy(() -> unsupported.bind(statement, 1, unsupportedValueFormat))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("unsupported relation key type");
+    ReleaseItemFormatRecord unsupportedNullFormat = format(1, "Vinyl").setHash(null);
+    assertThatThrownBy(() -> unsupported.bind(statement, 1, unsupportedNullFormat))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("unsupported relation key type");
+
     RelationTableRegistry.RelationTable formatTable =
         RelationTableRegistry.require(EntityType.RELEASE, ReleaseItemFormat.RELEASE_ITEM_FORMAT);
     RelationTableRegistry.RelationKey identityKey =
@@ -216,10 +236,36 @@ class CanonicalRelationBatchUnitTest {
             .findFirst()
             .orElseThrow();
     ReleaseItemFormatRecord format = format(1, "Vinyl").setIdentitySha256(null);
-    assertThat(identityKey.arrayValue(format)).isNull();
+    identityKey.bind(statement, 1, format);
+    verify(statement).setNull(1, Types.BINARY);
     format.setIdentitySha256(new byte[] {1});
-    assertThat(identityKey.arrayValue(format)).isEqualTo("\\x01");
-    assertThat(new RelationTableRegistry.ByteArrayRelationKeyValue((byte[]) null).hex()).isNull();
+    identityKey.bind(statement, 2, format);
+    ArgumentCaptor<byte[]> bytes = ArgumentCaptor.forClass(byte[].class);
+    verify(statement).setBytes(org.mockito.ArgumentMatchers.eq(2), bytes.capture());
+    assertThat(bytes.getValue()).containsExactly(1);
+    RelationTableRegistry.RelationKey integerKey = formatTable.keys().getFirst();
+    integerKey.bind(statement, 3, format);
+    verify(statement).setInt(3, RELEASE_ID);
+    RelationTableRegistry.RelationTable labelTable =
+        RelationTableRegistry.require(EntityType.RELEASE, LabelReleaseItem.LABEL_RELEASE_ITEM);
+    labelTable.keys().getLast().bind(statement, 4, label(null));
+    verify(statement).setNull(4, Types.VARCHAR);
+
+    assertThat(new RelationTableRegistry.ByteArrayRelationKeyValue((byte[]) null).value()).isNull();
+    byte[] source = new byte[] {1};
+    RelationTableRegistry.ByteArrayRelationKeyValue binary =
+        new RelationTableRegistry.ByteArrayRelationKeyValue(source);
+    source[0] = 2;
+    byte[] copy = binary.value();
+    copy[0] = 3;
+    assertThat(binary.value()).containsExactly(1);
+    RelationTableRegistry.ByteArrayRelationKeyValue same =
+        new RelationTableRegistry.ByteArrayRelationKeyValue(new byte[] {1});
+    assertThat(binary)
+        .isEqualTo(same)
+        .isNotEqualTo(new RelationTableRegistry.ByteArrayRelationKeyValue(new byte[] {2}))
+        .isNotEqualTo("not binary");
+    assertThat(binary.hashCode()).isEqualTo(same.hashCode());
   }
 
   private ReleaseItemArtistRecord artist() {

@@ -44,8 +44,8 @@ public class ConvergingRelationItemWriter implements ItemWriter<RelationSet> {
       }
       rootIds.add(relationSet.rootId());
     }
-    List<RelationSet> canonicalSets =
-        CanonicalRelationBatch.canonicalize(items.getItems(), entityType);
+    CanonicalRelationBatch.CanonicalBatch canonicalBatch =
+        CanonicalRelationBatch.prepare(items.getItems(), entityType);
     ExistingRelationRoots existingRoots = existingRelationRootsReader.find(entityType, rootIds);
 
     for (RelationTableRegistry.RelationTable relationTable :
@@ -55,16 +55,14 @@ public class ConvergingRelationItemWriter implements ItemWriter<RelationSet> {
         continue;
       }
       List<UpdatableRecord<?>> currentRecords =
-          canonicalSets.stream()
-              .flatMap(relationSet -> relationSet.records().stream())
-              .filter(record -> record.getTable().equals(relationTable.table()))
+          canonicalBatch.recordsFor(relationTable).stream()
               .filter(record -> existingRootIds.contains(relationTable.rootId(record)))
               .toList();
       deleteStaleRelations(relationTable, existingRootIds, currentRecords);
     }
 
     List<Collection<UpdatableRecord<?>>> records =
-        canonicalSets.stream()
+        canonicalBatch.relationSets().stream()
             .map(RelationSet::records)
             .map(recordsForRoot -> (Collection<UpdatableRecord<?>>) recordsForRoot)
             .toList();
@@ -84,19 +82,16 @@ public class ConvergingRelationItemWriter implements ItemWriter<RelationSet> {
             String sql =
                 currentRecords.isEmpty()
                     ? relationTable.deleteAllForRootsSql()
-                    : relationTable.deleteStaleSql();
+                    : relationTable.deleteStaleSql(currentRecords.size());
             try (PreparedStatement statement = connection.prepareStatement(sql)) {
               statement.setArray(1, roots);
               if (!currentRecords.isEmpty()) {
-                for (int keyIndex = 0; keyIndex < relationTable.keys().size(); keyIndex++) {
-                  RelationTableRegistry.RelationKey key = relationTable.keys().get(keyIndex);
-                  Object[] values =
-                      currentRecords.stream()
-                          .map(key::arrayValue)
-                          .toArray();
-                  Array keyArray = connection.createArrayOf(key.postgresArrayType(), values);
-                  arrays.add(keyArray);
-                  statement.setArray(keyIndex + 2, keyArray);
+                int parameterIndex = 2;
+                for (UpdatableRecord<?> record : currentRecords) {
+                  for (RelationTableRegistry.RelationKey key : relationTable.keys()) {
+                    key.bind(statement, parameterIndex, record);
+                    parameterIndex++;
+                  }
                 }
               }
               statement.executeUpdate();
