@@ -6,6 +6,7 @@ import io.dsub.discogs.batch.dump.DiscogsDumpVerifier;
 import io.dsub.discogs.batch.dump.EntityType;
 import io.dsub.discogs.batch.exception.DumpNotFoundException;
 import io.dsub.discogs.batch.exception.InvalidArgumentException;
+import io.dsub.discogs.batch.job.BatchRetryPolicy;
 import io.dsub.discogs.batch.job.listener.EntityProgressStepExecutionListener;
 import io.dsub.discogs.batch.job.listener.ItemCountingItemProcessListener;
 import io.dsub.discogs.batch.job.listener.NestedStepFailurePropagatingListener;
@@ -34,7 +35,6 @@ import org.springframework.batch.infrastructure.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
 
@@ -130,8 +130,7 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
         .writer(
             durableReleaseItemWriterFactory.create(runId, chunkSize, resumed))
         .faultTolerant()
-        .retryLimit(100)
-        .retry(PessimisticLockingFailureException.class)
+        .retryPolicy(BatchRetryPolicy.lockContention())
         .listener(stopWatchStepExecutionListener)
         .listener(itemCountingItemProcessListener)
         .listener(
