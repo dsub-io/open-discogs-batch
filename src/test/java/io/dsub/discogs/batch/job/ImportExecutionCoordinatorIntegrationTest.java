@@ -200,9 +200,11 @@ class ImportExecutionCoordinatorIntegrationTest extends PostgreSQLIntegrationSup
     ImportExecutionCoordinator artist = new ImportExecutionCoordinator(dataSource);
     ImportExecutionCoordinator.Preparation bootstrap =
         artist.prepare(parameters(EntityType.ARTIST, JULY_DUMP, 'a', false, false));
+    assertBootstrapForeignKeys(EntityType.ARTIST, 0, 0);
     assertCatalogEntityState(
         EntityType.ARTIST, "importing", "bootstrap", bootstrap.runId(), null);
     completeSuccessfully(artist, bootstrap.runId());
+    assertBootstrapForeignKeys(EntityType.ARTIST, 8, 8);
     assertCatalogEntityState(
         EntityType.ARTIST, "ready", null, null, bootstrap.runId());
     assertCatalogReadiness(false, "bootstrap_pending", 1);
@@ -211,6 +213,7 @@ class ImportExecutionCoordinatorIntegrationTest extends PostgreSQLIntegrationSup
     ImportExecutionCoordinator refresh = new ImportExecutionCoordinator(dataSource);
     ImportExecutionCoordinator.Preparation failed =
         refresh.prepare(parameters(EntityType.ARTIST, augustDump, 'b', false, false));
+    assertBootstrapForeignKeys(EntityType.ARTIST, 8, 8);
     assertCatalogEntityState(
         EntityType.ARTIST, "importing", "refresh", failed.runId(), bootstrap.runId());
     refresh.complete(false, new IllegalStateException("fixture refresh failure"));
@@ -1151,6 +1154,33 @@ class ImportExecutionCoordinatorIntegrationTest extends PostgreSQLIntegrationSup
       assertThat(result.getBoolean(1)).isEqualTo(ready);
       assertThat(result.getString(2)).isEqualTo(status);
       assertThat(result.getLong(3)).isEqualTo(readyEntities);
+    }
+  }
+
+  private void assertBootstrapForeignKeys(
+      EntityType entityType, long expectedExisting, long expectedValidated)
+      throws Exception {
+    try (Connection connection = dataSource.getConnection();
+        java.sql.PreparedStatement statement =
+            connection.prepareStatement(
+                """
+                select count(constraint_state.oid),
+                       count(constraint_state.oid)
+                           filter (where constraint_state.convalidated)
+                from discogs_bootstrap_foreign_keys() foreign_key
+                left join pg_constraint constraint_state
+                  on constraint_state.conrelid = to_regclass(
+                       format('%I', foreign_key.table_name)
+                     )
+                 and constraint_state.conname = foreign_key.constraint_name
+                where foreign_key.entity_type = ?
+                """)) {
+      statement.setString(1, entityType.toString());
+      try (ResultSet result = statement.executeQuery()) {
+        assertThat(result.next()).isTrue();
+        assertThat(result.getLong(1)).isEqualTo(expectedExisting);
+        assertThat(result.getLong(2)).isEqualTo(expectedValidated);
+      }
     }
   }
 

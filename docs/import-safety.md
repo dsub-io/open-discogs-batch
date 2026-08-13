@@ -63,6 +63,12 @@ Independent sets such as Artist and Label may run together; overlapping Go and
 Java imports cannot write concurrently. Schema migration takes the same shared
 lock family, so migration cannot race an active importer.
 
+During a first entity bootstrap, the canonical model's eligible foreign keys
+are absent while chunks load. Refresh imports retain every foreign key. After
+all bootstrap chunks succeed, the coordinator recreates missing keys as
+`NOT VALID`, validates them, and analyzes the imported tables in the completion
+transaction. Catalog readiness changes only after that transaction commits.
+
 Release chunks do not mutate or lock Master backlinks. After all Release
 chunks commit, one set reconciliation derives the desired backlink from
 canonical `release_item` rows, locks only changed Master rows in ascending

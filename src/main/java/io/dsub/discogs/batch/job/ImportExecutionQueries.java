@@ -271,6 +271,12 @@ final class ImportExecutionQueries {
       where entity_type = any (?)
       """;
 
+  static final String PREPARE_BOOTSTRAP_FOREIGN_KEYS =
+      "select prepare_discogs_bootstrap_foreign_keys(?)";
+
+  static final String FINALIZE_BOOTSTRAP =
+      "select finalize_discogs_bootstrap(?)";
+
   static final String MARK_CATALOG_STATES_READY =
       """
       update discogs_catalog_entity_state

@@ -125,6 +125,10 @@ public class ImportExecutionCoordinator {
         transferResumeProgress(resumedFromRunId, activeRunId, dumps.size());
       }
       markCatalogStatesImporting(activeRunId, entityTypes);
+      runBootstrapOperation(
+          ImportExecutionQueries.PREPARE_BOOTSTRAP_FOREIGN_KEYS,
+          activeRunId,
+          "prepare");
 
       activeEntityTypes = List.copyOf(entityTypes);
       lockConnection.commit();
@@ -168,6 +172,10 @@ public class ImportExecutionCoordinator {
       Throwable failureReason = success ? null : normalizedFailure(failure);
       updateRunStatus(activeRunId, success, failureReason);
       if (success) {
+        runBootstrapOperation(
+            ImportExecutionQueries.FINALIZE_BOOTSTRAP,
+            activeRunId,
+            "finalize");
         markCatalogStatesReady(activeRunId, activeEntityTypes);
         pruneSupersededFailedProgress();
         deleteRunChunks(activeRunId);
@@ -506,6 +514,23 @@ public class ImportExecutionCoordinator {
           statement.executeUpdate(), entityTypes.size(), START_CATALOG_STATE_ACTION, runId);
     } finally {
       requestedTypes.free();
+    }
+  }
+
+  private void runBootstrapOperation(String query, long runId, String action)
+      throws SQLException, ImportExecutionException {
+    try (PreparedStatement statement = lockConnection.prepareStatement(query)) {
+      statement.setLong(1, runId);
+      try (ResultSet result = statement.executeQuery()) {
+        if (!result.next()) {
+          throw new ImportExecutionException(
+              action + " import run " + runId + " bootstrap returned no result");
+        }
+        result.getInt(1);
+      }
+    } catch (SQLException exception) {
+      throw new ImportExecutionException(
+          action + " import run " + runId + " bootstrap", exception);
     }
   }
 
