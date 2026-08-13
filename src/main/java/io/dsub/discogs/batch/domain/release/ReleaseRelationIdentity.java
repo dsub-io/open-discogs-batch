@@ -25,6 +25,7 @@ public final class ReleaseRelationIdentity {
     CREDITED_ARTIST("credited_artist"),
     FORMAT("format"),
     IDENTIFIER("identifier"),
+    IMAGE("image"),
     TRACK("track"),
     VIDEO("video"),
     WORK("work");
