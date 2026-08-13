@@ -106,8 +106,8 @@ The available Gradle command validates the current forced-idempotency path
 once; it does not reproduce either before/after table:
 
 ```shell
-./gradlew cleanTest test \
-  --tests 'io.dsub.discogs.batch.job.PostgreSQLDiscogsJobIntegrationTest.whenSameDumpIsForcedTwice__BusinessRowsRemainIdentical' \
+./gradlew cleanE2eTest e2eTest \
+  --tests 'io.dsub.discogs.batch.job.PostgreSQLDiscogsJobE2ETest.forcedRefreshPreservesTheCanonicalBusinessState' \
   --quiet
 ```
 

@@ -168,11 +168,15 @@ Persistent test volumes and bind mounts are not allowed.
 
 ```shell
 sdk env
+./gradlew test             # pure unit tests; does not start Docker
+./gradlew integrationTest  # PostgreSQL and adapter contracts
+./gradlew e2eTest          # deterministic dump-to-PostgreSQL flows
 ./gradlew clean check --no-daemon --warning-mode=fail
 ```
 
-CI verifies deterministic unit, PostgreSQL integration, dump E2E behavior,
-cleanup residue, and 100% line and branch coverage.
+`check` runs all three lanes, naming validation, and 100% line and branch
+coverage. Integration and E2E tests share their PostgreSQL fixture within each
+JVM and clean every owned Docker resource after the lane completes.
 
 ## License
 
