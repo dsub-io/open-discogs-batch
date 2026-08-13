@@ -67,8 +67,7 @@ public class LabelSubItemsProcessor
         .setOrdinal(ordinal)
         .setUrl(url)
         .setHash(url.hashCode())
-        .setLastModifiedAt(observedAt)
-        .setCreatedAt(observedAt);
+        .setLastModifiedAt(observedAt);
   }
 
   private boolean isExistingLabel(Integer labelId) {

@@ -106,8 +106,7 @@ public class MasterSubItemsProcessor
         .setMasterId(masterId)
         .setOrdinal(ordinal)
         .setGenre(genre)
-        .setLastModifiedAt(observedAt)
-        .setCreatedAt(observedAt);
+        .setLastModifiedAt(observedAt);
   }
 
   private MasterStyleRecord getMasterStyleRecord(
@@ -116,8 +115,7 @@ public class MasterSubItemsProcessor
         .setMasterId(masterId)
         .setOrdinal(ordinal)
         .setStyle(style)
-        .setLastModifiedAt(observedAt)
-        .setCreatedAt(observedAt);
+        .setLastModifiedAt(observedAt);
   }
 
   private MasterVideoRecord getMasterVideoRecord(
@@ -136,7 +134,6 @@ public class MasterSubItemsProcessor
         .setDescription(video.getDescription())
         .setUrl(video.getUrl())
         .setHash(hashSrc.hashCode())
-        .setLastModifiedAt(observedAt)
-        .setCreatedAt(observedAt);
+        .setLastModifiedAt(observedAt);
   }
 }

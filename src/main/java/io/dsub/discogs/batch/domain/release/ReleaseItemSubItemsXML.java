@@ -120,7 +120,6 @@ public class ReleaseItemSubItemsXML {
       return new ReleaseItemArtistRecord()
           .setArtistId(artistId)
           .setReleaseItemId(parentId)
-          .setCreatedAt(observedAt)
           .setLastModifiedAt(observedAt);
     }
   }
@@ -153,7 +152,6 @@ public class ReleaseItemSubItemsXML {
           .setIdentitySha256(
               ReleaseRelationIdentity.digest(
                   ReleaseRelationIdentity.Relation.CREDITED_ARTIST, role))
-          .setCreatedAt(observedAt)
           .setLastModifiedAt(observedAt);
     }
   }
@@ -177,7 +175,6 @@ public class ReleaseItemSubItemsXML {
           .setReleaseItemId(parentId)
           .setLabelId(labelId)
           .setCategoryNotation(categoryNotation)
-          .setCreatedAt(observedAt)
           .setLastModifiedAt(observedAt);
     }
   }
@@ -237,7 +234,6 @@ public class ReleaseItemSubItemsXML {
                   reducedDescription,
                   canonicalQuantity,
                   text))
-          .setCreatedAt(observedAt)
           .setLastModifiedAt(observedAt);
     }
 
@@ -320,7 +316,6 @@ public class ReleaseItemSubItemsXML {
           .setIdentitySha256(
               ReleaseRelationIdentity.digest(
                   ReleaseRelationIdentity.Relation.TRACK, position, title, duration))
-          .setCreatedAt(observedAt)
           .setLastModifiedAt(observedAt);
     }
   }
@@ -354,7 +349,6 @@ public class ReleaseItemSubItemsXML {
           .setIdentitySha256(
               ReleaseRelationIdentity.digest(
                   ReleaseRelationIdentity.Relation.IDENTIFIER, type, description, value))
-          .setCreatedAt(observedAt)
           .setLastModifiedAt(observedAt);
     }
   }
@@ -384,7 +378,6 @@ public class ReleaseItemSubItemsXML {
               ReleaseRelationIdentity.digest(
                   ReleaseRelationIdentity.Relation.WORK, work))
           .setLabelId(id)
-          .setCreatedAt(observedAt)
           .setLastModifiedAt(observedAt);
     }
   }
@@ -418,7 +411,6 @@ public class ReleaseItemSubItemsXML {
           .setIdentitySha256(
               ReleaseRelationIdentity.digest(
                   ReleaseRelationIdentity.Relation.VIDEO, title, description, url))
-          .setCreatedAt(observedAt)
           .setLastModifiedAt(observedAt);
     }
   }

@@ -8,6 +8,7 @@ import io.dsub.discogs.batch.job.processor.RelationSet;
 import io.dsub.opendiscogs.jooq.tables.records.LabelUrlRecord;
 import java.sql.Connection;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Collection;
@@ -48,16 +49,24 @@ class ConvergingRelationItemWriterIntegrationTest extends PostgreSQLIntegrationS
               new ClassPathResource("migrations/V001__initial_schema.sql"))
           .execute(dataSource);
     }
+    if (!columnExists("ordinal")) {
+      new ResourceDatabasePopulator(
+              new ClassPathResource("migrations/V023__label_url_ordinal.sql"))
+          .execute(dataSource);
+    }
+    if (columnExists("created_at")) {
+      new ResourceDatabasePopulator(
+              new ClassPathResource("migrations/V039__remove_relation_created_at.sql"))
+          .execute(dataSource);
+    }
+  }
+
+  private static boolean columnExists(String columnName) throws SQLException {
     try (Connection connection = dataSource.getConnection();
         ResultSet columns =
-            connection.getMetaData().getColumns(null, "public", "label_url", "ordinal")) {
-      if (columns.next()) {
-        return;
-      }
+            connection.getMetaData().getColumns(null, "public", "label_url", columnName)) {
+      return columns.next();
     }
-    new ResourceDatabasePopulator(
-            new ClassPathResource("migrations/V023__label_url_ordinal.sql"))
-        .execute(dataSource);
   }
 
   @BeforeEach
@@ -77,10 +86,10 @@ class ConvergingRelationItemWriterIntegrationTest extends PostgreSQLIntegrationS
     jdbcTemplate.update(
         """
         insert into label_url
-            (id, created_at, last_modified_at, hash, url, label_id)
+            (id, last_modified_at, hash, url, label_id)
         values
-            (10, now(), now(), ?, ?, 1),
-            (11, now(), now(), ?, ?, 1)
+            (10, now(), ?, ?, 1),
+            (11, now(), ?, ?, 1)
         """,
         currentUrl.hashCode(),
         currentUrl,
@@ -106,8 +115,8 @@ class ConvergingRelationItemWriterIntegrationTest extends PostgreSQLIntegrationS
     jdbcTemplate.update(
         """
         insert into label_url
-            (created_at, last_modified_at, hash, url, label_id)
-        values (now(), now(), 1, 'https://stale.example', 1)
+            (last_modified_at, hash, url, label_id)
+        values (now(), 1, 'https://stale.example', 1)
         """);
 
     writer().write(
@@ -226,7 +235,6 @@ class ConvergingRelationItemWriterIntegrationTest extends PostgreSQLIntegrationS
         .setUrl(url)
         .setHash(url.hashCode())
         .setOrdinal(ordinal)
-        .setCreatedAt(observedAt)
         .setLastModifiedAt(observedAt);
   }
 }

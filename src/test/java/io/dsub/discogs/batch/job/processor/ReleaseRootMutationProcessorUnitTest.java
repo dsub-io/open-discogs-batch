@@ -52,10 +52,9 @@ class ReleaseRootMutationProcessorUnitTest {
     assertThat(mutation.relations().rootId()).isEqualTo(7);
     assertThat((ReleaseItemArtistRecord) mutation.relations().records().get(0))
         .satisfies(
-            record -> {
-              assertThat(record.getCreatedAt()).isEqualTo(mutation.root().getCreatedAt());
-              assertThat(record.getLastModifiedAt()).isEqualTo(mutation.root().getCreatedAt());
-            });
+            record ->
+                assertThat(record.getLastModifiedAt())
+                    .isEqualTo(mutation.root().getCreatedAt()));
     assertThat(mutation.root().getIsMaster()).isTrue();
   }
 

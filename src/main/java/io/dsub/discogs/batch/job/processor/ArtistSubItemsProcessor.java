@@ -134,8 +134,7 @@ public class ArtistSubItemsProcessor
         .setOrdinal(ordinal)
         .setNameVariation(nameVar)
         .setHash(nameVar.hashCode())
-        .setLastModifiedAt(observedAt)
-        .setCreatedAt(observedAt);
+        .setLastModifiedAt(observedAt);
   }
 
   private ArtistUrlRecord makeArtistUrlRecord(
@@ -145,7 +144,6 @@ public class ArtistSubItemsProcessor
         .setUrl(url)
         .setArtistId(artistId)
         .setOrdinal(ordinal)
-        .setCreatedAt(observedAt)
         .setHash(url.hashCode())
         .setLastModifiedAt(observedAt);
   }

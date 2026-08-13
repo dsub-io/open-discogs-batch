@@ -92,7 +92,6 @@ public class ReleaseItemSubItemsProcessor
                   .setReleaseItemId(releaseItemId)
                   .setGenre(genre)
                   .setOrdinal(ordinal)
-                  .setCreatedAt(observedAt)
                   .setLastModifiedAt(observedAt));
         }
       }
@@ -107,7 +106,6 @@ public class ReleaseItemSubItemsProcessor
                   .setReleaseItemId(releaseItemId)
                   .setStyle(style)
                   .setOrdinal(ordinal)
-                  .setCreatedAt(observedAt)
                   .setLastModifiedAt(observedAt));
         }
       }

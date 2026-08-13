@@ -36,7 +36,6 @@ class AbstractJooqItemWriterUnitTest {
     ReleaseItemArtistRecord relation =
         new ReleaseItemArtistRecord()
             .setId(9)
-            .setCreatedAt(NOW)
             .setLastModifiedAt(NOW)
             .setReleaseItemId(2)
             .setArtistId(5);
@@ -85,14 +84,12 @@ class AbstractJooqItemWriterUnitTest {
             .setMainReleaseId(2);
     ReleaseItemVideoRecord video =
         new ReleaseItemVideoRecord()
-            .setCreatedAt(NOW)
             .setLastModifiedAt(NOW)
             .setReleaseItemId(2)
             .setHash(1)
             .setUrl("https://video");
     ReleaseItemFormatRecord format =
         new ReleaseItemFormatRecord()
-            .setCreatedAt(NOW)
             .setLastModifiedAt(NOW)
             .setReleaseItemId(2)
             .setHash(2)

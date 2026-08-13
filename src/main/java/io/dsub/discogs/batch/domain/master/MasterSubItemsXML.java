@@ -52,7 +52,6 @@ public class MasterSubItemsXML {
       return new MasterArtistRecord()
           .setMasterId(parentId)
           .setArtistId(artistId)
-          .setCreatedAt(observedAt)
           .setLastModifiedAt(observedAt);
     }
   }
@@ -77,7 +76,6 @@ public class MasterSubItemsXML {
           .setDescription(description)
           .setUrl(url)
           .setHash(getHashValue())
-          .setCreatedAt(observedAt)
           .setLastModifiedAt(observedAt);
     }
 

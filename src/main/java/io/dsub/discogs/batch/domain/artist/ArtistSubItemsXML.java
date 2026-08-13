@@ -58,7 +58,6 @@ public class ArtistSubItemsXML {
       return new ArtistAliasRecord()
           .setArtistId(parentId)
           .setAliasId(aliasId)
-          .setCreatedAt(observedAt)
           .setLastModifiedAt(observedAt);
     }
   }
@@ -75,7 +74,6 @@ public class ArtistSubItemsXML {
       return new ArtistGroupRecord()
           .setArtistId(parentId)
           .setGroupId(groupId)
-          .setCreatedAt(observedAt)
           .setLastModifiedAt(observedAt);
     }
   }
@@ -92,7 +90,6 @@ public class ArtistSubItemsXML {
       return new ArtistMemberRecord()
           .setArtistId(parentId)
           .setMemberId(memberId)
-          .setCreatedAt(observedAt)
           .setLastModifiedAt(observedAt);
     }
   }

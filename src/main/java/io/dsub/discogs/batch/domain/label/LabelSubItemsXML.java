@@ -47,7 +47,6 @@ public class LabelSubItemsXML {
       return new LabelSubLabelRecord()
           .setParentLabelId(parentId)
           .setSubLabelId(subLabelId)
-          .setCreatedAt(observedAt)
           .setLastModifiedAt(observedAt);
     }
   }

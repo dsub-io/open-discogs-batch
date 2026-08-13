@@ -107,7 +107,8 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
         "migrations/V035__release_item_style_ordinal.sql",
         "migrations/V036__release_item_track_ordinal.sql",
         "migrations/V037__release_item_video_ordinal.sql",
-        "migrations/V038__release_item_work_ordinal.sql")) {
+        "migrations/V038__release_item_work_ordinal.sql",
+        "migrations/V039__remove_relation_created_at.sql")) {
       executeMigration(root, resource);
     }
 
@@ -253,12 +254,11 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
         jdbcTemplate.queryForObject(
             """
             insert into release_item_track
-                (created_at, last_modified_at, release_item_id, hash, position, title, duration)
-            values (?, ?, ?, ?, ?, ?, ?)
+                (last_modified_at, release_item_id, hash, position, title, duration)
+            values (?, ?, ?, ?, ?, ?)
             returning id
             """,
             Integer.class,
-            FIRST_WRITE,
             FIRST_WRITE,
             KNOWN_COLLISION_RELEASE_ID,
             KNOWN_COLLISION_HASH,
@@ -416,10 +416,10 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
     jdbcTemplate.execute(
         """
         insert into release_item_artist
-            (created_at, last_modified_at, artist_id, release_item_id)
+            (last_modified_at, artist_id, release_item_id)
         values
-            (now(), now(), 5, 2),
-            (now(), now(), 5, 2)
+            (now(), 5, 2),
+            (now(), 5, 2)
         on conflict (release_item_id, artist_id)
         do update set last_modified_at = excluded.last_modified_at
         """);
@@ -491,7 +491,6 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
     return new ReleaseItemArtistRecord()
         .setReleaseItemId(RELEASE_ID)
         .setArtistId(ARTIST_ID)
-        .setCreatedAt(FIRST_WRITE)
         .setLastModifiedAt(modifiedAt);
   }
 
@@ -500,7 +499,6 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
         .setReleaseItemId(RELEASE_ID)
         .setLabelId(LABEL_ID)
         .setCategoryNotation(categoryNotation)
-        .setCreatedAt(FIRST_WRITE)
         .setLastModifiedAt(modifiedAt);
   }
 
@@ -508,7 +506,6 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
     return new ReleaseItemGenreRecord()
         .setReleaseItemId(RELEASE_ID)
         .setGenre("Rock")
-        .setCreatedAt(FIRST_WRITE)
         .setLastModifiedAt(modifiedAt);
   }
 
@@ -516,7 +513,6 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
     return new ReleaseItemStyleRecord()
         .setReleaseItemId(RELEASE_ID)
         .setStyle("House")
-        .setCreatedAt(FIRST_WRITE)
         .setLastModifiedAt(modifiedAt);
   }
 
@@ -533,7 +529,6 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
             ReleaseRelationIdentity.digest(
                 ReleaseRelationIdentity.Relation.FORMAT,
                 "Vinyl", "[d:LP]", Integer.toString(quantity), "Limited"))
-        .setCreatedAt(FIRST_WRITE)
         .setLastModifiedAt(modifiedAt);
   }
 
@@ -547,7 +542,6 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
         .setIdentitySha256(
             ReleaseRelationIdentity.digest(
                 ReleaseRelationIdentity.Relation.TRACK, "A1", "Track", "3:00"))
-        .setCreatedAt(FIRST_WRITE)
         .setLastModifiedAt(modifiedAt);
   }
 
@@ -567,7 +561,6 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
         .setIdentitySha256(
             ReleaseRelationIdentity.digest(
                 ReleaseRelationIdentity.Relation.TRACK, position, title, null))
-        .setCreatedAt(FIRST_WRITE)
         .setLastModifiedAt(FIRST_WRITE);
   }
 
@@ -582,7 +575,6 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
             ReleaseRelationIdentity.digest(
                 ReleaseRelationIdentity.Relation.FORMAT,
                 "File", null, OVERSIZED_QUANTITY, null))
-        .setCreatedAt(FIRST_WRITE)
         .setLastModifiedAt(FIRST_WRITE);
   }
 
@@ -596,7 +588,6 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
         .setIdentitySha256(
             ReleaseRelationIdentity.digest(
                 ReleaseRelationIdentity.Relation.IDENTIFIER, "Barcode", "Text", "123"))
-        .setCreatedAt(FIRST_WRITE)
         .setLastModifiedAt(modifiedAt);
   }
 
@@ -608,7 +599,6 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
         .setIdentitySha256(
             ReleaseRelationIdentity.digest(
                 ReleaseRelationIdentity.Relation.IMAGE, "cover.jpg"))
-        .setCreatedAt(FIRST_WRITE)
         .setLastModifiedAt(modifiedAt);
   }
 
@@ -621,7 +611,6 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
         .setIdentitySha256(
             ReleaseRelationIdentity.digest(
                 ReleaseRelationIdentity.Relation.WORK, "Pressed By"))
-        .setCreatedAt(FIRST_WRITE)
         .setLastModifiedAt(modifiedAt);
   }
 
@@ -636,7 +625,6 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
             ReleaseRelationIdentity.digest(
                 ReleaseRelationIdentity.Relation.VIDEO,
                 "Video", "Description", "https://video.example"))
-        .setCreatedAt(FIRST_WRITE)
         .setLastModifiedAt(modifiedAt);
   }
 
@@ -649,7 +637,6 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
         .setIdentitySha256(
             ReleaseRelationIdentity.digest(
                 ReleaseRelationIdentity.Relation.CREDITED_ARTIST, "Producer"))
-        .setCreatedAt(FIRST_WRITE)
         .setLastModifiedAt(modifiedAt);
   }
 }
