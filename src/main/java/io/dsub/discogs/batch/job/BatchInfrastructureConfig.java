@@ -3,15 +3,15 @@ package io.dsub.discogs.batch.job;
 import io.dsub.discogs.batch.argument.ArgType;
 import io.dsub.discogs.batch.dump.DiscogsDump;
 import io.dsub.discogs.batch.dump.EntityType;
-import io.dsub.discogs.batch.job.decider.MasterMainReleaseStepJobExecutionDecider;
 import io.dsub.discogs.batch.job.listener.BatchListenerConfig;
 import io.dsub.discogs.batch.job.progress.ImportProgressStore;
 import io.dsub.discogs.batch.job.processor.ItemProcessorConfig;
 import io.dsub.discogs.batch.job.reader.DiscogsDumpItemReaderBuilder;
 import io.dsub.discogs.batch.job.reader.ItemReaderConfig;
-import io.dsub.discogs.batch.job.registry.DefaultEntityIdRegistry;
+import io.dsub.discogs.batch.job.reconciliation.PostgreSQLMasterMainReleaseReconciler;
 import io.dsub.discogs.batch.job.step.GlobalStepConfig;
 import io.dsub.discogs.batch.job.tasklet.GenreStyleInsertionTasklet;
+import io.dsub.discogs.batch.job.tasklet.MasterMainReleaseReconciliationTasklet;
 import io.dsub.discogs.batch.job.writer.ItemWriterConfig;
 import io.dsub.discogs.batch.util.FileUtil;
 import io.dsub.discogs.batch.util.SimpleFileUtil;
@@ -34,7 +34,9 @@ import org.springframework.context.annotation.Import;
         ItemWriterConfig.class,
         BatchListenerConfig.class,
         ImportProgressStore.class,
-        GenreStyleInsertionTasklet.class
+        GenreStyleInsertionTasklet.class,
+        PostgreSQLMasterMainReleaseReconciler.class,
+        MasterMainReleaseReconciliationTasklet.class
     })
 public class BatchInfrastructureConfig {
 
@@ -48,12 +50,6 @@ public class BatchInfrastructureConfig {
   @Bean
   public Map<EntityType, DiscogsDump> dumpMap() {
     return new HashMap<>();
-  }
-
-  @Bean
-  public MasterMainReleaseStepJobExecutionDecider masterMainReleaseStepJobExecutionDecider(
-      DefaultEntityIdRegistry registry) {
-    return new MasterMainReleaseStepJobExecutionDecider(registry);
   }
 
   // TODO: test!

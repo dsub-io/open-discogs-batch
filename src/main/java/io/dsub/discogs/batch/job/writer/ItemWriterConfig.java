@@ -50,7 +50,6 @@ public class ItemWriterConfig {
     return new DurableReleaseItemWriterFactory(
         dataSource,
         jooqItemWriter(),
-        new DefaultJooqMasterMainReleaseItemWriter(context),
         progressStore);
   }
 }

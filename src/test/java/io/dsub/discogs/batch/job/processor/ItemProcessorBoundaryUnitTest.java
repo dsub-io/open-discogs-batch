@@ -10,7 +10,6 @@ import io.dsub.discogs.batch.domain.artist.ArtistSubItemsXML;
 import io.dsub.discogs.batch.domain.artist.ArtistXML;
 import io.dsub.discogs.batch.domain.label.LabelSubItemsXML;
 import io.dsub.discogs.batch.domain.label.LabelXML;
-import io.dsub.discogs.batch.domain.master.MasterMainReleaseXML;
 import io.dsub.discogs.batch.domain.master.MasterSubItemsXML;
 import io.dsub.discogs.batch.domain.master.MasterXML;
 import io.dsub.discogs.batch.domain.release.ReleaseItemSubItemsXML;
@@ -117,44 +116,6 @@ class ItemProcessorBoundaryUnitTest {
             record -> {
               assertThat(record.getMasterId()).isEqualTo(1);
               assertThat(record.getIsMaster()).isTrue();
-            });
-  }
-
-  @Test
-  void masterMainReleaseProcessorEmitsEveryValidReleaseRootAndValidatesPositiveMappings()
-      throws Exception {
-    MasterMainReleaseItemProcessor processor = new MasterMainReleaseItemProcessor(registry());
-    MasterMainReleaseXML item = new MasterMainReleaseXML();
-
-    assertThat(processor.process(null, OBSERVED_AT)).isNull();
-    assertThat(processor.process(item, OBSERVED_AT)).isNull();
-    item.setReleaseId(1);
-    assertThat(processor.process(item, OBSERVED_AT))
-        .satisfies(
-            record -> {
-              assertThat(record.targetMasterId()).isNull();
-              assertThat(record.releaseId()).isEqualTo(1);
-            });
-
-    MasterMainReleaseXML.Master master = new MasterMainReleaseXML.Master();
-    item.setMaster(master);
-    assertThat(processor.process(item, OBSERVED_AT).targetMasterId()).isNull();
-    master.setMasterId(1);
-    assertThat(processor.process(item, OBSERVED_AT).targetMasterId()).isNull();
-    master.setMainRelease(true);
-    master.setMasterId(null);
-    assertThat(processor.process(item, OBSERVED_AT)).isNull();
-    master.setMasterId(2);
-    assertThat(processor.process(item, OBSERVED_AT)).isNull();
-    master.setMasterId(1);
-    item.setReleaseId(2);
-    assertThat(processor.process(item, OBSERVED_AT)).isNull();
-    item.setReleaseId(1);
-    assertThat(processor.process(item, OBSERVED_AT))
-        .satisfies(
-            record -> {
-              assertThat(record.targetMasterId()).isEqualTo(1);
-              assertThat(record.releaseId()).isEqualTo(1);
             });
   }
 

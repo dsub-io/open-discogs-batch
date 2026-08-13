@@ -17,6 +17,7 @@ public class EntityProgressStepExecutionListener
   private final EntityType entityType;
   private final long runId;
   private final int chunkSize;
+  private final CompletionPolicy completionPolicy;
   private final ImportProgressReporter progressReporter;
 
   public EntityProgressStepExecutionListener(
@@ -25,10 +26,21 @@ public class EntityProgressStepExecutionListener
       long runId,
       int chunkSize,
       boolean resumed) {
+    this(progressStore, entityType, runId, chunkSize, resumed, CompletionPolicy.FINALIZE);
+  }
+
+  public EntityProgressStepExecutionListener(
+      ImportProgressStore progressStore,
+      EntityType entityType,
+      long runId,
+      int chunkSize,
+      boolean resumed,
+      CompletionPolicy completionPolicy) {
     this.progressStore = progressStore;
     this.entityType = entityType;
     this.runId = runId;
     this.chunkSize = chunkSize;
+    this.completionPolicy = completionPolicy;
     this.progressReporter =
         new ImportProgressReporter(progressStore, entityType, runId, resumed);
   }
@@ -49,6 +61,9 @@ public class EntityProgressStepExecutionListener
       progressReporter.finish(false);
       return stepExecution.getExitStatus();
     }
+    if (completionPolicy == CompletionPolicy.DEFER) {
+      return stepExecution.getExitStatus();
+    }
     try {
       progressStore.completeEntityFromProgress(runId, entityType, chunkSize);
       progressReporter.finish(true);
@@ -59,5 +74,10 @@ public class EntityProgressStepExecutionListener
       progressReporter.finish(false);
       return ExitStatus.FAILED.addExitDescription(exception);
     }
+  }
+
+  public enum CompletionPolicy {
+    FINALIZE,
+    DEFER
   }
 }

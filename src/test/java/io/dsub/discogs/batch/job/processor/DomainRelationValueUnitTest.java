@@ -3,7 +3,6 @@ package io.dsub.discogs.batch.job.processor;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import io.dsub.discogs.batch.domain.master.MasterMainReleaseXML;
 import io.dsub.discogs.batch.domain.master.MasterSubItemsXML;
 import io.dsub.discogs.batch.domain.release.ReleaseItemSubItemsXML;
 import jakarta.xml.bind.JAXBContext;
@@ -43,28 +42,6 @@ class DomainRelationValueUnitTest {
               assertThat(record.getDescription()).isEqualTo("Description");
               assertThat(record.getUrl()).isEqualTo("https://video");
               assertThat(record.getHash()).isEqualTo(video.getHashValue());
-            });
-  }
-
-  @Test
-  void masterMainReleaseBuildHandlesMissingAndPresentMaster() {
-    MasterMainReleaseXML value = new MasterMainReleaseXML();
-    value.setReleaseId(11);
-    assertThat(value.buildRecord(java.time.LocalDateTime.MIN).targetMasterId()).isNull();
-
-    MasterMainReleaseXML.Master master = new MasterMainReleaseXML.Master();
-    master.setMasterId(7);
-    value.setMaster(master);
-    assertThat(value.buildRecord(java.time.LocalDateTime.MIN).targetMasterId()).isNull();
-    master.setMainRelease(true);
-    assertThat(value.buildRecord(java.time.LocalDateTime.MIN))
-        .satisfies(
-            record -> {
-              assertThat(record.targetMasterId()).isEqualTo(7);
-              assertThat(record.releaseId()).isEqualTo(11);
-              assertThat(record.releaseId()).isEqualTo(11);
-              assertThat(record.targetMasterId()).isEqualTo(7);
-              assertThat(record.observedAt()).isNotNull();
             });
   }
 

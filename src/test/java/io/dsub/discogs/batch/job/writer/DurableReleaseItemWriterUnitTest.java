@@ -9,7 +9,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.dsub.discogs.batch.domain.master.MasterMainReleaseAssignment;
 import io.dsub.discogs.batch.dump.EntityType;
 import io.dsub.discogs.batch.job.processor.RelationSet;
 import io.dsub.discogs.batch.job.processor.ReleaseRootMutation;
@@ -19,7 +18,6 @@ import io.dsub.discogs.batch.job.progress.ProcessedChunk;
 import io.dsub.opendiscogs.jooq.tables.records.GenreRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemRecord;
 import io.dsub.opendiscogs.jooq.tables.records.StyleRecord;
-import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import org.jooq.UpdatableRecord;
@@ -49,7 +47,6 @@ class DurableReleaseItemWriterUnitTest {
         .containsExactlyElementsOf(
             List.of(mutation.genres().getFirst(), mutation.styles().getFirst(), mutation.root()));
     verify(fixture.relationWriter()).write(any());
-    verify(fixture.mainReleaseWriter()).write(any());
     verify(fixture.progressStore())
         .recordCompletedChunk(RUN_ID, EntityType.RELEASE, CHUNK_SIZE, RANGE);
     verify(fixture.progressStore(), never()).isChunkCompleted(anyLong(), any(), any());
@@ -66,7 +63,6 @@ class DurableReleaseItemWriterUnitTest {
 
     verify(completed.recordWriter(), never()).write(any());
     verify(completed.relationWriter(), never()).write(any());
-    verify(completed.mainReleaseWriter(), never()).write(any());
     verify(completed.progressStore(), never())
         .recordCompletedChunk(anyLong(), any(), anyInt(), any());
 
@@ -84,19 +80,16 @@ class DurableReleaseItemWriterUnitTest {
   private Fixture fixture(boolean resumed) {
     ItemWriter<Collection<UpdatableRecord<?>>> recordWriter = mock(ItemWriter.class);
     ItemWriter<RelationSet> relationWriter = mock(ItemWriter.class);
-    ItemWriter<MasterMainReleaseAssignment> mainReleaseWriter = mock(ItemWriter.class);
     ImportProgressStore progressStore = mock(ImportProgressStore.class);
     DurableReleaseItemWriter writer =
         new DurableReleaseItemWriter(
             recordWriter,
             relationWriter,
-            mainReleaseWriter,
             progressStore,
             RUN_ID,
             CHUNK_SIZE,
             resumed);
-    return new Fixture(
-        writer, recordWriter, relationWriter, mainReleaseWriter, progressStore);
+    return new Fixture(writer, recordWriter, relationWriter, progressStore);
   }
 
   private ReleaseRootMutation mutation() {
@@ -106,15 +99,13 @@ class DurableReleaseItemWriterUnitTest {
         root,
         List.of(new GenreRecord().setName("Rock")),
         List.of(new StyleRecord().setName("House")),
-        relations,
-        new MasterMainReleaseAssignment(1, 2, LocalDateTime.of(2026, 8, 1, 0, 0)));
+        relations);
   }
 
   private record Fixture(
       DurableReleaseItemWriter writer,
       ItemWriter<Collection<UpdatableRecord<?>>> recordWriter,
       ItemWriter<RelationSet> relationWriter,
-      ItemWriter<MasterMainReleaseAssignment> mainReleaseWriter,
       ImportProgressStore progressStore) {
   }
 }

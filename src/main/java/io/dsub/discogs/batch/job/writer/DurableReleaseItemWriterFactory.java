@@ -1,6 +1,5 @@
 package io.dsub.discogs.batch.job.writer;
 
-import io.dsub.discogs.batch.domain.master.MasterMainReleaseAssignment;
 import io.dsub.discogs.batch.job.processor.RelationSet;
 import io.dsub.discogs.batch.job.processor.ReleaseRootMutation;
 import io.dsub.discogs.batch.job.progress.ImportProgressStore;
@@ -14,17 +13,14 @@ public final class DurableReleaseItemWriterFactory {
 
   private final DataSource dataSource;
   private final ItemWriter<UpdatableRecord<?>> recordWriter;
-  private final ItemWriter<MasterMainReleaseAssignment> mainReleaseWriter;
   private final ImportProgressStore progressStore;
 
   public DurableReleaseItemWriterFactory(
       DataSource dataSource,
       ItemWriter<UpdatableRecord<?>> recordWriter,
-      ItemWriter<MasterMainReleaseAssignment> mainReleaseWriter,
       ImportProgressStore progressStore) {
     this.dataSource = dataSource;
     this.recordWriter = recordWriter;
-    this.mainReleaseWriter = mainReleaseWriter;
     this.progressStore = progressStore;
   }
 
@@ -37,7 +33,6 @@ public final class DurableReleaseItemWriterFactory {
     return new DurableReleaseItemWriter(
         batchedRecords,
         converging,
-        mainReleaseWriter,
         progressStore,
         runId,
         chunkSize,

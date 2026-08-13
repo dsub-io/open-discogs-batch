@@ -314,7 +314,7 @@ public abstract class DiscogsJobIntegrationTest {
         is(0L));
   }
 
-  final void runAtomicReleaseRetryScenario()
+  final void runSeparatedReleaseReconciliationRetryScenario()
       throws Exception {
     ImportExecutionCoordinator importExecutionCoordinator =
         new ImportExecutionCoordinator(dataSource);
@@ -362,10 +362,10 @@ public abstract class DiscogsJobIntegrationTest {
         is(0L));
     assertThat(
         scalarLong("select count(*) from release_item where id = 1 and title = 'rollback sentinel'"),
-        is(1L));
+        is(0L));
     assertThat(
         scalarLong("select count(*) from release_item_video where release_item_id = 1"),
-        is(0L));
+        is(6L));
     assertThat(
         scalarLong("select count(*) from master where id = 1 and main_release_id is null"),
         is(1L));

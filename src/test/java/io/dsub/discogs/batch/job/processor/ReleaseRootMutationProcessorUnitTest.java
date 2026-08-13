@@ -6,7 +6,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import io.dsub.discogs.batch.domain.master.MasterMainReleaseAssignment;
 import io.dsub.discogs.batch.domain.release.ReleaseItemSubItemsXML;
 import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemRecord;
@@ -57,14 +56,11 @@ class ReleaseRootMutationProcessorUnitTest {
               assertThat(record.getCreatedAt()).isEqualTo(mutation.root().getCreatedAt());
               assertThat(record.getLastModifiedAt()).isEqualTo(mutation.root().getCreatedAt());
             });
-    assertThat(mutation.mainReleaseAssignment().releaseId()).isEqualTo(7);
-    assertThat(mutation.mainReleaseAssignment().targetMasterId()).isEqualTo(3);
-    assertThat(mutation.mainReleaseAssignment().observedAt())
-        .isEqualTo(java.time.LocalDateTime.of(2026, 8, 1, 0, 0));
+    assertThat(mutation.root().getIsMaster()).isTrue();
   }
 
   @Test
-  void rejectsInvalidRootsAndLeavesNonMainAssignmentsUnmapped() throws Exception {
+  void rejectsInvalidRootsAndLeavesNonMainRootsUnmapped() throws Exception {
     EntityIdRegistry registry = mock(EntityIdRegistry.class);
     ReleaseRootMutationProcessor processor = new ReleaseRootMutationProcessor(registry);
 
@@ -76,16 +72,14 @@ class ReleaseRootMutationProcessorUnitTest {
 
     ReleaseItemSubItemsXML source = new ReleaseItemSubItemsXML();
     source.setId(1);
-    assertThat(processor.process(source, OBSERVED_AT).mainReleaseAssignment().targetMasterId())
-        .isNull();
+    assertThat(processor.process(source, OBSERVED_AT).root().getIsMaster()).isFalse();
 
     ReleaseItemSubItemsXML.ReleaseMaster master =
         new ReleaseItemSubItemsXML.ReleaseMaster();
     master.setMasterId(3);
     master.setMainRelease(false);
     source.setMaster(master);
-    assertThat(processor.process(source, OBSERVED_AT).mainReleaseAssignment().targetMasterId())
-        .isNull();
+    assertThat(processor.process(source, OBSERVED_AT).root().getIsMaster()).isFalse();
   }
 
   @Test
@@ -94,22 +88,17 @@ class ReleaseRootMutationProcessorUnitTest {
     ReleaseItemRecord root = new ReleaseItemRecord();
     RelationSet relations =
         new RelationSet(io.dsub.discogs.batch.dump.EntityType.RELEASE, 1, List.of());
-    MasterMainReleaseAssignment assignment =
-        new MasterMainReleaseAssignment(1, null, java.time.LocalDateTime.MIN);
     assertThatThrownBy(
-            () -> new ReleaseRootMutation(null, List.of(), List.of(), relations, assignment))
+            () -> new ReleaseRootMutation(null, List.of(), List.of(), relations))
         .isInstanceOf(IllegalArgumentException.class);
     assertThatThrownBy(
-            () -> new ReleaseRootMutation(root, List.of(), List.of(), null, assignment))
+            () -> new ReleaseRootMutation(root, List.of(), List.of(), null))
         .isInstanceOf(IllegalArgumentException.class);
     assertThatThrownBy(
-            () -> new ReleaseRootMutation(root, List.of(), List.of(), relations, null))
-        .isInstanceOf(IllegalArgumentException.class);
-    assertThatThrownBy(
-            () -> new ReleaseRootMutation(root, null, List.of(), relations, assignment))
+            () -> new ReleaseRootMutation(root, null, List.of(), relations))
         .isInstanceOf(NullPointerException.class);
     assertThatThrownBy(
-            () -> new ReleaseRootMutation(root, List.of(), null, relations, assignment))
+            () -> new ReleaseRootMutation(root, List.of(), null, relations))
         .isInstanceOf(NullPointerException.class);
   }
 }

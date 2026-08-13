@@ -57,16 +57,16 @@ PostgreSQL advisory locks cover selected entities and their references:
 | Master | Artist, Master |
 | Release | Artist, Label, Master, Release |
 
-Release takes all locks because it also updates `master.main_release_id`.
+Release takes all locks because its final reconciliation updates
+`master.main_release_id`.
 Independent sets such as Artist and Label may run together; overlapping Go and
 Java imports cannot write concurrently. Schema migration takes the same shared
 lock family, so migration cannot race an active importer.
 
-Concurrent Release chunks may affect the same Master. Each chunk unions
-candidate IDs through indexed `master.id`, `master.main_release_id`, and
-`release_item.id` lookups, then locks the resulting Master rows in ascending
-order before updates. Do not combine those lookup paths with `OR`: PostgreSQL
-may otherwise scan the entire Master table once per worker.
+Release chunks do not mutate or lock Master backlinks. After all Release
+chunks commit, one set reconciliation derives the desired backlink from
+canonical `release_item` rows, locks only changed Master rows in ascending
+order, clears stale values, and then sets current values in one transaction.
 
 A partial Master or Release import is admitted only when each omitted reference
 entity has a compatible completed checkpoint at the current import contract
@@ -85,12 +85,13 @@ contains:
 - the processed-item counter.
 
 For each Release source chunk, one transaction contains the root rows,
-genre/style dictionaries, exact supported relation sets,
-`master.main_release_id` assignments, ledger entries, and processed-item
-counters. A retry reads the stream from the beginning, skips exact committed
-chunks, and safely reruns only the separate non-Release core phases. The model
-v0.3.1 import contract is part of resume and success compatibility; an older
-successful Release contract cannot suppress corrected Release semantics.
+genre/style dictionaries, exact supported relation sets, ledger entry, and
+processed-item counter. After all chunks commit, a separate transaction
+reconciles `master.main_release_id`; only then is Release entity progress
+finalized. If reconciliation fails, a retry skips the committed chunks and
+reruns the set reconciliation. The model v0.3.1 import contract is part of
+resume and success compatibility; an older successful Release contract cannot
+suppress corrected Release semantics.
 
 Missing supported relations are deleted, mutable values are updated, and
 unchanged rows retain their surrogate IDs. Exact relation duplicates collapse

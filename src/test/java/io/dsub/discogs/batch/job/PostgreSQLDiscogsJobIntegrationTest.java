@@ -17,7 +17,7 @@ public class PostgreSQLDiscogsJobIntegrationTest extends DiscogsJobIntegrationTe
   }
 
   @Test
-  void retryReplaysAtomicReleaseChunkAfterMainAssignmentFailure() throws Exception {
-    runAtomicReleaseRetryScenario();
+  void retryReconcilesBacklinksWithoutRewritingCommittedReleaseChunks() throws Exception {
+    runSeparatedReleaseReconciliationRetryScenario();
   }
 }

@@ -75,6 +75,12 @@ once in a rolled-back transaction after planner statistics and production
 PostgreSQL limits were updated. Full-import throughput and steady-state RSS
 remain to be measured during the next import.
 
+The per-chunk lock query was an intermediate safety correction. Release chunks
+now leave Master backlinks untouched; one post-chunk set reconciliation handles
+clear/set changes in a separate transaction. Its final production-scale plan,
+latency, WAL, and lock-wait comparison remains part of the full before/after
+measurement gate.
+
 ## Release format quantity parser
 
 The release dump contains 19,810,850 format rows, and release `6662697` has a

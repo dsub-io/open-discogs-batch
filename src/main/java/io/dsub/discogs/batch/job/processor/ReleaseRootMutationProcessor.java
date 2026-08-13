@@ -1,6 +1,5 @@
 package io.dsub.discogs.batch.job.processor;
 
-import io.dsub.discogs.batch.domain.master.MasterMainReleaseAssignment;
 import io.dsub.discogs.batch.domain.release.ReleaseItemSubItemsXML;
 import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
 import io.dsub.discogs.batch.util.ReflectionUtil;
@@ -36,13 +35,11 @@ public final class ReleaseRootMutationProcessor
     source.setStyles(styles);
     ReleaseItemRecord root = coreProcessor.processNormalized(source, observedAt);
     RelationSet relations = relationProcessor.processNormalized(source, observedAt);
-    Integer targetMasterId = root.getIsMaster() ? root.getMasterId() : null;
     return new ReleaseRootMutation(
         root,
         genres.stream().map(value -> new GenreRecord().setName(value)).toList(),
         styles.stream().map(value -> new StyleRecord().setName(value)).toList(),
-        relations,
-        new MasterMainReleaseAssignment(source.getId(), targetMasterId, observedAt));
+        relations);
   }
 
   private List<String> normalizedValues(List<String> values) {
