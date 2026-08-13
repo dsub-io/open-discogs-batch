@@ -178,6 +178,12 @@ sdk env
 coverage. Integration and E2E tests share their PostgreSQL fixture within each
 JVM and clean every owned Docker resource after the lane completes.
 
+On 2026-08-13, with clean project outputs and a warm dependency cache on the
+development machine, unit tests took 16.95 seconds and started no containers,
+integration tests took 21.56 seconds and started one PostgreSQL container, and
+E2E took 15.47 seconds and started one. Every lane left zero owned container,
+network, or volume residue.
+
 ## License
 
 MIT. See [LICENSE](LICENSE). Retain the `state303` attribution required by the
