@@ -8,6 +8,7 @@ import io.dsub.discogs.batch.container.PostgreSQLIntegrationSupport;
 import io.dsub.discogs.batch.dump.EntityType;
 import io.dsub.discogs.batch.domain.release.ReleaseRelationIdentity;
 import io.dsub.discogs.batch.job.processor.RelationSet;
+import io.dsub.opendiscogs.jooq.tables.records.ArtistRecord;
 import io.dsub.opendiscogs.jooq.tables.records.LabelReleaseItemRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemArtistRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemCreditedArtistRecord;
@@ -399,6 +400,41 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
         .isEqualTo(firstId);
   }
 
+  @Test
+  void unchangedRootSkipsPostgreSQLUpdate() throws Exception {
+    ArtistRecord unchanged =
+        new ArtistRecord()
+            .setId(ARTIST_ID)
+            .setCreatedAt(FIRST_WRITE.plusDays(1))
+            .setLastModifiedAt(FIRST_WRITE.plusDays(1))
+            .setName("Artist");
+    DefaultLJooqItemWriter<ArtistRecord> writer =
+        new DefaultLJooqItemWriter<>(mappedContext());
+    jdbcTemplate.execute(
+        """
+        create function reject_artist_update() returns trigger
+        language plpgsql as $$ begin
+          raise exception 'unchanged root must not update';
+        end $$
+        """);
+    jdbcTemplate.execute(
+        """
+        create trigger reject_artist_update
+        before update on artist
+        for each row execute function reject_artist_update()
+        """);
+    try {
+      writer.write(new Chunk<>(List.of(unchanged)));
+      unchanged.setName("Changed Artist");
+      assertThatThrownBy(() -> writer.write(new Chunk<>(List.of(unchanged))))
+          .rootCause()
+          .hasMessageContaining("unchanged root must not update");
+    } finally {
+      jdbcTemplate.execute("drop trigger reject_artist_update on artist");
+      jdbcTemplate.execute("drop function reject_artist_update()");
+    }
+  }
+
   private static void executeMigration(JdbcTemplate template, String resource) throws Exception {
     String source =
         new ClassPathResource(resource).getContentAsString(StandardCharsets.UTF_8);
@@ -426,17 +462,21 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
   }
 
   private ItemWriter<RelationSet> writer() {
+    DSLContext context = mappedContext();
+    ItemWriter<UpdatableRecord<?>> records = new DefaultLJooqItemWriter<>(context);
+    ItemWriter<Collection<UpdatableRecord<?>>> batches =
+        new CollectionItemWriter<>(records, 100);
+    return new ConvergingRelationItemWriter(isolatedDataSource, batches);
+  }
+
+  private DSLContext mappedContext() {
     Settings settings =
         new Settings()
             .withRenderMapping(
                 new RenderMapping()
                     .withSchemata(
                         new MappedSchema().withInput("public").withOutput(TEST_SCHEMA)));
-    DSLContext context = DSL.using(isolatedDataSource, SQLDialect.POSTGRES, settings);
-    ItemWriter<UpdatableRecord<?>> records = new DefaultLJooqItemWriter<>(context);
-    ItemWriter<Collection<UpdatableRecord<?>>> batches =
-        new CollectionItemWriter<>(records, 100);
-    return new ConvergingRelationItemWriter(isolatedDataSource, batches);
+    return DSL.using(isolatedDataSource, SQLDialect.POSTGRES, settings);
   }
 
   private RelationSet relationSet(int quantity, LocalDateTime modifiedAt) {
