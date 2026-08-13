@@ -6,19 +6,32 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import io.dsub.discogs.batch.container.PostgreSQLIntegrationSupport;
 import io.dsub.discogs.batch.dump.EntityType;
 import io.dsub.discogs.batch.exception.ImportExecutionException;
+import io.dsub.discogs.batch.job.progress.ChunkRange;
+import io.dsub.discogs.batch.job.progress.ImportProgressStore;
+import io.dsub.discogs.batch.job.progress.ProcessedChunk;
+import io.dsub.discogs.batch.job.processor.ReleaseRootMutation;
+import io.dsub.discogs.batch.job.writer.DurableReleaseItemWriter;
 import io.dsub.opendiscogs.model.manifest.ImportExecution;
 import io.dsub.opendiscogs.model.manifest.ImportManifest;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.batch.core.job.parameters.JobParameters;
 import org.springframework.batch.core.job.parameters.JobParametersBuilder;
+import org.springframework.batch.infrastructure.item.Chunk;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -30,6 +43,7 @@ class ImportExecutionCoordinatorIntegrationTest extends PostgreSQLIntegrationSup
   private static final int LEGACY_IMPORT_CONTRACT_REVISION = 1;
   private static final String GO_PROCESSOR = "go-open-discogs-batch";
   private static final String GO_PROCESSOR_VERSION = "2.3.6";
+  private static final Duration PROCESS_KILL_TIMEOUT = Duration.ofSeconds(10);
 
   @BeforeAll
   static void migrateDatabase() throws Exception {
@@ -685,6 +699,87 @@ class ImportExecutionCoordinatorIntegrationTest extends PostgreSQLIntegrationSup
   }
 
   @Test
+  void releaseProcessKillResumesCommittedChunkWithoutRewritingIt() throws Exception {
+    seedDependencyCheckpointsForRelease();
+    Process process = releaseProcessKillFixture();
+    long abandonedRunId;
+    try (BufferedReader output =
+        new BufferedReader(
+            new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
+      abandonedRunId = awaitCommittedReleaseChunk(output);
+    } finally {
+      process.destroyForcibly();
+      assertThat(
+              process.waitFor(PROCESS_KILL_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS))
+          .isTrue();
+    }
+
+    assertThat(process.exitValue()).isNotZero();
+    assertThat(stringQuery(
+        "select status from discogs_import_run where id = " + abandonedRunId))
+        .isEqualTo("running");
+    assertThat(longQuery(
+        "select count(*) from discogs_import_run_chunk where import_run_id = "
+            + abandonedRunId))
+        .isEqualTo(1);
+    assertThat(longQuery(
+        "select count(*) from release_item where id = "
+            + ReleaseProcessKillFixture.RELEASE_ID))
+        .isEqualTo(1);
+
+    ImportExecutionCoordinator retry = new ImportExecutionCoordinator(dataSource);
+    ImportExecutionCoordinator.Preparation resumed =
+        retry.prepare(ReleaseProcessKillFixture.jobParameters());
+
+    assertThat(resumed.resumedFromRunId()).isEqualTo(abandonedRunId);
+    assertThat(longQuery(
+        "select count(*) from discogs_import_run_chunk where import_run_id = "
+            + abandonedRunId))
+        .isZero();
+    assertThat(longQuery(
+        "select count(*) from discogs_import_run_chunk where import_run_id = "
+            + resumed.runId()))
+        .isEqualTo(1);
+    assertThat(stringQuery(
+        "select status from discogs_import_run where id = " + abandonedRunId))
+        .isEqualTo("failed");
+
+    ImportProgressStore progressStore = new ImportProgressStore(dataSource);
+    DurableReleaseItemWriter resumedWriter =
+        new DurableReleaseItemWriter(
+            ignored -> {
+              throw new AssertionError("committed Release root chunk was rewritten");
+            },
+            ignored -> {
+              throw new AssertionError("committed Release relation chunk was rewritten");
+            },
+            progressStore,
+            resumed.runId(),
+            ReleaseProcessKillFixture.CHUNK_SIZE,
+            true);
+    resumedWriter.write(
+        new Chunk<>(
+            List.of(
+                new ProcessedChunk<>(
+                    new ChunkRange(0, 0, ReleaseProcessKillFixture.CHUNK_SIZE),
+                    List.<ReleaseRootMutation>of()))));
+    progressStore.recordCompletedChunk(
+        resumed.runId(),
+        EntityType.RELEASE,
+        ReleaseProcessKillFixture.CHUNK_SIZE,
+        new ChunkRange(1, 1, ReleaseProcessKillFixture.CHUNK_SIZE));
+    progressStore.completeEntity(
+        resumed.runId(),
+        EntityType.RELEASE,
+        ReleaseProcessKillFixture.CHUNK_SIZE,
+        2);
+    retry.complete(true, null);
+    assertThat(stringQuery(
+        "select status from discogs_import_run where id = " + resumed.runId()))
+        .isEqualTo("success");
+  }
+
+  @Test
   void legacyAbandonedRunIsFailedButNeverResumed() throws Exception {
     ImportExecutionCoordinator interrupted = new ImportExecutionCoordinator(dataSource);
     JobParameters parameters =
@@ -778,6 +873,53 @@ class ImportExecutionCoordinatorIntegrationTest extends PostgreSQLIntegrationSup
       boolean allowDowngrade) {
     return parameters(
         List.of(new SelectedDump(type, dumpDate, checksumCharacter)), force, allowDowngrade);
+  }
+
+  private void seedDependencyCheckpointsForRelease() throws Exception {
+    ImportExecutionCoordinator dependencies = new ImportExecutionCoordinator(dataSource);
+    ImportExecutionCoordinator.Preparation preparation =
+        dependencies.prepare(
+            parameters(
+                List.of(
+                    new SelectedDump(EntityType.ARTIST, JULY_DUMP, 'a'),
+                    new SelectedDump(EntityType.LABEL, JULY_DUMP, 'b'),
+                    new SelectedDump(EntityType.MASTER, JULY_DUMP, 'c')),
+                false,
+                false));
+    completeSuccessfully(dependencies, preparation.runId());
+  }
+
+  private Process releaseProcessKillFixture() throws Exception {
+    Path java = Path.of(System.getProperty("java.home"), "bin", "java");
+    ProcessBuilder builder =
+        new ProcessBuilder(
+                java.toString(),
+                "-cp",
+                System.getProperty("java.class.path"),
+                ReleaseProcessKillFixture.class.getName())
+            .redirectErrorStream(true);
+    builder.environment().put(ReleaseProcessKillFixture.JDBC_URL_ENV, jdbcUrl);
+    builder.environment().put(ReleaseProcessKillFixture.JDBC_USERNAME_ENV, username);
+    builder.environment().put(ReleaseProcessKillFixture.JDBC_PASSWORD_ENV, password);
+    return builder.start();
+  }
+
+  private long awaitCommittedReleaseChunk(BufferedReader output) throws Exception {
+    CompletableFuture<Long> committedRun =
+        CompletableFuture.supplyAsync(
+            () ->
+                output.lines()
+                    .filter(line -> line.startsWith(ReleaseProcessKillFixture.READY_PREFIX))
+                    .map(
+                        line ->
+                            Long.parseLong(
+                                line.substring(ReleaseProcessKillFixture.READY_PREFIX.length())))
+                    .findFirst()
+                    .orElseThrow(
+                        () ->
+                            new IllegalStateException(
+                                "Release process-kill fixture exited before committing a chunk")));
+    return committedRun.get(PROCESS_KILL_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
   }
 
   private JobParameters parametersWithDependencies(
