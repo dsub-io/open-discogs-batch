@@ -30,6 +30,7 @@ import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
 import java.nio.charset.StandardCharsets;
@@ -80,6 +81,8 @@ import org.springframework.test.context.ContextConfiguration;
 public abstract class DiscogsJobIntegrationTest {
 
   private static final AtomicLong TEST_MANIFEST_SEQUENCE = new AtomicLong();
+  private static final String GO_BATCH_PROCESSOR = "go-open-discogs-batch";
+  private static final String CROSS_LANGUAGE_TEST_VERSION = "cross-language-test";
 
   @Autowired
   JobOperatorTestUtils jobOperatorTestUtils;
@@ -293,6 +296,7 @@ public abstract class DiscogsJobIntegrationTest {
             firstPreparation.runId()),
         is(1L));
     importExecutionCoordinator.complete(false, new IllegalStateException("interrupted"));
+    markRunAsGo(firstPreparation.runId());
 
     ImportExecutionCoordinator.Preparation resumedPreparation =
         importExecutionCoordinator.prepare(parameters);
@@ -612,6 +616,18 @@ public abstract class DiscogsJobIntegrationTest {
         .addLong(ImportJobParameters.RUN_ID, runId)
         .addString(ImportJobParameters.RESUMED, "false")
         .toJobParameters();
+  }
+
+  private void markRunAsGo(long runId) throws SQLException {
+    try (Connection connection = dataSource.getConnection();
+        PreparedStatement statement =
+            connection.prepareStatement(
+                "update discogs_import_run set processor = ?, processor_version = ? where id = ?")) {
+      statement.setString(1, GO_BATCH_PROCESSOR);
+      statement.setString(2, CROSS_LANGUAGE_TEST_VERSION);
+      statement.setLong(3, runId);
+      assertThat(statement.executeUpdate(), is(1));
+    }
   }
 
   private JobParameters coordinatedParameters(int chunkSize, EntityType... entityTypes) {
