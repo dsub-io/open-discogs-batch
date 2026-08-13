@@ -106,6 +106,11 @@ class AbstractJooqItemWriterUnitTest {
         .containsExactly("last_modified_at", "ordinal");
     assertThat(names(writer.businessUpdateFields(format))).containsExactly("ordinal");
     assertThat(writer.updateFields(format)).isSameAs(writer.updateFields(format));
+    assertThat(writer.businessUpdateFields(format))
+        .isSameAs(writer.businessUpdateFields(format));
+    assertThat(writer.bindValues(format))
+        .hasSize(writer.insertFields(format).size() + writer.updateFields(format).size())
+        .contains(NOW, 2, "Vinyl");
   }
 
   @Test
@@ -124,6 +129,7 @@ class AbstractJooqItemWriterUnitTest {
         .doesNotContainKeys("id", "created_at");
     assertThat(writer.updateMap(artist)).doesNotContainKeys("id", "created_at");
     assertThat(writer.updateMap(genre)).isEmpty();
+    assertThat(writer.bindValues(genre)).hasSize(writer.insertFields(genre).size());
   }
 
   private List<String> names(List<Field<?>> fields) {
@@ -155,6 +161,10 @@ class AbstractJooqItemWriterUnitTest {
 
     List<Field<?>> businessUpdateFields(UpdatableRecord<?> record) {
       return getBusinessUpdateFields(record.getTable());
+    }
+
+    Object[] bindValues(UpdatableRecord<?> record) {
+      return getBindValues(record);
     }
 
     @Override

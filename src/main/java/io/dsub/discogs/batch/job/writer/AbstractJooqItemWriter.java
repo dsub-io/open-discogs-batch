@@ -34,6 +34,8 @@ public abstract class AbstractJooqItemWriter<T extends UpdatableRecord<?>> imple
   private final Map<Table<?>, List<Field<?>>> insertFields = new ConcurrentHashMap<>();
   private final Map<Table<?>, List<Field<?>>> constraintFieldsCache = new ConcurrentHashMap<>();
   private final Map<Table<?>, List<Field<?>>> updateFieldsCache = new ConcurrentHashMap<>();
+  private final Map<Table<?>, List<Field<?>>> businessUpdateFieldsCache =
+      new ConcurrentHashMap<>();
 
   protected List<Object> getInsertValues(T record) {
     return getInsertFields(record.getTable()).stream()
@@ -93,9 +95,35 @@ public abstract class AbstractJooqItemWriter<T extends UpdatableRecord<?>> imple
   }
 
   protected List<Field<?>> getBusinessUpdateFields(Table<?> table) {
-    return getUpdateFields(table).stream()
-        .filter(field -> !field.getName().equals("last_modified_at"))
-        .collect(Collectors.toList());
+    return businessUpdateFieldsCache.computeIfAbsent(
+        table,
+        uncachedTable ->
+            getUpdateFields(uncachedTable).stream()
+                .filter(field -> !field.getName().equals("last_modified_at"))
+                .toList());
+  }
+
+  protected Object[] getBindValues(T record) {
+    List<Field<?>> insert = getInsertFields(record.getTable());
+    List<Field<?>> update = getUpdateFields(record.getTable());
+    boolean updateOnConflict = !getBusinessUpdateFields(record.getTable()).isEmpty();
+    int updateCount = updateOnConflict ? update.size() : 0;
+    Object[] values = new Object[insert.size() + updateCount];
+    int index = copyFieldValues(record, insert, values, 0);
+    if (updateOnConflict) {
+      copyFieldValues(record, update, values, index);
+    }
+    return values;
+  }
+
+  private int copyFieldValues(
+      T record, List<Field<?>> fields, Object[] target, int startIndex) {
+    int index = startIndex;
+    for (Field<?> field : fields) {
+      target[index] = field.getValue(record);
+      index++;
+    }
+    return index;
   }
 
   private List<Field<?>> generatedConstraintFields(Table<?> table) {

@@ -1,8 +1,8 @@
 package io.dsub.discogs.batch.job.writer;
 
+import java.sql.Connection;
 import java.util.List;
 import java.util.Map;
-import java.sql.Connection;
 import javax.sql.DataSource;
 import org.jooq.BatchBindStep;
 import org.jooq.Condition;
@@ -38,25 +38,11 @@ public class DefaultLJooqItemWriter<T extends UpdatableRecord<?>> extends Abstra
       DSLContext transactionContext = DSL.using(context.configuration().derive(connection));
       Query query = getQuery(items.getItems().getFirst(), transactionContext);
       BatchBindStep batch = transactionContext.batch(query);
-      items.forEach(record -> batch.bind(mapValues(record)));
+      items.forEach(record -> batch.bind(getBindValues(record)));
       batch.execute();
     } finally {
       DataSourceUtils.releaseConnection(connection, dataSource);
     }
-  }
-
-  /**
-   * map values from record into a full array
-   *
-   * @param record to be parsed into array
-   * @return values
-   */
-  private Object[] mapValues(T record) {
-    List<Object> values = getInsertValues(record);
-    if (!getBusinessUpdateFields(record.getTable()).isEmpty()) {
-      getUpdateFields(record.getTable()).forEach(field -> values.add(field.getValue(record)));
-    }
-    return values.toArray();
   }
 
   @Override
