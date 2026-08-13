@@ -158,7 +158,7 @@ class LegacyLiquibaseContractSourceUnitTest {
     assertThatThrownBy(
             () ->
                 new LegacyLiquibaseContractSource()
-                    .load(canonical.subList(0, canonical.size() - 3)))
+                    .load(canonical.subList(0, 0)))
         .isInstanceOf(InitializationFailureException.class)
         .hasMessageContaining("newer than the canonical migration artifact");
 

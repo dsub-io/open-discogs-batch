@@ -7,14 +7,14 @@ import io.dsub.discogs.batch.dump.EntityType;
 import io.dsub.opendiscogs.jooq.tables.records.ArtistUrlRecord;
 import java.util.ArrayList;
 import java.util.List;
-import org.jooq.UpdatableRecord;
+import org.jooq.TableRecord;
 import org.junit.jupiter.api.Test;
 
 class RelationSetUnitTest {
 
   @Test
   void validatesIdentityAndCopiesRecords() {
-    List<UpdatableRecord<?>> records = new ArrayList<>();
+    List<TableRecord<?>> records = new ArrayList<>();
     records.add(new ArtistUrlRecord());
     RelationSet relationSet = new RelationSet(EntityType.ARTIST, 1, records);
     records.clear();

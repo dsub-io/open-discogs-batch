@@ -11,6 +11,40 @@ final class ImportProgressQueries {
         and chunk_index = ?
       """;
 
+  static final String FIND_COMPLETED_CHUNKS =
+      """
+      select chunk_index, first_item_index, item_count
+      from discogs_import_run_chunk
+      where import_run_id = ?
+        and entity_type = ?
+      order by chunk_index
+      """;
+
+  static final String FIND_COMPLETED_ENTITY =
+      """
+      select total_items
+      from discogs_import_run_dump
+      where import_run_id = ?
+        and entity_type = ?
+        and chunk_size = ?
+        and completed_at is not null
+        and total_items is not null
+        and total_chunks is not null
+        and processed_items = total_items
+      """;
+
+  static final String SHOULD_SEED_MASTER_MAIN_RELEASES =
+      """
+      select exists (
+        select 1
+        from discogs_catalog_entity_state
+        where entity_type = 'release'
+          and status = 'importing'
+          and operation = 'bootstrap'
+          and active_import_run_id = ?
+      )
+      """;
+
   static final String RECORD_CHUNK =
       """
       with active_run as (

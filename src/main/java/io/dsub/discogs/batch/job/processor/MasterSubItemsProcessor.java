@@ -11,23 +11,23 @@ import io.dsub.discogs.batch.util.ReflectionUtil;
 import io.dsub.opendiscogs.jooq.tables.records.MasterGenreRecord;
 import io.dsub.opendiscogs.jooq.tables.records.MasterStyleRecord;
 import io.dsub.opendiscogs.jooq.tables.records.MasterVideoRecord;
-import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import lombok.RequiredArgsConstructor;
-import org.jooq.UpdatableRecord;
-import org.springframework.batch.infrastructure.item.ItemProcessor;
+import org.jooq.TableRecord;
 
-@RequiredArgsConstructor
 public class MasterSubItemsProcessor
-    implements ItemProcessor<MasterSubItemsXML, RelationSet> {
+    implements ObservedAtItemProcessor<MasterSubItemsXML, RelationSet> {
 
   private final EntityIdRegistry idRegistry;
 
+  public MasterSubItemsProcessor(EntityIdRegistry idRegistry) {
+    this.idRegistry = Objects.requireNonNull(idRegistry, "idRegistry must not be null");
+  }
+
   @Override
-  public RelationSet process(MasterSubItemsXML master) {
+  public RelationSet process(MasterSubItemsXML master, LocalDateTime observedAt) {
 
     if (master.getId() == null || master.getId() < 1) {
       return null;
@@ -35,24 +35,22 @@ public class MasterSubItemsProcessor
 
     ReflectionUtil.normalizeStringFields(master);
 
-    List<UpdatableRecord<?>> items = new ArrayList<>();
+    List<TableRecord<?>> items = new ArrayList<>();
     Integer masterId = master.getId();
 
     if (master.getMasterArtists() != null) {
       master.getMasterArtists().stream()
           .filter(Objects::nonNull)
-          .distinct()
           .filter(masterArtist -> isExistingArtist(masterArtist.getArtistId()))
-          .map(xml -> xml.getRecord(masterId))
+          .map(xml -> xml.getRecord(masterId, observedAt))
           .forEach(items::add);
     }
 
     if (master.getMasterVideos() != null) {
       master.getMasterVideos().stream()
           .filter(Objects::nonNull)
-          .distinct()
           .filter(video -> video.getUrl() != null)
-          .map(video -> getMasterVideoRecord(masterId, video))
+          .map(video -> getMasterVideoRecord(masterId, video, observedAt))
           .forEach(items::add);
     }
 
@@ -60,9 +58,8 @@ public class MasterSubItemsProcessor
       master.getGenres().stream()
           .filter(Objects::nonNull)
           .map(String::trim)
-          .distinct()
           .filter(this::isExistingGenre)
-          .map(genre -> getMasterGenreRecord(masterId, genre))
+          .map(genre -> getMasterGenreRecord(masterId, genre, observedAt))
           .forEach(items::add);
     }
 
@@ -70,9 +67,8 @@ public class MasterSubItemsProcessor
       master.getStyles().stream()
           .filter(Objects::nonNull)
           .map(String::trim)
-          .distinct()
           .filter(this::isExistingStyle)
-          .map(style -> getMasterStyleRecord(masterId, style))
+          .map(style -> getMasterStyleRecord(masterId, style, observedAt))
           .forEach(items::add);
     }
 
@@ -92,24 +88,24 @@ public class MasterSubItemsProcessor
     return idRegistry.exists(GENRE, name);
   }
 
-  private MasterGenreRecord getMasterGenreRecord(Integer masterId, String genre) {
+  private MasterGenreRecord getMasterGenreRecord(
+      Integer masterId, String genre, LocalDateTime observedAt) {
     return new MasterGenreRecord()
         .setMasterId(masterId)
         .setGenre(genre)
-        .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()))
-        .setCreatedAt(LocalDateTime.now(Clock.systemUTC()));
+        .setLastModifiedAt(observedAt);
   }
 
-  private MasterStyleRecord getMasterStyleRecord(Integer masterId, String style) {
+  private MasterStyleRecord getMasterStyleRecord(
+      Integer masterId, String style, LocalDateTime observedAt) {
     return new MasterStyleRecord()
         .setMasterId(masterId)
         .setStyle(style)
-        .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()))
-        .setCreatedAt(LocalDateTime.now(Clock.systemUTC()));
+        .setLastModifiedAt(observedAt);
   }
 
   private MasterVideoRecord getMasterVideoRecord(
-      Integer masterId, MasterSubItemsXML.MasterVideoXML video) {
+      Integer masterId, MasterSubItemsXML.MasterVideoXML video, LocalDateTime observedAt) {
     String hashSrc =
         (video.getTitle() == null ? "" : video.getTitle())
             + (video.getDescription() == null ? "" : video.getDescription())
@@ -120,7 +116,6 @@ public class MasterSubItemsProcessor
         .setDescription(video.getDescription())
         .setUrl(video.getUrl())
         .setHash(hashSrc.hashCode())
-        .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()))
-        .setCreatedAt(LocalDateTime.now(Clock.systemUTC()));
+        .setLastModifiedAt(observedAt);
   }
 }

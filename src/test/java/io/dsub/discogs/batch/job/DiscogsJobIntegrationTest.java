@@ -30,6 +30,7 @@ import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
 import java.nio.charset.StandardCharsets;
@@ -41,11 +42,12 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 import javax.sql.DataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.BatchStatus;
@@ -81,6 +83,10 @@ import org.springframework.test.context.ContextConfiguration;
 public abstract class DiscogsJobIntegrationTest {
 
   private static final AtomicLong TEST_MANIFEST_SEQUENCE = new AtomicLong();
+  private static final String GO_BATCH_PROCESSOR = "go-open-discogs-batch";
+  private static final String CROSS_LANGUAGE_TEST_VERSION = "cross-language-test";
+  private static final String FIRST_MASTER_MAIN_RELEASE =
+      "    <main_release>1</main_release>\n";
 
   @Autowired
   JobOperatorTestUtils jobOperatorTestUtils;
@@ -129,8 +135,7 @@ public abstract class DiscogsJobIntegrationTest {
     return paramsBuilder.toJobParameters();
   }
 
-  @Test
-  void whenAllTypesProvided__ShouldNotSkipAnyType() throws Exception {
+  final void runAllTypesScenario() throws Exception {
     JobParameters params =
         jobOperatorTestUtils
             .getUniqueJobParametersBuilder()
@@ -152,8 +157,7 @@ public abstract class DiscogsJobIntegrationTest {
     }
   }
 
-  @Test
-  void whenOnlyArtistLabel__ShouldSkipMasterRelease() throws Exception {
+  final void runSelectiveEntitiesScenario() throws Exception {
     JobParametersBuilder builder = new JobParametersBuilder();
     //    builder.addString("artist", "artist");
     builder.addString("label", "label");
@@ -181,8 +185,27 @@ public abstract class DiscogsJobIntegrationTest {
             "release eTag not found. skipping release step."));
   }
 
-  @Test
-  void relationFailureFailsTheWholeJobInsteadOfEndingSuccessfully() throws Exception {
+  final void runStandaloneEntityScenarios() throws Exception {
+    for (EntityType entityType : EntityType.values()) {
+      JobParameters parameters =
+          jobOperatorTestUtils
+              .getUniqueJobParametersBuilder()
+              .addString(entityType.toString(), entityType.toString())
+              .addString(ImportJobParameters.CHUNK_SIZE, "1000")
+              .toJobParameters();
+      parameters = withTrackedImportRun(parameters);
+
+      JobExecution execution =
+          jobOperator.start(jobOperatorTestUtils.getJob(), parameters);
+
+      assertThat(execution.getExitStatus().getExitCode(), is("COMPLETED"));
+      assertThat(dumpMap.keySet(), is(java.util.Set.of(entityType)));
+      assertThat(dumpMap.size(), is(1));
+      dumpMap.clear();
+    }
+  }
+
+  final void runRelationFailurePropagationScenario() throws Exception {
     try (Connection connection = dataSource.getConnection();
         Statement statement = connection.createStatement()) {
       statement.execute(
@@ -236,8 +259,7 @@ public abstract class DiscogsJobIntegrationTest {
     }
   }
 
-  @Test
-  void failedMultiEntityRunResumesCompletedSourceChunksWithoutRewritingThem()
+  final void runMultiEntityResumeScenario()
       throws Exception {
     ImportExecutionCoordinator importExecutionCoordinator =
         new ImportExecutionCoordinator(dataSource);
@@ -278,6 +300,7 @@ public abstract class DiscogsJobIntegrationTest {
             firstPreparation.runId()),
         is(1L));
     importExecutionCoordinator.complete(false, new IllegalStateException("interrupted"));
+    markRunAsGo(firstPreparation.runId());
 
     ImportExecutionCoordinator.Preparation resumedPreparation =
         importExecutionCoordinator.prepare(parameters);
@@ -319,8 +342,7 @@ public abstract class DiscogsJobIntegrationTest {
         is(0L));
   }
 
-  @Test
-  void retryReplaysAtomicReleaseChunkAfterMainAssignmentFailure()
+  final void runSeparatedReleaseReconciliationRetryScenario()
       throws Exception {
     ImportExecutionCoordinator importExecutionCoordinator =
         new ImportExecutionCoordinator(dataSource);
@@ -331,6 +353,7 @@ public abstract class DiscogsJobIntegrationTest {
             EntityType.LABEL,
             EntityType.MASTER,
             EntityType.RELEASE);
+    removeFirstMasterMainReleaseFromDump();
     executeSql("update master set main_release_id = null");
     executeSql(
         """
@@ -368,10 +391,10 @@ public abstract class DiscogsJobIntegrationTest {
         is(0L));
     assertThat(
         scalarLong("select count(*) from release_item where id = 1 and title = 'rollback sentinel'"),
-        is(1L));
+        is(0L));
     assertThat(
         scalarLong("select count(*) from release_item_video where release_item_id = 1"),
-        is(0L));
+        is(6L));
     assertThat(
         scalarLong("select count(*) from master where id = 1 and main_release_id is null"),
         is(1L));
@@ -403,8 +426,20 @@ public abstract class DiscogsJobIntegrationTest {
         is(1L));
   }
 
-  @Test
-  void whenSameDumpIsForcedTwice__BusinessRowsRemainIdentical() throws Exception {
+  private void removeFirstMasterMainReleaseFromDump() throws IOException {
+    File masterDump = dumpFiles.get(EntityType.MASTER);
+    String content;
+    try (GZIPInputStream input = new GZIPInputStream(Files.newInputStream(masterDump.toPath()))) {
+      content = new String(input.readAllBytes(), StandardCharsets.UTF_8);
+    }
+    try (GZIPOutputStream output =
+        new GZIPOutputStream(Files.newOutputStream(masterDump.toPath()))) {
+      output.write(content.replaceFirst(FIRST_MASTER_MAIN_RELEASE, "")
+          .getBytes(StandardCharsets.UTF_8));
+    }
+  }
+
+  final void runIdempotentRefreshScenario() throws Exception {
     JobParameters firstParameters =
         jobOperatorTestUtils
             .getUniqueJobParametersBuilder()
@@ -599,6 +634,18 @@ public abstract class DiscogsJobIntegrationTest {
         .addLong(ImportJobParameters.RUN_ID, runId)
         .addString(ImportJobParameters.RESUMED, "false")
         .toJobParameters();
+  }
+
+  private void markRunAsGo(long runId) throws SQLException {
+    try (Connection connection = dataSource.getConnection();
+        PreparedStatement statement =
+            connection.prepareStatement(
+                "update discogs_import_run set processor = ?, processor_version = ? where id = ?")) {
+      statement.setString(1, GO_BATCH_PROCESSOR);
+      statement.setString(2, CROSS_LANGUAGE_TEST_VERSION);
+      statement.setLong(3, runId);
+      assertThat(statement.executeUpdate(), is(1));
+    }
   }
 
   private JobParameters coordinatedParameters(int chunkSize, EntityType... entityTypes) {

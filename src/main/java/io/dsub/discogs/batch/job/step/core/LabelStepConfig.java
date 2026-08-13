@@ -7,14 +7,16 @@ import io.dsub.discogs.batch.dump.DiscogsDumpVerifier;
 import io.dsub.discogs.batch.dump.EntityType;
 import io.dsub.discogs.batch.exception.DumpNotFoundException;
 import io.dsub.discogs.batch.exception.InvalidArgumentException;
-import io.dsub.discogs.batch.job.listener.IdCachingItemProcessListener;
+import io.dsub.discogs.batch.job.BatchRetryPolicy;
 import io.dsub.discogs.batch.job.listener.EntityProgressStepExecutionListener;
+import io.dsub.discogs.batch.job.listener.IdCachingItemProcessListener;
 import io.dsub.discogs.batch.job.listener.ItemCountingItemProcessListener;
 import io.dsub.discogs.batch.job.listener.NestedStepFailurePropagatingListener;
 import io.dsub.discogs.batch.job.listener.StopWatchStepExecutionListener;
 import io.dsub.discogs.batch.job.listener.StringNormalizingItemReadListener;
 import io.dsub.discogs.batch.job.step.AbstractStepConfig;
 import io.dsub.discogs.batch.job.processor.RelationSet;
+import io.dsub.discogs.batch.job.processor.ResumeAwareSourceChunkItemProcessor;
 import io.dsub.discogs.batch.job.progress.ImportProgressStore;
 import io.dsub.discogs.batch.job.progress.ProcessedChunk;
 import io.dsub.discogs.batch.job.progress.SourceChunk;
@@ -22,10 +24,11 @@ import io.dsub.discogs.batch.job.reader.SourceChunkItemStreamReader;
 import io.dsub.discogs.batch.job.tasklet.FileFetchTasklet;
 import io.dsub.discogs.batch.util.FileUtil;
 import io.dsub.discogs.batch.job.writer.DurableRelationItemWriterFactory;
+import io.dsub.discogs.batch.job.writer.ProcessedChunkItemWriter;
 import io.dsub.opendiscogs.jooq.tables.records.LabelRecord;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.jooq.UpdatableRecord;
+import org.jooq.TableRecord;
 import org.springframework.batch.core.step.Step;
 import org.springframework.batch.core.configuration.annotation.JobScope;
 import org.springframework.batch.core.step.builder.StepBuilder;
@@ -36,11 +39,9 @@ import org.springframework.batch.core.job.flow.support.SimpleFlow;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.infrastructure.item.ItemProcessor;
 import org.springframework.batch.infrastructure.item.ItemWriter;
-import org.springframework.batch.infrastructure.item.support.SynchronizedItemStreamReader;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
 
@@ -56,15 +57,16 @@ public class LabelStepConfig extends AbstractStepConfig {
   public static final String LABEL_FILE_FETCH_STEP = "label file fetch step";
   public static final String LABEL_FILE_CLEAR_STEP = "label file clear step";
 
-  private final SynchronizedItemStreamReader<LabelXML> labelStreamReader;
+  private final SourceChunkItemStreamReader<LabelXML> labelStreamReader;
   private final SourceChunkItemStreamReader<LabelSubItemsXML> labelSubItemsStreamReader;
 
-  private final ItemProcessor<LabelXML, LabelRecord> labelCoreProcessor;
+  private final ItemProcessor<SourceChunk<LabelXML>, ProcessedChunk<LabelRecord>>
+      labelCoreProcessor;
   private final ItemProcessor<SourceChunk<LabelSubItemsXML>, ProcessedChunk<RelationSet>>
       labelSubItemsProcessor;
   private final DurableRelationItemWriterFactory durableRelationItemWriterFactory;
   private final ImportProgressStore importProgressStore;
-  private final ItemWriter<UpdatableRecord<?>> entityItemWriter;
+  private final ItemWriter<TableRecord<?>> entityItemWriter;
   private final DiscogsDump labelDump;
 
   private final ThreadPoolTaskExecutor taskExecutor;
@@ -80,14 +82,19 @@ public class LabelStepConfig extends AbstractStepConfig {
 
   @Bean
   @JobScope
-  public Step labelStep() throws InvalidArgumentException, DumpNotFoundException {
+  public Step labelStep(
+      @Value(CHUNK) Integer chunkSize,
+      @Value(RUN_ID) Long runId,
+      @Value(RESUMED) Boolean resumed)
+      throws InvalidArgumentException, DumpNotFoundException {
 
     // @formatter:off
     Flow labelStepFlow =
         new FlowBuilder<SimpleFlow>(LABEL_STEP_FLOW)
 
             // from execution decider
-            .from(executionDecider(LABEL))
+            .from(executionDecider(
+                LABEL, EntityType.LABEL, importProgressStore, runId, chunkSize, resumed))
             .on(SKIPPED)
             .end()
             .on(ANY)
@@ -99,13 +106,13 @@ public class LabelStepConfig extends AbstractStepConfig {
             .fail()
             .from(labelFileFetchStep())
             .on(ANY)
-            .to(labelCoreInsertionStep(null))
+            .to(labelCoreInsertionStep())
 
             // from core item insertion
-            .from(labelCoreInsertionStep(null))
+            .from(labelCoreInsertionStep())
             .on(FAILED)
             .fail()
-            .from(labelCoreInsertionStep(null))
+            .from(labelCoreInsertionStep())
             .on(ANY)
             .to(labelSubItemsInsertionStep(null, null, null))
 
@@ -131,16 +138,16 @@ public class LabelStepConfig extends AbstractStepConfig {
 
   @Bean
   @JobScope
-  public Step labelCoreInsertionStep(@Value(CHUNK) Integer chunkSize) {
+  public Step labelCoreInsertionStep() {
     return new StepBuilder(LABEL_CORE_INSERTION_STEP, jobRepository)
-        .<LabelXML, UpdatableRecord<?>>chunk(chunkSize)
+        .<SourceChunk<LabelXML>, ProcessedChunk<LabelRecord>>chunk(
+            TRACKED_CHUNKS_PER_TRANSACTION)
         .transactionManager(transactionManager)
         .reader(labelStreamReader)
         .processor(labelCoreProcessor)
-        .writer(entityItemWriter)
+        .writer(new ProcessedChunkItemWriter<>(entityItemWriter))
         .faultTolerant()
-        .retryLimit(10)
-        .retry(PessimisticLockingFailureException.class)
+        .retryPolicy(BatchRetryPolicy.lockContention())
         .listener(stopWatchStepExecutionListener)
         .listener(stringNormalizingItemReadListener)
         .listener(idCachingItemProcessListener)
@@ -160,13 +167,15 @@ public class LabelStepConfig extends AbstractStepConfig {
             TRACKED_CHUNKS_PER_TRANSACTION)
         .transactionManager(transactionManager)
         .reader(labelSubItemsStreamReader)
-        .processor(labelSubItemsProcessor)
+        .processor(
+            new ResumeAwareSourceChunkItemProcessor<>(
+                labelSubItemsProcessor,
+                importProgressStore.loadCompletedChunks(runId, EntityType.LABEL, resumed)))
         .writer(
             durableRelationItemWriterFactory.create(
                 EntityType.LABEL, runId, chunkSize, resumed))
         .faultTolerant()
-        .retryLimit(10)
-        .retry(PessimisticLockingFailureException.class)
+        .retryPolicy(BatchRetryPolicy.lockContention())
         .listener(stringNormalizingItemReadListener)
         .listener(stopWatchStepExecutionListener)
         .listener(itemCountingItemProcessListener)

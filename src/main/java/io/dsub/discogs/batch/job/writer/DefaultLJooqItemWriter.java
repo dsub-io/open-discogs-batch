@@ -1,22 +1,22 @@
 package io.dsub.discogs.batch.job.writer;
 
+import java.sql.Connection;
 import java.util.List;
 import java.util.Map;
-import java.sql.Connection;
 import javax.sql.DataSource;
 import org.jooq.BatchBindStep;
 import org.jooq.Condition;
 import org.jooq.DSLContext;
 import org.jooq.Field;
 import org.jooq.Query;
-import org.jooq.UpdatableRecord;
+import org.jooq.TableRecord;
 import org.jooq.ConnectionProvider;
 import org.jooq.impl.DSL;
 import org.jooq.impl.DataSourceConnectionProvider;
 import org.springframework.batch.infrastructure.item.Chunk;
 import org.springframework.jdbc.datasource.DataSourceUtils;
 
-public class DefaultLJooqItemWriter<T extends UpdatableRecord<?>> extends AbstractJooqItemWriter<T> {
+public class DefaultLJooqItemWriter<T extends TableRecord<?>> extends AbstractJooqItemWriter<T> {
 
   private static final String INVALID_CONNECTION_PROVIDER_MESSAGE =
       "jOOQ item writer requires a DataSource-backed DSLContext";
@@ -38,25 +38,11 @@ public class DefaultLJooqItemWriter<T extends UpdatableRecord<?>> extends Abstra
       DSLContext transactionContext = DSL.using(context.configuration().derive(connection));
       Query query = getQuery(items.getItems().getFirst(), transactionContext);
       BatchBindStep batch = transactionContext.batch(query);
-      items.forEach(record -> batch.bind(mapValues(record)));
+      items.forEach(record -> batch.bind(getBindValues(record)));
       batch.execute();
     } finally {
       DataSourceUtils.releaseConnection(connection, dataSource);
     }
-  }
-
-  /**
-   * map values from record into a full array
-   *
-   * @param record to be parsed into array
-   * @return values
-   */
-  private Object[] mapValues(T record) {
-    List<Object> values = getInsertValues(record);
-    if (!getBusinessUpdateFields(record.getTable()).isEmpty()) {
-      getUpdateFields(record.getTable()).forEach(field -> values.add(field.getValue(record)));
-    }
-    return values.toArray();
   }
 
   @Override

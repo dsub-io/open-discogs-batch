@@ -32,11 +32,11 @@ class ItemReaderConfigUnitTest {
         new ItemReaderConfig(readerBuilder, dumpService, new EnumMap<>(EntityType.class));
     List<Callable<Object>> readers =
         List.of(
-            config::artistStreamReader,
+            () -> config.artistStreamReader(5),
             () -> config.artistSubItemsStreamReader(5),
-            config::labelStreamReader,
+            () -> config.labelStreamReader(5),
             () -> config.labelSubItemsStreamReader(5),
-            config::masterStreamReader,
+            () -> config.masterStreamReader(5),
             () -> config.masterSubItemsStreamReader(5),
             () -> config.releaseItemSubItemsStreamReader(5));
 

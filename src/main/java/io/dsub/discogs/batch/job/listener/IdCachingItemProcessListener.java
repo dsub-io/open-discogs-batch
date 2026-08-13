@@ -13,6 +13,7 @@ import io.dsub.discogs.batch.domain.master.MasterXML;
 import io.dsub.discogs.batch.domain.release.ReleaseItemXML;
 import io.dsub.discogs.batch.job.registry.DefaultEntityIdRegistry;
 import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
+import io.dsub.discogs.batch.job.progress.SourceChunk;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
@@ -34,27 +35,39 @@ public class IdCachingItemProcessListener implements ItemProcessListener<Object,
     if (result == null) {
       return;
     }
+    if (pulled instanceof SourceChunk<?> sourceChunk) {
+      sourceChunk.values().forEach(this::cacheProcessedItem);
+      return;
+    }
+    cacheProcessedItem(pulled);
+  }
+
+  private void cacheProcessedItem(Object pulled) {
     if (pulled instanceof ArtistXML artist) {
-      if (artist.getId() != null) {
+      if (isPositive(artist.getId())) {
         idRegistry.put(ARTIST, artist.getId());
       }
     } else if (pulled instanceof LabelXML label) {
-      if (label.getId() != null) {
+      if (isPositive(label.getId())) {
         idRegistry.put(LABEL, label.getId());
       }
     } else if (pulled instanceof MasterXML master) {
-      if (master.getId() != null) {
+      if (isPositive(master.getId())) {
         idRegistry.put(MASTER, master.getId());
         cacheStringTypedItems(STYLE, master.getStyles());
         cacheStringTypedItems(GENRE, master.getGenres());
       }
     } else if (pulled instanceof ReleaseItemXML releaseItem) {
-      if (releaseItem.getId() != null) {
+      if (isPositive(releaseItem.getId())) {
         idRegistry.put(RELEASE, releaseItem.getId());
         cacheStringTypedItems(GENRE, releaseItem.getGenres());
         cacheStringTypedItems(STYLE, releaseItem.getStyles());
       }
     }
+  }
+
+  private boolean isPositive(Integer id) {
+    return id != null && id > 0;
   }
 
   private void cacheStringTypedItems(DefaultEntityIdRegistry.Type type, List<String> values) {

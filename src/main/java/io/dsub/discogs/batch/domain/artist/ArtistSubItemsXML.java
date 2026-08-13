@@ -4,7 +4,6 @@ import io.dsub.discogs.batch.domain.SubItemXML;
 import io.dsub.opendiscogs.jooq.tables.records.ArtistAliasRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ArtistGroupRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ArtistMemberRecord;
-import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
 import jakarta.xml.bind.annotation.XmlAccessType;
@@ -55,12 +54,11 @@ public class ArtistSubItemsXML {
     private Integer aliasId;
 
     @Override
-    public ArtistAliasRecord getRecord(int parentId) {
+    public ArtistAliasRecord getRecord(int parentId, LocalDateTime observedAt) {
       return new ArtistAliasRecord()
           .setArtistId(parentId)
           .setAliasId(aliasId)
-          .setCreatedAt(LocalDateTime.now(Clock.systemUTC()))
-          .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()));
+          .setLastModifiedAt(observedAt);
     }
   }
 
@@ -72,12 +70,11 @@ public class ArtistSubItemsXML {
     private Integer groupId;
 
     @Override
-    public ArtistGroupRecord getRecord(int parentId) {
+    public ArtistGroupRecord getRecord(int parentId, LocalDateTime observedAt) {
       return new ArtistGroupRecord()
           .setArtistId(parentId)
           .setGroupId(groupId)
-          .setCreatedAt(LocalDateTime.now(Clock.systemUTC()))
-          .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()));
+          .setLastModifiedAt(observedAt);
     }
   }
 
@@ -89,12 +86,11 @@ public class ArtistSubItemsXML {
     private Integer memberId;
 
     @Override
-    public ArtistMemberRecord getRecord(int parentId) {
+    public ArtistMemberRecord getRecord(int parentId, LocalDateTime observedAt) {
       return new ArtistMemberRecord()
           .setArtistId(parentId)
           .setMemberId(memberId)
-          .setCreatedAt(LocalDateTime.now(Clock.systemUTC()))
-          .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()));
+          .setLastModifiedAt(observedAt);
     }
   }
 }

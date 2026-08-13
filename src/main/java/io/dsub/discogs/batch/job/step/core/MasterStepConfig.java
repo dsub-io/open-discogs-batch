@@ -7,14 +7,16 @@ import io.dsub.discogs.batch.dump.DiscogsDumpVerifier;
 import io.dsub.discogs.batch.dump.EntityType;
 import io.dsub.discogs.batch.exception.DumpNotFoundException;
 import io.dsub.discogs.batch.exception.InvalidArgumentException;
-import io.dsub.discogs.batch.job.listener.IdCachingItemProcessListener;
+import io.dsub.discogs.batch.job.BatchRetryPolicy;
 import io.dsub.discogs.batch.job.listener.EntityProgressStepExecutionListener;
+import io.dsub.discogs.batch.job.listener.IdCachingItemProcessListener;
 import io.dsub.discogs.batch.job.listener.ItemCountingItemProcessListener;
 import io.dsub.discogs.batch.job.listener.NestedStepFailurePropagatingListener;
 import io.dsub.discogs.batch.job.listener.StopWatchStepExecutionListener;
 import io.dsub.discogs.batch.job.listener.StringNormalizingItemReadListener;
 import io.dsub.discogs.batch.job.step.AbstractStepConfig;
 import io.dsub.discogs.batch.job.processor.RelationSet;
+import io.dsub.discogs.batch.job.processor.ResumeAwareSourceChunkItemProcessor;
 import io.dsub.discogs.batch.job.progress.ImportProgressStore;
 import io.dsub.discogs.batch.job.progress.ProcessedChunk;
 import io.dsub.discogs.batch.job.progress.SourceChunk;
@@ -23,10 +25,11 @@ import io.dsub.discogs.batch.job.tasklet.FileFetchTasklet;
 import io.dsub.discogs.batch.job.tasklet.GenreStyleInsertionTasklet;
 import io.dsub.discogs.batch.util.FileUtil;
 import io.dsub.discogs.batch.job.writer.DurableRelationItemWriterFactory;
+import io.dsub.discogs.batch.job.writer.ProcessedChunkItemWriter;
 import io.dsub.opendiscogs.jooq.tables.records.MasterRecord;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.jooq.UpdatableRecord;
+import org.jooq.TableRecord;
 import org.springframework.batch.core.step.Step;
 import org.springframework.batch.core.configuration.annotation.JobScope;
 import org.springframework.batch.core.step.builder.StepBuilder;
@@ -37,11 +40,9 @@ import org.springframework.batch.core.job.flow.support.SimpleFlow;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.infrastructure.item.ItemProcessor;
 import org.springframework.batch.infrastructure.item.ItemWriter;
-import org.springframework.batch.infrastructure.item.support.SynchronizedItemStreamReader;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
 
@@ -59,14 +60,15 @@ public class MasterStepConfig extends AbstractStepConfig {
   public static final String MASTER_GENRE_STYLE_INSERTION_STEP =
       "master genre style insertion step";
 
-  private final SynchronizedItemStreamReader<MasterXML> masterStreamReader;
+  private final SourceChunkItemStreamReader<MasterXML> masterStreamReader;
   private final SourceChunkItemStreamReader<MasterSubItemsXML> masterSubItemsStreamReader;
-  private final ItemProcessor<MasterXML, MasterRecord> masterCoreProcessor;
+  private final ItemProcessor<SourceChunk<MasterXML>, ProcessedChunk<MasterRecord>>
+      masterCoreProcessor;
   private final ItemProcessor<SourceChunk<MasterSubItemsXML>, ProcessedChunk<RelationSet>>
       masterSubItemsProcessor;
   private final DurableRelationItemWriterFactory durableRelationItemWriterFactory;
   private final ImportProgressStore importProgressStore;
-  private final ItemWriter<UpdatableRecord<?>> entityItemWriter;
+  private final ItemWriter<TableRecord<?>> entityItemWriter;
   private final DiscogsDump masterDump;
 
   private final ThreadPoolTaskExecutor taskExecutor;
@@ -83,7 +85,10 @@ public class MasterStepConfig extends AbstractStepConfig {
 
   @Bean
   @JobScope
-  public Step masterStep(@Value(CHUNK) Integer chunkSize)
+  public Step masterStep(
+      @Value(CHUNK) Integer chunkSize,
+      @Value(RUN_ID) Long runId,
+      @Value(RESUMED) Boolean resumed)
       throws InvalidArgumentException, DumpNotFoundException {
 
     // @formatter:off
@@ -91,7 +96,8 @@ public class MasterStepConfig extends AbstractStepConfig {
         new FlowBuilder<SimpleFlow>(MASTER_STEP_FLOW)
 
             // from execution decider
-            .from(executionDecider(MASTER))
+            .from(executionDecider(
+                MASTER, EntityType.MASTER, importProgressStore, runId, chunkSize, resumed))
             .on(SKIPPED)
             .end()
             .on(ANY)
@@ -103,13 +109,13 @@ public class MasterStepConfig extends AbstractStepConfig {
             .fail()
             .from(masterFileFetchStep())
             .on(ANY)
-            .to(masterCoreInsertionStep(chunkSize))
+            .to(masterCoreInsertionStep())
 
             // from core insertion
-            .from(masterCoreInsertionStep(chunkSize))
+            .from(masterCoreInsertionStep())
             .on(FAILED)
             .fail()
-            .from(masterCoreInsertionStep(chunkSize))
+            .from(masterCoreInsertionStep())
             .on(ANY)
             .to(masterGenreStyleInsertionStep())
 
@@ -152,16 +158,16 @@ public class MasterStepConfig extends AbstractStepConfig {
 
   @Bean
   @JobScope
-  public Step masterCoreInsertionStep(@Value(CHUNK) Integer chunkSize) {
+  public Step masterCoreInsertionStep() {
     return new StepBuilder(MASTER_CORE_INSERTION_STEP, jobRepository)
-        .<MasterXML, UpdatableRecord<?>>chunk(chunkSize)
+        .<SourceChunk<MasterXML>, ProcessedChunk<MasterRecord>>chunk(
+            TRACKED_CHUNKS_PER_TRANSACTION)
         .transactionManager(transactionManager)
         .reader(masterStreamReader)
         .processor(masterCoreProcessor)
-        .writer(entityItemWriter)
+        .writer(new ProcessedChunkItemWriter<>(entityItemWriter))
         .faultTolerant()
-        .retryLimit(10)
-        .retry(PessimisticLockingFailureException.class)
+        .retryPolicy(BatchRetryPolicy.lockContention())
         .listener(stopWatchStepExecutionListener)
         .listener(stringNormalizingItemReadListener)
         .listener(idCachingItemProcessListener)
@@ -181,13 +187,15 @@ public class MasterStepConfig extends AbstractStepConfig {
             TRACKED_CHUNKS_PER_TRANSACTION)
         .transactionManager(transactionManager)
         .reader(masterSubItemsStreamReader)
-        .processor(masterSubItemsProcessor)
+        .processor(
+            new ResumeAwareSourceChunkItemProcessor<>(
+                masterSubItemsProcessor,
+                importProgressStore.loadCompletedChunks(runId, EntityType.MASTER, resumed)))
         .writer(
             durableRelationItemWriterFactory.create(
                 EntityType.MASTER, runId, chunkSize, resumed))
         .faultTolerant()
-        .retryLimit(10)
-        .retry(PessimisticLockingFailureException.class)
+        .retryPolicy(BatchRetryPolicy.lockContention())
         .listener(stringNormalizingItemReadListener)
         .listener(stopWatchStepExecutionListener)
         .listener(itemCountingItemProcessListener)

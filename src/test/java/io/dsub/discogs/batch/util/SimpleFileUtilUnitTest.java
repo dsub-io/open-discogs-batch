@@ -108,9 +108,9 @@ class SimpleFileUtilUnitTest {
   }
 
   @Test
-  void whenClearAll__ShouldClearEntirePath() throws InterruptedException {
+  void whenClearAll__ShouldClearEntirePath() {
+    List<Path> filePaths = new ArrayList<>();
     try {
-      List<Path> filePaths = new ArrayList<>();
       Path appDir = fileUtil.getAppDirectory(true);
       filePaths.add(appDir);
 
@@ -127,8 +127,6 @@ class SimpleFileUtilUnitTest {
 
     } catch (FileException e) {
       fail(e);
-    } finally {
-      Thread.sleep(500);
     }
   }
 

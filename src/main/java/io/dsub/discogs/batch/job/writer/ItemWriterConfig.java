@@ -6,7 +6,7 @@ import javax.sql.DataSource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jooq.DSLContext;
-import org.jooq.UpdatableRecord;
+import org.jooq.TableRecord;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.infrastructure.item.ItemWriter;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,14 +25,14 @@ public class ItemWriterConfig {
   private final DataSource dataSource;
 
   @Bean
-  public ItemWriter<UpdatableRecord<?>> jooqItemWriter() {
+  public ItemWriter<TableRecord<?>> jooqItemWriter() {
       return new DefaultLJooqItemWriter<>(context);
   }
 
   @Bean
   @StepScope
   @Primary
-  public ItemWriter<UpdatableRecord<?>> entityItemWriter(
+  public ItemWriter<TableRecord<?>> entityItemWriter(
       ImportProgressStore progressStore,
       @Value("#{jobParameters['" + ImportJobParameters.RUN_ID + "']}") Long runId) {
     return new ActiveRunItemWriter<>(jooqItemWriter(), progressStore, runId);
@@ -50,7 +50,6 @@ public class ItemWriterConfig {
     return new DurableReleaseItemWriterFactory(
         dataSource,
         jooqItemWriter(),
-        new DefaultJooqMasterMainReleaseItemWriter(context),
         progressStore);
   }
 }

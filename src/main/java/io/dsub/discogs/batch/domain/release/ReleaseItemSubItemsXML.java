@@ -1,7 +1,9 @@
 package io.dsub.discogs.batch.domain.release;
 
+import io.dsub.discogs.batch.domain.CanonicalRelationIdentity;
 import io.dsub.discogs.batch.domain.HashXML;
 import io.dsub.discogs.batch.domain.SubItemXML;
+import io.dsub.discogs.batch.util.DiscogsStringNormalizer;
 import io.dsub.opendiscogs.jooq.tables.records.LabelReleaseItemRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemArtistRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemCreditedArtistRecord;
@@ -10,7 +12,6 @@ import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemIdentifierRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemTrackRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemVideoRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemWorkRecord;
-import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
@@ -116,12 +117,11 @@ public class ReleaseItemSubItemsXML {
     String name;
 
     @Override
-    public ReleaseItemArtistRecord getRecord(int parentId) {
+    public ReleaseItemArtistRecord getRecord(int parentId, LocalDateTime observedAt) {
       return new ReleaseItemArtistRecord()
           .setArtistId(artistId)
           .setReleaseItemId(parentId)
-          .setCreatedAt(LocalDateTime.now(Clock.systemUTC()))
-          .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()));
+          .setLastModifiedAt(observedAt);
     }
   }
 
@@ -144,14 +144,16 @@ public class ReleaseItemSubItemsXML {
     }
 
     @Override
-    public ReleaseItemCreditedArtistRecord getRecord(int parentId) {
+    public ReleaseItemCreditedArtistRecord getRecord(int parentId, LocalDateTime observedAt) {
       return new ReleaseItemCreditedArtistRecord()
           .setReleaseItemId(parentId)
           .setArtistId(artistId)
           .setRole(role)
           .setHash(getHashValue())
-          .setCreatedAt(LocalDateTime.now(Clock.systemUTC()))
-          .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()));
+          .setIdentitySha256(
+              CanonicalRelationIdentity.digest(
+                  CanonicalRelationIdentity.Relation.CREDITED_ARTIST, role))
+          .setLastModifiedAt(observedAt);
     }
   }
 
@@ -169,13 +171,12 @@ public class ReleaseItemSubItemsXML {
     String labelName;
 
     @Override
-    public LabelReleaseItemRecord getRecord(int parentId) {
+    public LabelReleaseItemRecord getRecord(int parentId, LocalDateTime observedAt) {
       return new LabelReleaseItemRecord()
           .setReleaseItemId(parentId)
           .setLabelId(labelId)
           .setCategoryNotation(categoryNotation)
-          .setCreatedAt(LocalDateTime.now(Clock.systemUTC()))
-          .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()));
+          .setLastModifiedAt(observedAt);
     }
   }
 
@@ -183,11 +184,15 @@ public class ReleaseItemSubItemsXML {
   @XmlAccessorType(XmlAccessType.FIELD)
   public static class ReleaseFormat implements HashXML<ReleaseItemFormatRecord> {
 
+    private static final String HASH_FIELD_SEPARATOR = "\0";
+    private static final String HASH_NULL_VALUE = "\1";
+    private static final String MAX_INT_32_DECIMAL = "2147483647";
+
     @XmlAttribute(name = "name")
     String name;
 
     @XmlAttribute(name = "qty")
-    Integer quantity;
+    String quantity;
 
     @XmlAttribute(name = "text")
     String text;
@@ -198,21 +203,39 @@ public class ReleaseItemSubItemsXML {
 
     @Override
     public int getHashValue() {
-      String reducedDescription = getReducedDescription();
-      return makeHash(new String[]{name, reducedDescription, text});
+      return hashValue(getReducedDescription(), canonicalQuantity());
+    }
+
+    private int hashValue(String reducedDescription, String canonicalQuantity) {
+      return String.join(
+              HASH_FIELD_SEPARATOR,
+              hashString(name),
+              hashString(reducedDescription),
+              hashString(canonicalQuantity),
+              hashString(text))
+          .hashCode();
     }
 
     @Override
-    public ReleaseItemFormatRecord getRecord(int parentId) {
+    public ReleaseItemFormatRecord getRecord(int parentId, LocalDateTime observedAt) {
+      String canonicalQuantity = canonicalQuantity();
+      String reducedDescription = getReducedDescription();
       return new ReleaseItemFormatRecord()
           .setReleaseItemId(parentId)
           .setName(name)
-          .setQuantity(quantity)
+          .setQuantity(integerQuantity(canonicalQuantity))
+          .setQuantityText(canonicalQuantity)
           .setText(text)
-          .setDescription(getReducedDescription())
-          .setHash(getHashValue())
-          .setCreatedAt(LocalDateTime.now(Clock.systemUTC()))
-          .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()));
+          .setDescription(reducedDescription)
+          .setHash(hashValue(reducedDescription, canonicalQuantity))
+          .setIdentitySha256(
+              CanonicalRelationIdentity.digest(
+                  CanonicalRelationIdentity.Relation.FORMAT,
+                  name,
+                  reducedDescription,
+                  canonicalQuantity,
+                  text))
+          .setLastModifiedAt(observedAt);
     }
 
     private String getReducedDescription() {
@@ -222,11 +245,46 @@ public class ReleaseItemSubItemsXML {
       String description =
           descriptions.stream()
               .filter(Objects::nonNull)
-              .map(String::trim)
-              .filter(desc -> !desc.isBlank())
+              .map(DiscogsStringNormalizer::normalizeNullable)
+              .filter(Objects::nonNull)
               .map(desc -> "[d:" + desc + "]")
               .collect(Collectors.joining(","));
       return description.isBlank() ? null : description;
+    }
+
+    private String hashString(String value) {
+      return value == null ? HASH_NULL_VALUE : value;
+    }
+
+    private String canonicalQuantity() {
+      String normalized = DiscogsStringNormalizer.normalizeNullable(quantity);
+      if (normalized == null) {
+        return null;
+      }
+      for (int index = 0; index < normalized.length(); index++) {
+        char value = normalized.charAt(index);
+        if (value < '0' || value > '9') {
+          throw new IllegalArgumentException("invalid non-negative release format quantity");
+        }
+      }
+      int firstSignificant = 0;
+      while (firstSignificant < normalized.length() - 1
+          && normalized.charAt(firstSignificant) == '0') {
+        firstSignificant++;
+      }
+      return normalized.substring(firstSignificant);
+    }
+
+    private Integer integerQuantity(String canonical) {
+      if (canonical == null) {
+        return null;
+      }
+      if (canonical.length() > MAX_INT_32_DECIMAL.length()
+          || (canonical.length() == MAX_INT_32_DECIMAL.length()
+              && canonical.compareTo(MAX_INT_32_DECIMAL) > 0)) {
+        return null;
+      }
+      return Integer.valueOf(canonical);
     }
   }
 
@@ -249,15 +307,17 @@ public class ReleaseItemSubItemsXML {
     }
 
     @Override
-    public ReleaseItemTrackRecord getRecord(int parentId) {
+    public ReleaseItemTrackRecord getRecord(int parentId, LocalDateTime observedAt) {
       return new ReleaseItemTrackRecord()
           .setReleaseItemId(parentId)
           .setPosition(position)
           .setTitle(title)
           .setDuration(duration)
           .setHash(getHashValue())
-          .setCreatedAt(LocalDateTime.now(Clock.systemUTC()))
-          .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()));
+          .setIdentitySha256(
+              CanonicalRelationIdentity.digest(
+                  CanonicalRelationIdentity.Relation.TRACK, position, title, duration))
+          .setLastModifiedAt(observedAt);
     }
   }
 
@@ -280,15 +340,17 @@ public class ReleaseItemSubItemsXML {
     }
 
     @Override
-    public ReleaseItemIdentifierRecord getRecord(int parentId) {
+    public ReleaseItemIdentifierRecord getRecord(int parentId, LocalDateTime observedAt) {
       return new ReleaseItemIdentifierRecord()
           .setReleaseItemId(parentId)
           .setType(type)
           .setDescription(description)
           .setValue(value)
           .setHash(getHashValue())
-          .setCreatedAt(LocalDateTime.now(Clock.systemUTC()))
-          .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()));
+          .setIdentitySha256(
+              CanonicalRelationIdentity.digest(
+                  CanonicalRelationIdentity.Relation.IDENTIFIER, type, description, value))
+          .setLastModifiedAt(observedAt);
     }
   }
 
@@ -308,14 +370,16 @@ public class ReleaseItemSubItemsXML {
     }
 
     @Override
-    public ReleaseItemWorkRecord getRecord(int parentId) {
+    public ReleaseItemWorkRecord getRecord(int parentId, LocalDateTime observedAt) {
       return new ReleaseItemWorkRecord()
           .setReleaseItemId(parentId)
           .setWork(work)
           .setHash(getHashValue())
+          .setIdentitySha256(
+              CanonicalRelationIdentity.digest(
+                  CanonicalRelationIdentity.Relation.WORK, work))
           .setLabelId(id)
-          .setCreatedAt(LocalDateTime.now(Clock.systemUTC()))
-          .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()));
+          .setLastModifiedAt(observedAt);
     }
   }
 
@@ -338,15 +402,17 @@ public class ReleaseItemSubItemsXML {
     }
 
     @Override
-    public ReleaseItemVideoRecord getRecord(int parentId) {
+    public ReleaseItemVideoRecord getRecord(int parentId, LocalDateTime observedAt) {
       return new ReleaseItemVideoRecord()
           .setReleaseItemId(parentId)
           .setTitle(title)
           .setDescription(description)
           .setUrl(url)
           .setHash(getHashValue())
-          .setCreatedAt(LocalDateTime.now(Clock.systemUTC()))
-          .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()));
+          .setIdentitySha256(
+              CanonicalRelationIdentity.digest(
+                  CanonicalRelationIdentity.Relation.VIDEO, title, description, url))
+          .setLastModifiedAt(observedAt);
     }
   }
 }

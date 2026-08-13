@@ -1,56 +1,107 @@
 package io.dsub.discogs.batch.job.processor;
 
 import io.dsub.discogs.batch.domain.release.ReleaseItemXML;
+import io.dsub.discogs.batch.domain.release.ReleaseItemSubItemsXML;
 import io.dsub.discogs.batch.job.registry.DefaultEntityIdRegistry;
 import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
 import io.dsub.discogs.batch.util.DefaultMalformedDateParser;
 import io.dsub.discogs.batch.util.MalformedDateParser;
 import io.dsub.discogs.batch.util.ReflectionUtil;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemRecord;
-import java.time.Clock;
 import java.time.LocalDateTime;
-import lombok.RequiredArgsConstructor;
-import org.springframework.batch.infrastructure.item.ItemProcessor;
+import java.util.Objects;
 
-@RequiredArgsConstructor
-public class ReleaseItemCoreProcessor implements ItemProcessor<ReleaseItemXML, ReleaseItemRecord> {
+public class ReleaseItemCoreProcessor
+    implements ObservedAtItemProcessor<ReleaseItemXML, ReleaseItemRecord> {
 
   private final MalformedDateParser parser = new DefaultMalformedDateParser();
   private final EntityIdRegistry idRegistry;
 
-  @Override
-  public ReleaseItemRecord process(ReleaseItemXML release) throws Exception {
+  public ReleaseItemCoreProcessor(EntityIdRegistry idRegistry) {
+    this.idRegistry = Objects.requireNonNull(idRegistry, "idRegistry must not be null");
+  }
 
-    if (release.getId() == null || release.getId() < 1) {
+  @Override
+  public ReleaseItemRecord process(ReleaseItemXML release, LocalDateTime observedAt) {
+
+    if (!hasValidId(release.getId())) {
       return null;
     }
 
-    ReflectionUtil.normalizeStringFields(release);
+    ReflectionUtil.normalizeReleaseStringFields(release);
+    return processNormalized(release, observedAt);
+  }
 
-    Integer masterId = null;
+  ReleaseItemRecord processNormalized(ReleaseItemXML release, LocalDateTime observedAt) {
+    Integer masterId = existingMasterId(
+        release.getMaster() == null ? null : release.getMaster().getMasterId());
+    return buildRecord(
+        release.getId(),
+        release.getTitle(),
+        release.getStatus(),
+        release.getCountry(),
+        release.getDataQuality(),
+        release.getReleaseDate(),
+        release.getMaster() != null && release.getMaster().isMaster(),
+        masterId,
+        release.getNotes(),
+        observedAt);
+  }
 
-    if (release.getMaster() != null && release.getMaster().getMasterId() != null) {
-      Integer id = release.getMaster().getMasterId();
-      if (idRegistry.exists(DefaultEntityIdRegistry.Type.MASTER, id)) {
-        masterId = id;
-      }
+  ReleaseItemRecord processNormalized(
+      ReleaseItemSubItemsXML release, LocalDateTime observedAt) {
+    Integer masterId = existingMasterId(
+        release.getMaster() == null ? null : release.getMaster().getMasterId());
+    return buildRecord(
+        release.getId(),
+        release.getTitle(),
+        release.getStatus(),
+        release.getCountry(),
+        release.getDataQuality(),
+        release.getReleaseDate(),
+        release.getMaster() != null && release.getMaster().isMainRelease(),
+        masterId,
+        release.getNotes(),
+        observedAt);
+  }
+
+  private Integer existingMasterId(Integer id) {
+    if (id != null && idRegistry.exists(DefaultEntityIdRegistry.Type.MASTER, id)) {
+      return id;
     }
+    return null;
+  }
 
+  private ReleaseItemRecord buildRecord(
+      Integer id,
+      String title,
+      String status,
+      String country,
+      String dataQuality,
+      String releaseDate,
+      boolean isMaster,
+      Integer masterId,
+      String notes,
+      LocalDateTime observedAt) {
     return new ReleaseItemRecord()
-        .setId(release.getId())
-        .setTitle(release.getTitle())
-        .setStatus(release.getStatus())
-        .setCountry(release.getCountry())
-        .setDataQuality(release.getDataQuality())
-        .setReleaseDate(parser.parse(release.getReleaseDate()))
-        .setHasValidDay(parser.isDayValid(release.getReleaseDate()))
-        .setHasValidMonth(parser.isMonthValid(release.getReleaseDate()))
-        .setHasValidYear(parser.isYearValid(release.getReleaseDate()))
-        .setListedReleaseDate(release.getReleaseDate())
-        .setIsMaster(release.getMaster() != null && release.getMaster().isMaster())
+        .setId(id)
+        .setTitle(title)
+        .setStatus(status)
+        .setCountry(country)
+        .setDataQuality(dataQuality)
+        .setReleaseDate(parser.parse(releaseDate))
+        .setHasValidDay(parser.isDayValid(releaseDate))
+        .setHasValidMonth(parser.isMonthValid(releaseDate))
+        .setHasValidYear(parser.isYearValid(releaseDate))
+        .setListedReleaseDate(releaseDate)
+        .setIsMaster(isMaster)
         .setMasterId(masterId)
-        .setNotes(release.getNotes())
-        .setCreatedAt(LocalDateTime.now(Clock.systemUTC()))
-        .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()));
+        .setNotes(notes)
+        .setCreatedAt(observedAt)
+        .setLastModifiedAt(observedAt);
+  }
+
+  private boolean hasValidId(Integer id) {
+    return id != null && id > 0;
   }
 }

@@ -3,18 +3,17 @@ package io.dsub.discogs.batch.job.processor;
 import io.dsub.discogs.batch.domain.artist.ArtistXML;
 import io.dsub.discogs.batch.util.ReflectionUtil;
 import io.dsub.opendiscogs.jooq.tables.records.ArtistRecord;
-import lombok.RequiredArgsConstructor;
-import org.springframework.batch.infrastructure.item.ItemProcessor;
+import java.time.LocalDateTime;
 
-@RequiredArgsConstructor
-public class ArtistCoreProcessor implements ItemProcessor<ArtistXML, ArtistRecord> {
+public class ArtistCoreProcessor
+    implements ObservedAtItemProcessor<ArtistXML, ArtistRecord> {
 
   @Override
-  public ArtistRecord process(ArtistXML item) {
+  public ArtistRecord process(ArtistXML item, LocalDateTime observedAt) {
     if (item.getId() == null || item.getId() < 1) {
       return null;
     }
     ReflectionUtil.normalizeStringFields(item);
-    return item.buildRecord();
+    return item.buildRecord(observedAt);
   }
 }

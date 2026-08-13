@@ -1,8 +1,9 @@
 package io.dsub.discogs.batch.domain;
 
-import org.jooq.UpdatableRecord;
+import java.time.LocalDateTime;
+import org.jooq.TableRecord;
 
-public interface SubItemXML<T extends UpdatableRecord<T>> {
+public interface SubItemXML<T extends TableRecord<T>> {
 
-  T getRecord(int parentId);
+  T getRecord(int parentId, LocalDateTime observedAt);
 }

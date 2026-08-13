@@ -4,13 +4,13 @@ Stream Discogs monthly public data dumps into PostgreSQL with Spring Batch,
 bounded memory, durable progress, and idempotent recovery.
 
 This release consumes canonical
-[`open-discogs-model`](https://github.com/dsub-io/open-discogs-model) v0.3.0.
+[`open-discogs-model`](https://github.com/dsub-io/open-discogs-model) v0.3.1.
 Java and Go therefore apply the same migration bytes and import contracts. This
 is an independent project and is not endorsed by Discogs.
 
 > [!CAUTION]
 > **Production import is not approved yet.** Publish both batch implementations
-> against model v0.3.0 and complete cross-language migration, recovery, and
+> against model v0.3.1 and complete cross-language migration, recovery, and
 > full-dump validation before starting or resuming a production import.
 
 - [Import safety and recovery](docs/import-safety.md)
@@ -42,8 +42,8 @@ otherwise discovery performs the bounded request sequence documented in
 | --- | --- |
 | Source | Monthly public dumps only; no Discogs API, live hydration, or user writes |
 | Memory | Dumps are decompressed and parsed as streams; the full dump is never held in memory |
-| Commit | Each Release root, genre/style dictionaries, supported relations, master assignment, and durable progress commit atomically |
-| Retry | Compatible interrupted runs resume verified chunks; non-Release safe core phases may rerun; `--force` restarts the same manifest from zero |
+| Commit | Each Release root, genre/style dictionary, supported relation set, and durable chunk progress commit atomically; Master backlinks reconcile in one following transaction |
+| Retry | A failed backlink reconciliation preserves committed Release chunks and reruns only reconciliation; other compatible interruptions resume verified chunks; `--force` restarts the same manifest from zero |
 | Convergence | Supported missing relations are removed; roots absent from a newer dump are not deleted |
 | Visibility | Readers can observe committed chunks; a complete monthly import is not an atomic snapshot switch |
 | Files | Failed-run downloads remain; `--cleanup` removes only this run's selected files after success |
@@ -77,7 +77,7 @@ the importer never creates the database.
 | Existing schema | `USAGE` and `CREATE` on the schema, table writes, and migration DDL authority |
 | Restricted batch role | A DBA prepares the schema, extension, and grants first |
 
-Model v0.3.0 migrations packaged in the model dependency are the only schema
+Model v0.3.1 migrations packaged in the model dependency are the only schema
 source of truth. Migration V007 uses
 `CREATE EXTENSION IF NOT EXISTS pg_trgm`; allow the migration role to install
 this trusted extension or have a DBA pre-install it in a stable schema visible
@@ -168,11 +168,21 @@ Persistent test volumes and bind mounts are not allowed.
 
 ```shell
 sdk env
+./gradlew test             # pure unit tests; does not start Docker
+./gradlew integrationTest  # PostgreSQL and adapter contracts
+./gradlew e2eTest          # deterministic dump-to-PostgreSQL flows
 ./gradlew clean check --no-daemon --warning-mode=fail
 ```
 
-CI verifies deterministic unit, PostgreSQL integration, dump E2E behavior,
-cleanup residue, and 100% line and branch coverage.
+`check` runs all three lanes, naming validation, and 100% line and branch
+coverage. Integration and E2E tests share their PostgreSQL fixture within each
+JVM and clean every owned Docker resource after the lane completes.
+
+On 2026-08-13, with clean project outputs and a warm dependency cache on the
+development machine, unit tests took 16.95 seconds and started no containers,
+integration tests took 21.56 seconds and started one PostgreSQL container, and
+E2E took 15.47 seconds and started one. Every lane left zero owned container,
+network, or volume residue.
 
 ## License
 

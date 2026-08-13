@@ -4,7 +4,6 @@ import io.dsub.discogs.batch.domain.HashXML;
 import io.dsub.discogs.batch.domain.SubItemXML;
 import io.dsub.opendiscogs.jooq.tables.records.MasterArtistRecord;
 import io.dsub.opendiscogs.jooq.tables.records.MasterVideoRecord;
-import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
 import jakarta.xml.bind.annotation.XmlAccessType;
@@ -49,12 +48,11 @@ public class MasterSubItemsXML {
     private Integer artistId;
 
     @Override
-    public MasterArtistRecord getRecord(int parentId) {
+    public MasterArtistRecord getRecord(int parentId, LocalDateTime observedAt) {
       return new MasterArtistRecord()
           .setMasterId(parentId)
           .setArtistId(artistId)
-          .setCreatedAt(LocalDateTime.now(Clock.systemUTC()))
-          .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()));
+          .setLastModifiedAt(observedAt);
     }
   }
 
@@ -72,14 +70,13 @@ public class MasterSubItemsXML {
     private String url;
 
     @Override
-    public MasterVideoRecord getRecord(int parentId) {
+    public MasterVideoRecord getRecord(int parentId, LocalDateTime observedAt) {
       return new MasterVideoRecord()
           .setTitle(title)
           .setDescription(description)
           .setUrl(url)
           .setHash(getHashValue())
-          .setCreatedAt(LocalDateTime.now(Clock.systemUTC()))
-          .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()));
+          .setLastModifiedAt(observedAt);
     }
 
     @Override

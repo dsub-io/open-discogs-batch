@@ -12,8 +12,8 @@ import io.dsub.opendiscogs.jooq.tables.records.LabelReleaseItemRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemFormatRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemGenreRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemStyleRecord;
-import java.util.List;
 import java.util.Arrays;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class ReleaseRelationNormalizationUnitTest {
@@ -21,7 +21,7 @@ class ReleaseRelationNormalizationUnitTest {
   private static final int RELEASE_ID = 2;
 
   @Test
-  void normalizesBeforeDomainDeduplicationAndPreservesCatalogSpelling() {
+  void normalizesBeforeCanonicalBatchingAndPreservesCatalogSpelling() {
     EntityIdRegistry registry = mock(EntityIdRegistry.class);
     when(registry.exists(any(EntityIdRegistry.Type.class), any(Integer.class))).thenReturn(true);
     when(registry.exists(any(EntityIdRegistry.Type.class), any(String.class))).thenReturn(true);
@@ -33,30 +33,31 @@ class ReleaseRelationNormalizationUnitTest {
     item.setLabelReleaseLabels(
         List.of(label(null), label(null), label("SK 026"), label(" SK026 ")));
 
-    RelationSet result = new ReleaseItemSubItemsProcessor(registry).process(item);
+    RelationSet result =
+        new ReleaseItemSubItemsProcessor(registry).process(item, java.time.LocalDateTime.MIN);
 
-    assertThat(result.records()).filteredOn(ReleaseItemGenreRecord.class::isInstance).hasSize(1);
-    assertThat(result.records()).filteredOn(ReleaseItemStyleRecord.class::isInstance).hasSize(1);
-    assertThat(result.records()).filteredOn(ReleaseItemFormatRecord.class::isInstance).hasSize(1);
+    assertThat(result.records()).filteredOn(ReleaseItemGenreRecord.class::isInstance).hasSize(2);
+    assertThat(result.records()).filteredOn(ReleaseItemStyleRecord.class::isInstance).hasSize(2);
+    assertThat(result.records()).filteredOn(ReleaseItemFormatRecord.class::isInstance).hasSize(2);
     assertThat(result.records())
         .filteredOn(LabelReleaseItemRecord.class::isInstance)
         .extracting(record -> record.get("category_notation"))
-        .containsExactly(null, "SK 026", "SK026");
+        .containsExactly(null, null, "SK 026", "SK026");
   }
 
   @Test
-  void formatQuantityDoesNotChangeTheNormalizedIdentityHash() {
+  void formatQuantityChangesTheNormalizedIdentityHash() {
     ReleaseItemSubItemsXML.ReleaseFormat first = format(" Vinyl ", " LP ");
-    first.setQuantity(1);
+    first.setQuantity("1");
     ReleaseItemSubItemsXML.ReleaseFormat second = format("Vinyl", "LP");
-    second.setQuantity(2);
-    ReflectionUtil.normalizeStringFields(first);
-    ReflectionUtil.normalizeStringFields(second);
+    second.setQuantity("2");
+    ReflectionUtil.normalizeReleaseStringFields(first);
+    ReflectionUtil.normalizeReleaseStringFields(second);
 
-    assertThat(first.getRecord(RELEASE_ID).getHash())
-        .isEqualTo(second.getRecord(RELEASE_ID).getHash());
-    assertThat(first.getRecord(RELEASE_ID).getQuantity()).isEqualTo(1);
-    assertThat(second.getRecord(RELEASE_ID).getQuantity()).isEqualTo(2);
+    assertThat(first.getRecord(RELEASE_ID, java.time.LocalDateTime.MIN).getHash())
+        .isNotEqualTo(second.getRecord(RELEASE_ID, java.time.LocalDateTime.MIN).getHash());
+    assertThat(first.getRecord(RELEASE_ID, java.time.LocalDateTime.MIN).getQuantity()).isEqualTo(1);
+    assertThat(second.getRecord(RELEASE_ID, java.time.LocalDateTime.MIN).getQuantity()).isEqualTo(2);
   }
 
   @Test
@@ -72,7 +73,8 @@ class ReleaseRelationNormalizationUnitTest {
         new ReleaseItemSubItemsXML.ReleaseFormat();
     item.setReleaseFormats(List.of(described, blank, missingDescriptions));
 
-    RelationSet result = new ReleaseItemSubItemsProcessor(registry).process(item);
+    RelationSet result =
+        new ReleaseItemSubItemsProcessor(registry).process(item, java.time.LocalDateTime.MIN);
 
     assertThat(result.records()).filteredOn(ReleaseItemFormatRecord.class::isInstance).hasSize(1);
   }

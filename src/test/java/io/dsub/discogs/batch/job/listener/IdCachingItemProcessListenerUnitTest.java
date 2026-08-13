@@ -9,6 +9,9 @@ import io.dsub.discogs.batch.domain.label.LabelXML;
 import io.dsub.discogs.batch.domain.master.MasterXML;
 import io.dsub.discogs.batch.domain.release.ReleaseItemXML;
 import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
+import io.dsub.discogs.batch.job.progress.ChunkRange;
+import io.dsub.discogs.batch.job.progress.ProcessedChunk;
+import io.dsub.discogs.batch.job.progress.SourceChunk;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -61,6 +64,24 @@ class IdCachingItemProcessListenerUnitTest {
     verify(registry).put(EntityIdRegistry.Type.RELEASE, 4);
     verify(registry).put(EntityIdRegistry.Type.GENRE, "Rock");
     verify(registry).put(EntityIdRegistry.Type.STYLE, "House");
+  }
+
+  @Test
+  void cachesValidItemsFromOneProcessedSourceChunk() {
+    EntityIdRegistry registry = mock(EntityIdRegistry.class);
+    IdCachingItemProcessListener listener = new IdCachingItemProcessListener(registry);
+    ArtistXML valid = new ArtistXML();
+    valid.setId(1);
+    ArtistXML invalid = new ArtistXML();
+    invalid.setId(0);
+    ChunkRange range = new ChunkRange(0, 0, 2);
+
+    listener.afterProcess(
+        new SourceChunk<>(range, List.of(valid, invalid)),
+        new ProcessedChunk<>(range, List.of(new Object())));
+
+    verify(registry).put(EntityIdRegistry.Type.ARTIST, 1);
+    verify(registry, never()).put(EntityIdRegistry.Type.ARTIST, 0);
   }
 
   private List<String> values(String... values) {

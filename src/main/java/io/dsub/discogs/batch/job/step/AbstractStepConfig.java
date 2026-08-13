@@ -1,5 +1,8 @@
 package io.dsub.discogs.batch.job.step;
 
+import io.dsub.discogs.batch.dump.EntityType;
+import io.dsub.discogs.batch.job.progress.ImportProgressStore;
+import java.util.OptionalLong;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.job.flow.FlowExecutionStatus;
 import org.springframework.batch.core.job.flow.JobExecutionDecider;
@@ -31,6 +34,33 @@ public abstract class AbstractStepConfig {
       }
       log.info("{} eTag not found. skipping {} step.", etagKey, etagKey);
       return new FlowExecutionStatus(SKIPPED);
+    };
+  }
+
+  protected JobExecutionDecider executionDecider(
+      String etagKey,
+      EntityType entityType,
+      ImportProgressStore progressStore,
+      long runId,
+      int chunkSize,
+      boolean resumed) {
+    JobExecutionDecider selectedEntityDecider = executionDecider(etagKey);
+    return (jobExecution, stepExecution) -> {
+      FlowExecutionStatus selected =
+          selectedEntityDecider.decide(jobExecution, stepExecution);
+      if (selected.equals(new FlowExecutionStatus(SKIPPED))) {
+        return selected;
+      }
+      OptionalLong completedItems =
+          progressStore.completedEntityItems(runId, entityType, chunkSize, resumed);
+      if (completedItems.isPresent()) {
+        log.info(
+            "{} source already completed with {} items. skipping entity flow.",
+            etagKey,
+            completedItems.getAsLong());
+        return new FlowExecutionStatus(SKIPPED);
+      }
+      return selected;
     };
   }
 }

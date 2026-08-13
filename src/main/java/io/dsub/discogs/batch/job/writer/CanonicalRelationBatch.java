@@ -6,9 +6,10 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import org.jooq.UpdatableRecord;
+import org.jooq.Table;
+import org.jooq.TableRecord;
 
-/** Validates and collapses relation rows by their canonical PostgreSQL conflict target. */
+/** Canonicalizes semantic identities before validating PostgreSQL storage identities. */
 final class CanonicalRelationBatch {
 
   private CanonicalRelationBatch() {
@@ -16,7 +17,30 @@ final class CanonicalRelationBatch {
 
   static List<RelationSet> canonicalize(
       List<? extends RelationSet> relationSets, EntityType entityType) {
-    List<List<UpdatableRecord<?>>> canonicalRecords = new ArrayList<>(relationSets.size());
+    return prepare(relationSets, entityType).relationSets();
+  }
+
+  static CanonicalBatch prepare(
+      List<? extends RelationSet> relationSets, EntityType entityType) {
+    RelationSlotAllocator.assignCanonicalDigests(relationSets, entityType);
+    List<RelationSet> semanticSets =
+        collapseBySemanticIdentity(relationSets, entityType);
+    RelationSlotAllocator.allocateAssignedDigests(semanticSets, entityType);
+
+    Map<Table<?>, List<TableRecord<?>>> recordsByTable = new LinkedHashMap<>();
+    semanticSets.stream()
+        .flatMap(relationSet -> relationSet.records().stream())
+        .forEach(
+            record ->
+                recordsByTable
+                    .computeIfAbsent(record.getTable(), ignored -> new ArrayList<>())
+                    .add(record));
+    return new CanonicalBatch(semanticSets, recordsByTable);
+  }
+
+  private static List<RelationSet> collapseBySemanticIdentity(
+      List<? extends RelationSet> relationSets, EntityType entityType) {
+    List<List<TableRecord<?>>> canonicalRecords = new ArrayList<>(relationSets.size());
     for (int index = 0; index < relationSets.size(); index++) {
       canonicalRecords.add(new ArrayList<>());
     }
@@ -25,11 +49,11 @@ final class CanonicalRelationBatch {
         new LinkedHashMap<>();
     for (int setIndex = 0; setIndex < relationSets.size(); setIndex++) {
       RelationSet relationSet = relationSets.get(setIndex);
-      for (UpdatableRecord<?> record : relationSet.records()) {
+      for (TableRecord<?> record : relationSet.records()) {
         RelationTableRegistry.RelationTable relationTable =
             RelationTableRegistry.require(entityType, record.getTable());
         relationTable.requireRoot(record, relationSet.rootId());
-        RelationTableRegistry.RelationIdentity identity = relationTable.identity(record);
+        RelationTableRegistry.RelationIdentity identity = relationTable.semanticIdentity(record);
         CanonicalRecord existing = recordsByIdentity.get(identity);
         if (existing == null) {
           recordsByIdentity.put(identity, new CanonicalRecord(record));
@@ -37,7 +61,11 @@ final class CanonicalRelationBatch {
         } else if (!relationTable.hasSamePayload(existing.record(), record)) {
           throw new IllegalArgumentException(
               "conflicting persisted payload for " + relationTable.table().getName()
-                  + " (" + relationTable.describeIdentity(record) + ")");
+                  + " (" + relationTable.describeSemanticIdentity(record) + ")");
+        } else if (!relationTable.hasSameLegacyHash(existing.record(), record)) {
+          throw new IllegalArgumentException(
+              "conflicting legacy hash for " + relationTable.table().getName()
+                  + " (" + relationTable.describeSemanticIdentity(record) + ")");
         }
       }
     }
@@ -51,6 +79,22 @@ final class CanonicalRelationBatch {
     return List.copyOf(canonicalSets);
   }
 
-  private record CanonicalRecord(UpdatableRecord<?> record) {
+  record CanonicalBatch(
+      List<RelationSet> relationSets, Map<Table<?>, List<TableRecord<?>>> recordsByTable) {
+
+    CanonicalBatch {
+      relationSets = List.copyOf(relationSets);
+      Map<Table<?>, List<TableRecord<?>>> immutableRecords = new LinkedHashMap<>();
+      recordsByTable.forEach((table, records) -> immutableRecords.put(table, List.copyOf(records)));
+      recordsByTable = Map.copyOf(immutableRecords);
+    }
+
+    List<TableRecord<?>> recordsFor(RelationTableRegistry.RelationTable relationTable) {
+      return recordsByTable.getOrDefault(relationTable.table(), List.of());
+    }
   }
+
+  private record CanonicalRecord(TableRecord<?> record) {
+  }
+
 }

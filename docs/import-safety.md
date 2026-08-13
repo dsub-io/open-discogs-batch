@@ -2,12 +2,12 @@
 
 This is the operational contract for dump discovery, admission, commits,
 recovery, and reader visibility. The schema contract is canonical
-[`open-discogs-model`](https://github.com/dsub-io/open-discogs-model) v0.3.0,
+[`open-discogs-model`](https://github.com/dsub-io/open-discogs-model) v0.3.1,
 shared with the Go importer.
 
 > [!CAUTION]
 > Production import is not approved yet. Release both importers against model
-> v0.3.0 and finish cross-language migration, recovery, and full-dump validation
+> v0.3.1 and finish cross-language migration, recovery, and full-dump validation
 > before starting or resuming one.
 
 ## Decision table
@@ -57,16 +57,29 @@ PostgreSQL advisory locks cover selected entities and their references:
 | Master | Artist, Master |
 | Release | Artist, Label, Master, Release |
 
-Release takes all locks because it also updates `master.main_release_id`.
+Release takes all locks because its final reconciliation updates
+`master.main_release_id`.
 Independent sets such as Artist and Label may run together; overlapping Go and
 Java imports cannot write concurrently. Schema migration takes the same shared
 lock family, so migration cannot race an active importer.
 
+During a first entity bootstrap, the canonical model's eligible foreign keys
+are absent while chunks load. Refresh imports retain every foreign key. After
+all bootstrap chunks succeed, the coordinator recreates missing keys as
+`NOT VALID`, validates them, and analyzes the imported tables in the completion
+transaction. Catalog readiness changes only after that transaction commits.
+
+Release chunks do not mutate or lock Master backlinks. After all Release
+chunks commit, one set reconciliation derives the desired backlink from
+canonical `release_item` rows, locks only changed Master rows in ascending
+order, clears stale values, and then sets current values in one transaction.
+
 A partial Master or Release import is admitted only when each omitted reference
-entity has a compatible successful checkpoint. A missing checkpoint, a stale
-checkpoint, or a same-date dump reissued with a different checksum fails before
-the batch writes data. Selecting the dependency in the same run satisfies this
-preflight.
+entity has a compatible completed checkpoint at the current import contract
+revision. Entity completion remains durable when a later entity makes the
+parent run fail or the process exits before final run completion. A missing,
+incomplete, stale, or same-date reissued checkpoint fails before the batch
+writes data. Selecting the dependency in the same run satisfies this preflight.
 
 ## Atomicity and idempotency
 
@@ -78,12 +91,13 @@ contains:
 - the processed-item counter.
 
 For each Release source chunk, one transaction contains the root rows,
-genre/style dictionaries, exact supported relation sets,
-`master.main_release_id` assignments, ledger entries, and processed-item
-counters. A retry reads the stream from the beginning, skips exact committed
-chunks, and safely reruns only the separate non-Release core phases. The model
-v0.3.0 import contract is part of resume and success compatibility; an older
-successful Release contract cannot suppress corrected Release semantics.
+genre/style dictionaries, exact supported relation sets, ledger entry, and
+processed-item counter. After all chunks commit, a separate transaction
+reconciles `master.main_release_id`; only then is Release entity progress
+finalized. If reconciliation fails, a retry skips the committed chunks and
+reruns the set reconciliation. The model v0.3.1 import contract is part of
+resume and success compatibility; an older successful Release contract cannot
+suppress corrected Release semantics.
 
 Missing supported relations are deleted, mutable values are updated, and
 unchanged rows retain their surrogate IDs. Exact relation duplicates collapse
@@ -95,9 +109,34 @@ An entity completes only after end-of-stream validation proves exact chunk
 coverage and matching totals. A run succeeds only after every selected entity
 completes.
 
-Several relation identities still use signed 32-bit Java hashes. Distinct
-values can collide within one root; collision-resistant identity is tracked in
-[`open-discogs-model#43`](https://github.com/dsub-io/open-discogs-model/issues/43).
+Release contract revision 3 stores a model-defined SHA-256 identity for
+credited artists, formats, identifiers, tracks, videos, and label/company work
+relations. The legacy signed 32-bit hash remains only as a deterministic
+compatibility slot.
+Exact semantic duplicates collapse, while distinct payloads sharing the old
+hash receive separate slots. Stale reconciliation compares both values, so a
+legacy null digest or a changed slot assignment is replaced transactionally.
+
+Release `4846884` proves that tracks `6/Яд` and `7/Ад` share legacy hash
+`86171`; both must survive. Format identity includes name, reduced
+descriptions, canonical quantity, and text. Release `48967` has otherwise
+identical `CD`/`Compilation` formats with quantities `1` and `2`, and release
+`6662697` has a quantity larger than signed 32-bit storage. The canonical
+decimal is retained in `quantity_text`; `quantity` is populated only when it
+fits.
+
+The 2026-08 dump audit streamed all 19,341,287 release roots in 2,132.79
+seconds with zero duplicate or non-monotonic roots. The corrected allocator
+accepted every root, including four conflicting identifier rows and 14
+conflicting track rows that the legacy 32-bit keys could not distinguish.
+
+The model-defined non-release relation identity applies the same collision-resistant
+transition to artist name variations and URLs, label URLs, and master videos.
+Artist `33476` contains `Al Thompson` and `C. Thompson`; both have Java hash
+`-1130078775` and must survive as distinct SHA-256 identities. The Java importer
+reads the Artist, Label, and Master contract revisions from the canonical model
+artifact, so checkpoints and interrupted progress created with the earlier hash
+semantics are not reused.
 
 ## Interruption and resume
 
@@ -109,9 +148,12 @@ and transfers only a compatible valid ledger. Resume requires an exact match
 on:
 
 - manifest and per-entity import contract revision;
-- processor name and version;
 - entity set and dump identities;
 - chunk size.
+
+Processor name and version remain provenance only. Java and Go may transfer a
+ledger when the shared import contract revision matches; an output- or
+chunk-boundary-changing release must increment that revision.
 
 If transfer fails, the new run does not adopt partial progress. Every chunk is
 fenced by its owning run, so a delayed worker cannot commit after abandonment.

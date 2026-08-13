@@ -16,7 +16,6 @@ import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.configuration.annotation.JobScope;
 import org.springframework.batch.core.configuration.annotation.StepScope;
-import org.springframework.batch.infrastructure.item.support.SynchronizedItemStreamReader;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -38,9 +37,11 @@ public class ItemReaderConfig {
 
   @Bean
   @StepScope
-  public SynchronizedItemStreamReader<ArtistXML> artistStreamReader() {
+  public SourceChunkItemStreamReader<ArtistXML> artistStreamReader(
+      @Value(CHUNK_SIZE) Integer chunkSize) {
     try {
-      return readerBuilder.build(ArtistXML.class, artistDump(null));
+      return new SourceChunkItemStreamReader<>(
+          readerBuilder.build(ArtistXML.class, artistDump(null)), chunkSize);
     } catch (Exception e) {
       throw new InitializationFailureException(
           "failed to initialize artist stream reader: " + e.getMessage());
@@ -62,9 +63,11 @@ public class ItemReaderConfig {
 
   @Bean
   @StepScope
-  public SynchronizedItemStreamReader<LabelXML> labelStreamReader() {
+  public SourceChunkItemStreamReader<LabelXML> labelStreamReader(
+      @Value(CHUNK_SIZE) Integer chunkSize) {
     try {
-      return readerBuilder.build(LabelXML.class, labelDump(null));
+      return new SourceChunkItemStreamReader<>(
+          readerBuilder.build(LabelXML.class, labelDump(null)), chunkSize);
     } catch (Exception e) {
       throw new InitializationFailureException(
           "failed to initialize label stream reader: " + e.getMessage());
@@ -86,9 +89,11 @@ public class ItemReaderConfig {
 
   @Bean
   @StepScope
-  public SynchronizedItemStreamReader<MasterXML> masterStreamReader() {
+  public SourceChunkItemStreamReader<MasterXML> masterStreamReader(
+      @Value(CHUNK_SIZE) Integer chunkSize) {
     try {
-      return readerBuilder.build(MasterXML.class, masterDump(null));
+      return new SourceChunkItemStreamReader<>(
+          readerBuilder.build(MasterXML.class, masterDump(null)), chunkSize);
     } catch (Exception e) {
       throw new InitializationFailureException(
           "failed to initialize master stream reader: " + e.getMessage());

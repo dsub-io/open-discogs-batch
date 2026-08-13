@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Map;
 import org.jooq.Field;
 import org.jooq.Query;
-import org.jooq.UpdatableRecord;
+import org.jooq.TableRecord;
 import org.junit.jupiter.api.Test;
 import org.springframework.batch.infrastructure.item.Chunk;
 
@@ -34,8 +34,6 @@ class AbstractJooqItemWriterUnitTest {
             .setName("Artist");
     ReleaseItemArtistRecord relation =
         new ReleaseItemArtistRecord()
-            .setId(9)
-            .setCreatedAt(NOW)
             .setLastModifiedAt(NOW)
             .setReleaseItemId(2)
             .setArtistId(5);
@@ -45,7 +43,7 @@ class AbstractJooqItemWriterUnitTest {
         .doesNotContain("id")
         .contains("release_item_id", "artist_id");
     assertThat(writer.insertFields(relation)).isSameAs(writer.insertFields(relation));
-    assertThat(writer.insertValues(relation)).doesNotContain(9).contains(2, 5);
+    assertThat(writer.insertValues(relation)).contains(2, 5);
   }
 
   @Test
@@ -82,14 +80,12 @@ class AbstractJooqItemWriterUnitTest {
             .setMainReleaseId(2);
     ReleaseItemVideoRecord video =
         new ReleaseItemVideoRecord()
-            .setCreatedAt(NOW)
             .setLastModifiedAt(NOW)
             .setReleaseItemId(2)
             .setHash(1)
             .setUrl("https://video");
     ReleaseItemFormatRecord format =
         new ReleaseItemFormatRecord()
-            .setCreatedAt(NOW)
             .setLastModifiedAt(NOW)
             .setReleaseItemId(2)
             .setHash(2)
@@ -103,9 +99,14 @@ class AbstractJooqItemWriterUnitTest {
     assertThat(names(writer.updateFields(video))).containsExactly("last_modified_at");
     assertThat(names(writer.businessUpdateFields(video))).isEmpty();
     assertThat(names(writer.updateFields(format)))
-        .containsExactly("last_modified_at", "quantity");
-    assertThat(names(writer.businessUpdateFields(format))).containsExactly("quantity");
+        .containsExactly("last_modified_at");
+    assertThat(names(writer.businessUpdateFields(format))).isEmpty();
     assertThat(writer.updateFields(format)).isSameAs(writer.updateFields(format));
+    assertThat(writer.businessUpdateFields(format))
+        .isSameAs(writer.businessUpdateFields(format));
+    assertThat(writer.bindValues(format))
+        .hasSize(writer.insertFields(format).size())
+        .contains(NOW, 2, "Vinyl");
   }
 
   @Test
@@ -124,6 +125,7 @@ class AbstractJooqItemWriterUnitTest {
         .doesNotContainKeys("id", "created_at");
     assertThat(writer.updateMap(artist)).doesNotContainKeys("id", "created_at");
     assertThat(writer.updateMap(genre)).isEmpty();
+    assertThat(writer.bindValues(genre)).hasSize(writer.insertFields(genre).size());
   }
 
   private List<String> names(List<Field<?>> fields) {
@@ -131,38 +133,42 @@ class AbstractJooqItemWriterUnitTest {
   }
 
   private static final class ExposedWriter
-      extends AbstractJooqItemWriter<UpdatableRecord<?>> {
+      extends AbstractJooqItemWriter<TableRecord<?>> {
 
-    List<Object> insertValues(UpdatableRecord<?> record) {
+    List<Object> insertValues(TableRecord<?> record) {
       return getInsertValues(record);
     }
 
-    List<Field<?>> insertFields(UpdatableRecord<?> record) {
+    List<Field<?>> insertFields(TableRecord<?> record) {
       return getInsertFields(record.getTable());
     }
 
-    Map<String, Object> updateMap(UpdatableRecord<?> record) {
+    Map<String, Object> updateMap(TableRecord<?> record) {
       return getUpdateMap(record);
     }
 
-    List<Field<?>> constraintFields(UpdatableRecord<?> record) {
+    List<Field<?>> constraintFields(TableRecord<?> record) {
       return getConstraintFields(record.getTable());
     }
 
-    List<Field<?>> updateFields(UpdatableRecord<?> record) {
+    List<Field<?>> updateFields(TableRecord<?> record) {
       return getUpdateFields(record.getTable());
     }
 
-    List<Field<?>> businessUpdateFields(UpdatableRecord<?> record) {
+    List<Field<?>> businessUpdateFields(TableRecord<?> record) {
       return getBusinessUpdateFields(record.getTable());
     }
 
-    @Override
-    public void write(Chunk<? extends UpdatableRecord<?>> items) {
+    Object[] bindValues(TableRecord<?> record) {
+      return getBindValues(record);
     }
 
     @Override
-    public Query getQuery(UpdatableRecord<?> record) {
+    public void write(Chunk<? extends TableRecord<?>> items) {
+    }
+
+    @Override
+    public Query getQuery(TableRecord<?> record) {
       return null;
     }
   }

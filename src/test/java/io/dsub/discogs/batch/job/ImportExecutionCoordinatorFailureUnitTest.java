@@ -210,6 +210,46 @@ class ImportExecutionCoordinatorFailureUnitTest {
         .isInstanceOf(NullPointerException.class);
   }
 
+  @Test
+  void bootstrapOperationRejectsMissingResultAndPreservesSqlFailure() throws Exception {
+    ImportExecutionCoordinator coordinator = coordinator();
+    Connection connection = mock(Connection.class);
+    PreparedStatement statement = mock(PreparedStatement.class);
+    ResultSet emptyResult = mock(ResultSet.class);
+    when(connection.prepareStatement(ImportExecutionQueries.FINALIZE_BOOTSTRAP))
+        .thenReturn(statement);
+    when(statement.executeQuery()).thenReturn(emptyResult);
+    when(emptyResult.next()).thenReturn(false);
+    ReflectionTestUtils.setField(coordinator, "lockConnection", connection);
+
+    assertThatThrownBy(
+            () ->
+                ReflectionTestUtils.invokeMethod(
+                    coordinator,
+                    "runBootstrapOperation",
+                    ImportExecutionQueries.FINALIZE_BOOTSTRAP,
+                    7L,
+                    "finalize"))
+        .hasRootCauseInstanceOf(ImportExecutionException.class)
+        .rootCause()
+        .hasMessage("finalize import run 7 bootstrap returned no result");
+
+    SQLException failure = new SQLException("fixture bootstrap failure");
+    when(statement.executeQuery()).thenThrow(failure);
+    assertThatThrownBy(
+            () ->
+                ReflectionTestUtils.invokeMethod(
+                    coordinator,
+                    "runBootstrapOperation",
+                    ImportExecutionQueries.FINALIZE_BOOTSTRAP,
+                    7L,
+                    "finalize"))
+        .hasCauseInstanceOf(ImportExecutionException.class)
+        .cause()
+        .hasMessage("finalize import run 7 bootstrap")
+        .hasCause(failure);
+  }
+
   private Object plannedDump() throws Exception {
     Class<?> plannedDumpClass =
         java.util.Arrays.stream(ImportExecutionCoordinator.class.getDeclaredClasses())

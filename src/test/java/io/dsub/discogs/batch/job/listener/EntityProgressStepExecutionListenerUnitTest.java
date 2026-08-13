@@ -67,6 +67,25 @@ class EntityProgressStepExecutionListenerUnitTest {
   }
 
   @Test
+  void deferredCompletionLeavesCoveredProgressOpenForTheFollowingStep() throws Exception {
+    ImportProgressStore progressStore = mock(ImportProgressStore.class);
+    StepExecution stepExecution = stepExecution(BatchStatus.COMPLETED);
+    EntityProgressStepExecutionListener listener =
+        new EntityProgressStepExecutionListener(
+            progressStore,
+            EntityType.RELEASE,
+            8L,
+            10,
+            false,
+            EntityProgressStepExecutionListener.CompletionPolicy.DEFER);
+
+    ExitStatus result = listener.afterStep(stepExecution);
+
+    assertThat(result).isEqualTo(stepExecution.getExitStatus());
+    verify(progressStore, never()).completeEntityFromProgress(8L, EntityType.RELEASE, 10);
+  }
+
+  @Test
   void invalidCoverageFailsAnOtherwiseCompletedStep() throws Exception {
     ImportProgressStore progressStore = mock(ImportProgressStore.class);
     ImportExecutionException failure = new ImportExecutionException("invalid coverage");

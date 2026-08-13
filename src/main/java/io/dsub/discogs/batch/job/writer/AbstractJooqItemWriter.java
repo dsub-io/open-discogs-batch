@@ -16,12 +16,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import org.jooq.Field;
 import org.jooq.Table;
-import org.jooq.UpdatableRecord;
+import org.jooq.TableRecord;
 
-public abstract class AbstractJooqItemWriter<T extends UpdatableRecord<?>> implements JooqItemWriter<T> {
+public abstract class AbstractJooqItemWriter<T extends TableRecord<?>> implements JooqItemWriter<T> {
 
-  private static final Set<Table<?>> ROOT_TABLES =
-      Set.of(Artist.ARTIST, Label.LABEL, Master.MASTER, ReleaseItem.RELEASE_ITEM);
   private static final Set<Table<?>> CANONICAL_KEY_TABLES =
       Set.of(
           Artist.ARTIST,
@@ -34,6 +32,8 @@ public abstract class AbstractJooqItemWriter<T extends UpdatableRecord<?>> imple
   private final Map<Table<?>, List<Field<?>>> insertFields = new ConcurrentHashMap<>();
   private final Map<Table<?>, List<Field<?>>> constraintFieldsCache = new ConcurrentHashMap<>();
   private final Map<Table<?>, List<Field<?>>> updateFieldsCache = new ConcurrentHashMap<>();
+  private final Map<Table<?>, List<Field<?>>> businessUpdateFieldsCache =
+      new ConcurrentHashMap<>();
 
   protected List<Object> getInsertValues(T record) {
     return getInsertFields(record.getTable()).stream()
@@ -45,11 +45,7 @@ public abstract class AbstractJooqItemWriter<T extends UpdatableRecord<?>> imple
     return insertFields.computeIfAbsent(
         table,
         uncachedTable -> {
-          List<Field<?>> fields = new ArrayList<>(List.of(uncachedTable.fields()));
-          if (!ROOT_TABLES.contains(uncachedTable)) {
-            fields.removeIf(field -> field.getName().equals("id"));
-          }
-          return List.copyOf(fields);
+          return List.of(uncachedTable.fields());
         });
   }
 
@@ -74,12 +70,10 @@ public abstract class AbstractJooqItemWriter<T extends UpdatableRecord<?>> imple
         table,
         uncachedTable -> {
           List<Field<?>> constraintFields = getConstraintFields(uncachedTable);
-          List<Field<?>> mutableFields = RelationTableRegistry.mutableFields(uncachedTable);
           boolean hashIdentity = uncachedTable.field("hash") != null;
           return Arrays.stream(uncachedTable.fields())
               .filter(field -> !constraintFields.contains(field))
               .filter(field -> !field.getName().equals("created_at"))
-              .filter(field -> !field.getName().equals("id"))
               .filter(
                   field ->
                       !uncachedTable.equals(Master.MASTER)
@@ -87,16 +81,41 @@ public abstract class AbstractJooqItemWriter<T extends UpdatableRecord<?>> imple
               .filter(
                   field ->
                       !hashIdentity
-                          || field.getName().equals("last_modified_at")
-                          || mutableFields.contains(field))
+                          || field.getName().equals("last_modified_at"))
               .toList();
         });
   }
 
   protected List<Field<?>> getBusinessUpdateFields(Table<?> table) {
-    return getUpdateFields(table).stream()
-        .filter(field -> !field.getName().equals("last_modified_at"))
-        .collect(Collectors.toList());
+    return businessUpdateFieldsCache.computeIfAbsent(
+        table,
+        uncachedTable ->
+            getUpdateFields(uncachedTable).stream()
+                .filter(field -> !field.getName().equals("last_modified_at"))
+                .toList());
+  }
+
+  protected Object[] getBindValues(T record) {
+    List<Field<?>> insert = getInsertFields(record.getTable());
+    List<Field<?>> update = getUpdateFields(record.getTable());
+    boolean updateOnConflict = !getBusinessUpdateFields(record.getTable()).isEmpty();
+    int updateCount = updateOnConflict ? update.size() : 0;
+    Object[] values = new Object[insert.size() + updateCount];
+    int index = copyFieldValues(record, insert, values, 0);
+    if (updateOnConflict) {
+      copyFieldValues(record, update, values, index);
+    }
+    return values;
+  }
+
+  private int copyFieldValues(
+      T record, List<Field<?>> fields, Object[] target, int startIndex) {
+    int index = startIndex;
+    for (Field<?> field : fields) {
+      target[index] = field.getValue(record);
+      index++;
+    }
+    return index;
   }
 
   private List<Field<?>> generatedConstraintFields(Table<?> table) {
@@ -104,11 +123,6 @@ public abstract class AbstractJooqItemWriter<T extends UpdatableRecord<?>> imple
       throw new IllegalArgumentException(
           "table has no registered canonical conflict key: " + table.getName());
     }
-    List<Field<?>> fields =
-        new ArrayList<>(table.getPrimaryKey().getFields());
-    if (!ROOT_TABLES.contains(table)) {
-      fields.removeIf(field -> field.getName().equals("id"));
-    }
-    return List.copyOf(fields);
+    return List.copyOf(table.getPrimaryKey().getFields());
   }
 }

@@ -26,11 +26,28 @@ final class ImportExecutionQueries {
 
   static final String FIND_DEPENDENCY_CHECKPOINT =
       """
+      with completed_checkpoint as (
+        select dump.dump_date,
+               dump.checksum_sha256
+        from discogs_import_run_dump run_dump
+        join discogs_dump dump
+          on dump.id = run_dump.dump_id
+         and dump.entity_type = run_dump.entity_type
+        where run_dump.entity_type = ?
+          and run_dump.import_contract_revision = ?
+          and run_dump.completed_at is not null
+          and run_dump.chunk_size is not null
+          and run_dump.total_items is not null
+          and run_dump.total_chunks is not null
+          and run_dump.processed_items = run_dump.total_items
+        order by run_dump.completed_at desc, run_dump.import_run_id desc
+        limit 1
+      )
       select checkpoint.dump_date as checkpoint_date,
              checkpoint.checksum_sha256 as checkpoint_checksum,
              expected.dump_date as expected_date,
              expected.checksum_sha256 as expected_checksum
-      from discogs_import_checkpoint checkpoint
+      from completed_checkpoint checkpoint
       left join lateral (
         select dump.dump_date,
                dump.checksum_sha256
@@ -40,7 +57,6 @@ final class ImportExecutionQueries {
         order by dump.dump_date desc, dump.id desc
         limit 1
       ) expected on true
-      where checkpoint.entity_type = ?
       """;
 
   static final String FIND_CURRENT_SUCCESS =
@@ -97,8 +113,6 @@ final class ImportExecutionQueries {
       from discogs_import_run import_run
       where import_run.manifest_sha256 = ?
         and import_run.status = 'failed'
-        and import_run.processor = ?
-        and import_run.processor_version = ?
         and not import_run.force_requested
         and not exists (
           select 1
@@ -149,12 +163,8 @@ final class ImportExecutionQueries {
           join discogs_import_run_dump current_dump
             on current_dump.import_run_id = checkpoint.import_run_id
            and current_dump.entity_type = checkpoint.entity_type
-          join discogs_import_run current_run
-            on current_run.id = checkpoint.import_run_id
           where failed_dump.import_run_id = import_run.id
             and (current_dump.dump_id <> failed_dump.dump_id
-                 or current_run.processor <> import_run.processor
-                 or current_run.processor_version <> import_run.processor_version
                  or current_dump.import_contract_revision
                     <> failed_dump.import_contract_revision)
             and (checkpoint.applied_at > import_run.completed_at
@@ -247,6 +257,51 @@ final class ImportExecutionQueries {
         and status = 'running'
       """;
 
+  static final String MARK_CATALOG_STATES_IMPORTING =
+      """
+      update discogs_catalog_entity_state
+      set status = ?,
+          operation = case
+              when last_successful_import_run_id is null then 'bootstrap'
+              else 'refresh'
+          end,
+          active_import_run_id = ?,
+          updated_at = now(),
+          failure_message = null
+      where entity_type = any (?)
+      """;
+
+  static final String PREPARE_BOOTSTRAP_FOREIGN_KEYS =
+      "select prepare_discogs_bootstrap_foreign_keys(?)";
+
+  static final String FINALIZE_BOOTSTRAP =
+      "select finalize_discogs_bootstrap(?)";
+
+  static final String MARK_CATALOG_STATES_READY =
+      """
+      update discogs_catalog_entity_state
+      set status = ?,
+          operation = null,
+          active_import_run_id = null,
+          last_successful_import_run_id = ?,
+          ready_at = now(),
+          updated_at = now(),
+          failure_message = null
+      where entity_type = any (?)
+        and (active_import_run_id = ? or active_import_run_id is null)
+      """;
+
+  static final String MARK_CATALOG_STATES_FAILED =
+      """
+      update discogs_catalog_entity_state
+      set status = ?,
+          active_import_run_id = null,
+          updated_at = now(),
+          failure_message = ?
+      where entity_type = any (?)
+        and active_import_run_id = ?
+      """;
+
   static final String PRUNE_SUPERSEDED_FAILED_PROGRESS =
       """
       delete from discogs_import_run_chunk run_chunk
@@ -259,16 +314,11 @@ final class ImportExecutionQueries {
             from discogs_import_run_dump failed_dump
             left join discogs_import_checkpoint checkpoint
               on checkpoint.entity_type = failed_dump.entity_type
-            left join discogs_import_run current_run
-              on current_run.id = checkpoint.import_run_id
             left join discogs_import_run_dump current_dump
               on current_dump.import_run_id = checkpoint.import_run_id
              and current_dump.entity_type = checkpoint.entity_type
             where failed_dump.import_run_id = failed_run.id
               and (current_dump.dump_id is distinct from failed_dump.dump_id
-                   or current_run.processor is distinct from failed_run.processor
-                   or current_run.processor_version
-                      is distinct from failed_run.processor_version
                    or current_dump.import_contract_revision
                       is distinct from failed_dump.import_contract_revision)
           )

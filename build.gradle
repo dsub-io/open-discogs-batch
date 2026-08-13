@@ -25,7 +25,7 @@ ext {
     set('classGraphVersion', '4.8.186')
     set('jooqVersion', '3.21.7')
     set('pbVersion', '0.10.2')
-    set('openDiscogsModelVersion', '0.3.0')
+    set('openDiscogsModelVersion', '0.3.1')
     set('postgresqlVersion', '42.7.13')
 }
 
@@ -85,6 +85,23 @@ test {
     useJUnitPlatform {
         excludeTags 'e2e'
     }
+    filter {
+        includeTestsMatching '*UnitTest'
+    }
+}
+
+tasks.register('integrationTest', Test) {
+    description = 'Runs PostgreSQL and adapter integration tests.'
+    group = 'verification'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform {
+        excludeTags 'e2e'
+    }
+    filter {
+        includeTestsMatching '*IntegrationTest'
+    }
+    shouldRunAfter test
 }
 
 tasks.register('e2eTest', Test) {
@@ -95,12 +112,15 @@ tasks.register('e2eTest', Test) {
     useJUnitPlatform {
         includeTags 'e2e'
     }
+    filter {
+        includeTestsMatching '*E2ETest'
+    }
     testLogging {
         events 'passed', 'skipped', 'failed'
         exceptionFormat = 'full'
-        showStandardStreams = true
+        showStandardStreams = false
     }
-    shouldRunAfter test
+    shouldRunAfter integrationTest
 }
 
 tasks.register('validateTestNaming') {
@@ -144,12 +164,13 @@ tasks.register('validateTestNaming') {
 }
 
 check.dependsOn validateTestNaming
+check.dependsOn integrationTest
 check.dependsOn e2eTest
 check.dependsOn jacocoTestReport
 check.dependsOn jacocoTestCoverageVerification
 
 jacocoTestReport {
-    dependsOn test, e2eTest
+    dependsOn test, integrationTest, e2eTest
     executionData tasks.withType(Test)
     reports {
         xml.required = true

@@ -30,12 +30,24 @@ public class ImportExecutionCoordinator {
 
   static final String PROCESSOR = "open-discogs-batch";
   static final String DEVELOPMENT_VERSION = "development";
+  static final String CATALOG_STATUS_IMPORTING = "importing";
+  static final String CATALOG_STATUS_READY = "ready";
+  static final String CATALOG_STATUS_FAILED = "failed";
+  static final String FAILURE_WITHOUT_CAUSE = "import failed without an exception";
+
+  private static final String RUN_STATUS_SUCCESS = "success";
+  private static final String RUN_STATUS_FAILED = "failed";
+  private static final String CATALOG_STATE_ARRAY_TYPE = "varchar";
+  private static final String START_CATALOG_STATE_ACTION = "start";
+  private static final String FINALIZE_CATALOG_STATE_ACTION = "finalize";
+  private static final String FAIL_CATALOG_STATE_ACTION = "fail";
 
   private final DataSource dataSource;
   private final ImportDependencyPreflight dependencyPreflight = new ImportDependencyPreflight();
 
   private Connection lockConnection;
   private List<Integer> acquiredLockKeys = List.of();
+  private List<String> activeEntityTypes = List.of();
   private Long activeRunId;
 
   public synchronized Preparation prepare(JobParameters parameters)
@@ -75,6 +87,7 @@ public class ImportExecutionCoordinator {
       // Admission is manifest-atomic: one incompatible entity starts every selected entity fresh.
       Long successfulRunId = findSuccessfulRun(manifestSha256);
       if (successfulRunId != null && !force) {
+        markCatalogStatesReady(successfulRunId, entityTypes);
         lockConnection.commit();
         log.info(
             "manifest {} is still current as import run {}. skipping.",
@@ -93,8 +106,7 @@ public class ImportExecutionCoordinator {
       Long resumedFromRunId =
           force
               ? null
-              : findResumableRun(
-                  manifestSha256, version, chunkSize, dumps.size());
+              : findResumableRun(manifestSha256, chunkSize, dumps.size());
       activeRunId =
           insertRun(
               manifestSha256,
@@ -112,7 +124,13 @@ public class ImportExecutionCoordinator {
       if (resumedFromRunId != null) {
         transferResumeProgress(resumedFromRunId, activeRunId, dumps.size());
       }
+      markCatalogStatesImporting(activeRunId, entityTypes);
+      runBootstrapOperation(
+          ImportExecutionQueries.PREPARE_BOOTSTRAP_FOREIGN_KEYS,
+          activeRunId,
+          "prepare");
 
+      activeEntityTypes = List.copyOf(entityTypes);
       lockConnection.commit();
       log.info(
           "started import run {} for manifest {}, entities {}, resumed-from {}",
@@ -151,16 +169,24 @@ public class ImportExecutionCoordinator {
         }
       }
 
-      updateRunStatus(activeRunId, success, failure);
+      Throwable failureReason = success ? null : normalizedFailure(failure);
+      updateRunStatus(activeRunId, success, failureReason);
       if (success) {
+        runBootstrapOperation(
+            ImportExecutionQueries.FINALIZE_BOOTSTRAP,
+            activeRunId,
+            "finalize");
+        markCatalogStatesReady(activeRunId, activeEntityTypes);
         pruneSupersededFailedProgress();
         deleteRunChunks(activeRunId);
+      } else {
+        markCatalogStatesFailed(activeRunId, activeEntityTypes, failureReason.toString());
       }
       lockConnection.commit();
       log.info(
           "completed import run {} with status {}",
           activeRunId,
-          success ? "success" : "failed");
+          success ? RUN_STATUS_SUCCESS : RUN_STATUS_FAILED);
     } catch (ImportExecutionException exception) {
       rollbackQuietly();
       throw exception;
@@ -309,16 +335,13 @@ public class ImportExecutionCoordinator {
 
   private Long findResumableRun(
       String manifestSha256,
-      String version,
       int chunkSize,
       int entityCount)
       throws SQLException {
     try (PreparedStatement statement =
         lockConnection.prepareStatement(ImportExecutionQueries.FIND_RESUMABLE_RUN)) {
       statement.setString(1, manifestSha256);
-      statement.setString(2, PROCESSOR);
-      statement.setString(3, version);
-      int nextParameter = bindCurrentEntityRevisions(statement, 4);
+      int nextParameter = bindCurrentEntityRevisions(statement, 2);
       statement.setInt(nextParameter, entityCount);
       statement.setInt(nextParameter + 1, chunkSize);
       try (ResultSet result = statement.executeQuery()) {
@@ -461,8 +484,8 @@ public class ImportExecutionCoordinator {
       throws SQLException, ImportExecutionException {
     try (PreparedStatement statement =
         lockConnection.prepareStatement(ImportExecutionQueries.COMPLETE_RUN)) {
-      statement.setString(1, success ? "success" : "failed");
-      if (success || failure == null) {
+      statement.setString(1, success ? RUN_STATUS_SUCCESS : RUN_STATUS_FAILED);
+      if (success) {
         statement.setNull(2, Types.VARCHAR);
       } else {
         statement.setString(2, failure.toString());
@@ -472,6 +495,95 @@ public class ImportExecutionCoordinator {
         throw new ImportExecutionException(
             "active import run was not in running state: " + runId);
       }
+    }
+  }
+
+  private Throwable normalizedFailure(Throwable failure) {
+    return failure == null ? new IllegalStateException(FAILURE_WITHOUT_CAUSE) : failure;
+  }
+
+  private void markCatalogStatesImporting(long runId, List<String> entityTypes)
+      throws SQLException, ImportExecutionException {
+    Array requestedTypes = catalogEntityTypes(entityTypes);
+    try (PreparedStatement statement =
+        lockConnection.prepareStatement(ImportExecutionQueries.MARK_CATALOG_STATES_IMPORTING)) {
+      statement.setString(1, CATALOG_STATUS_IMPORTING);
+      statement.setLong(2, runId);
+      statement.setArray(3, requestedTypes);
+      requireCatalogStateTransitions(
+          statement.executeUpdate(), entityTypes.size(), START_CATALOG_STATE_ACTION, runId);
+    } finally {
+      requestedTypes.free();
+    }
+  }
+
+  private void runBootstrapOperation(String query, long runId, String action)
+      throws SQLException, ImportExecutionException {
+    try (PreparedStatement statement = lockConnection.prepareStatement(query)) {
+      statement.setLong(1, runId);
+      try (ResultSet result = statement.executeQuery()) {
+        if (!result.next()) {
+          throw new ImportExecutionException(
+              action + " import run " + runId + " bootstrap returned no result");
+        }
+        result.getInt(1);
+      }
+    } catch (SQLException exception) {
+      throw new ImportExecutionException(
+          action + " import run " + runId + " bootstrap", exception);
+    }
+  }
+
+  private void markCatalogStatesReady(long runId, List<String> entityTypes)
+      throws SQLException, ImportExecutionException {
+    Array requestedTypes = catalogEntityTypes(entityTypes);
+    try (PreparedStatement statement =
+        lockConnection.prepareStatement(ImportExecutionQueries.MARK_CATALOG_STATES_READY)) {
+      statement.setString(1, CATALOG_STATUS_READY);
+      statement.setLong(2, runId);
+      statement.setArray(3, requestedTypes);
+      statement.setLong(4, runId);
+      requireCatalogStateTransitions(
+          statement.executeUpdate(), entityTypes.size(), FINALIZE_CATALOG_STATE_ACTION, runId);
+    } finally {
+      requestedTypes.free();
+    }
+  }
+
+  private void markCatalogStatesFailed(
+      long runId, List<String> entityTypes, String failure)
+      throws SQLException, ImportExecutionException {
+    Array requestedTypes = catalogEntityTypes(entityTypes);
+    try (PreparedStatement statement =
+        lockConnection.prepareStatement(ImportExecutionQueries.MARK_CATALOG_STATES_FAILED)) {
+      statement.setString(1, CATALOG_STATUS_FAILED);
+      statement.setString(2, failure);
+      statement.setArray(3, requestedTypes);
+      statement.setLong(4, runId);
+      requireCatalogStateTransitions(
+          statement.executeUpdate(), entityTypes.size(), FAIL_CATALOG_STATE_ACTION, runId);
+    } finally {
+      requestedTypes.free();
+    }
+  }
+
+  private Array catalogEntityTypes(List<String> entityTypes) throws SQLException {
+    return lockConnection.createArrayOf(CATALOG_STATE_ARRAY_TYPE, entityTypes.toArray());
+  }
+
+  private void requireCatalogStateTransitions(
+      int affected, int expected, String action, long runId)
+      throws ImportExecutionException {
+    if (affected != expected) {
+      throw new ImportExecutionException(
+          action
+              + " import run "
+              + runId
+              + " catalog state: updated "
+              + affected
+              + " of "
+              + expected
+              + " entities");
     }
   }
 
@@ -503,6 +615,7 @@ public class ImportExecutionCoordinator {
   private void rollbackAndRelease() {
     rollbackQuietly();
     activeRunId = null;
+    activeEntityTypes = List.of();
     releaseEntityLocks();
   }
 
@@ -542,6 +655,7 @@ public class ImportExecutionCoordinator {
       }
       lockConnection = null;
       acquiredLockKeys = List.of();
+      activeEntityTypes = List.of();
     }
   }
 

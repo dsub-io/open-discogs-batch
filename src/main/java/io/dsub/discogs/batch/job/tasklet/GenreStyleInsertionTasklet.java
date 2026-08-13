@@ -6,7 +6,7 @@ import io.dsub.discogs.batch.job.writer.ItemWriterConfig;
 import io.dsub.opendiscogs.jooq.tables.records.GenreRecord;
 import io.dsub.opendiscogs.jooq.tables.records.StyleRecord;
 import java.util.stream.Collectors;
-import org.jooq.UpdatableRecord;
+import org.jooq.TableRecord;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.step.StepContribution;
 import org.springframework.batch.core.scope.context.ChunkContext;
@@ -21,12 +21,12 @@ import org.springframework.stereotype.Component;
 public class GenreStyleInsertionTasklet implements Tasklet {
 
   private final EntityIdRegistry registry;
-  private final ItemWriter<UpdatableRecord<?>> entityItemWriter;
+  private final ItemWriter<TableRecord<?>> entityItemWriter;
 
   public GenreStyleInsertionTasklet(
       EntityIdRegistry registry,
       @Qualifier(ItemWriterConfig.ENTITY_ITEM_WRITER)
-          ItemWriter<UpdatableRecord<?>> entityItemWriter) {
+          ItemWriter<TableRecord<?>> entityItemWriter) {
     this.registry = registry;
     this.entityItemWriter = entityItemWriter;
   }
