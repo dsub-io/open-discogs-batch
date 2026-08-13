@@ -80,14 +80,19 @@ public class ArtistStepConfig extends AbstractStepConfig {
 
   @Bean
   @JobScope
-  public Step artistStep() throws InvalidArgumentException, DumpNotFoundException {
+  public Step artistStep(
+      @Value(CHUNK) Integer chunkSize,
+      @Value(RUN_ID) Long runId,
+      @Value(RESUMED) Boolean resumed)
+      throws InvalidArgumentException, DumpNotFoundException {
 
     // @formatter:off
     Flow artistStepFlow =
         new FlowBuilder<SimpleFlow>(ARTIST_STEP_FLOW)
 
             // execution decider
-            .from(executionDecider(ARTIST))
+            .from(executionDecider(
+                ARTIST, EntityType.ARTIST, importProgressStore, runId, chunkSize, resumed))
             .on(SKIPPED)
             .end()
             .on(ANY)

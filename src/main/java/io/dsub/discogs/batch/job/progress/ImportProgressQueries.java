@@ -20,6 +20,19 @@ final class ImportProgressQueries {
       order by chunk_index
       """;
 
+  static final String FIND_COMPLETED_ENTITY =
+      """
+      select total_items
+      from discogs_import_run_dump
+      where import_run_id = ?
+        and entity_type = ?
+        and chunk_size = ?
+        and completed_at is not null
+        and total_items is not null
+        and total_chunks is not null
+        and processed_items = total_items
+      """;
+
   static final String RECORD_CHUNK =
       """
       with active_run as (

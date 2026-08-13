@@ -82,6 +82,10 @@ class ImportProgressStoreIntegrationTest extends PostgreSQLIntegrationSupport {
             java.util.Map.of(first.index(), first, second.index(), second));
     assertThat(progressStore.loadCompletedChunks(runId, EntityType.ARTIST, false).chunks())
         .isEmpty();
+    assertThat(
+            progressStore.completedEntityItems(
+                runId, EntityType.ARTIST, CHUNK_SIZE, true))
+        .isEmpty();
     progressStore.completeEntityFromProgress(runId, EntityType.ARTIST, CHUNK_SIZE);
     ImportProgressSnapshot completed = progressStore.getProgress(runId, EntityType.ARTIST);
     assertThat(completed.totalItems()).hasValue(7);
@@ -98,6 +102,18 @@ class ImportProgressStoreIntegrationTest extends PostgreSQLIntegrationSupport {
                 Boolean.class,
                 runId))
         .isTrue();
+    assertThat(
+            progressStore.completedEntityItems(
+                runId, EntityType.ARTIST, CHUNK_SIZE, true))
+        .hasValue(7);
+    assertThat(
+            progressStore.completedEntityItems(
+                runId, EntityType.ARTIST, CHUNK_SIZE, false))
+        .isEmpty();
+    assertThat(
+            progressStore.completedEntityItems(
+                runId, EntityType.ARTIST, CHUNK_SIZE + 1, true))
+        .isEmpty();
   }
 
   @Test

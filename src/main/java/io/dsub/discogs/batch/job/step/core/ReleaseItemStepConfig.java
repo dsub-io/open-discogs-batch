@@ -77,14 +77,18 @@ public class ReleaseItemStepConfig extends AbstractStepConfig {
 
   @Bean
   @JobScope
-  public Step releaseStep(@Value(CHUNK) Integer chunkSize)
+  public Step releaseStep(
+      @Value(CHUNK) Integer chunkSize,
+      @Value(RUN_ID) Long runId,
+      @Value(RESUMED) Boolean resumed)
       throws InvalidArgumentException, DumpNotFoundException {
     // @formatter:off
     Flow releaseStepFlow =
         new FlowBuilder<SimpleFlow>(RELEASE_STEP_FLOW)
 
             // from execution decider
-            .from(executionDecider(RELEASE))
+            .from(executionDecider(
+                RELEASE, EntityType.RELEASE, importProgressStore, runId, chunkSize, resumed))
             .on(SKIPPED)
             .end()
             .on(ANY)

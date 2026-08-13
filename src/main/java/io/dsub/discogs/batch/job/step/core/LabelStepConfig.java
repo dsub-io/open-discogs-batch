@@ -82,14 +82,19 @@ public class LabelStepConfig extends AbstractStepConfig {
 
   @Bean
   @JobScope
-  public Step labelStep() throws InvalidArgumentException, DumpNotFoundException {
+  public Step labelStep(
+      @Value(CHUNK) Integer chunkSize,
+      @Value(RUN_ID) Long runId,
+      @Value(RESUMED) Boolean resumed)
+      throws InvalidArgumentException, DumpNotFoundException {
 
     // @formatter:off
     Flow labelStepFlow =
         new FlowBuilder<SimpleFlow>(LABEL_STEP_FLOW)
 
             // from execution decider
-            .from(executionDecider(LABEL))
+            .from(executionDecider(
+                LABEL, EntityType.LABEL, importProgressStore, runId, chunkSize, resumed))
             .on(SKIPPED)
             .end()
             .on(ANY)

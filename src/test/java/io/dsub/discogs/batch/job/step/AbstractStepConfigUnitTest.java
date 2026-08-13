@@ -2,12 +2,18 @@ package io.dsub.discogs.batch.job.step;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
 
 import ch.qos.logback.classic.Level;
 import io.dsub.discogs.batch.exception.InvalidArgumentException;
+import io.dsub.discogs.batch.dump.EntityType;
+import io.dsub.discogs.batch.job.progress.ImportProgressStore;
 import io.dsub.discogs.batch.testutil.LogSpy;
+import java.util.OptionalLong;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -32,6 +38,9 @@ class AbstractStepConfigUnitTest {
   void setUp() throws InvalidArgumentException {
     stepConfig = Mockito.mock(AbstractStepConfig.class);
     when(stepConfig.executionDecider(any())).thenCallRealMethod();
+    when(stepConfig.executionDecider(
+            any(), any(), any(), anyLong(), anyInt(), anyBoolean()))
+        .thenCallRealMethod();
   }
 
   @Test
@@ -41,6 +50,38 @@ class AbstractStepConfigUnitTest {
     doReturn(ExitStatus.FAILED).when(jobExecution).getExitStatus();
 
     assertThat(decider.decide(jobExecution, null).getName()).isEqualTo("SKIPPED");
+  }
+
+  @Test
+  void skipsASelectedEntityWhenTransferredProgressIsAlreadyComplete() {
+    ImportProgressStore progressStore = Mockito.mock(ImportProgressStore.class);
+    when(progressStore.completedEntityItems(7L, EntityType.RELEASE, 1000, true))
+        .thenReturn(OptionalLong.of(19_341_287L));
+    JobExecution jobExecution = selectedJobExecution("release");
+
+    FlowExecutionStatus status =
+        stepConfig
+            .executionDecider(
+                "release", EntityType.RELEASE, progressStore, 7L, 1000, true)
+            .decide(jobExecution, null);
+
+    assertThat(status.getName()).isEqualTo("SKIPPED");
+  }
+
+  @Test
+  void executesASelectedEntityWhenTransferredProgressIsIncomplete() {
+    ImportProgressStore progressStore = Mockito.mock(ImportProgressStore.class);
+    when(progressStore.completedEntityItems(8L, EntityType.MASTER, 1000, true))
+        .thenReturn(OptionalLong.empty());
+    JobExecution jobExecution = selectedJobExecution("master");
+
+    FlowExecutionStatus status =
+        stepConfig
+            .executionDecider(
+                "master", EntityType.MASTER, progressStore, 8L, 1000, true)
+            .decide(jobExecution, null);
+
+    assertThat(status.getName()).isEqualTo("COMPLETED");
   }
 
   @Test
@@ -108,5 +149,18 @@ class AbstractStepConfigUnitTest {
       assertThat(logSpy.getLogsByLevelAsString(Level.DEBUG, true).get(0))
           .contains(param, "executing");
     }
+  }
+
+  private JobExecution selectedJobExecution(String entity) {
+    JobExecution jobExecution = Mockito.mock(JobExecution.class);
+    JobParameters jobParameters = Mockito.mock(JobParameters.class);
+    ExitStatus exitStatus = Mockito.mock(ExitStatus.class);
+    doReturn("COMPLETED").when(exitStatus).getExitCode();
+    doReturn(exitStatus).when(jobExecution).getExitStatus();
+    when(jobExecution.getJobParameters()).thenReturn(jobParameters);
+    doReturn(new JobParameter<>(entity, entity, String.class))
+        .when(jobParameters)
+        .getParameter(entity);
+    return jobExecution;
   }
 }

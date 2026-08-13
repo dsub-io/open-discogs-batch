@@ -85,7 +85,10 @@ public class MasterStepConfig extends AbstractStepConfig {
 
   @Bean
   @JobScope
-  public Step masterStep(@Value(CHUNK) Integer chunkSize)
+  public Step masterStep(
+      @Value(CHUNK) Integer chunkSize,
+      @Value(RUN_ID) Long runId,
+      @Value(RESUMED) Boolean resumed)
       throws InvalidArgumentException, DumpNotFoundException {
 
     // @formatter:off
@@ -93,7 +96,8 @@ public class MasterStepConfig extends AbstractStepConfig {
         new FlowBuilder<SimpleFlow>(MASTER_STEP_FLOW)
 
             // from execution decider
-            .from(executionDecider(MASTER))
+            .from(executionDecider(
+                MASTER, EntityType.MASTER, importProgressStore, runId, chunkSize, resumed))
             .on(SKIPPED)
             .end()
             .on(ANY)

@@ -66,6 +66,24 @@ public class ImportProgressStore {
             ChunkRange::index, chunk -> chunk)));
   }
 
+  public OptionalLong completedEntityItems(
+      long runId, EntityType entityType, int chunkSize, boolean resumed) {
+    if (!resumed) {
+      return OptionalLong.empty();
+    }
+    List<Long> completedItems =
+        jdbcTemplate.query(
+            ImportProgressQueries.FIND_COMPLETED_ENTITY,
+            (result, rowNumber) -> result.getLong("total_items"),
+            runId,
+            entityType.toString(),
+            chunkSize);
+    if (completedItems.isEmpty()) {
+      return OptionalLong.empty();
+    }
+    return OptionalLong.of(completedItems.getFirst());
+  }
+
   public void recordCompletedChunk(
       long runId, EntityType entityType, int chunkSize, ChunkRange chunk)
       throws ImportExecutionException {
