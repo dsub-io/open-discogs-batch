@@ -8,6 +8,11 @@ import io.dsub.discogs.batch.job.progress.ChunkRange;
 import io.dsub.discogs.batch.job.progress.CompletedChunkInventory;
 import io.dsub.discogs.batch.job.progress.ProcessedChunk;
 import io.dsub.discogs.batch.job.progress.SourceChunk;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -17,8 +22,15 @@ class SourceChunkItemProcessorUnitTest {
 
   @Test
   void preservesRangeWhileFilteringNullDelegateResults() throws Exception {
+    Clock clock = Clock.fixed(Instant.parse("2026-08-01T00:00:00Z"), ZoneOffset.UTC);
+    List<LocalDateTime> observedTimes = new ArrayList<>();
     SourceChunkItemProcessor<Integer, String> processor =
-        new SourceChunkItemProcessor<>(value -> value == 2 ? null : "value-" + value);
+        new SourceChunkItemProcessor<>(
+            (value, observedAt) -> {
+              observedTimes.add(observedAt);
+              return value == 2 ? null : "value-" + value;
+            },
+            clock);
     ChunkRange range = new ChunkRange(0, 0, 3);
 
     ProcessedChunk<String> processed =
@@ -26,6 +38,9 @@ class SourceChunkItemProcessorUnitTest {
 
     assertThat(processed.range()).isEqualTo(range);
     assertThat(processed.values()).containsExactly("value-1", "value-3");
+    assertThat(observedTimes)
+        .containsOnly(LocalDateTime.of(2026, 8, 1, 0, 0))
+        .hasSize(3);
   }
 
   @Test

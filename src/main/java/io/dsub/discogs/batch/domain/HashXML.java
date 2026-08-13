@@ -3,7 +3,7 @@ package io.dsub.discogs.batch.domain;
 import org.jooq.UpdatableRecord;
 
 /**
- * A contract to enforce containing getHashValue() method on top of getRecord(int parentId).
+ * Adds the legacy hash contract used by relation records.
  *
  * @param <T> a subclass of {@link UpdatableRecord<T>} that this class will produce as an instance.
  */

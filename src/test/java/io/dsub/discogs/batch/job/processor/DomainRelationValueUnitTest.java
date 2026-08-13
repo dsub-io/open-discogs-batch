@@ -36,7 +36,7 @@ class DomainRelationValueUnitTest {
     video.setDescription("Description");
     video.setUrl("https://video");
 
-    assertThat(video.getRecord(7))
+    assertThat(video.getRecord(7, java.time.LocalDateTime.MIN))
         .satisfies(
             record -> {
               assertThat(record.getTitle()).isEqualTo("Title");
@@ -72,19 +72,20 @@ class DomainRelationValueUnitTest {
   void releaseFormatReducesDescriptionsAcrossAllBoundaryStates() {
     ReleaseItemSubItemsXML.ReleaseFormat format = new ReleaseItemSubItemsXML.ReleaseFormat();
     format.setName("Vinyl");
-    assertThat(format.getRecord(1).getDescription()).isNull();
+    assertThat(format.getRecord(1, java.time.LocalDateTime.MIN).getDescription()).isNull();
 
     format.setDescriptions(List.of());
-    assertThat(format.getRecord(1).getDescription()).isNull();
+    assertThat(format.getRecord(1, java.time.LocalDateTime.MIN).getDescription()).isNull();
 
     List<String> descriptions = new ArrayList<>();
     descriptions.add(null);
     descriptions.add("  ");
     format.setDescriptions(descriptions);
-    assertThat(format.getRecord(1).getDescription()).isNull();
+    assertThat(format.getRecord(1, java.time.LocalDateTime.MIN).getDescription()).isNull();
 
     format.setDescriptions(List.of(" LP ", "Limited"));
-    assertThat(format.getRecord(1).getDescription()).isEqualTo("[d:LP],[d:Limited]");
+    assertThat(format.getRecord(1, java.time.LocalDateTime.MIN).getDescription())
+        .isEqualTo("[d:LP],[d:Limited]");
   }
 
   @Test
@@ -100,8 +101,10 @@ class DomainRelationValueUnitTest {
     quantityTwo.setDescriptions(List.of("Compilation"));
 
     assertThat(quantityOne.getHashValue()).isNotEqualTo(quantityTwo.getHashValue());
-    assertThat(quantityOne.getRecord(48967).getHash()).isEqualTo(quantityOne.getHashValue());
-    assertThat(quantityTwo.getRecord(48967).getHash()).isEqualTo(quantityTwo.getHashValue());
+    assertThat(quantityOne.getRecord(48967, java.time.LocalDateTime.MIN).getHash())
+        .isEqualTo(quantityOne.getHashValue());
+    assertThat(quantityTwo.getRecord(48967, java.time.LocalDateTime.MIN).getHash())
+        .isEqualTo(quantityTwo.getHashValue());
   }
 
   @Test
@@ -110,7 +113,7 @@ class DomainRelationValueUnitTest {
     format.setName("File");
     format.setQuantity(OVERSIZED_FORMAT_QUANTITY);
 
-    var record = format.getRecord(6662697);
+    var record = format.getRecord(6662697, java.time.LocalDateTime.MIN);
     assertThat(record.getQuantity()).isNull();
     assertThat(record.getQuantityText()).isEqualTo(OVERSIZED_FORMAT_QUANTITY);
     assertThat(record.getIdentitySha256()).hasSize(32);
@@ -131,8 +134,8 @@ class DomainRelationValueUnitTest {
     assertThat(release.getReleaseFormats()).singleElement().satisfies(
         format -> {
           assertThat(format.getQuantity()).isEqualTo(OVERSIZED_FORMAT_QUANTITY);
-          assertThat(format.getRecord(6_662_697).getQuantity()).isNull();
-          assertThat(format.getRecord(6_662_697).getQuantityText())
+          assertThat(format.getRecord(6_662_697, java.time.LocalDateTime.MIN).getQuantity()).isNull();
+          assertThat(format.getRecord(6_662_697, java.time.LocalDateTime.MIN).getQuantityText())
               .isEqualTo(OVERSIZED_FORMAT_QUANTITY);
         });
   }
@@ -142,23 +145,24 @@ class DomainRelationValueUnitTest {
     ReleaseItemSubItemsXML.ReleaseFormat format = new ReleaseItemSubItemsXML.ReleaseFormat();
     format.setName("CD");
     format.setQuantity("0002");
-    assertThat(format.getRecord(1).getQuantity()).isEqualTo(2);
-    assertThat(format.getRecord(1).getQuantityText()).isEqualTo("2");
+    assertThat(format.getRecord(1, java.time.LocalDateTime.MIN).getQuantity()).isEqualTo(2);
+    assertThat(format.getRecord(1, java.time.LocalDateTime.MIN).getQuantityText()).isEqualTo("2");
 
     format.setQuantity(" \u3000");
-    assertThat(format.getRecord(1).getQuantity()).isNull();
-    assertThat(format.getRecord(1).getQuantityText()).isNull();
+    assertThat(format.getRecord(1, java.time.LocalDateTime.MIN).getQuantity()).isNull();
+    assertThat(format.getRecord(1, java.time.LocalDateTime.MIN).getQuantityText()).isNull();
 
     format.setQuantity("2147483647");
-    assertThat(format.getRecord(1).getQuantity()).isEqualTo(Integer.MAX_VALUE);
+    assertThat(format.getRecord(1, java.time.LocalDateTime.MIN).getQuantity())
+        .isEqualTo(Integer.MAX_VALUE);
     format.setQuantity("2147483648");
-    assertThat(format.getRecord(1).getQuantity()).isNull();
+    assertThat(format.getRecord(1, java.time.LocalDateTime.MIN).getQuantity()).isNull();
     format.setQuantity("10000000000");
-    assertThat(format.getRecord(1).getQuantity()).isNull();
+    assertThat(format.getRecord(1, java.time.LocalDateTime.MIN).getQuantity()).isNull();
 
     for (String invalid : List.of("-1", "not-a-number")) {
       format.setQuantity(invalid);
-      assertThatThrownBy(() -> format.getRecord(1))
+      assertThatThrownBy(() -> format.getRecord(1, java.time.LocalDateTime.MIN))
           .isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("invalid non-negative release format quantity");
     }

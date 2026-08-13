@@ -12,18 +12,32 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import lombok.RequiredArgsConstructor;
 import org.jooq.UpdatableRecord;
 import org.springframework.batch.infrastructure.item.ItemProcessor;
 
-@RequiredArgsConstructor
 public class LabelSubItemsProcessor
-    implements ItemProcessor<LabelSubItemsXML, RelationSet> {
+    implements ItemProcessor<LabelSubItemsXML, RelationSet>,
+        ObservedAtItemProcessor<LabelSubItemsXML, RelationSet> {
 
   private final EntityIdRegistry idRegistry;
+  private final Clock clock;
+
+  public LabelSubItemsProcessor(EntityIdRegistry idRegistry) {
+    this(idRegistry, Clock.systemUTC());
+  }
+
+  LabelSubItemsProcessor(EntityIdRegistry idRegistry, Clock clock) {
+    this.idRegistry = Objects.requireNonNull(idRegistry, "idRegistry must not be null");
+    this.clock = Objects.requireNonNull(clock, "clock must not be null");
+  }
 
   @Override
   public RelationSet process(LabelSubItemsXML item) {
+    return process(item, LocalDateTime.now(clock));
+  }
+
+  @Override
+  public RelationSet process(LabelSubItemsXML item, LocalDateTime observedAt) {
     if (item.getId() == null || item.getId() < 1) {
       return null;
     }
@@ -37,30 +51,29 @@ public class LabelSubItemsProcessor
     if (item.getLabelSubLabels() != null) {
       item.getLabelSubLabels().stream()
           .filter(Objects::nonNull)
-          .distinct()
           .filter(subLabel -> isExistingLabel(subLabel.getSubLabelId()))
-          .map(xml -> xml.getRecord(labelId))
+          .map(xml -> xml.getRecord(labelId, observedAt))
           .forEach(records::add);
     }
 
     if (item.getUrls() != null) {
       item.getUrls().stream()
           .filter(Objects::nonNull)
-          .distinct()
-          .map(url -> getLabelUrlRecord(labelId, url))
+          .map(url -> getLabelUrlRecord(labelId, url, observedAt))
           .forEach(records::add);
     }
 
     return new RelationSet(EntityType.LABEL, labelId, records);
   }
 
-  private LabelUrlRecord getLabelUrlRecord(Integer labelId, String url) {
+  private LabelUrlRecord getLabelUrlRecord(
+      Integer labelId, String url, LocalDateTime observedAt) {
     return new LabelUrlRecord()
         .setLabelId(labelId)
         .setUrl(url)
         .setHash(url.hashCode())
-        .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()))
-        .setCreatedAt(LocalDateTime.now(Clock.systemUTC()));
+        .setLastModifiedAt(observedAt)
+        .setCreatedAt(observedAt);
   }
 
   private boolean isExistingLabel(Integer labelId) {

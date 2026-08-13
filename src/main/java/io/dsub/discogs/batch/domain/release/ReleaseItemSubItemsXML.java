@@ -11,7 +11,6 @@ import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemIdentifierRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemTrackRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemVideoRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemWorkRecord;
-import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
@@ -117,12 +116,12 @@ public class ReleaseItemSubItemsXML {
     String name;
 
     @Override
-    public ReleaseItemArtistRecord getRecord(int parentId) {
+    public ReleaseItemArtistRecord getRecord(int parentId, LocalDateTime observedAt) {
       return new ReleaseItemArtistRecord()
           .setArtistId(artistId)
           .setReleaseItemId(parentId)
-          .setCreatedAt(LocalDateTime.now(Clock.systemUTC()))
-          .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()));
+          .setCreatedAt(observedAt)
+          .setLastModifiedAt(observedAt);
     }
   }
 
@@ -145,7 +144,7 @@ public class ReleaseItemSubItemsXML {
     }
 
     @Override
-    public ReleaseItemCreditedArtistRecord getRecord(int parentId) {
+    public ReleaseItemCreditedArtistRecord getRecord(int parentId, LocalDateTime observedAt) {
       return new ReleaseItemCreditedArtistRecord()
           .setReleaseItemId(parentId)
           .setArtistId(artistId)
@@ -154,8 +153,8 @@ public class ReleaseItemSubItemsXML {
           .setIdentitySha256(
               ReleaseRelationIdentity.digest(
                   ReleaseRelationIdentity.Relation.CREDITED_ARTIST, role))
-          .setCreatedAt(LocalDateTime.now(Clock.systemUTC()))
-          .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()));
+          .setCreatedAt(observedAt)
+          .setLastModifiedAt(observedAt);
     }
   }
 
@@ -173,13 +172,13 @@ public class ReleaseItemSubItemsXML {
     String labelName;
 
     @Override
-    public LabelReleaseItemRecord getRecord(int parentId) {
+    public LabelReleaseItemRecord getRecord(int parentId, LocalDateTime observedAt) {
       return new LabelReleaseItemRecord()
           .setReleaseItemId(parentId)
           .setLabelId(labelId)
           .setCategoryNotation(categoryNotation)
-          .setCreatedAt(LocalDateTime.now(Clock.systemUTC()))
-          .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()));
+          .setCreatedAt(observedAt)
+          .setLastModifiedAt(observedAt);
     }
   }
 
@@ -220,7 +219,7 @@ public class ReleaseItemSubItemsXML {
     }
 
     @Override
-    public ReleaseItemFormatRecord getRecord(int parentId) {
+    public ReleaseItemFormatRecord getRecord(int parentId, LocalDateTime observedAt) {
       String canonicalQuantity = canonicalQuantity();
       String reducedDescription = getReducedDescription();
       return new ReleaseItemFormatRecord()
@@ -238,8 +237,8 @@ public class ReleaseItemSubItemsXML {
                   reducedDescription,
                   canonicalQuantity,
                   text))
-          .setCreatedAt(LocalDateTime.now(Clock.systemUTC()))
-          .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()));
+          .setCreatedAt(observedAt)
+          .setLastModifiedAt(observedAt);
     }
 
     private String getReducedDescription() {
@@ -311,7 +310,7 @@ public class ReleaseItemSubItemsXML {
     }
 
     @Override
-    public ReleaseItemTrackRecord getRecord(int parentId) {
+    public ReleaseItemTrackRecord getRecord(int parentId, LocalDateTime observedAt) {
       return new ReleaseItemTrackRecord()
           .setReleaseItemId(parentId)
           .setPosition(position)
@@ -321,8 +320,8 @@ public class ReleaseItemSubItemsXML {
           .setIdentitySha256(
               ReleaseRelationIdentity.digest(
                   ReleaseRelationIdentity.Relation.TRACK, position, title, duration))
-          .setCreatedAt(LocalDateTime.now(Clock.systemUTC()))
-          .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()));
+          .setCreatedAt(observedAt)
+          .setLastModifiedAt(observedAt);
     }
   }
 
@@ -345,7 +344,7 @@ public class ReleaseItemSubItemsXML {
     }
 
     @Override
-    public ReleaseItemIdentifierRecord getRecord(int parentId) {
+    public ReleaseItemIdentifierRecord getRecord(int parentId, LocalDateTime observedAt) {
       return new ReleaseItemIdentifierRecord()
           .setReleaseItemId(parentId)
           .setType(type)
@@ -355,8 +354,8 @@ public class ReleaseItemSubItemsXML {
           .setIdentitySha256(
               ReleaseRelationIdentity.digest(
                   ReleaseRelationIdentity.Relation.IDENTIFIER, type, description, value))
-          .setCreatedAt(LocalDateTime.now(Clock.systemUTC()))
-          .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()));
+          .setCreatedAt(observedAt)
+          .setLastModifiedAt(observedAt);
     }
   }
 
@@ -376,7 +375,7 @@ public class ReleaseItemSubItemsXML {
     }
 
     @Override
-    public ReleaseItemWorkRecord getRecord(int parentId) {
+    public ReleaseItemWorkRecord getRecord(int parentId, LocalDateTime observedAt) {
       return new ReleaseItemWorkRecord()
           .setReleaseItemId(parentId)
           .setWork(work)
@@ -385,8 +384,8 @@ public class ReleaseItemSubItemsXML {
               ReleaseRelationIdentity.digest(
                   ReleaseRelationIdentity.Relation.WORK, work))
           .setLabelId(id)
-          .setCreatedAt(LocalDateTime.now(Clock.systemUTC()))
-          .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()));
+          .setCreatedAt(observedAt)
+          .setLastModifiedAt(observedAt);
     }
   }
 
@@ -409,7 +408,7 @@ public class ReleaseItemSubItemsXML {
     }
 
     @Override
-    public ReleaseItemVideoRecord getRecord(int parentId) {
+    public ReleaseItemVideoRecord getRecord(int parentId, LocalDateTime observedAt) {
       return new ReleaseItemVideoRecord()
           .setReleaseItemId(parentId)
           .setTitle(title)
@@ -419,8 +418,8 @@ public class ReleaseItemSubItemsXML {
           .setIdentitySha256(
               ReleaseRelationIdentity.digest(
                   ReleaseRelationIdentity.Relation.VIDEO, title, description, url))
-          .setCreatedAt(LocalDateTime.now(Clock.systemUTC()))
-          .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()));
+          .setCreatedAt(observedAt)
+          .setLastModifiedAt(observedAt);
     }
   }
 }

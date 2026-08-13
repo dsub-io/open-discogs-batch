@@ -127,7 +127,7 @@ class ItemProcessorBoundaryUnitTest {
   }
 
   @Test
-  void artistRelationsFilterMissingIdsBlankValuesNullsAndDuplicates() {
+  void artistRelationsFilterInvalidValuesAndLeaveCanonicalDedupeToTheBatch() {
     ArtistSubItemsProcessor processor = new ArtistSubItemsProcessor(registry());
     ArtistSubItemsXML item = new ArtistSubItemsXML();
 
@@ -158,11 +158,11 @@ class ItemProcessorBoundaryUnitTest {
     item.setNameVariations(listWithNull(" Name ", " ", "Name"));
     item.setUrls(listWithNull(" https://example.test ", "", "https://example.test"));
 
-    assertThat(processor.process(item).records()).hasSize(5);
+    assertThat(processor.process(item).records()).hasSize(10);
   }
 
   @Test
-  void labelRelationsFilterMissingLabelsBlankUrlsNullsAndDuplicates() {
+  void labelRelationsFilterInvalidValuesAndLeaveCanonicalDedupeToTheBatch() {
     LabelSubItemsProcessor processor = new LabelSubItemsProcessor(registry());
     LabelSubItemsXML item = new LabelSubItemsXML();
 
@@ -181,7 +181,7 @@ class ItemProcessorBoundaryUnitTest {
     item.setLabelSubLabels(listWithNull(existing, missing, existing));
     item.setUrls(listWithNull(" https://example.test ", " ", "https://example.test"));
 
-    assertThat(processor.process(item).records()).hasSize(2);
+    assertThat(processor.process(item).records()).hasSize(4);
   }
 
   @Test
@@ -212,7 +212,7 @@ class ItemProcessorBoundaryUnitTest {
     item.setGenres(listWithNull(" Rock ", "Missing", "Rock"));
     item.setStyles(listWithNull(" House ", "Missing", "House"));
 
-    assertThat(processor.process(item).records()).hasSize(5);
+    assertThat(processor.process(item).records()).hasSize(8);
   }
 
   @Test
@@ -284,7 +284,7 @@ class ItemProcessorBoundaryUnitTest {
     item.setGenres(listWithNull(" Rock ", " ", "Missing", "Rock"));
     item.setStyles(listWithNull(" House ", " ", "Missing", "House"));
 
-    assertThat(processor.process(item).records()).hasSize(12);
+    assertThat(processor.process(item).records()).hasSize(22);
   }
 
   @Test

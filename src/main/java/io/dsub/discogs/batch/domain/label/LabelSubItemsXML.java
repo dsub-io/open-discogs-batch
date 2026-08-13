@@ -2,7 +2,6 @@ package io.dsub.discogs.batch.domain.label;
 
 import io.dsub.discogs.batch.domain.SubItemXML;
 import io.dsub.opendiscogs.jooq.tables.records.LabelSubLabelRecord;
-import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -44,12 +43,12 @@ public class LabelSubItemsXML {
     private Integer subLabelId;
 
     @Override
-    public LabelSubLabelRecord getRecord(int parentId) {
+    public LabelSubLabelRecord getRecord(int parentId, LocalDateTime observedAt) {
       return new LabelSubLabelRecord()
           .setParentLabelId(parentId)
           .setSubLabelId(subLabelId)
-          .setCreatedAt(LocalDateTime.now(Clock.systemUTC()))
-          .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()));
+          .setCreatedAt(observedAt)
+          .setLastModifiedAt(observedAt);
     }
   }
 }

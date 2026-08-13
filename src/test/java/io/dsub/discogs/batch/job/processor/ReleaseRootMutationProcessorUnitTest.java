@@ -10,6 +10,7 @@ import io.dsub.discogs.batch.domain.master.MasterMainReleaseAssignment;
 import io.dsub.discogs.batch.domain.release.ReleaseItemSubItemsXML;
 import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemRecord;
+import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemArtistRecord;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -33,6 +34,10 @@ class ReleaseRootMutationProcessorUnitTest {
     source.setReleaseDate("2026-08-00");
     source.setGenres(Arrays.asList(" Rock ", "Rock", " ", null));
     source.setStyles(List.of(" House ", "House"));
+    ReleaseItemSubItemsXML.ReleaseAlbumArtist artist =
+        new ReleaseItemSubItemsXML.ReleaseAlbumArtist();
+    artist.setArtistId(9);
+    source.setReleaseAlbumArtists(List.of(artist));
     ReleaseItemSubItemsXML.ReleaseMaster master =
         new ReleaseItemSubItemsXML.ReleaseMaster();
     master.setMasterId(3);
@@ -44,9 +49,17 @@ class ReleaseRootMutationProcessorUnitTest {
     assertThat(mutation.root().getId()).isEqualTo(7);
     assertThat(mutation.root().getTitle()).isEqualTo("Release");
     assertThat(mutation.root().getMasterId()).isEqualTo(3);
+    assertThat(mutation.root().getCreatedAt())
+        .isEqualTo(java.time.LocalDateTime.of(2026, 8, 1, 0, 0));
     assertThat(mutation.genres()).extracting("name").containsExactly("Rock");
     assertThat(mutation.styles()).extracting("name").containsExactly("House");
     assertThat(mutation.relations().rootId()).isEqualTo(7);
+    assertThat((ReleaseItemArtistRecord) mutation.relations().records().get(0))
+        .satisfies(
+            record -> {
+              assertThat(record.getCreatedAt()).isEqualTo(mutation.root().getCreatedAt());
+              assertThat(record.getLastModifiedAt()).isEqualTo(mutation.root().getCreatedAt());
+            });
     assertThat(mutation.mainReleaseAssignment().releaseId()).isEqualTo(7);
     assertThat(mutation.mainReleaseAssignment().targetMasterId()).isEqualTo(3);
     assertThat(mutation.mainReleaseAssignment().observedAt())

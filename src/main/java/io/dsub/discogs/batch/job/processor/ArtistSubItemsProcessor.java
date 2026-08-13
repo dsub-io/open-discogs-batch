@@ -18,18 +18,32 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
-import lombok.RequiredArgsConstructor;
 import org.jooq.UpdatableRecord;
 import org.springframework.batch.infrastructure.item.ItemProcessor;
 
-@RequiredArgsConstructor
 public class ArtistSubItemsProcessor
-    implements ItemProcessor<ArtistSubItemsXML, RelationSet> {
+    implements ItemProcessor<ArtistSubItemsXML, RelationSet>,
+        ObservedAtItemProcessor<ArtistSubItemsXML, RelationSet> {
 
   private final EntityIdRegistry idRegistry;
+  private final Clock clock;
+
+  public ArtistSubItemsProcessor(EntityIdRegistry idRegistry) {
+    this(idRegistry, Clock.systemUTC());
+  }
+
+  ArtistSubItemsProcessor(EntityIdRegistry idRegistry, Clock clock) {
+    this.idRegistry = Objects.requireNonNull(idRegistry, "idRegistry must not be null");
+    this.clock = Objects.requireNonNull(clock, "clock must not be null");
+  }
 
   @Override
   public RelationSet process(ArtistSubItemsXML item) {
+    return process(item, LocalDateTime.now(clock));
+  }
+
+  @Override
+  public RelationSet process(ArtistSubItemsXML item, LocalDateTime observedAt) {
 
     if (item.getId() == null || item.getId() < 1) {
       return null;
@@ -39,91 +53,92 @@ public class ArtistSubItemsProcessor
 
     List<UpdatableRecord<?>> items = new ArrayList<>();
 
-    items.addAll(getArtistAliasRecords(item));
-    items.addAll(getArtistGroupRecords(item));
-    items.addAll(getArtistMemberRecords(item));
-    items.addAll(getArtistUrlRecords(item));
-    items.addAll(getArtistNameVariationRecords(item));
+    items.addAll(getArtistAliasRecords(item, observedAt));
+    items.addAll(getArtistGroupRecords(item, observedAt));
+    items.addAll(getArtistMemberRecords(item, observedAt));
+    items.addAll(getArtistUrlRecords(item, observedAt));
+    items.addAll(getArtistNameVariationRecords(item, observedAt));
 
     return new RelationSet(EntityType.ARTIST, item.getId(), items);
   }
 
-  private List<ArtistNameVariationRecord> getArtistNameVariationRecords(ArtistSubItemsXML item) {
+  private List<ArtistNameVariationRecord> getArtistNameVariationRecords(
+      ArtistSubItemsXML item, LocalDateTime observedAt) {
     if (item.getNameVariations() == null || item.getNameVariations().isEmpty()) {
       return Collections.emptyList();
     }
     return item.getNameVariations().stream()
         .filter(Objects::nonNull)
-        .distinct()
-        .map(nameVar -> makeArtistNameVariationRecord(item.getId(), nameVar))
+        .map(nameVar -> makeArtistNameVariationRecord(item.getId(), nameVar, observedAt))
         .collect(Collectors.toList());
   }
 
-  private List<ArtistUrlRecord> getArtistUrlRecords(ArtistSubItemsXML item) {
+  private List<ArtistUrlRecord> getArtistUrlRecords(
+      ArtistSubItemsXML item, LocalDateTime observedAt) {
     if (item.getUrls() == null || item.getUrls().isEmpty()) {
       return Collections.emptyList();
     }
     return item.getUrls().stream()
         .filter(Objects::nonNull)
-        .distinct()
-        .map(url -> makeArtistUrlRecord(item.getId(), url))
+        .map(url -> makeArtistUrlRecord(item.getId(), url, observedAt))
         .collect(Collectors.toList());
   }
 
-  private List<ArtistMemberRecord> getArtistMemberRecords(ArtistSubItemsXML item) {
+  private List<ArtistMemberRecord> getArtistMemberRecords(
+      ArtistSubItemsXML item, LocalDateTime observedAt) {
     if (item.getMembers() == null || item.getMembers().isEmpty()) {
       return Collections.emptyList();
     }
     return item.getMembers().stream()
         .filter(Objects::nonNull)
-        .distinct()
         .filter(member -> idRegistry.exists(ARTIST, member.getMemberId()))
-        .map(xml -> xml.getRecord(item.getId()))
+        .map(xml -> xml.getRecord(item.getId(), observedAt))
         .collect(Collectors.toList());
   }
 
-  private List<ArtistGroupRecord> getArtistGroupRecords(ArtistSubItemsXML item) {
+  private List<ArtistGroupRecord> getArtistGroupRecords(
+      ArtistSubItemsXML item, LocalDateTime observedAt) {
     if (item.getGroups() == null || item.getGroups().isEmpty()) {
       return Collections.emptyList();
     }
     return item.getGroups().stream()
         .filter(Objects::nonNull)
-        .distinct()
         .filter(group -> idRegistry.exists(ARTIST, group.getGroupId()))
-        .map(xml -> xml.getRecord(item.getId()))
+        .map(xml -> xml.getRecord(item.getId(), observedAt))
         .collect(Collectors.toList());
   }
 
-  private List<ArtistAliasRecord> getArtistAliasRecords(ArtistSubItemsXML item) {
+  private List<ArtistAliasRecord> getArtistAliasRecords(
+      ArtistSubItemsXML item, LocalDateTime observedAt) {
     if (item.getAliases() == null || item.getAliases().isEmpty()) {
       return Collections.emptyList();
     }
     return item.getAliases().stream()
         .filter(Objects::nonNull)
-        .distinct()
         .filter(alias -> idRegistry.exists(ARTIST, alias.getAliasId()))
-        .map(xml -> xml.getRecord(item.getId()))
+        .map(xml -> xml.getRecord(item.getId(), observedAt))
         .collect(Collectors.toList());
   }
 
   private ArtistNameVariationRecord makeArtistNameVariationRecord(
-      Integer artistId, String nameVar) {
+      Integer artistId, String nameVar, LocalDateTime observedAt) {
     ArtistNameVariationRecord record = new ArtistNameVariationRecord();
     return record
         .setArtistId(artistId)
         .setNameVariation(nameVar)
         .setHash(nameVar.hashCode())
-        .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()))
-        .setCreatedAt(LocalDateTime.now(Clock.systemUTC()));
+        .setLastModifiedAt(observedAt)
+        .setCreatedAt(observedAt);
   }
 
-  private ArtistUrlRecord makeArtistUrlRecord(Integer artistId, String url) {
+  private ArtistUrlRecord makeArtistUrlRecord(
+      Integer artistId, String url, LocalDateTime observedAt) {
     ArtistUrlRecord record = new ArtistUrlRecord();
     return record
         .setUrl(url)
         .setArtistId(artistId)
-        .setCreatedAt(LocalDateTime.now(Clock.systemUTC()))
+        .setCreatedAt(observedAt)
         .setHash(url.hashCode())
-        .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()));
+        .setLastModifiedAt(observedAt);
   }
 }
