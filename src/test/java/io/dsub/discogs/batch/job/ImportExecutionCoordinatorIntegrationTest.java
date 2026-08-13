@@ -78,6 +78,15 @@ class ImportExecutionCoordinatorIntegrationTest extends PostgreSQLIntegrationSup
               discogs_dump
           restart identity cascade
           """);
+      statement.executeUpdate(
+          """
+          insert into discogs_catalog_entity_state (entity_type, status, operation)
+          values
+              ('artist', 'bootstrap_pending', 'bootstrap'),
+              ('label', 'bootstrap_pending', 'bootstrap'),
+              ('master', 'bootstrap_pending', 'bootstrap'),
+              ('release', 'bootstrap_pending', 'bootstrap')
+          """);
     }
   }
 
@@ -168,6 +177,68 @@ class ImportExecutionCoordinatorIntegrationTest extends PostgreSQLIntegrationSup
     assertThat(stringQuery(
         "select dump_date::text from discogs_import_checkpoint where entity_type = 'artist'"))
         .isEqualTo("2026-07-01");
+  }
+
+  @Test
+  void tracksBootstrapRefreshFailureAndAggregateReadiness() throws Exception {
+    assertCatalogReadiness(false, "bootstrap_pending", 0);
+
+    ImportExecutionCoordinator artist = new ImportExecutionCoordinator(dataSource);
+    ImportExecutionCoordinator.Preparation bootstrap =
+        artist.prepare(parameters(EntityType.ARTIST, JULY_DUMP, 'a', false, false));
+    assertCatalogEntityState(
+        EntityType.ARTIST, "importing", "bootstrap", bootstrap.runId(), null);
+    completeSuccessfully(artist, bootstrap.runId());
+    assertCatalogEntityState(
+        EntityType.ARTIST, "ready", null, null, bootstrap.runId());
+    assertCatalogReadiness(false, "bootstrap_pending", 1);
+
+    LocalDate augustDump = JULY_DUMP.plusMonths(1);
+    ImportExecutionCoordinator refresh = new ImportExecutionCoordinator(dataSource);
+    ImportExecutionCoordinator.Preparation failed =
+        refresh.prepare(parameters(EntityType.ARTIST, augustDump, 'b', false, false));
+    assertCatalogEntityState(
+        EntityType.ARTIST, "importing", "refresh", failed.runId(), bootstrap.runId());
+    refresh.complete(false, new IllegalStateException("fixture refresh failure"));
+    assertCatalogEntityState(
+        EntityType.ARTIST, "failed", "refresh", null, bootstrap.runId());
+    assertCatalogReadiness(false, "failed", 0);
+
+    ImportExecutionCoordinator retry = new ImportExecutionCoordinator(dataSource);
+    ImportExecutionCoordinator.Preparation retried =
+        retry.prepare(parameters(EntityType.ARTIST, augustDump, 'b', false, false));
+    completeSuccessfully(retry, retried.runId());
+
+    ImportExecutionCoordinator remaining = new ImportExecutionCoordinator(dataSource);
+    ImportExecutionCoordinator.Preparation remainingRun =
+        remaining.prepare(
+            parameters(
+                List.of(
+                    new SelectedDump(EntityType.LABEL, augustDump, 'c'),
+                    new SelectedDump(EntityType.MASTER, augustDump, 'd'),
+                    new SelectedDump(EntityType.RELEASE, augustDump, 'e')),
+                false,
+                false));
+    completeSuccessfully(remaining, remainingRun.runId());
+    assertCatalogReadiness(true, "ready", EntityType.values().length);
+  }
+
+  @Test
+  void rejectsAdmissionWhenCanonicalCatalogStateInventoryIsIncomplete()
+      throws Exception {
+    try (Connection connection = dataSource.getConnection();
+        Statement statement = connection.createStatement()) {
+      statement.executeUpdate(
+          "delete from discogs_catalog_entity_state where entity_type = 'artist'");
+    }
+
+    assertThatThrownBy(
+            () ->
+                new ImportExecutionCoordinator(dataSource)
+                    .prepare(parameters(EntityType.ARTIST, JULY_DUMP, 'a', false, false)))
+        .isInstanceOf(ImportExecutionException.class)
+        .hasMessageContaining("catalog state: updated 0 of 1 entities");
+    assertThat(longQuery("select count(*) from discogs_import_run")).isZero();
   }
 
   @Test
@@ -283,6 +354,9 @@ class ImportExecutionCoordinatorIntegrationTest extends PostgreSQLIntegrationSup
     ImportExecutionCoordinator.Preparation preparation = coordinator.prepare(numericChunk);
     coordinator.complete(false, null);
     assertThat(preparation.runId()).isPositive();
+    assertThat(stringQuery(
+            "select failure_message from discogs_catalog_entity_state where entity_type = 'artist'"))
+        .contains(ImportExecutionCoordinator.FAILURE_WITHOUT_CAUSE);
 
     JobParameters missingManifest =
         new JobParametersBuilder()
@@ -896,6 +970,46 @@ class ImportExecutionCoordinatorIntegrationTest extends PostgreSQLIntegrationSup
 
   private record SelectedDump(
       EntityType entityType, LocalDate dumpDate, char checksumCharacter) {
+  }
+
+  private void assertCatalogEntityState(
+      EntityType entityType,
+      String status,
+      String operation,
+      Long activeRunId,
+      Long lastSuccessfulRunId)
+      throws Exception {
+    try (Connection connection = dataSource.getConnection();
+        java.sql.PreparedStatement statement =
+            connection.prepareStatement(
+                """
+                select status, operation, active_import_run_id, last_successful_import_run_id
+                from discogs_catalog_entity_state
+                where entity_type = ?
+                """)) {
+      statement.setString(1, entityType.toString());
+      try (ResultSet result = statement.executeQuery()) {
+        assertThat(result.next()).isTrue();
+        assertThat(result.getString(1)).isEqualTo(status);
+        assertThat(result.getString(2)).isEqualTo(operation);
+        assertThat(result.getObject(3, Long.class)).isEqualTo(activeRunId);
+        assertThat(result.getObject(4, Long.class)).isEqualTo(lastSuccessfulRunId);
+      }
+    }
+  }
+
+  private void assertCatalogReadiness(
+      boolean ready, String status, long readyEntities) throws Exception {
+    try (Connection connection = dataSource.getConnection();
+        Statement statement = connection.createStatement();
+        ResultSet result =
+            statement.executeQuery(
+                "select ready, status, ready_entities from discogs_catalog_readiness")) {
+      assertThat(result.next()).isTrue();
+      assertThat(result.getBoolean(1)).isEqualTo(ready);
+      assertThat(result.getString(2)).isEqualTo(status);
+      assertThat(result.getLong(3)).isEqualTo(readyEntities);
+    }
   }
 
   private long longQuery(String sql) throws Exception {

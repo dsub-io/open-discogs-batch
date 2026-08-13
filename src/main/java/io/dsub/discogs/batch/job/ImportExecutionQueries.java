@@ -257,6 +257,45 @@ final class ImportExecutionQueries {
         and status = 'running'
       """;
 
+  static final String MARK_CATALOG_STATES_IMPORTING =
+      """
+      update discogs_catalog_entity_state
+      set status = ?,
+          operation = case
+              when last_successful_import_run_id is null then 'bootstrap'
+              else 'refresh'
+          end,
+          active_import_run_id = ?,
+          updated_at = now(),
+          failure_message = null
+      where entity_type = any (?)
+      """;
+
+  static final String MARK_CATALOG_STATES_READY =
+      """
+      update discogs_catalog_entity_state
+      set status = ?,
+          operation = null,
+          active_import_run_id = null,
+          last_successful_import_run_id = ?,
+          ready_at = now(),
+          updated_at = now(),
+          failure_message = null
+      where entity_type = any (?)
+        and (active_import_run_id = ? or active_import_run_id is null)
+      """;
+
+  static final String MARK_CATALOG_STATES_FAILED =
+      """
+      update discogs_catalog_entity_state
+      set status = ?,
+          active_import_run_id = null,
+          updated_at = now(),
+          failure_message = ?
+      where entity_type = any (?)
+        and active_import_run_id = ?
+      """;
+
   static final String PRUNE_SUPERSEDED_FAILED_PROGRESS =
       """
       delete from discogs_import_run_chunk run_chunk
