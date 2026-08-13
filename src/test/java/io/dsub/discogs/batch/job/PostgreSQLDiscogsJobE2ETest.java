@@ -32,6 +32,11 @@ public class PostgreSQLDiscogsJobE2ETest extends DiscogsJobIntegrationTest {
   }
 
   @Test
+  void importsEachEntityAsAStandaloneJob() throws Exception {
+    runStandaloneEntityScenarios();
+  }
+
+  @Test
   void forcedRefreshPreservesTheCanonicalBusinessState() throws Exception {
     runIdempotentRefreshScenario();
   }

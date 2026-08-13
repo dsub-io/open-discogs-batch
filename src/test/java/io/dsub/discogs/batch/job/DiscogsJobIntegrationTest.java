@@ -178,6 +178,26 @@ public abstract class DiscogsJobIntegrationTest {
             "release eTag not found. skipping release step."));
   }
 
+  final void runStandaloneEntityScenarios() throws Exception {
+    for (EntityType entityType : EntityType.values()) {
+      JobParameters parameters =
+          jobOperatorTestUtils
+              .getUniqueJobParametersBuilder()
+              .addString(entityType.toString(), entityType.toString())
+              .addString(ImportJobParameters.CHUNK_SIZE, "1000")
+              .toJobParameters();
+      parameters = withTrackedImportRun(parameters);
+
+      JobExecution execution =
+          jobOperator.start(jobOperatorTestUtils.getJob(), parameters);
+
+      assertThat(execution.getExitStatus().getExitCode(), is("COMPLETED"));
+      assertThat(dumpMap.keySet(), is(java.util.Set.of(entityType)));
+      assertThat(dumpMap.size(), is(1));
+      dumpMap.clear();
+    }
+  }
+
   final void runRelationFailurePropagationScenario() throws Exception {
     try (Connection connection = dataSource.getConnection();
         Statement statement = connection.createStatement()) {
