@@ -93,8 +93,7 @@ public class ImportExecutionCoordinator {
       Long resumedFromRunId =
           force
               ? null
-              : findResumableRun(
-                  manifestSha256, version, chunkSize, dumps.size());
+              : findResumableRun(manifestSha256, chunkSize, dumps.size());
       activeRunId =
           insertRun(
               manifestSha256,
@@ -309,16 +308,13 @@ public class ImportExecutionCoordinator {
 
   private Long findResumableRun(
       String manifestSha256,
-      String version,
       int chunkSize,
       int entityCount)
       throws SQLException {
     try (PreparedStatement statement =
         lockConnection.prepareStatement(ImportExecutionQueries.FIND_RESUMABLE_RUN)) {
       statement.setString(1, manifestSha256);
-      statement.setString(2, PROCESSOR);
-      statement.setString(3, version);
-      int nextParameter = bindCurrentEntityRevisions(statement, 4);
+      int nextParameter = bindCurrentEntityRevisions(statement, 2);
       statement.setInt(nextParameter, entityCount);
       statement.setInt(nextParameter + 1, chunkSize);
       try (ResultSet result = statement.executeQuery()) {

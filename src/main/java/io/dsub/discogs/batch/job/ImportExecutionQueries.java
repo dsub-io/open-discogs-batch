@@ -113,8 +113,6 @@ final class ImportExecutionQueries {
       from discogs_import_run import_run
       where import_run.manifest_sha256 = ?
         and import_run.status = 'failed'
-        and import_run.processor = ?
-        and import_run.processor_version = ?
         and not import_run.force_requested
         and not exists (
           select 1
@@ -165,12 +163,8 @@ final class ImportExecutionQueries {
           join discogs_import_run_dump current_dump
             on current_dump.import_run_id = checkpoint.import_run_id
            and current_dump.entity_type = checkpoint.entity_type
-          join discogs_import_run current_run
-            on current_run.id = checkpoint.import_run_id
           where failed_dump.import_run_id = import_run.id
             and (current_dump.dump_id <> failed_dump.dump_id
-                 or current_run.processor <> import_run.processor
-                 or current_run.processor_version <> import_run.processor_version
                  or current_dump.import_contract_revision
                     <> failed_dump.import_contract_revision)
             and (checkpoint.applied_at > import_run.completed_at
@@ -275,16 +269,11 @@ final class ImportExecutionQueries {
             from discogs_import_run_dump failed_dump
             left join discogs_import_checkpoint checkpoint
               on checkpoint.entity_type = failed_dump.entity_type
-            left join discogs_import_run current_run
-              on current_run.id = checkpoint.import_run_id
             left join discogs_import_run_dump current_dump
               on current_dump.import_run_id = checkpoint.import_run_id
              and current_dump.entity_type = checkpoint.entity_type
             where failed_dump.import_run_id = failed_run.id
               and (current_dump.dump_id is distinct from failed_dump.dump_id
-                   or current_run.processor is distinct from failed_run.processor
-                   or current_run.processor_version
-                      is distinct from failed_run.processor_version
                    or current_dump.import_contract_revision
                       is distinct from failed_dump.import_contract_revision)
           )

@@ -526,7 +526,7 @@ class ImportExecutionCoordinatorIntegrationTest extends PostgreSQLIntegrationSup
   }
 
   @Test
-  void currentGoFailureNeverResumesInJava() throws Exception {
+  void currentGoFailureResumesInJava() throws Exception {
     ImportExecutionCoordinator coordinator = new ImportExecutionCoordinator(dataSource);
     JobParameters parameters =
         parametersWithDependencies(EntityType.RELEASE, JULY_DUMP, 'e', false, false);
@@ -537,15 +537,18 @@ class ImportExecutionCoordinatorIntegrationTest extends PostgreSQLIntegrationSup
 
     ImportExecutionCoordinator.Preparation javaRun = coordinator.prepare(parameters);
 
-    assertThat(javaRun.resumedFromRunId()).isNull();
+    assertThat(javaRun.resumedFromRunId()).isEqualTo(goRun.runId());
     assertThat(longQuery(
         "select count(*) from discogs_import_run_chunk where import_run_id = "
-            + goRun.runId())).isEqualTo(1);
+            + goRun.runId())).isZero();
+    assertThat(longQuery(
+        "select count(*) from discogs_import_run_chunk where import_run_id = "
+            + javaRun.runId())).isEqualTo(1);
     coordinator.complete(false, new IllegalStateException("test cleanup"));
   }
 
   @Test
-  void differentJavaVersionFailureNeverResumes() throws Exception {
+  void compatibleJavaVersionFailureResumes() throws Exception {
     ImportExecutionCoordinator coordinator = new ImportExecutionCoordinator(dataSource);
     JobParameters parameters =
         parametersWithDependencies(EntityType.RELEASE, JULY_DUMP, 'e', false, false);
@@ -556,10 +559,13 @@ class ImportExecutionCoordinatorIntegrationTest extends PostgreSQLIntegrationSup
 
     ImportExecutionCoordinator.Preparation currentVersion = coordinator.prepare(parameters);
 
-    assertThat(currentVersion.resumedFromRunId()).isNull();
+    assertThat(currentVersion.resumedFromRunId()).isEqualTo(oldVersion.runId());
     assertThat(longQuery(
         "select count(*) from discogs_import_run_chunk where import_run_id = "
-            + oldVersion.runId())).isEqualTo(1);
+            + oldVersion.runId())).isZero();
+    assertThat(longQuery(
+        "select count(*) from discogs_import_run_chunk where import_run_id = "
+            + currentVersion.runId())).isEqualTo(1);
     coordinator.complete(false, new IllegalStateException("test cleanup"));
   }
 
