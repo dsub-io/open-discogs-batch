@@ -7,7 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.jooq.Table;
-import org.jooq.UpdatableRecord;
+import org.jooq.TableRecord;
 
 /** Canonicalizes semantic identities before validating PostgreSQL storage identities. */
 final class CanonicalRelationBatch {
@@ -29,7 +29,7 @@ final class CanonicalRelationBatch {
     List<RelationSet> physicalSets =
         collapseByIdentity(semanticSets, entityType, IdentityKind.PHYSICAL);
 
-    Map<Table<?>, List<UpdatableRecord<?>>> recordsByTable = new LinkedHashMap<>();
+    Map<Table<?>, List<TableRecord<?>>> recordsByTable = new LinkedHashMap<>();
     physicalSets.stream()
         .flatMap(relationSet -> relationSet.records().stream())
         .forEach(
@@ -44,7 +44,7 @@ final class CanonicalRelationBatch {
       List<? extends RelationSet> relationSets,
       EntityType entityType,
       IdentityKind identityKind) {
-    List<List<UpdatableRecord<?>>> canonicalRecords = new ArrayList<>(relationSets.size());
+    List<List<TableRecord<?>>> canonicalRecords = new ArrayList<>(relationSets.size());
     for (int index = 0; index < relationSets.size(); index++) {
       canonicalRecords.add(new ArrayList<>());
     }
@@ -53,7 +53,7 @@ final class CanonicalRelationBatch {
         new LinkedHashMap<>();
     for (int setIndex = 0; setIndex < relationSets.size(); setIndex++) {
       RelationSet relationSet = relationSets.get(setIndex);
-      for (UpdatableRecord<?> record : relationSet.records()) {
+      for (TableRecord<?> record : relationSet.records()) {
         RelationTableRegistry.RelationTable relationTable =
             RelationTableRegistry.require(entityType, record.getTable());
         relationTable.requireRoot(record, relationSet.rootId());
@@ -81,28 +81,28 @@ final class CanonicalRelationBatch {
   }
 
   record CanonicalBatch(
-      List<RelationSet> relationSets, Map<Table<?>, List<UpdatableRecord<?>>> recordsByTable) {
+      List<RelationSet> relationSets, Map<Table<?>, List<TableRecord<?>>> recordsByTable) {
 
     CanonicalBatch {
       relationSets = List.copyOf(relationSets);
-      Map<Table<?>, List<UpdatableRecord<?>>> immutableRecords = new LinkedHashMap<>();
+      Map<Table<?>, List<TableRecord<?>>> immutableRecords = new LinkedHashMap<>();
       recordsByTable.forEach((table, records) -> immutableRecords.put(table, List.copyOf(records)));
       recordsByTable = Map.copyOf(immutableRecords);
     }
 
-    List<UpdatableRecord<?>> recordsFor(RelationTableRegistry.RelationTable relationTable) {
+    List<TableRecord<?>> recordsFor(RelationTableRegistry.RelationTable relationTable) {
       return recordsByTable.getOrDefault(relationTable.table(), List.of());
     }
   }
 
-  private record CanonicalRecord(UpdatableRecord<?> record) {
+  private record CanonicalRecord(TableRecord<?> record) {
   }
 
   private enum IdentityKind {
     SEMANTIC {
       @Override
       RelationTableRegistry.RelationIdentity identity(
-          RelationTableRegistry.RelationTable relationTable, UpdatableRecord<?> record) {
+          RelationTableRegistry.RelationTable relationTable, TableRecord<?> record) {
         return relationTable.semanticIdentity(record);
       }
 
@@ -110,14 +110,14 @@ final class CanonicalRelationBatch {
     PHYSICAL {
       @Override
       RelationTableRegistry.RelationIdentity identity(
-          RelationTableRegistry.RelationTable relationTable, UpdatableRecord<?> record) {
+          RelationTableRegistry.RelationTable relationTable, TableRecord<?> record) {
         return relationTable.identity(record);
       }
 
     };
 
     abstract RelationTableRegistry.RelationIdentity identity(
-        RelationTableRegistry.RelationTable relationTable, UpdatableRecord<?> record);
+        RelationTableRegistry.RelationTable relationTable, TableRecord<?> record);
 
   }
 }

@@ -20,7 +20,7 @@ import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemRecord;
 import io.dsub.opendiscogs.jooq.tables.records.StyleRecord;
 import java.util.Collection;
 import java.util.List;
-import org.jooq.UpdatableRecord;
+import org.jooq.TableRecord;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.batch.infrastructure.item.Chunk;
@@ -40,7 +40,7 @@ class DurableReleaseItemWriterUnitTest {
 
     fixture.writer().write(new Chunk<>(List.of(new ProcessedChunk<>(RANGE, List.of(mutation)))));
 
-    ArgumentCaptor<Chunk<? extends Collection<UpdatableRecord<?>>>> records =
+    ArgumentCaptor<Chunk<? extends Collection<TableRecord<?>>>> records =
         ArgumentCaptor.forClass(Chunk.class);
     verify(fixture.recordWriter()).write(records.capture());
     assertThat(records.getValue().getItems().getFirst())
@@ -78,7 +78,7 @@ class DurableReleaseItemWriterUnitTest {
 
   @SuppressWarnings("unchecked")
   private Fixture fixture(boolean resumed) {
-    ItemWriter<Collection<UpdatableRecord<?>>> recordWriter = mock(ItemWriter.class);
+    ItemWriter<Collection<TableRecord<?>>> recordWriter = mock(ItemWriter.class);
     ItemWriter<RelationSet> relationWriter = mock(ItemWriter.class);
     ImportProgressStore progressStore = mock(ImportProgressStore.class);
     DurableReleaseItemWriter writer =
@@ -104,7 +104,7 @@ class DurableReleaseItemWriterUnitTest {
 
   private record Fixture(
       DurableReleaseItemWriter writer,
-      ItemWriter<Collection<UpdatableRecord<?>>> recordWriter,
+      ItemWriter<Collection<TableRecord<?>>> recordWriter,
       ItemWriter<RelationSet> relationWriter,
       ImportProgressStore progressStore) {
   }

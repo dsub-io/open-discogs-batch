@@ -16,12 +16,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import org.jooq.Field;
 import org.jooq.Table;
-import org.jooq.UpdatableRecord;
+import org.jooq.TableRecord;
 
-public abstract class AbstractJooqItemWriter<T extends UpdatableRecord<?>> implements JooqItemWriter<T> {
+public abstract class AbstractJooqItemWriter<T extends TableRecord<?>> implements JooqItemWriter<T> {
 
-  private static final Set<Table<?>> ROOT_TABLES =
-      Set.of(Artist.ARTIST, Label.LABEL, Master.MASTER, ReleaseItem.RELEASE_ITEM);
   private static final Set<Table<?>> CANONICAL_KEY_TABLES =
       Set.of(
           Artist.ARTIST,
@@ -47,11 +45,7 @@ public abstract class AbstractJooqItemWriter<T extends UpdatableRecord<?>> imple
     return insertFields.computeIfAbsent(
         table,
         uncachedTable -> {
-          List<Field<?>> fields = new ArrayList<>(List.of(uncachedTable.fields()));
-          if (!ROOT_TABLES.contains(uncachedTable)) {
-            fields.removeIf(field -> field.getName().equals("id"));
-          }
-          return List.copyOf(fields);
+          return List.of(uncachedTable.fields());
         });
   }
 
@@ -80,7 +74,6 @@ public abstract class AbstractJooqItemWriter<T extends UpdatableRecord<?>> imple
           return Arrays.stream(uncachedTable.fields())
               .filter(field -> !constraintFields.contains(field))
               .filter(field -> !field.getName().equals("created_at"))
-              .filter(field -> !field.getName().equals("id"))
               .filter(
                   field ->
                       !uncachedTable.equals(Master.MASTER)
@@ -130,11 +123,6 @@ public abstract class AbstractJooqItemWriter<T extends UpdatableRecord<?>> imple
       throw new IllegalArgumentException(
           "table has no registered canonical conflict key: " + table.getName());
     }
-    List<Field<?>> fields =
-        new ArrayList<>(table.getPrimaryKey().getFields());
-    if (!ROOT_TABLES.contains(table)) {
-      fields.removeIf(field -> field.getName().equals("id"));
-    }
-    return List.copyOf(fields);
+    return List.copyOf(table.getPrimaryKey().getFields());
   }
 }

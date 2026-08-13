@@ -17,7 +17,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
-import org.jooq.UpdatableRecord;
+import org.jooq.TableRecord;
 
 public class ArtistSubItemsProcessor
     implements ObservedAtItemProcessor<ArtistSubItemsXML, RelationSet> {
@@ -37,7 +37,7 @@ public class ArtistSubItemsProcessor
 
     ReflectionUtil.normalizeStringFields(item);
 
-    List<UpdatableRecord<?>> items = new ArrayList<>();
+    List<TableRecord<?>> items = new ArrayList<>();
 
     items.addAll(getArtistAliasRecords(item, observedAt));
     items.addAll(getArtistGroupRecords(item, observedAt));

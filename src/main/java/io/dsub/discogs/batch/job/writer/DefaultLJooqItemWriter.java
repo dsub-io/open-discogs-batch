@@ -9,14 +9,14 @@ import org.jooq.Condition;
 import org.jooq.DSLContext;
 import org.jooq.Field;
 import org.jooq.Query;
-import org.jooq.UpdatableRecord;
+import org.jooq.TableRecord;
 import org.jooq.ConnectionProvider;
 import org.jooq.impl.DSL;
 import org.jooq.impl.DataSourceConnectionProvider;
 import org.springframework.batch.infrastructure.item.Chunk;
 import org.springframework.jdbc.datasource.DataSourceUtils;
 
-public class DefaultLJooqItemWriter<T extends UpdatableRecord<?>> extends AbstractJooqItemWriter<T> {
+public class DefaultLJooqItemWriter<T extends TableRecord<?>> extends AbstractJooqItemWriter<T> {
 
   private static final String INVALID_CONNECTION_PROVIDER_MESSAGE =
       "jOOQ item writer requires a DataSource-backed DSLContext";

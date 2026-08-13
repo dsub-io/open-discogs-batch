@@ -29,7 +29,7 @@ import io.dsub.discogs.batch.job.writer.ProcessedChunkItemWriter;
 import io.dsub.opendiscogs.jooq.tables.records.MasterRecord;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.jooq.UpdatableRecord;
+import org.jooq.TableRecord;
 import org.springframework.batch.core.step.Step;
 import org.springframework.batch.core.configuration.annotation.JobScope;
 import org.springframework.batch.core.step.builder.StepBuilder;
@@ -68,7 +68,7 @@ public class MasterStepConfig extends AbstractStepConfig {
       masterSubItemsProcessor;
   private final DurableRelationItemWriterFactory durableRelationItemWriterFactory;
   private final ImportProgressStore importProgressStore;
-  private final ItemWriter<UpdatableRecord<?>> entityItemWriter;
+  private final ItemWriter<TableRecord<?>> entityItemWriter;
   private final DiscogsDump masterDump;
 
   private final ThreadPoolTaskExecutor taskExecutor;

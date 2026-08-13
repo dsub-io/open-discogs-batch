@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import org.jooq.UpdatableRecord;
+import org.jooq.TableRecord;
 
 public class MasterSubItemsProcessor
     implements ObservedAtItemProcessor<MasterSubItemsXML, RelationSet> {
@@ -35,7 +35,7 @@ public class MasterSubItemsProcessor
 
     ReflectionUtil.normalizeStringFields(master);
 
-    List<UpdatableRecord<?>> items = new ArrayList<>();
+    List<TableRecord<?>> items = new ArrayList<>();
     Integer masterId = master.getId();
 
     if (master.getMasterArtists() != null) {

@@ -12,7 +12,7 @@ import java.util.Collection;
 import java.util.List;
 import org.jooq.DSLContext;
 import org.jooq.SQLDialect;
-import org.jooq.UpdatableRecord;
+import org.jooq.TableRecord;
 import org.jooq.impl.DSL;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,19 +39,22 @@ class ConvergingRelationItemWriterIntegrationTest extends PostgreSQLIntegrationS
   }
 
   @Test
-  void keepsCurrentPhysicalRowAndDeletesOnlyStaleKeys() throws Exception {
+  void keepsCurrentCanonicalRowAndDeletesOnlyStaleKeys() throws Exception {
     String currentUrl = "https://current.example";
     String staleUrl = "https://stale.example";
+    LocalDateTime existingObservedAt = LocalDateTime.of(2026, 8, 1, 0, 0);
     jdbcTemplate.update(
         """
         insert into label_url
-            (id, last_modified_at, hash, url, label_id)
+            (last_modified_at, hash, url, label_id)
         values
-            (10, now(), ?, ?, 1),
-            (11, now(), ?, ?, 1)
+            (?, ?, ?, 1),
+            (?, ?, ?, 1)
         """,
+        existingObservedAt,
         currentUrl.hashCode(),
         currentUrl,
+        existingObservedAt,
         staleUrl.hashCode(),
         staleUrl);
 
@@ -65,8 +68,12 @@ class ConvergingRelationItemWriterIntegrationTest extends PostgreSQLIntegrationS
 
     assertThat(
             jdbcTemplate.queryForList(
-                "select id from label_url order by id", Integer.class))
-        .containsExactly(10);
+                "select url from label_url", String.class))
+        .containsExactly(currentUrl);
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "select last_modified_at from label_url", LocalDateTime.class))
+        .isEqualTo(existingObservedAt);
   }
 
   @Test
@@ -123,8 +130,8 @@ class ConvergingRelationItemWriterIntegrationTest extends PostgreSQLIntegrationS
 
   private ItemWriter<RelationSet> writer() {
     DSLContext context = DSL.using(dataSource, SQLDialect.POSTGRES);
-    ItemWriter<UpdatableRecord<?>> records = new DefaultLJooqItemWriter<>(context);
-    ItemWriter<Collection<UpdatableRecord<?>>> batches =
+    ItemWriter<TableRecord<?>> records = new DefaultLJooqItemWriter<>(context);
+    ItemWriter<Collection<TableRecord<?>>> batches =
         new CollectionItemWriter<>(records, BATCH_SIZE);
     return new ConvergingRelationItemWriter(dataSource, batches);
   }

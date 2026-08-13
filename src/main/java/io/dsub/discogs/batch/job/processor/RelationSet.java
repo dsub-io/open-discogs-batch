@@ -2,11 +2,11 @@ package io.dsub.discogs.batch.job.processor;
 
 import io.dsub.discogs.batch.dump.EntityType;
 import java.util.List;
-import org.jooq.UpdatableRecord;
+import org.jooq.TableRecord;
 
 /** All currently present relation rows for one dump root. */
 public record RelationSet(
-    EntityType entityType, int rootId, List<UpdatableRecord<?>> records) {
+    EntityType entityType, int rootId, List<TableRecord<?>> records) {
 
   public RelationSet {
     if (entityType == null) {

@@ -1,13 +1,13 @@
 package io.dsub.discogs.batch.domain;
 
-import org.jooq.UpdatableRecord;
+import org.jooq.TableRecord;
 
 /**
  * Adds the legacy hash contract used by relation records.
  *
- * @param <T> a subclass of {@link UpdatableRecord<T>} that this class will produce as an instance.
+ * @param <T> a subclass of {@link TableRecord<T>} that this class will produce as an instance.
  */
-public interface HashXML<T extends UpdatableRecord<T>> extends SubItemXML<T> {
+public interface HashXML<T extends TableRecord<T>> extends SubItemXML<T> {
 
   int getHashValue();
 

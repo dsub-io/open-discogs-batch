@@ -8,7 +8,7 @@ import io.dsub.discogs.batch.job.progress.ProcessedChunk;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import org.jooq.UpdatableRecord;
+import org.jooq.TableRecord;
 import org.springframework.batch.infrastructure.item.Chunk;
 import org.springframework.batch.infrastructure.item.ItemWriter;
 
@@ -18,7 +18,7 @@ public final class DurableReleaseItemWriter
 
   private static final EntityType ENTITY_TYPE = EntityType.RELEASE;
 
-  private final ItemWriter<Collection<UpdatableRecord<?>>> recordWriter;
+  private final ItemWriter<Collection<TableRecord<?>>> recordWriter;
   private final ItemWriter<RelationSet> relationWriter;
   private final ImportProgressStore progressStore;
   private final long runId;
@@ -26,7 +26,7 @@ public final class DurableReleaseItemWriter
   private final boolean resumed;
 
   public DurableReleaseItemWriter(
-      ItemWriter<Collection<UpdatableRecord<?>>> recordWriter,
+      ItemWriter<Collection<TableRecord<?>>> recordWriter,
       ItemWriter<RelationSet> relationWriter,
       ImportProgressStore progressStore,
       long runId,
@@ -47,7 +47,7 @@ public final class DurableReleaseItemWriter
         continue;
       }
 
-      List<UpdatableRecord<?>> records = new ArrayList<>();
+      List<TableRecord<?>> records = new ArrayList<>();
       List<RelationSet> relations = new ArrayList<>(sourceChunk.values().size());
       for (ReleaseRootMutation mutation : sourceChunk.values()) {
         records.addAll(mutation.genres());

@@ -14,7 +14,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import javax.sql.DataSource;
-import org.jooq.UpdatableRecord;
+import org.jooq.TableRecord;
 import org.junit.jupiter.api.Test;
 import org.springframework.batch.infrastructure.item.Chunk;
 import org.springframework.batch.infrastructure.item.ItemWriter;
@@ -43,7 +43,7 @@ class ConvergingRelationItemWriterUnitTest {
   @Test
   void emptySpringChunkDoesNothing() throws Exception {
     @SuppressWarnings("unchecked")
-    ItemWriter<Collection<UpdatableRecord<?>>> delegate = mock(ItemWriter.class);
+    ItemWriter<Collection<TableRecord<?>>> delegate = mock(ItemWriter.class);
     ConvergingRelationItemWriter writer =
         new ConvergingRelationItemWriter(mock(DataSource.class), delegate);
 
@@ -67,7 +67,7 @@ class ConvergingRelationItemWriterUnitTest {
   @Test
   void rejectsMixedEntityTypesBeforeOpeningADatabaseConnection() {
     @SuppressWarnings("unchecked")
-    ItemWriter<Collection<UpdatableRecord<?>>> delegate = mock(ItemWriter.class);
+    ItemWriter<Collection<TableRecord<?>>> delegate = mock(ItemWriter.class);
     DataSource dataSource = mock(DataSource.class);
     ConvergingRelationItemWriter writer =
         new ConvergingRelationItemWriter(dataSource, delegate);
@@ -85,7 +85,7 @@ class ConvergingRelationItemWriterUnitTest {
   @Test
   void rejectsMissingLegacyHashBeforeDatabaseAccess() {
     @SuppressWarnings("unchecked")
-    ItemWriter<Collection<UpdatableRecord<?>>> delegate = mock(ItemWriter.class);
+    ItemWriter<Collection<TableRecord<?>>> delegate = mock(ItemWriter.class);
     DataSource dataSource = mock(DataSource.class);
     ConvergingRelationItemWriter writer =
         new ConvergingRelationItemWriter(dataSource, delegate);

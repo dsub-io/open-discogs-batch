@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Map;
 import org.jooq.Field;
 import org.jooq.Query;
-import org.jooq.UpdatableRecord;
+import org.jooq.TableRecord;
 import org.junit.jupiter.api.Test;
 import org.springframework.batch.infrastructure.item.Chunk;
 
@@ -34,7 +34,6 @@ class AbstractJooqItemWriterUnitTest {
             .setName("Artist");
     ReleaseItemArtistRecord relation =
         new ReleaseItemArtistRecord()
-            .setId(9)
             .setLastModifiedAt(NOW)
             .setReleaseItemId(2)
             .setArtistId(5);
@@ -44,7 +43,7 @@ class AbstractJooqItemWriterUnitTest {
         .doesNotContain("id")
         .contains("release_item_id", "artist_id");
     assertThat(writer.insertFields(relation)).isSameAs(writer.insertFields(relation));
-    assertThat(writer.insertValues(relation)).doesNotContain(9).contains(2, 5);
+    assertThat(writer.insertValues(relation)).contains(2, 5);
   }
 
   @Test
@@ -134,42 +133,42 @@ class AbstractJooqItemWriterUnitTest {
   }
 
   private static final class ExposedWriter
-      extends AbstractJooqItemWriter<UpdatableRecord<?>> {
+      extends AbstractJooqItemWriter<TableRecord<?>> {
 
-    List<Object> insertValues(UpdatableRecord<?> record) {
+    List<Object> insertValues(TableRecord<?> record) {
       return getInsertValues(record);
     }
 
-    List<Field<?>> insertFields(UpdatableRecord<?> record) {
+    List<Field<?>> insertFields(TableRecord<?> record) {
       return getInsertFields(record.getTable());
     }
 
-    Map<String, Object> updateMap(UpdatableRecord<?> record) {
+    Map<String, Object> updateMap(TableRecord<?> record) {
       return getUpdateMap(record);
     }
 
-    List<Field<?>> constraintFields(UpdatableRecord<?> record) {
+    List<Field<?>> constraintFields(TableRecord<?> record) {
       return getConstraintFields(record.getTable());
     }
 
-    List<Field<?>> updateFields(UpdatableRecord<?> record) {
+    List<Field<?>> updateFields(TableRecord<?> record) {
       return getUpdateFields(record.getTable());
     }
 
-    List<Field<?>> businessUpdateFields(UpdatableRecord<?> record) {
+    List<Field<?>> businessUpdateFields(TableRecord<?> record) {
       return getBusinessUpdateFields(record.getTable());
     }
 
-    Object[] bindValues(UpdatableRecord<?> record) {
+    Object[] bindValues(TableRecord<?> record) {
       return getBindValues(record);
     }
 
     @Override
-    public void write(Chunk<? extends UpdatableRecord<?>> items) {
+    public void write(Chunk<? extends TableRecord<?>> items) {
     }
 
     @Override
-    public Query getQuery(UpdatableRecord<?> record) {
+    public Query getQuery(TableRecord<?> record) {
       return null;
     }
   }

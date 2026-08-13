@@ -24,7 +24,7 @@ import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemWorkRecord;
 import java.sql.PreparedStatement;
 import java.sql.Types;
 import java.util.List;
-import org.jooq.UpdatableRecord;
+import org.jooq.TableRecord;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -34,7 +34,7 @@ class CanonicalRelationBatchUnitTest {
 
   @Test
   void collapsesExactDuplicatesByConflictTargetAndPreservesCatalogSpellings() {
-    List<UpdatableRecord<?>> records =
+    List<TableRecord<?>> records =
         List.of(
             artist(),
             artist(),

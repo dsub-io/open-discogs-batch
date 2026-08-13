@@ -11,7 +11,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import javax.sql.DataSource;
-import org.jooq.UpdatableRecord;
+import org.jooq.TableRecord;
 import org.springframework.batch.infrastructure.item.Chunk;
 import org.springframework.batch.infrastructure.item.ItemWriter;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -21,11 +21,11 @@ public class ConvergingRelationItemWriter implements ItemWriter<RelationSet> {
 
   private final JdbcTemplate jdbcTemplate;
   private final ExistingRelationRootsReader existingRelationRootsReader;
-  private final ItemWriter<Collection<UpdatableRecord<?>>> delegate;
+  private final ItemWriter<Collection<TableRecord<?>>> delegate;
 
   public ConvergingRelationItemWriter(
       DataSource dataSource,
-      ItemWriter<Collection<UpdatableRecord<?>>> delegate) {
+      ItemWriter<Collection<TableRecord<?>>> delegate) {
     this.jdbcTemplate = new JdbcTemplate(dataSource);
     this.existingRelationRootsReader = new ExistingRelationRootsReader(dataSource);
     this.delegate = delegate;
@@ -54,17 +54,17 @@ public class ConvergingRelationItemWriter implements ItemWriter<RelationSet> {
       if (existingRootIds.isEmpty()) {
         continue;
       }
-      List<UpdatableRecord<?>> currentRecords =
+      List<TableRecord<?>> currentRecords =
           canonicalBatch.recordsFor(relationTable).stream()
               .filter(record -> existingRootIds.contains(relationTable.rootId(record)))
               .toList();
       deleteStaleRelations(relationTable, existingRootIds, currentRecords);
     }
 
-    List<Collection<UpdatableRecord<?>>> records =
+    List<Collection<TableRecord<?>>> records =
         canonicalBatch.relationSets().stream()
             .map(RelationSet::records)
-            .map(recordsForRoot -> (Collection<UpdatableRecord<?>>) recordsForRoot)
+            .map(recordsForRoot -> (Collection<TableRecord<?>>) recordsForRoot)
             .toList();
     delegate.write(new Chunk<>(records));
   }
@@ -72,7 +72,7 @@ public class ConvergingRelationItemWriter implements ItemWriter<RelationSet> {
   private void deleteStaleRelations(
       RelationTableRegistry.RelationTable relationTable,
       Set<Integer> rootIds,
-      List<UpdatableRecord<?>> currentRecords) {
+      List<TableRecord<?>> currentRecords) {
     jdbcTemplate.execute(
         (Connection connection) -> {
           List<Array> arrays = new ArrayList<>(relationTable.keys().size() + 1);
@@ -87,7 +87,7 @@ public class ConvergingRelationItemWriter implements ItemWriter<RelationSet> {
               statement.setArray(1, roots);
               if (!currentRecords.isEmpty()) {
                 int parameterIndex = 2;
-                for (UpdatableRecord<?> record : currentRecords) {
+                for (TableRecord<?> record : currentRecords) {
                   for (RelationTableRegistry.RelationKey key : relationTable.keys()) {
                     key.bind(statement, parameterIndex, record);
                     parameterIndex++;

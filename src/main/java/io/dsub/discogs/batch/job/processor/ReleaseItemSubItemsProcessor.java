@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
-import org.jooq.UpdatableRecord;
+import org.jooq.TableRecord;
 
 public class ReleaseItemSubItemsProcessor
     implements ObservedAtItemProcessor<ReleaseItemSubItemsXML, RelationSet> {
@@ -36,7 +36,7 @@ public class ReleaseItemSubItemsProcessor
     if (item.getId() == null || item.getId() < 1) {
       return null;
     }
-    List<UpdatableRecord<?>> items = new ArrayList<>();
+    List<TableRecord<?>> items = new ArrayList<>();
     int releaseItemId = item.getId();
 
     if (item.getReleaseAlbumArtists() != null) {

@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import org.jooq.UpdatableRecord;
+import org.jooq.TableRecord;
 
 public class LabelSubItemsProcessor
     implements ObservedAtItemProcessor<LabelSubItemsXML, RelationSet> {
@@ -30,7 +30,7 @@ public class LabelSubItemsProcessor
 
     ReflectionUtil.normalizeStringFields(item);
 
-    List<UpdatableRecord<?>> records = new ArrayList<>();
+    List<TableRecord<?>> records = new ArrayList<>();
 
     Integer labelId = item.getId();
 

@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.jooq.Field;
-import org.jooq.UpdatableRecord;
+import org.jooq.TableRecord;
 
 /** Allocates deterministic legacy hash slots for distinct SHA-256 relation identities. */
 final class ReleaseRelationSlotAllocator {
@@ -88,7 +88,7 @@ final class ReleaseRelationSlotAllocator {
       return;
     }
     for (RelationSet relationSet : relationSets) {
-      for (UpdatableRecord<?> record : relationSet.records()) {
+      for (TableRecord<?> record : relationSet.records()) {
         RelationDescriptor descriptor = RELATIONS.get(record.getTable().getName());
         if (descriptor == null) {
           continue;
@@ -125,7 +125,7 @@ final class ReleaseRelationSlotAllocator {
     }
     Map<Scope, ScopeRows> scopes = new LinkedHashMap<>();
     for (RelationSet relationSet : relationSets) {
-      for (UpdatableRecord<?> record : relationSet.records()) {
+      for (TableRecord<?> record : relationSet.records()) {
         RelationDescriptor descriptor = RELATIONS.get(record.getTable().getName());
         if (descriptor == null) {
           continue;
@@ -177,7 +177,7 @@ final class ReleaseRelationSlotAllocator {
                   .toArray(String[]::new));
     }
 
-    byte[] digest(UpdatableRecord<?> record) {
+    byte[] digest(TableRecord<?> record) {
       return ReleaseRelationIdentity.digest(relation, identityFieldValues.values(record));
     }
   }
@@ -185,10 +185,10 @@ final class ReleaseRelationSlotAllocator {
   @FunctionalInterface
   private interface IdentityFieldValues {
 
-    String[] values(UpdatableRecord<?> record);
+    String[] values(TableRecord<?> record);
   }
 
-  private static String canonicalFormatQuantity(UpdatableRecord<?> record) {
+  private static String canonicalFormatQuantity(TableRecord<?> record) {
     String quantityText = RELEASE_ITEM_FORMAT.QUANTITY_TEXT.getValue(record);
     if (quantityText != null) {
       return quantityText;
@@ -262,7 +262,7 @@ final class ReleaseRelationSlotAllocator {
   }
 
   private record Row(
-      UpdatableRecord<?> record,
+      TableRecord<?> record,
       Field<Integer> hashField,
       int legacyHash,
       byte[] digest) {

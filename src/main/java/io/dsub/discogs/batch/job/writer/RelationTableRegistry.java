@@ -33,7 +33,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.jooq.Field;
 import org.jooq.Table;
-import org.jooq.UpdatableRecord;
+import org.jooq.TableRecord;
 
 final class RelationTableRegistry {
 
@@ -253,11 +253,11 @@ final class RelationTableRegistry {
       payloadFields = List.copyOf(payloadFields);
     }
 
-    RelationIdentity identity(UpdatableRecord<?> record) {
+    RelationIdentity identity(TableRecord<?> record) {
       return RelationIdentity.create(table, keys, record);
     }
 
-    RelationIdentity semanticIdentity(UpdatableRecord<?> record) {
+    RelationIdentity semanticIdentity(TableRecord<?> record) {
       return RelationIdentity.create(table, semanticKeys(), record);
     }
 
@@ -279,27 +279,27 @@ final class RelationTableRegistry {
           .toList();
     }
 
-    boolean hasSamePayload(UpdatableRecord<?> left, UpdatableRecord<?> right) {
+    boolean hasSamePayload(TableRecord<?> left, TableRecord<?> right) {
       return payloadFields.stream()
           .allMatch(field -> Objects.equals(field.getValue(left), field.getValue(right)));
     }
 
-    void requireRoot(UpdatableRecord<?> record, int rootId) {
+    void requireRoot(TableRecord<?> record, int rootId) {
       if (!Objects.equals(rootIdField.getValue(record), rootId)) {
         throw new IllegalArgumentException(
             "relation " + table.getName() + " does not belong to root " + rootId);
       }
     }
 
-    int rootId(UpdatableRecord<?> record) {
+    int rootId(TableRecord<?> record) {
       return rootIdField.getValue(record);
     }
 
-    String describeSemanticIdentity(UpdatableRecord<?> record) {
+    String describeSemanticIdentity(TableRecord<?> record) {
       return describeIdentity(semanticKeys(), record);
     }
 
-    private String describeIdentity(List<RelationKey> identityKeys, UpdatableRecord<?> record) {
+    private String describeIdentity(List<RelationKey> identityKeys, TableRecord<?> record) {
       return identityKeys.stream()
           .map(key -> key.field().getName() + "=" + key.describeValue(record))
           .collect(Collectors.joining(", "));
@@ -351,7 +351,7 @@ final class RelationTableRegistry {
       Objects.requireNonNull(type, "relation key type must not be null");
     }
 
-    void bind(PreparedStatement statement, int parameterIndex, UpdatableRecord<?> record)
+    void bind(PreparedStatement statement, int parameterIndex, TableRecord<?> record)
         throws SQLException {
       Object value = field.getValue(record);
       if (value == null) {
@@ -375,19 +375,19 @@ final class RelationTableRegistry {
       };
     }
 
-    Integer integerValue(UpdatableRecord<?> record) {
+    Integer integerValue(TableRecord<?> record) {
       return (Integer) field.getValue(record);
     }
 
-    String textValue(UpdatableRecord<?> record) {
+    String textValue(TableRecord<?> record) {
       return (String) field.getValue(record);
     }
 
-    BinaryKey binaryValue(UpdatableRecord<?> record) {
+    BinaryKey binaryValue(TableRecord<?> record) {
       return new BinaryKey((byte[]) field.getValue(record));
     }
 
-    String describeValue(UpdatableRecord<?> record) {
+    String describeValue(TableRecord<?> record) {
       return String.valueOf(field.getValue(record));
     }
   }
@@ -407,7 +407,7 @@ final class RelationTableRegistry {
           IntegerTripleBinaryIdentity {
 
     static RelationIdentity create(
-        Table<?> table, List<RelationKey> keys, UpdatableRecord<?> record) {
+        Table<?> table, List<RelationKey> keys, TableRecord<?> record) {
       return switch (keys.size()) {
         case 2 -> twoKeyIdentity(table, keys, record);
         case 3 -> threeKeyIdentity(table, keys, record);
@@ -417,7 +417,7 @@ final class RelationTableRegistry {
     }
 
     private static RelationIdentity twoKeyIdentity(
-        Table<?> table, List<RelationKey> keys, UpdatableRecord<?> record) {
+        Table<?> table, List<RelationKey> keys, TableRecord<?> record) {
       requireType(keys.get(0), RelationKeyType.INTEGER);
       return switch (keys.get(1).type()) {
         case INTEGER ->
@@ -433,7 +433,7 @@ final class RelationTableRegistry {
     }
 
     private static RelationIdentity threeKeyIdentity(
-        Table<?> table, List<RelationKey> keys, UpdatableRecord<?> record) {
+        Table<?> table, List<RelationKey> keys, TableRecord<?> record) {
       requireType(keys.get(0), RelationKeyType.INTEGER);
       requireType(keys.get(1), RelationKeyType.INTEGER);
       return switch (keys.get(2).type()) {
@@ -454,7 +454,7 @@ final class RelationTableRegistry {
     }
 
     private static RelationIdentity fourKeyIdentity(
-        Table<?> table, List<RelationKey> keys, UpdatableRecord<?> record) {
+        Table<?> table, List<RelationKey> keys, TableRecord<?> record) {
       requireType(keys.get(0), RelationKeyType.INTEGER);
       requireType(keys.get(1), RelationKeyType.INTEGER);
       requireType(keys.get(2), RelationKeyType.INTEGER);
