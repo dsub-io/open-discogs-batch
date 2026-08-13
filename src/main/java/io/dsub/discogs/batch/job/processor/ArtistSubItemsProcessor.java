@@ -16,7 +16,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 import org.jooq.UpdatableRecord;
 
 public class ArtistSubItemsProcessor
@@ -35,6 +34,8 @@ public class ArtistSubItemsProcessor
       return null;
     }
 
+    List<String> sourceUrls = item.getUrls();
+    List<String> sourceNameVariations = item.getNameVariations();
     ReflectionUtil.normalizeStringFields(item);
 
     List<UpdatableRecord<?>> items = new ArrayList<>();
@@ -42,32 +43,42 @@ public class ArtistSubItemsProcessor
     items.addAll(getArtistAliasRecords(item, observedAt));
     items.addAll(getArtistGroupRecords(item, observedAt));
     items.addAll(getArtistMemberRecords(item, observedAt));
-    items.addAll(getArtistUrlRecords(item, observedAt));
-    items.addAll(getArtistNameVariationRecords(item, observedAt));
+    items.addAll(getArtistUrlRecords(item.getId(), sourceUrls, observedAt));
+    items.addAll(
+        getArtistNameVariationRecords(item.getId(), sourceNameVariations, observedAt));
 
     return new RelationSet(EntityType.ARTIST, item.getId(), items);
   }
 
   private List<ArtistNameVariationRecord> getArtistNameVariationRecords(
-      ArtistSubItemsXML item, LocalDateTime observedAt) {
-    if (item.getNameVariations() == null || item.getNameVariations().isEmpty()) {
+      Integer artistId, List<String> sourceValues, LocalDateTime observedAt) {
+    if (sourceValues == null || sourceValues.isEmpty()) {
       return Collections.emptyList();
     }
-    return item.getNameVariations().stream()
-        .filter(Objects::nonNull)
-        .map(nameVar -> makeArtistNameVariationRecord(item.getId(), nameVar, observedAt))
-        .collect(Collectors.toList());
+    List<ArtistNameVariationRecord> records = new ArrayList<>();
+    for (int ordinal = 0; ordinal < sourceValues.size(); ordinal++) {
+      String nameVariation = normalizeLegacyString(sourceValues.get(ordinal));
+      if (nameVariation != null) {
+        records.add(
+            makeArtistNameVariationRecord(artistId, nameVariation, ordinal, observedAt));
+      }
+    }
+    return records;
   }
 
   private List<ArtistUrlRecord> getArtistUrlRecords(
-      ArtistSubItemsXML item, LocalDateTime observedAt) {
-    if (item.getUrls() == null || item.getUrls().isEmpty()) {
+      Integer artistId, List<String> sourceValues, LocalDateTime observedAt) {
+    if (sourceValues == null || sourceValues.isEmpty()) {
       return Collections.emptyList();
     }
-    return item.getUrls().stream()
-        .filter(Objects::nonNull)
-        .map(url -> makeArtistUrlRecord(item.getId(), url, observedAt))
-        .collect(Collectors.toList());
+    List<ArtistUrlRecord> records = new ArrayList<>();
+    for (int ordinal = 0; ordinal < sourceValues.size(); ordinal++) {
+      String url = normalizeLegacyString(sourceValues.get(ordinal));
+      if (url != null) {
+        records.add(makeArtistUrlRecord(artistId, url, ordinal, observedAt));
+      }
+    }
+    return records;
   }
 
   private List<ArtistMemberRecord> getArtistMemberRecords(
@@ -75,11 +86,14 @@ public class ArtistSubItemsProcessor
     if (item.getMembers() == null || item.getMembers().isEmpty()) {
       return Collections.emptyList();
     }
-    return item.getMembers().stream()
-        .filter(Objects::nonNull)
-        .filter(member -> idRegistry.exists(ARTIST, member.getMemberId()))
-        .map(xml -> xml.getRecord(item.getId(), observedAt))
-        .collect(Collectors.toList());
+    List<ArtistMemberRecord> records = new ArrayList<>();
+    for (int ordinal = 0; ordinal < item.getMembers().size(); ordinal++) {
+      ArtistSubItemsXML.ArtistMemberXML member = item.getMembers().get(ordinal);
+      if (member != null && idRegistry.exists(ARTIST, member.getMemberId())) {
+        records.add(member.getRecord(item.getId(), observedAt).setOrdinal(ordinal));
+      }
+    }
+    return records;
   }
 
   private List<ArtistGroupRecord> getArtistGroupRecords(
@@ -87,11 +101,14 @@ public class ArtistSubItemsProcessor
     if (item.getGroups() == null || item.getGroups().isEmpty()) {
       return Collections.emptyList();
     }
-    return item.getGroups().stream()
-        .filter(Objects::nonNull)
-        .filter(group -> idRegistry.exists(ARTIST, group.getGroupId()))
-        .map(xml -> xml.getRecord(item.getId(), observedAt))
-        .collect(Collectors.toList());
+    List<ArtistGroupRecord> records = new ArrayList<>();
+    for (int ordinal = 0; ordinal < item.getGroups().size(); ordinal++) {
+      ArtistSubItemsXML.ArtistGroupXML group = item.getGroups().get(ordinal);
+      if (group != null && idRegistry.exists(ARTIST, group.getGroupId())) {
+        records.add(group.getRecord(item.getId(), observedAt).setOrdinal(ordinal));
+      }
+    }
+    return records;
   }
 
   private List<ArtistAliasRecord> getArtistAliasRecords(
@@ -99,18 +116,22 @@ public class ArtistSubItemsProcessor
     if (item.getAliases() == null || item.getAliases().isEmpty()) {
       return Collections.emptyList();
     }
-    return item.getAliases().stream()
-        .filter(Objects::nonNull)
-        .filter(alias -> idRegistry.exists(ARTIST, alias.getAliasId()))
-        .map(xml -> xml.getRecord(item.getId(), observedAt))
-        .collect(Collectors.toList());
+    List<ArtistAliasRecord> records = new ArrayList<>();
+    for (int ordinal = 0; ordinal < item.getAliases().size(); ordinal++) {
+      ArtistSubItemsXML.ArtistAliasXML alias = item.getAliases().get(ordinal);
+      if (alias != null && idRegistry.exists(ARTIST, alias.getAliasId())) {
+        records.add(alias.getRecord(item.getId(), observedAt).setOrdinal(ordinal));
+      }
+    }
+    return records;
   }
 
   private ArtistNameVariationRecord makeArtistNameVariationRecord(
-      Integer artistId, String nameVar, LocalDateTime observedAt) {
+      Integer artistId, String nameVar, int ordinal, LocalDateTime observedAt) {
     ArtistNameVariationRecord record = new ArtistNameVariationRecord();
     return record
         .setArtistId(artistId)
+        .setOrdinal(ordinal)
         .setNameVariation(nameVar)
         .setHash(nameVar.hashCode())
         .setLastModifiedAt(observedAt)
@@ -118,13 +139,22 @@ public class ArtistSubItemsProcessor
   }
 
   private ArtistUrlRecord makeArtistUrlRecord(
-      Integer artistId, String url, LocalDateTime observedAt) {
+      Integer artistId, String url, int ordinal, LocalDateTime observedAt) {
     ArtistUrlRecord record = new ArtistUrlRecord();
     return record
         .setUrl(url)
         .setArtistId(artistId)
+        .setOrdinal(ordinal)
         .setCreatedAt(observedAt)
         .setHash(url.hashCode())
         .setLastModifiedAt(observedAt);
+  }
+
+  private String normalizeLegacyString(String value) {
+    if (value == null) {
+      return null;
+    }
+    String normalized = value.trim();
+    return normalized.isBlank() ? null : normalized;
   }
 }

@@ -14,6 +14,7 @@ import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemCreditedArtistRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemFormatRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemGenreRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemIdentifierRecord;
+import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemImageRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemStyleRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemTrackRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemVideoRecord;
@@ -84,7 +85,29 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
         "migrations/V013__release_image_identity.sql",
         "migrations/V014__release_track_identity.sql",
         "migrations/V015__release_video_identity.sql",
-        "migrations/V016__release_work_identity.sql")) {
+        "migrations/V016__release_work_identity.sql",
+        "migrations/V017__artist_alias_ordinal.sql",
+        "migrations/V018__artist_group_ordinal.sql",
+        "migrations/V019__artist_member_ordinal.sql",
+        "migrations/V020__artist_name_variation_ordinal.sql",
+        "migrations/V021__artist_url_ordinal.sql",
+        "migrations/V022__label_sub_label_ordinal.sql",
+        "migrations/V023__label_url_ordinal.sql",
+        "migrations/V024__master_artist_ordinal.sql",
+        "migrations/V025__master_genre_ordinal.sql",
+        "migrations/V026__master_style_ordinal.sql",
+        "migrations/V027__master_video_ordinal.sql",
+        "migrations/V028__label_release_item_ordinal.sql",
+        "migrations/V029__release_item_artist_ordinal.sql",
+        "migrations/V030__release_item_credited_artist_ordinal.sql",
+        "migrations/V031__release_item_format_ordinal.sql",
+        "migrations/V032__release_item_genre_ordinal.sql",
+        "migrations/V033__release_item_identifier_ordinal.sql",
+        "migrations/V034__release_item_image_ordinal.sql",
+        "migrations/V035__release_item_style_ordinal.sql",
+        "migrations/V036__release_item_track_ordinal.sql",
+        "migrations/V037__release_item_video_ordinal.sql",
+        "migrations/V038__release_item_work_ordinal.sql")) {
       executeMigration(root, resource);
     }
 
@@ -427,6 +450,7 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
     records.add(format(quantity, modifiedAt));
     records.add(track(modifiedAt));
     records.add(identifier(modifiedAt));
+    records.add(image(modifiedAt));
     records.add(work(modifiedAt));
     records.add(video(modifiedAt));
     records.add(creditedArtist(modifiedAt));
@@ -450,6 +474,8 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
     assertThat(
             jdbcTemplate.queryForObject(
                 "select count(*) from release_item_identifier", Long.class))
+        .isEqualTo(1);
+    assertThat(jdbcTemplate.queryForObject("select count(*) from release_item_image", Long.class))
         .isEqualTo(1);
     assertThat(jdbcTemplate.queryForObject("select count(*) from release_item_work", Long.class))
         .isEqualTo(1);
@@ -570,6 +596,18 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
         .setIdentitySha256(
             ReleaseRelationIdentity.digest(
                 ReleaseRelationIdentity.Relation.IDENTIFIER, "Barcode", "Text", "123"))
+        .setCreatedAt(FIRST_WRITE)
+        .setLastModifiedAt(modifiedAt);
+  }
+
+  private ReleaseItemImageRecord image(LocalDateTime modifiedAt) {
+    return new ReleaseItemImageRecord()
+        .setReleaseItemId(RELEASE_ID)
+        .setHash(107)
+        .setFileName("cover.jpg")
+        .setIdentitySha256(
+            ReleaseRelationIdentity.digest(
+                ReleaseRelationIdentity.Relation.IMAGE, "cover.jpg"))
         .setCreatedAt(FIRST_WRITE)
         .setLastModifiedAt(modifiedAt);
   }

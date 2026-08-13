@@ -121,4 +121,20 @@ class SourceChunkItemProcessorUnitTest {
                     new SourceChunk<>(new ChunkRange(1, 1, 1), List.of(2))))
         .isSameAs(expected);
   }
+
+  @Test
+  void defaultBoundaryPreservesRuntimeFailures() {
+    IllegalStateException expected = new IllegalStateException("runtime fixture");
+    SourceChunkItemProcessor<Integer, String> processor =
+        new SourceChunkItemProcessor<>(
+            (value, observedAt) -> {
+              throw expected;
+            });
+
+    assertThatThrownBy(
+            () ->
+                processor.process(
+                    new SourceChunk<>(new ChunkRange(0, 0, 1), List.of(1))))
+        .isSameAs(expected);
+  }
 }

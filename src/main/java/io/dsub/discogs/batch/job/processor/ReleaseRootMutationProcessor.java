@@ -2,7 +2,6 @@ package io.dsub.discogs.batch.job.processor;
 
 import io.dsub.discogs.batch.domain.release.ReleaseItemSubItemsXML;
 import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
-import io.dsub.discogs.batch.util.ReflectionUtil;
 import io.dsub.opendiscogs.jooq.tables.records.GenreRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemRecord;
 import io.dsub.opendiscogs.jooq.tables.records.StyleRecord;
@@ -28,13 +27,10 @@ public final class ReleaseRootMutationProcessor
     if (source == null || source.getId() == null || source.getId() < 1) {
       return null;
     }
-    ReflectionUtil.normalizeReleaseStringFields(source);
+    RelationSet relations = relationProcessor.process(source, observedAt);
     List<String> genres = normalizedValues(source.getGenres());
     List<String> styles = normalizedValues(source.getStyles());
-    source.setGenres(genres);
-    source.setStyles(styles);
     ReleaseItemRecord root = coreProcessor.processNormalized(source, observedAt);
-    RelationSet relations = relationProcessor.processNormalized(source, observedAt);
     return new ReleaseRootMutation(
         root,
         genres.stream().map(value -> new GenreRecord().setName(value)).toList(),
@@ -46,12 +42,6 @@ public final class ReleaseRootMutationProcessor
     if (values == null) {
       return List.of();
     }
-    LinkedHashSet<String> uniqueValues = new LinkedHashSet<>();
-    for (String value : values) {
-      if (value != null && !value.isBlank()) {
-        uniqueValues.add(value);
-      }
-    }
-    return List.copyOf(uniqueValues);
+    return List.copyOf(new LinkedHashSet<>(values));
   }
 }

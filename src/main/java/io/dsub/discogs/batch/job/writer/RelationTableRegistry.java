@@ -18,6 +18,7 @@ import io.dsub.opendiscogs.jooq.tables.ReleaseItemCreditedArtist;
 import io.dsub.opendiscogs.jooq.tables.ReleaseItemFormat;
 import io.dsub.opendiscogs.jooq.tables.ReleaseItemGenre;
 import io.dsub.opendiscogs.jooq.tables.ReleaseItemIdentifier;
+import io.dsub.opendiscogs.jooq.tables.ReleaseItemImage;
 import io.dsub.opendiscogs.jooq.tables.ReleaseItemStyle;
 import io.dsub.opendiscogs.jooq.tables.ReleaseItemTrack;
 import io.dsub.opendiscogs.jooq.tables.ReleaseItemVideo;
@@ -161,6 +162,13 @@ final class RelationTableRegistry {
                   integerKey(ReleaseItemIdentifier.RELEASE_ITEM_IDENTIFIER.HASH),
                   byteaKey(ReleaseItemIdentifier.RELEASE_ITEM_IDENTIFIER.IDENTITY_SHA256)),
               table(
+                  ReleaseItemImage.RELEASE_ITEM_IMAGE,
+                  ReleaseItemImage.RELEASE_ITEM_IMAGE.RELEASE_ITEM_ID,
+                  List.of(ReleaseItemImage.RELEASE_ITEM_IMAGE.FILE_NAME),
+                  integerKey(ReleaseItemImage.RELEASE_ITEM_IMAGE.RELEASE_ITEM_ID),
+                  integerKey(ReleaseItemImage.RELEASE_ITEM_IMAGE.HASH),
+                  byteaKey(ReleaseItemImage.RELEASE_ITEM_IMAGE.IDENTITY_SHA256)),
+              table(
                   ReleaseItemStyle.RELEASE_ITEM_STYLE,
                   ReleaseItemStyle.RELEASE_ITEM_STYLE.RELEASE_ITEM_ID,
                   integerKey(ReleaseItemStyle.RELEASE_ITEM_STYLE.RELEASE_ITEM_ID),
@@ -295,10 +303,6 @@ final class RelationTableRegistry {
       return rootIdField.getValue(record);
     }
 
-    String describeIdentity(UpdatableRecord<?> record) {
-      return describeIdentity(keys, record);
-    }
-
     String describeSemanticIdentity(UpdatableRecord<?> record) {
       return describeIdentity(semanticKeys(), record);
     }
@@ -350,6 +354,11 @@ final class RelationTableRegistry {
 
   record RelationKey(Field<?> field, RelationKeyType type) {
 
+    RelationKey {
+      Objects.requireNonNull(field, "relation key field must not be null");
+      Objects.requireNonNull(type, "relation key type must not be null");
+    }
+
     void bind(PreparedStatement statement, int parameterIndex, UpdatableRecord<?> record)
         throws SQLException {
       Object value = field.getValue(record);
@@ -357,10 +366,12 @@ final class RelationTableRegistry {
         statement.setNull(parameterIndex, jdbcType());
         return;
       }
-      switch (type) {
-        case INTEGER -> statement.setInt(parameterIndex, (Integer) value);
-        case TEXT -> statement.setString(parameterIndex, (String) value);
-        case BINARY -> statement.setBytes(parameterIndex, (byte[]) value);
+      if (type == RelationKeyType.INTEGER) {
+        statement.setInt(parameterIndex, (Integer) value);
+      } else if (type == RelationKeyType.TEXT) {
+        statement.setString(parameterIndex, (String) value);
+      } else {
+        statement.setBytes(parameterIndex, (byte[]) value);
       }
     }
 

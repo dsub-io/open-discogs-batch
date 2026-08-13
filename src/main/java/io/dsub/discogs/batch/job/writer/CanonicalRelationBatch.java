@@ -66,7 +66,7 @@ final class CanonicalRelationBatch {
         } else if (!relationTable.hasSamePayload(existing.record(), record)) {
           throw new IllegalArgumentException(
               "conflicting persisted payload for " + relationTable.table().getName()
-                  + " (" + identityKind.describe(relationTable, record) + ")");
+                  + " (" + relationTable.describeSemanticIdentity(record) + ")");
         }
       }
     }
@@ -106,11 +106,6 @@ final class CanonicalRelationBatch {
         return relationTable.semanticIdentity(record);
       }
 
-      @Override
-      String describe(
-          RelationTableRegistry.RelationTable relationTable, UpdatableRecord<?> record) {
-        return relationTable.describeSemanticIdentity(record);
-      }
     },
     PHYSICAL {
       @Override
@@ -119,17 +114,10 @@ final class CanonicalRelationBatch {
         return relationTable.identity(record);
       }
 
-      @Override
-      String describe(
-          RelationTableRegistry.RelationTable relationTable, UpdatableRecord<?> record) {
-        return relationTable.describeIdentity(record);
-      }
     };
 
     abstract RelationTableRegistry.RelationIdentity identity(
         RelationTableRegistry.RelationTable relationTable, UpdatableRecord<?> record);
 
-    abstract String describe(
-        RelationTableRegistry.RelationTable relationTable, UpdatableRecord<?> record);
   }
 }

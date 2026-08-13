@@ -17,6 +17,7 @@ import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemCreditedArtistRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemFormatRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemGenreRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemIdentifierRecord;
+import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemImageRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemStyleRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemTrackRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemVideoRecord;
@@ -57,7 +58,9 @@ class CanonicalRelationBatchUnitTest {
             video("Video"),
             video("Video"),
             creditedArtist("Producer"),
-            creditedArtist("Producer"));
+            creditedArtist("Producer"),
+            image("cover.jpg"),
+            image("cover.jpg"));
 
     CanonicalRelationBatch.CanonicalBatch batch =
         CanonicalRelationBatch.prepare(
@@ -66,7 +69,7 @@ class CanonicalRelationBatchUnitTest {
     List<RelationSet> result = batch.relationSets();
 
     assertThat(result).hasSize(1);
-    assertThat(result.getFirst().records()).hasSize(12);
+    assertThat(result.getFirst().records()).hasSize(13);
     assertThat(result.getFirst().records())
         .filteredOn(record -> record instanceof LabelReleaseItemRecord)
         .extracting(record -> record.get("category_notation"))
@@ -74,6 +77,10 @@ class CanonicalRelationBatchUnitTest {
     RelationTableRegistry.RelationTable labels =
         RelationTableRegistry.require(EntityType.RELEASE, LabelReleaseItem.LABEL_RELEASE_ITEM);
     assertThat(batch.recordsFor(labels)).hasSize(3);
+    assertThat(result.getFirst().records())
+        .filteredOn(ReleaseItemImageRecord.class::isInstance)
+        .singleElement()
+        .satisfies(record -> assertThat(record.get("identity_sha256")).isInstanceOf(byte[].class));
   }
 
   @Test
@@ -149,6 +156,49 @@ class CanonicalRelationBatchUnitTest {
                 "LP",
                 "2",
                 "Limited"));
+  }
+
+  @Test
+  void coversReleaseAllocatorValidationBoundaries() {
+    ReleaseRelationSlotAllocator.allocate(List.of(), EntityType.ARTIST);
+
+    ReleaseItemFormatRecord absentQuantity =
+        format(1, "Vinyl").setQuantity(null).setQuantityText(null);
+    ReleaseRelationSlotAllocator.assignCanonicalDigests(
+        List.of(
+            new RelationSet(
+                EntityType.RELEASE, RELEASE_ID, List.of(absentQuantity))),
+        EntityType.RELEASE);
+    assertThat(absentQuantity.getIdentitySha256()).hasSize(32);
+
+    ReleaseItemFormatRecord missingDigest = format(1, "Vinyl").setIdentitySha256(null);
+    ReleaseItemFormatRecord missingHash = format(1, "Vinyl").setHash(null);
+    ReleaseItemFormatRecord shortDigest = format(1, "Vinyl").setIdentitySha256(new byte[] {1});
+    for (ReleaseItemFormatRecord invalid : List.of(missingDigest, missingHash, shortDigest)) {
+      assertThatThrownBy(
+              () ->
+                  ReleaseRelationSlotAllocator.allocateAssignedDigests(
+                      List.of(
+                          new RelationSet(
+                              EntityType.RELEASE, RELEASE_ID, List.of(invalid))),
+                      EntityType.RELEASE))
+          .isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("identity is incomplete");
+    }
+
+    ReleaseItemFormatRecord duplicateFirst = format(1, "Vinyl");
+    ReleaseItemFormatRecord duplicateSecond = format(1, "Vinyl");
+    assertThatThrownBy(
+            () ->
+                ReleaseRelationSlotAllocator.allocateAssignedDigests(
+                    List.of(
+                        new RelationSet(
+                            EntityType.RELEASE,
+                            RELEASE_ID,
+                            List.of(duplicateFirst, duplicateSecond))),
+                    EntityType.RELEASE))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("must be canonicalized");
   }
 
   @Test
@@ -290,6 +340,16 @@ class CanonicalRelationBatchUnitTest {
         RelationTableRegistry.require(EntityType.RELEASE, LabelReleaseItem.LABEL_RELEASE_ITEM);
     labelTable.keys().getLast().bind(statement, 4, label(null));
     verify(statement).setNull(4, Types.VARCHAR);
+    ReleaseItemFormatRecord missingRelease = format(1, "Vinyl").setReleaseItemId(null);
+    integerKey.bind(statement, 5, missingRelease);
+    verify(statement).setNull(5, Types.INTEGER);
+    labelTable.keys().getLast().bind(statement, 6, label("SK 026"));
+    verify(statement).setString(6, "SK 026");
+    assertThatThrownBy(
+            () ->
+                new RelationTableRegistry.RelationKey(
+                    ReleaseItemFormat.RELEASE_ITEM_FORMAT.RELEASE_ITEM_ID, null))
+        .isInstanceOf(NullPointerException.class);
 
     assertThat(new RelationTableRegistry.BinaryKey(null).value()).isNull();
     byte[] source = new byte[] {1};
@@ -401,5 +461,12 @@ class CanonicalRelationBatchUnitTest {
         .setIdentitySha256(
             ReleaseRelationIdentity.digest(
                 ReleaseRelationIdentity.Relation.CREDITED_ARTIST, role));
+  }
+
+  private ReleaseItemImageRecord image(String fileName) {
+    return new ReleaseItemImageRecord()
+        .setReleaseItemId(RELEASE_ID)
+        .setHash(107)
+        .setFileName(fileName);
   }
 }

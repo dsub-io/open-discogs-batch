@@ -28,6 +28,7 @@ public class LabelSubItemsProcessor
       return null;
     }
 
+    List<String> sourceUrls = item.getUrls();
     ReflectionUtil.normalizeStringFields(item);
 
     List<UpdatableRecord<?>> records = new ArrayList<>();
@@ -35,27 +36,35 @@ public class LabelSubItemsProcessor
     Integer labelId = item.getId();
 
     if (item.getLabelSubLabels() != null) {
-      item.getLabelSubLabels().stream()
-          .filter(Objects::nonNull)
-          .filter(subLabel -> isExistingLabel(subLabel.getSubLabelId()))
-          .map(xml -> xml.getRecord(labelId, observedAt))
-          .forEach(records::add);
+      for (int ordinal = 0; ordinal < item.getLabelSubLabels().size(); ordinal++) {
+        LabelSubItemsXML.LabelSubLabelXML subLabel = item.getLabelSubLabels().get(ordinal);
+        if (subLabel != null && isExistingLabel(subLabel.getSubLabelId())) {
+          records.add(subLabel.getRecord(labelId, observedAt).setOrdinal(ordinal));
+        }
+      }
     }
 
-    if (item.getUrls() != null) {
-      item.getUrls().stream()
-          .filter(Objects::nonNull)
-          .map(url -> getLabelUrlRecord(labelId, url, observedAt))
-          .forEach(records::add);
+    if (sourceUrls != null) {
+      for (int ordinal = 0; ordinal < sourceUrls.size(); ordinal++) {
+        String sourceUrl = sourceUrls.get(ordinal);
+        String url = sourceUrl == null ? null : sourceUrl.trim();
+        if (url != null && url.isBlank()) {
+          url = null;
+        }
+        if (url != null) {
+          records.add(getLabelUrlRecord(labelId, url, ordinal, observedAt));
+        }
+      }
     }
 
     return new RelationSet(EntityType.LABEL, labelId, records);
   }
 
   private LabelUrlRecord getLabelUrlRecord(
-      Integer labelId, String url, LocalDateTime observedAt) {
+      Integer labelId, String url, int ordinal, LocalDateTime observedAt) {
     return new LabelUrlRecord()
         .setLabelId(labelId)
+        .setOrdinal(ordinal)
         .setUrl(url)
         .setHash(url.hashCode())
         .setLastModifiedAt(observedAt)

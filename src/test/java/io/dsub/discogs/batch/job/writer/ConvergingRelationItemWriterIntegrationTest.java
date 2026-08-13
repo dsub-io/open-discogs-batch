@@ -35,17 +35,28 @@ class ConvergingRelationItemWriterIntegrationTest extends PostgreSQLIntegrationS
 
   @BeforeAll
   static void migrateDatabase() throws Exception {
+    boolean tableExists;
     try (Connection connection = dataSource.getConnection();
         ResultSet tables =
             connection
                 .getMetaData()
                 .getTables(null, "public", "label_url", new String[] {"TABLE"})) {
-      if (tables.next()) {
+      tableExists = tables.next();
+    }
+    if (!tableExists) {
+      new ResourceDatabasePopulator(
+              new ClassPathResource("migrations/V001__initial_schema.sql"))
+          .execute(dataSource);
+    }
+    try (Connection connection = dataSource.getConnection();
+        ResultSet columns =
+            connection.getMetaData().getColumns(null, "public", "label_url", "ordinal")) {
+      if (columns.next()) {
         return;
       }
     }
     new ResourceDatabasePopulator(
-            new ClassPathResource("migrations/V001__initial_schema.sql"))
+            new ClassPathResource("migrations/V023__label_url_ordinal.sql"))
         .execute(dataSource);
   }
 
@@ -142,6 +153,59 @@ class ConvergingRelationItemWriterIntegrationTest extends PostgreSQLIntegrationS
         .isOne();
   }
 
+  @Test
+  void refreshesOrdinalAndSkipsAnUnchangedRetry() throws Exception {
+    String url = "https://ordinal.example";
+    LocalDateTime firstObservation = LocalDateTime.of(2026, 8, 1, 0, 0);
+    writer().write(
+        new Chunk<>(
+            List.of(
+                new RelationSet(
+                    EntityType.LABEL,
+                    1,
+                    List.of(labelUrl(1, url, 5, firstObservation))))));
+
+    LocalDateTime secondObservation = firstObservation.plusDays(1);
+    RelationSet reordered =
+        new RelationSet(
+            EntityType.LABEL,
+            1,
+            List.of(labelUrl(1, url, 1, secondObservation)));
+    writer().write(new Chunk<>(List.of(reordered)));
+
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "select ordinal from label_url where label_id = 1", Integer.class))
+        .isEqualTo(1);
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "select last_modified_at from label_url where label_id = 1",
+                LocalDateTime.class))
+        .isEqualTo(secondObservation);
+
+    jdbcTemplate.execute(
+        """
+        create function reject_unchanged_ordinal_update() returns trigger
+        language plpgsql as $$
+        begin
+          raise exception 'unchanged ordinal must not update';
+        end;
+        $$
+        """);
+    jdbcTemplate.execute(
+        """
+        create trigger reject_unchanged_ordinal_update
+        before update on label_url
+        for each row execute function reject_unchanged_ordinal_update()
+        """);
+    try {
+      writer().write(new Chunk<>(List.of(reordered)));
+    } finally {
+      jdbcTemplate.execute("drop trigger reject_unchanged_ordinal_update on label_url");
+      jdbcTemplate.execute("drop function reject_unchanged_ordinal_update()");
+    }
+  }
+
   private ItemWriter<RelationSet> writer() {
     DSLContext context = DSL.using(dataSource, SQLDialect.POSTGRES);
     ItemWriter<UpdatableRecord<?>> records = new DefaultLJooqItemWriter<>(context);
@@ -152,11 +216,17 @@ class ConvergingRelationItemWriterIntegrationTest extends PostgreSQLIntegrationS
 
   private LabelUrlRecord labelUrl(int labelId, String url) {
     LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
+    return labelUrl(labelId, url, 0, now);
+  }
+
+  private LabelUrlRecord labelUrl(
+      int labelId, String url, int ordinal, LocalDateTime observedAt) {
     return new LabelUrlRecord()
         .setLabelId(labelId)
         .setUrl(url)
         .setHash(url.hashCode())
-        .setCreatedAt(now)
-        .setLastModifiedAt(now);
+        .setOrdinal(ordinal)
+        .setCreatedAt(observedAt)
+        .setLastModifiedAt(observedAt);
   }
 }
