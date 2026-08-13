@@ -16,23 +16,17 @@ public final class PostgreSQLMasterMainReleaseReconciler
 
   static final String CLEAR_STALE_MAPPINGS_SQL =
       """
-      with desired as materialized (
-        select distinct on (release_item.master_id)
-               release_item.master_id,
-               release_item.id as release_id
-        from release_item
-        where release_item.is_master is true
-          and release_item.master_id is not null
-        order by release_item.master_id,
-                 release_item.last_modified_at desc,
-                 release_item.id desc
-      ),
-      stale as materialized (
+      with stale as materialized (
         select target.id
         from master target
-        left join desired on desired.master_id = target.id
-        where target.main_release_id is distinct from desired.release_id
-          and target.main_release_id is not null
+        where target.main_release_id is not null
+          and not exists (
+            select 1
+            from release_item current_release
+            where current_release.id = target.main_release_id
+              and current_release.master_id = target.id
+              and current_release.is_master is true
+          )
         order by target.id
         for update of target
       )
