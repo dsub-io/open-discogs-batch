@@ -17,6 +17,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionOperations;
 
 class SourceChunkItemProcessorUnitTest {
 
@@ -82,5 +84,41 @@ class SourceChunkItemProcessorUnitTest {
             () -> processor.process(
                 new SourceChunk<>(new ChunkRange(1, 5, 4), List.of(1, 2, 3, 4))))
         .hasMessageContaining("does not match the source range");
+  }
+
+  @Test
+  void executesPreparationThroughTheConfiguredBoundaryAndPreservesCheckedFailures() {
+    AtomicInteger boundaryCalls = new AtomicInteger();
+    TransactionOperations boundary =
+        new TransactionOperations() {
+          @Override
+          public <T> T execute(TransactionCallback<T> callback) {
+            boundaryCalls.incrementAndGet();
+            return callback.doInTransaction(null);
+          }
+        };
+    SourceChunkItemProcessor<Integer, String> successful =
+        new SourceChunkItemProcessor<>((value, observedAt) -> value.toString(), boundary);
+
+    assertThat(
+            org.assertj.core.api.Assertions.catchThrowable(
+                () ->
+                    successful.process(
+                        new SourceChunk<>(new ChunkRange(0, 0, 1), List.of(1)))))
+        .isNull();
+    assertThat(boundaryCalls).hasValue(1);
+
+    Exception expected = new Exception("checked fixture");
+    SourceChunkItemProcessor<Integer, String> failing =
+        new SourceChunkItemProcessor<>(
+            (value, observedAt) -> {
+              throw expected;
+            },
+            boundary);
+    assertThatThrownBy(
+            () ->
+                failing.process(
+                    new SourceChunk<>(new ChunkRange(1, 1, 1), List.of(2))))
+        .isSameAs(expected);
   }
 }
