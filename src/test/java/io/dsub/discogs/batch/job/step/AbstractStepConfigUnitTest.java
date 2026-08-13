@@ -43,6 +43,34 @@ class AbstractStepConfigUnitTest {
     assertThat(decider.decide(jobExecution, null).getName()).isEqualTo("SKIPPED");
   }
 
+  @Test
+  void supportsEveryNonEmptyEntityCombination() throws InvalidArgumentException {
+    String[] entities = {"artist", "label", "master", "release"};
+    for (int mask = 1; mask < 1 << entities.length; mask++) {
+      JobExecution jobExecution = Mockito.mock(JobExecution.class);
+      JobParameters jobParameters = Mockito.mock(JobParameters.class);
+      ExitStatus exitStatus = Mockito.mock(ExitStatus.class);
+      doReturn("COMPLETED").when(exitStatus).getExitCode();
+      doReturn(exitStatus).when(jobExecution).getExitStatus();
+      when(jobExecution.getJobParameters()).thenReturn(jobParameters);
+
+      for (int index = 0; index < entities.length; index++) {
+        String entity = entities[index];
+        boolean selected = (mask & (1 << index)) != 0;
+        JobParameter<String> parameter =
+            selected ? new JobParameter<>(entity, entity, String.class) : null;
+        doReturn(parameter).when(jobParameters).getParameter(entity);
+
+        FlowExecutionStatus status =
+            stepConfig.executionDecider(entity).decide(jobExecution, null);
+
+        assertThat(status.getName())
+            .as("entity=%s mask=%4s", entity, Integer.toBinaryString(mask))
+            .isEqualTo(selected ? "COMPLETED" : "SKIPPED");
+      }
+    }
+  }
+
   @ParameterizedTest
   @ValueSource(strings = {"artist", "release", "master", "label"})
   void whenGetOnKeyExecutionDecider__ShouldReturnValidExecutionDecider(String param)
