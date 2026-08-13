@@ -22,6 +22,21 @@ public class PostgreSQLDiscogsJobE2ETest extends DiscogsJobIntegrationTest {
   @Autowired private DataSource schemaDataSource;
 
   @Test
+  void importsEveryEntityThroughTheCompleteJob() throws Exception {
+    runAllTypesScenario();
+  }
+
+  @Test
+  void skipsEntitiesThatWereNotSelected() throws Exception {
+    runSelectiveEntitiesScenario();
+  }
+
+  @Test
+  void forcedRefreshPreservesTheCanonicalBusinessState() throws Exception {
+    runIdempotentRefreshScenario();
+  }
+
+  @Test
   void canonicalTablesAreIsolatedInTheSelectedSchema() {
     JdbcTemplate jdbc = new JdbcTemplate(schemaDataSource);
 

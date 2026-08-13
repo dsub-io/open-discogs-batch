@@ -139,8 +139,6 @@ class DefaultJobParameterResolverUnitTest {
     // when
     Properties resultProps = jobParameterResolver.resolve(new DefaultApplicationArguments());
 
-    System.out.println(resultProps);
-
     // then
     assertThat(resultProps.get(type.toString())).isEqualTo(dump.getETag());
     assertThat(resultProps.get(ImportJobParameters.checksum(type)))

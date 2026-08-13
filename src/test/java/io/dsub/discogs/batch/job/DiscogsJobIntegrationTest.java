@@ -45,7 +45,6 @@ import javax.sql.DataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.BatchStatus;
@@ -129,8 +128,7 @@ public abstract class DiscogsJobIntegrationTest {
     return paramsBuilder.toJobParameters();
   }
 
-  @Test
-  void whenAllTypesProvided__ShouldNotSkipAnyType() throws Exception {
+  final void runAllTypesScenario() throws Exception {
     JobParameters params =
         jobOperatorTestUtils
             .getUniqueJobParametersBuilder()
@@ -152,8 +150,7 @@ public abstract class DiscogsJobIntegrationTest {
     }
   }
 
-  @Test
-  void whenOnlyArtistLabel__ShouldSkipMasterRelease() throws Exception {
+  final void runSelectiveEntitiesScenario() throws Exception {
     JobParametersBuilder builder = new JobParametersBuilder();
     //    builder.addString("artist", "artist");
     builder.addString("label", "label");
@@ -181,8 +178,7 @@ public abstract class DiscogsJobIntegrationTest {
             "release eTag not found. skipping release step."));
   }
 
-  @Test
-  void relationFailureFailsTheWholeJobInsteadOfEndingSuccessfully() throws Exception {
+  final void runRelationFailurePropagationScenario() throws Exception {
     try (Connection connection = dataSource.getConnection();
         Statement statement = connection.createStatement()) {
       statement.execute(
@@ -236,8 +232,7 @@ public abstract class DiscogsJobIntegrationTest {
     }
   }
 
-  @Test
-  void failedMultiEntityRunResumesCompletedSourceChunksWithoutRewritingThem()
+  final void runMultiEntityResumeScenario()
       throws Exception {
     ImportExecutionCoordinator importExecutionCoordinator =
         new ImportExecutionCoordinator(dataSource);
@@ -319,8 +314,7 @@ public abstract class DiscogsJobIntegrationTest {
         is(0L));
   }
 
-  @Test
-  void retryReplaysAtomicReleaseChunkAfterMainAssignmentFailure()
+  final void runAtomicReleaseRetryScenario()
       throws Exception {
     ImportExecutionCoordinator importExecutionCoordinator =
         new ImportExecutionCoordinator(dataSource);
@@ -403,8 +397,7 @@ public abstract class DiscogsJobIntegrationTest {
         is(1L));
   }
 
-  @Test
-  void whenSameDumpIsForcedTwice__BusinessRowsRemainIdentical() throws Exception {
+  final void runIdempotentRefreshScenario() throws Exception {
     JobParameters firstParameters =
         jobOperatorTestUtils
             .getUniqueJobParametersBuilder()

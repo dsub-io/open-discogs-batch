@@ -1,6 +1,5 @@
 package io.dsub.discogs.batch.job.reader;
 
-import static io.dsub.discogs.batch.job.registry.EntityIdRegistry.Type.ARTIST;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -11,14 +10,11 @@ import io.dsub.discogs.batch.util.ToggleProgressBarConsumer;
 
 import io.dsub.discogs.batch.TestArguments;
 import io.dsub.discogs.batch.domain.artist.ArtistSubItemsXML;
-import io.dsub.discogs.batch.job.processor.ArtistSubItemsProcessor;
-import io.dsub.discogs.batch.job.registry.DefaultEntityIdRegistry;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.lang.reflect.Field;
 import java.nio.file.Path;
-import java.util.Objects;
-import java.util.stream.IntStream;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -30,13 +26,18 @@ import org.springframework.batch.infrastructure.item.xml.StaxEventItemReader;
 
 class ProgressBarStaxEventItemReaderUnitTest {
 
-  private final PrintStream stdout = System.out;
+  private final PrintStream stderr = System.err;
   private ByteArrayOutputStream outCaptor;
 
   @BeforeEach
   void setUp() {
     outCaptor = new ByteArrayOutputStream();
     System.setErr(new PrintStream(outCaptor));
+  }
+
+  @AfterEach
+  void tearDown() {
+    System.setErr(stderr);
   }
 
   @ParameterizedTest
@@ -115,31 +116,6 @@ class ProgressBarStaxEventItemReaderUnitTest {
     assertThat(t)
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("at least 1 fragmentRootElement is required");
-  }
-
-  @Test
-  void whenRead__ShouldReturnValidItems() throws Exception {
-
-    ProgressBarStaxEventItemReader<ArtistSubItemsXML> reader =
-        new ProgressBarStaxEventItemReader<>(ArtistSubItemsXML.class,
-            Path.of(TestArguments.BASE_XML_PATH, "artist.xml.gz"), "artist");
-
-    DefaultEntityIdRegistry registry = new DefaultEntityIdRegistry();
-
-    ArtistSubItemsProcessor processor = new ArtistSubItemsProcessor(registry);
-    IntStream.range(1, 1000).forEach(i -> registry.put(ARTIST, i));
-
-    reader.open(new ExecutionContext());
-
-    // when
-    ArtistSubItemsXML item = reader.read();
-    while (item != null) {
-      Objects.requireNonNull(processor.process(item, java.time.LocalDateTime.MIN))
-          .records()
-          .forEach(System.out::println);
-      item = reader.read();
-    }
-    reader.close();
   }
 
   @Test
