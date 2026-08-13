@@ -2,7 +2,6 @@ package io.dsub.discogs.batch.domain.master;
 
 import io.dsub.discogs.batch.domain.BaseXML;
 import io.dsub.opendiscogs.jooq.tables.records.MasterRecord;
-import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
 import jakarta.xml.bind.annotation.XmlAccessType;
@@ -44,13 +43,13 @@ public class MasterXML implements BaseXML<MasterRecord> {
   private List<String> styles;
 
   @Override
-  public MasterRecord buildRecord() {
+  public MasterRecord buildRecord(LocalDateTime observedAt) {
     return new MasterRecord()
         .setId(id)
         .setTitle(title)
         .setYear(year)
         .setDataQuality(dataQuality)
-        .setCreatedAt(LocalDateTime.now(Clock.systemUTC()))
-        .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()));
+        .setCreatedAt(observedAt)
+        .setLastModifiedAt(observedAt);
   }
 }

@@ -23,6 +23,7 @@ import io.dsub.discogs.batch.job.reader.SourceChunkItemStreamReader;
 import io.dsub.discogs.batch.job.tasklet.FileFetchTasklet;
 import io.dsub.discogs.batch.util.FileUtil;
 import io.dsub.discogs.batch.job.writer.DurableRelationItemWriterFactory;
+import io.dsub.discogs.batch.job.writer.ProcessedChunkItemWriter;
 import io.dsub.opendiscogs.jooq.tables.records.LabelRecord;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,7 +38,6 @@ import org.springframework.batch.core.job.flow.support.SimpleFlow;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.infrastructure.item.ItemProcessor;
 import org.springframework.batch.infrastructure.item.ItemWriter;
-import org.springframework.batch.infrastructure.item.support.SynchronizedItemStreamReader;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -57,10 +57,11 @@ public class LabelStepConfig extends AbstractStepConfig {
   public static final String LABEL_FILE_FETCH_STEP = "label file fetch step";
   public static final String LABEL_FILE_CLEAR_STEP = "label file clear step";
 
-  private final SynchronizedItemStreamReader<LabelXML> labelStreamReader;
+  private final SourceChunkItemStreamReader<LabelXML> labelStreamReader;
   private final SourceChunkItemStreamReader<LabelSubItemsXML> labelSubItemsStreamReader;
 
-  private final ItemProcessor<LabelXML, LabelRecord> labelCoreProcessor;
+  private final ItemProcessor<SourceChunk<LabelXML>, ProcessedChunk<LabelRecord>>
+      labelCoreProcessor;
   private final ItemProcessor<SourceChunk<LabelSubItemsXML>, ProcessedChunk<RelationSet>>
       labelSubItemsProcessor;
   private final DurableRelationItemWriterFactory durableRelationItemWriterFactory;
@@ -100,13 +101,13 @@ public class LabelStepConfig extends AbstractStepConfig {
             .fail()
             .from(labelFileFetchStep())
             .on(ANY)
-            .to(labelCoreInsertionStep(null))
+            .to(labelCoreInsertionStep())
 
             // from core item insertion
-            .from(labelCoreInsertionStep(null))
+            .from(labelCoreInsertionStep())
             .on(FAILED)
             .fail()
-            .from(labelCoreInsertionStep(null))
+            .from(labelCoreInsertionStep())
             .on(ANY)
             .to(labelSubItemsInsertionStep(null, null, null))
 
@@ -132,13 +133,14 @@ public class LabelStepConfig extends AbstractStepConfig {
 
   @Bean
   @JobScope
-  public Step labelCoreInsertionStep(@Value(CHUNK) Integer chunkSize) {
+  public Step labelCoreInsertionStep() {
     return new StepBuilder(LABEL_CORE_INSERTION_STEP, jobRepository)
-        .<LabelXML, UpdatableRecord<?>>chunk(chunkSize)
+        .<SourceChunk<LabelXML>, ProcessedChunk<LabelRecord>>chunk(
+            TRACKED_CHUNKS_PER_TRANSACTION)
         .transactionManager(transactionManager)
         .reader(labelStreamReader)
         .processor(labelCoreProcessor)
-        .writer(entityItemWriter)
+        .writer(new ProcessedChunkItemWriter<>(entityItemWriter))
         .faultTolerant()
         .retryLimit(10)
         .retry(PessimisticLockingFailureException.class)

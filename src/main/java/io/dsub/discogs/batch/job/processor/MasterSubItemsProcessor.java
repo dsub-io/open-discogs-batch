@@ -11,33 +11,19 @@ import io.dsub.discogs.batch.util.ReflectionUtil;
 import io.dsub.opendiscogs.jooq.tables.records.MasterGenreRecord;
 import io.dsub.opendiscogs.jooq.tables.records.MasterStyleRecord;
 import io.dsub.opendiscogs.jooq.tables.records.MasterVideoRecord;
-import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import org.jooq.UpdatableRecord;
-import org.springframework.batch.infrastructure.item.ItemProcessor;
 
 public class MasterSubItemsProcessor
-    implements ItemProcessor<MasterSubItemsXML, RelationSet>,
-        ObservedAtItemProcessor<MasterSubItemsXML, RelationSet> {
+    implements ObservedAtItemProcessor<MasterSubItemsXML, RelationSet> {
 
   private final EntityIdRegistry idRegistry;
-  private final Clock clock;
 
   public MasterSubItemsProcessor(EntityIdRegistry idRegistry) {
-    this(idRegistry, Clock.systemUTC());
-  }
-
-  MasterSubItemsProcessor(EntityIdRegistry idRegistry, Clock clock) {
     this.idRegistry = Objects.requireNonNull(idRegistry, "idRegistry must not be null");
-    this.clock = Objects.requireNonNull(clock, "clock must not be null");
-  }
-
-  @Override
-  public RelationSet process(MasterSubItemsXML master) {
-    return process(master, LocalDateTime.now(clock));
   }
 
   @Override

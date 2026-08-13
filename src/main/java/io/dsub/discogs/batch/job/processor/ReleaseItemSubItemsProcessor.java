@@ -7,38 +7,20 @@ import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
 import io.dsub.discogs.batch.util.ReflectionUtil;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemGenreRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemStyleRecord;
-import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import org.jooq.UpdatableRecord;
-import org.springframework.batch.infrastructure.item.ItemProcessor;
 
 public class ReleaseItemSubItemsProcessor
-    implements ItemProcessor<ReleaseItemSubItemsXML, RelationSet>,
-        ObservedAtItemProcessor<ReleaseItemSubItemsXML, RelationSet> {
+    implements ObservedAtItemProcessor<ReleaseItemSubItemsXML, RelationSet> {
 
   private final EntityIdRegistry idRegistry;
-  private final Clock clock;
 
   public ReleaseItemSubItemsProcessor(EntityIdRegistry idRegistry) {
-    this(idRegistry, Clock.systemUTC());
-  }
-
-  ReleaseItemSubItemsProcessor(EntityIdRegistry idRegistry, Clock clock) {
     this.idRegistry = Objects.requireNonNull(idRegistry, "idRegistry must not be null");
-    this.clock = Objects.requireNonNull(clock, "clock must not be null");
-  }
-
-  @Override
-  public RelationSet process(ReleaseItemSubItemsXML item) {
-    if (item == null) {
-      return null;
-    }
-    ReflectionUtil.normalizeReleaseStringFields(item);
-    return processNormalized(item, LocalDateTime.now(clock));
   }
 
   @Override

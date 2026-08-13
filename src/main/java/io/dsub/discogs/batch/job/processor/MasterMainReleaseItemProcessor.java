@@ -4,17 +4,21 @@ import io.dsub.discogs.batch.domain.master.MasterMainReleaseAssignment;
 import io.dsub.discogs.batch.domain.master.MasterMainReleaseXML;
 import io.dsub.discogs.batch.job.registry.DefaultEntityIdRegistry;
 import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
-import lombok.RequiredArgsConstructor;
-import org.springframework.batch.infrastructure.item.ItemProcessor;
+import java.time.LocalDateTime;
+import java.util.Objects;
 
-@RequiredArgsConstructor
 public class MasterMainReleaseItemProcessor
-    implements ItemProcessor<MasterMainReleaseXML, MasterMainReleaseAssignment> {
+    implements ObservedAtItemProcessor<MasterMainReleaseXML, MasterMainReleaseAssignment> {
 
   private final EntityIdRegistry idRegistry;
 
+  public MasterMainReleaseItemProcessor(EntityIdRegistry idRegistry) {
+    this.idRegistry = Objects.requireNonNull(idRegistry, "idRegistry must not be null");
+  }
+
   @Override
-  public MasterMainReleaseAssignment process(MasterMainReleaseXML item) throws Exception {
+  public MasterMainReleaseAssignment process(
+      MasterMainReleaseXML item, LocalDateTime observedAt) {
     if (item == null
         || !idRegistry.exists(DefaultEntityIdRegistry.Type.RELEASE, item.getReleaseId())) {
       return null;
@@ -27,6 +31,6 @@ public class MasterMainReleaseItemProcessor
       return null;
     }
 
-    return item.buildRecord();
+    return item.buildRecord(observedAt);
   }
 }

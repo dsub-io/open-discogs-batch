@@ -7,33 +7,19 @@ import io.dsub.discogs.batch.dump.EntityType;
 import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
 import io.dsub.discogs.batch.util.ReflectionUtil;
 import io.dsub.opendiscogs.jooq.tables.records.LabelUrlRecord;
-import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import org.jooq.UpdatableRecord;
-import org.springframework.batch.infrastructure.item.ItemProcessor;
 
 public class LabelSubItemsProcessor
-    implements ItemProcessor<LabelSubItemsXML, RelationSet>,
-        ObservedAtItemProcessor<LabelSubItemsXML, RelationSet> {
+    implements ObservedAtItemProcessor<LabelSubItemsXML, RelationSet> {
 
   private final EntityIdRegistry idRegistry;
-  private final Clock clock;
 
   public LabelSubItemsProcessor(EntityIdRegistry idRegistry) {
-    this(idRegistry, Clock.systemUTC());
-  }
-
-  LabelSubItemsProcessor(EntityIdRegistry idRegistry, Clock clock) {
     this.idRegistry = Objects.requireNonNull(idRegistry, "idRegistry must not be null");
-    this.clock = Objects.requireNonNull(clock, "clock must not be null");
-  }
-
-  @Override
-  public RelationSet process(LabelSubItemsXML item) {
-    return process(item, LocalDateTime.now(clock));
   }
 
   @Override

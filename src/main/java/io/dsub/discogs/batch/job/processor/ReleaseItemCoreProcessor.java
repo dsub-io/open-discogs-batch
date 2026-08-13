@@ -8,35 +8,28 @@ import io.dsub.discogs.batch.util.DefaultMalformedDateParser;
 import io.dsub.discogs.batch.util.MalformedDateParser;
 import io.dsub.discogs.batch.util.ReflectionUtil;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemRecord;
-import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.Objects;
-import org.springframework.batch.infrastructure.item.ItemProcessor;
 
-public class ReleaseItemCoreProcessor implements ItemProcessor<ReleaseItemXML, ReleaseItemRecord> {
+public class ReleaseItemCoreProcessor
+    implements ObservedAtItemProcessor<ReleaseItemXML, ReleaseItemRecord> {
 
   private final MalformedDateParser parser = new DefaultMalformedDateParser();
   private final EntityIdRegistry idRegistry;
-  private final Clock clock;
 
   public ReleaseItemCoreProcessor(EntityIdRegistry idRegistry) {
-    this(idRegistry, Clock.systemUTC());
-  }
-
-  ReleaseItemCoreProcessor(EntityIdRegistry idRegistry, Clock clock) {
     this.idRegistry = Objects.requireNonNull(idRegistry, "idRegistry must not be null");
-    this.clock = Objects.requireNonNull(clock, "clock must not be null");
   }
 
   @Override
-  public ReleaseItemRecord process(ReleaseItemXML release) throws Exception {
+  public ReleaseItemRecord process(ReleaseItemXML release, LocalDateTime observedAt) {
 
     if (!hasValidId(release.getId())) {
       return null;
     }
 
     ReflectionUtil.normalizeReleaseStringFields(release);
-    return processNormalized(release, LocalDateTime.now(clock));
+    return processNormalized(release, observedAt);
   }
 
   ReleaseItemRecord processNormalized(ReleaseItemXML release, LocalDateTime observedAt) {

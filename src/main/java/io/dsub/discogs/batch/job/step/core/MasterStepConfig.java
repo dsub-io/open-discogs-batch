@@ -24,6 +24,7 @@ import io.dsub.discogs.batch.job.tasklet.FileFetchTasklet;
 import io.dsub.discogs.batch.job.tasklet.GenreStyleInsertionTasklet;
 import io.dsub.discogs.batch.util.FileUtil;
 import io.dsub.discogs.batch.job.writer.DurableRelationItemWriterFactory;
+import io.dsub.discogs.batch.job.writer.ProcessedChunkItemWriter;
 import io.dsub.opendiscogs.jooq.tables.records.MasterRecord;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,7 +39,6 @@ import org.springframework.batch.core.job.flow.support.SimpleFlow;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.infrastructure.item.ItemProcessor;
 import org.springframework.batch.infrastructure.item.ItemWriter;
-import org.springframework.batch.infrastructure.item.support.SynchronizedItemStreamReader;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -60,9 +60,10 @@ public class MasterStepConfig extends AbstractStepConfig {
   public static final String MASTER_GENRE_STYLE_INSERTION_STEP =
       "master genre style insertion step";
 
-  private final SynchronizedItemStreamReader<MasterXML> masterStreamReader;
+  private final SourceChunkItemStreamReader<MasterXML> masterStreamReader;
   private final SourceChunkItemStreamReader<MasterSubItemsXML> masterSubItemsStreamReader;
-  private final ItemProcessor<MasterXML, MasterRecord> masterCoreProcessor;
+  private final ItemProcessor<SourceChunk<MasterXML>, ProcessedChunk<MasterRecord>>
+      masterCoreProcessor;
   private final ItemProcessor<SourceChunk<MasterSubItemsXML>, ProcessedChunk<RelationSet>>
       masterSubItemsProcessor;
   private final DurableRelationItemWriterFactory durableRelationItemWriterFactory;
@@ -104,13 +105,13 @@ public class MasterStepConfig extends AbstractStepConfig {
             .fail()
             .from(masterFileFetchStep())
             .on(ANY)
-            .to(masterCoreInsertionStep(chunkSize))
+            .to(masterCoreInsertionStep())
 
             // from core insertion
-            .from(masterCoreInsertionStep(chunkSize))
+            .from(masterCoreInsertionStep())
             .on(FAILED)
             .fail()
-            .from(masterCoreInsertionStep(chunkSize))
+            .from(masterCoreInsertionStep())
             .on(ANY)
             .to(masterGenreStyleInsertionStep())
 
@@ -153,13 +154,14 @@ public class MasterStepConfig extends AbstractStepConfig {
 
   @Bean
   @JobScope
-  public Step masterCoreInsertionStep(@Value(CHUNK) Integer chunkSize) {
+  public Step masterCoreInsertionStep() {
     return new StepBuilder(MASTER_CORE_INSERTION_STEP, jobRepository)
-        .<MasterXML, UpdatableRecord<?>>chunk(chunkSize)
+        .<SourceChunk<MasterXML>, ProcessedChunk<MasterRecord>>chunk(
+            TRACKED_CHUNKS_PER_TRANSACTION)
         .transactionManager(transactionManager)
         .reader(masterStreamReader)
         .processor(masterCoreProcessor)
-        .writer(entityItemWriter)
+        .writer(new ProcessedChunkItemWriter<>(entityItemWriter))
         .faultTolerant()
         .retryLimit(10)
         .retry(PessimisticLockingFailureException.class)

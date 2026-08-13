@@ -27,8 +27,8 @@ public class ItemProcessorConfig {
 
   @Bean
   @StepScope
-  public ItemProcessor<ArtistXML, ArtistRecord> artistCoreProcessor() {
-    return new ArtistCoreProcessor();
+  public ItemProcessor<SourceChunk<ArtistXML>, ProcessedChunk<ArtistRecord>> artistCoreProcessor() {
+    return new SourceChunkItemProcessor<>(new ArtistCoreProcessor());
   }
 
   @Bean
@@ -40,8 +40,8 @@ public class ItemProcessorConfig {
 
   @Bean
   @StepScope
-  public ItemProcessor<LabelXML, LabelRecord> labelCoreProcessor() {
-    return new LabelCoreProcessor();
+  public ItemProcessor<SourceChunk<LabelXML>, ProcessedChunk<LabelRecord>> labelCoreProcessor() {
+    return new SourceChunkItemProcessor<>(new LabelCoreProcessor());
   }
 
   @Bean
@@ -53,8 +53,8 @@ public class ItemProcessorConfig {
 
   @Bean
   @StepScope
-  public ItemProcessor<MasterXML, MasterRecord> masterCoreProcessor() {
-    return new MasterCoreProcessor();
+  public ItemProcessor<SourceChunk<MasterXML>, ProcessedChunk<MasterRecord>> masterCoreProcessor() {
+    return new SourceChunkItemProcessor<>(new MasterCoreProcessor());
   }
 
   @Bean

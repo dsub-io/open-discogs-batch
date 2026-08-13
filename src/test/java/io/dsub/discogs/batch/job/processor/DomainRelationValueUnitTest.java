@@ -50,14 +50,14 @@ class DomainRelationValueUnitTest {
   void masterMainReleaseBuildHandlesMissingAndPresentMaster() {
     MasterMainReleaseXML value = new MasterMainReleaseXML();
     value.setReleaseId(11);
-    assertThat(value.buildRecord().targetMasterId()).isNull();
+    assertThat(value.buildRecord(java.time.LocalDateTime.MIN).targetMasterId()).isNull();
 
     MasterMainReleaseXML.Master master = new MasterMainReleaseXML.Master();
     master.setMasterId(7);
     value.setMaster(master);
-    assertThat(value.buildRecord().targetMasterId()).isNull();
+    assertThat(value.buildRecord(java.time.LocalDateTime.MIN).targetMasterId()).isNull();
     master.setMainRelease(true);
-    assertThat(value.buildRecord())
+    assertThat(value.buildRecord(java.time.LocalDateTime.MIN))
         .satisfies(
             record -> {
               assertThat(record.targetMasterId()).isEqualTo(7);

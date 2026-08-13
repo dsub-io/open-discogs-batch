@@ -1,7 +1,6 @@
 package io.dsub.discogs.batch.domain.master;
 
 import io.dsub.discogs.batch.domain.BaseXML;
-import java.time.Clock;
 import java.time.LocalDateTime;
 import jakarta.xml.bind.annotation.XmlAccessType;
 import jakarta.xml.bind.annotation.XmlAccessorType;
@@ -25,11 +24,11 @@ public class MasterMainReleaseXML implements BaseXML<MasterMainReleaseAssignment
   private Master master;
 
   @Override
-  public MasterMainReleaseAssignment buildRecord() {
+  public MasterMainReleaseAssignment buildRecord(LocalDateTime observedAt) {
     Integer targetMasterId =
         master != null && master.isMainRelease() ? master.getMasterId() : null;
     return new MasterMainReleaseAssignment(
-        releaseId, targetMasterId, LocalDateTime.now(Clock.systemUTC()));
+        releaseId, targetMasterId, observedAt);
   }
 
   @Data

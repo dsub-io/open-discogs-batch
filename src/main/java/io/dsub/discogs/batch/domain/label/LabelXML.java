@@ -2,7 +2,6 @@ package io.dsub.discogs.batch.domain.label;
 
 import io.dsub.discogs.batch.domain.BaseXML;
 import io.dsub.opendiscogs.jooq.tables.records.LabelRecord;
-import java.time.Clock;
 import java.time.LocalDateTime;
 import jakarta.xml.bind.annotation.XmlAccessType;
 import jakarta.xml.bind.annotation.XmlAccessorType;
@@ -31,14 +30,14 @@ public class LabelXML implements BaseXML<LabelRecord> {
   private String dataQuality;
 
   @Override
-  public LabelRecord buildRecord() {
+  public LabelRecord buildRecord(LocalDateTime observedAt) {
     return new LabelRecord()
         .setId(id)
         .setName(name)
         .setContactInfo(contactInfo)
         .setProfile(profile)
         .setDataQuality(dataQuality)
-        .setCreatedAt(LocalDateTime.now(Clock.systemUTC()))
-        .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()));
+        .setCreatedAt(observedAt)
+        .setLastModifiedAt(observedAt);
   }
 }

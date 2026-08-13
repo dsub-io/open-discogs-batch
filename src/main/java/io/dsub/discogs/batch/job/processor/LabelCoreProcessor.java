@@ -3,18 +3,17 @@ package io.dsub.discogs.batch.job.processor;
 import io.dsub.discogs.batch.domain.label.LabelXML;
 import io.dsub.discogs.batch.util.ReflectionUtil;
 import io.dsub.opendiscogs.jooq.tables.records.LabelRecord;
-import lombok.RequiredArgsConstructor;
-import org.springframework.batch.infrastructure.item.ItemProcessor;
+import java.time.LocalDateTime;
 
-@RequiredArgsConstructor
-public class LabelCoreProcessor implements ItemProcessor<LabelXML, LabelRecord> {
+public class LabelCoreProcessor
+    implements ObservedAtItemProcessor<LabelXML, LabelRecord> {
 
   @Override
-  public LabelRecord process(LabelXML command) throws Exception {
+  public LabelRecord process(LabelXML command, LocalDateTime observedAt) {
     if (command.getId() == null || command.getId() < 1) {
       return null;
     }
     ReflectionUtil.normalizeStringFields(command);
-    return command.buildRecord();
+    return command.buildRecord(observedAt);
   }
 }

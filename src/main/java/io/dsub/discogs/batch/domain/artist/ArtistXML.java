@@ -2,7 +2,6 @@ package io.dsub.discogs.batch.domain.artist;
 
 import io.dsub.discogs.batch.domain.BaseXML;
 import io.dsub.opendiscogs.jooq.tables.records.ArtistRecord;
-import java.time.Clock;
 import java.time.LocalDateTime;
 import jakarta.xml.bind.annotation.XmlAccessType;
 import jakarta.xml.bind.annotation.XmlAccessorType;
@@ -31,14 +30,14 @@ public class ArtistXML implements BaseXML<ArtistRecord> {
   private String dataQuality;
 
   @Override
-  public ArtistRecord buildRecord() {
+  public ArtistRecord buildRecord(LocalDateTime observedAt) {
     return new ArtistRecord()
         .setId(id)
         .setName(name)
         .setRealName(realName)
         .setProfile(profile)
         .setDataQuality(dataQuality)
-        .setLastModifiedAt(LocalDateTime.now(Clock.systemUTC()))
-        .setCreatedAt(LocalDateTime.now(Clock.systemUTC()));
+        .setLastModifiedAt(observedAt)
+        .setCreatedAt(observedAt);
   }
 }

@@ -7,35 +7,21 @@ import io.dsub.discogs.batch.util.ReflectionUtil;
 import io.dsub.opendiscogs.jooq.tables.records.GenreRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemRecord;
 import io.dsub.opendiscogs.jooq.tables.records.StyleRecord;
-import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
-import org.springframework.batch.infrastructure.item.ItemProcessor;
 
 /** Builds the root, relations, and main-release assignment from one XML element. */
 public final class ReleaseRootMutationProcessor
-    implements ItemProcessor<ReleaseItemSubItemsXML, ReleaseRootMutation>,
-        ObservedAtItemProcessor<ReleaseItemSubItemsXML, ReleaseRootMutation> {
+    implements ObservedAtItemProcessor<ReleaseItemSubItemsXML, ReleaseRootMutation> {
 
   private final ReleaseItemCoreProcessor coreProcessor;
   private final ReleaseItemSubItemsProcessor relationProcessor;
-  private final Clock clock;
 
   public ReleaseRootMutationProcessor(EntityIdRegistry idRegistry) {
-    this(idRegistry, Clock.systemUTC());
-  }
-
-  ReleaseRootMutationProcessor(EntityIdRegistry idRegistry, Clock clock) {
     this.coreProcessor = new ReleaseItemCoreProcessor(idRegistry);
     this.relationProcessor = new ReleaseItemSubItemsProcessor(idRegistry);
-    this.clock = Objects.requireNonNull(clock, "clock must not be null");
-  }
-
-  @Override
-  public ReleaseRootMutation process(ReleaseItemSubItemsXML source) throws Exception {
-    return process(source, LocalDateTime.now(clock));
   }
 
   @Override

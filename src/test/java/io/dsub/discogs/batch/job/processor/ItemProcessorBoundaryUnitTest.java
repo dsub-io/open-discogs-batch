@@ -16,10 +16,20 @@ import io.dsub.discogs.batch.domain.master.MasterXML;
 import io.dsub.discogs.batch.domain.release.ReleaseItemSubItemsXML;
 import io.dsub.discogs.batch.domain.release.ReleaseItemXML;
 import io.dsub.discogs.batch.job.registry.EntityIdRegistry;
+import io.dsub.discogs.batch.job.progress.ChunkRange;
+import io.dsub.discogs.batch.job.progress.SourceChunk;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class ItemProcessorBoundaryUnitTest {
+
+  private static final Clock FIXED_CLOCK =
+      Clock.fixed(Instant.parse("2026-08-01T00:00:00Z"), ZoneOffset.UTC);
+  private static final LocalDateTime OBSERVED_AT = LocalDateTime.of(2026, 8, 1, 0, 0);
 
   @Test
   void coreProcessorsRejectMissingIdsAndNormalizeValidRecords() throws Exception {
@@ -28,28 +38,50 @@ class ItemProcessorBoundaryUnitTest {
     MasterCoreProcessor masterProcessor = new MasterCoreProcessor();
 
     ArtistXML artist = new ArtistXML();
-    assertThat(artistProcessor.process(artist)).isNull();
+    assertThat(artistProcessor.process(artist, OBSERVED_AT)).isNull();
     artist.setId(0);
-    assertThat(artistProcessor.process(artist)).isNull();
+    assertThat(artistProcessor.process(artist, OBSERVED_AT)).isNull();
     artist.setId(1);
     artist.setName(" Artist ");
-    assertThat(artistProcessor.process(artist).getName()).isEqualTo("Artist");
+    assertThat(artistProcessor.process(artist, OBSERVED_AT).getName()).isEqualTo("Artist");
 
     LabelXML label = new LabelXML();
-    assertThat(labelProcessor.process(label)).isNull();
+    assertThat(labelProcessor.process(label, OBSERVED_AT)).isNull();
     label.setId(-1);
-    assertThat(labelProcessor.process(label)).isNull();
+    assertThat(labelProcessor.process(label, OBSERVED_AT)).isNull();
     label.setId(1);
     label.setName(" Label ");
-    assertThat(labelProcessor.process(label).getName()).isEqualTo("Label");
+    assertThat(labelProcessor.process(label, OBSERVED_AT).getName()).isEqualTo("Label");
 
     MasterXML master = new MasterXML();
-    assertThat(masterProcessor.process(master)).isNull();
+    assertThat(masterProcessor.process(master, OBSERVED_AT)).isNull();
     master.setId(0);
-    assertThat(masterProcessor.process(master)).isNull();
+    assertThat(masterProcessor.process(master, OBSERVED_AT)).isNull();
     master.setId(1);
     master.setTitle(" Master ");
-    assertThat(masterProcessor.process(master).getTitle()).isEqualTo("Master");
+    assertThat(masterProcessor.process(master, OBSERVED_AT).getTitle()).isEqualTo("Master");
+  }
+
+  @Test
+  void coreSourceChunkSharesOneObservedTimestamp() throws Exception {
+    ArtistXML first = new ArtistXML();
+    first.setId(1);
+    ArtistXML second = new ArtistXML();
+    second.setId(2);
+    SourceChunkItemProcessor<ArtistXML, io.dsub.opendiscogs.jooq.tables.records.ArtistRecord>
+        processor = new SourceChunkItemProcessor<>(new ArtistCoreProcessor(), FIXED_CLOCK);
+
+    var result =
+        processor.process(
+            new SourceChunk<>(new ChunkRange(0, 0, 2), List.of(first, second)));
+
+    assertThat(result.values())
+        .extracting(io.dsub.opendiscogs.jooq.tables.records.ArtistRecord::getCreatedAt)
+        .containsOnly(LocalDateTime.of(2026, 8, 1, 0, 0));
+    assertThat(result.values())
+        .allSatisfy(
+            record ->
+                assertThat(record.getLastModifiedAt()).isEqualTo(record.getCreatedAt()));
   }
 
   @Test
@@ -58,14 +90,14 @@ class ItemProcessorBoundaryUnitTest {
     ReleaseItemCoreProcessor processor = new ReleaseItemCoreProcessor(registry);
     ReleaseItemXML release = new ReleaseItemXML();
 
-    assertThat(processor.process(release)).isNull();
+    assertThat(processor.process(release, OBSERVED_AT)).isNull();
     release.setId(0);
-    assertThat(processor.process(release)).isNull();
+    assertThat(processor.process(release, OBSERVED_AT)).isNull();
 
     release.setId(10);
     release.setTitle(" Release ");
     release.setReleaseDate("2026-07-01");
-    assertThat(processor.process(release))
+    assertThat(processor.process(release, OBSERVED_AT))
         .satisfies(
             record -> {
               assertThat(record.getTitle()).isEqualTo("Release");
@@ -76,11 +108,11 @@ class ItemProcessorBoundaryUnitTest {
     ReleaseItemXML.Master master = new ReleaseItemXML.Master();
     master.setMaster(true);
     release.setMaster(master);
-    assertThat(processor.process(release).getMasterId()).isNull();
+    assertThat(processor.process(release, OBSERVED_AT).getMasterId()).isNull();
     master.setMasterId(2);
-    assertThat(processor.process(release).getMasterId()).isNull();
+    assertThat(processor.process(release, OBSERVED_AT).getMasterId()).isNull();
     master.setMasterId(1);
-    assertThat(processor.process(release))
+    assertThat(processor.process(release, OBSERVED_AT))
         .satisfies(
             record -> {
               assertThat(record.getMasterId()).isEqualTo(1);
@@ -94,10 +126,10 @@ class ItemProcessorBoundaryUnitTest {
     MasterMainReleaseItemProcessor processor = new MasterMainReleaseItemProcessor(registry());
     MasterMainReleaseXML item = new MasterMainReleaseXML();
 
-    assertThat(processor.process(null)).isNull();
-    assertThat(processor.process(item)).isNull();
+    assertThat(processor.process(null, OBSERVED_AT)).isNull();
+    assertThat(processor.process(item, OBSERVED_AT)).isNull();
     item.setReleaseId(1);
-    assertThat(processor.process(item))
+    assertThat(processor.process(item, OBSERVED_AT))
         .satisfies(
             record -> {
               assertThat(record.targetMasterId()).isNull();
@@ -106,19 +138,19 @@ class ItemProcessorBoundaryUnitTest {
 
     MasterMainReleaseXML.Master master = new MasterMainReleaseXML.Master();
     item.setMaster(master);
-    assertThat(processor.process(item).targetMasterId()).isNull();
+    assertThat(processor.process(item, OBSERVED_AT).targetMasterId()).isNull();
     master.setMasterId(1);
-    assertThat(processor.process(item).targetMasterId()).isNull();
+    assertThat(processor.process(item, OBSERVED_AT).targetMasterId()).isNull();
     master.setMainRelease(true);
     master.setMasterId(null);
-    assertThat(processor.process(item)).isNull();
+    assertThat(processor.process(item, OBSERVED_AT)).isNull();
     master.setMasterId(2);
-    assertThat(processor.process(item)).isNull();
+    assertThat(processor.process(item, OBSERVED_AT)).isNull();
     master.setMasterId(1);
     item.setReleaseId(2);
-    assertThat(processor.process(item)).isNull();
+    assertThat(processor.process(item, OBSERVED_AT)).isNull();
     item.setReleaseId(1);
-    assertThat(processor.process(item))
+    assertThat(processor.process(item, OBSERVED_AT))
         .satisfies(
             record -> {
               assertThat(record.targetMasterId()).isEqualTo(1);
@@ -131,18 +163,18 @@ class ItemProcessorBoundaryUnitTest {
     ArtistSubItemsProcessor processor = new ArtistSubItemsProcessor(registry());
     ArtistSubItemsXML item = new ArtistSubItemsXML();
 
-    assertThat(processor.process(item)).isNull();
+    assertThat(processor.process(item, OBSERVED_AT)).isNull();
     item.setId(0);
-    assertThat(processor.process(item)).isNull();
+    assertThat(processor.process(item, OBSERVED_AT)).isNull();
     item.setId(1);
-    assertThat(processor.process(item).records()).isEmpty();
+    assertThat(processor.process(item, OBSERVED_AT).records()).isEmpty();
 
     item.setAliases(List.of());
     item.setGroups(List.of());
     item.setMembers(List.of());
     item.setNameVariations(List.of());
     item.setUrls(List.of());
-    assertThat(processor.process(item).records()).isEmpty();
+    assertThat(processor.process(item, OBSERVED_AT).records()).isEmpty();
 
     ArtistSubItemsXML.ArtistAliasXML alias = new ArtistSubItemsXML.ArtistAliasXML();
     alias.setAliasId(1);
@@ -158,7 +190,7 @@ class ItemProcessorBoundaryUnitTest {
     item.setNameVariations(listWithNull(" Name ", " ", "Name"));
     item.setUrls(listWithNull(" https://example.test ", "", "https://example.test"));
 
-    assertThat(processor.process(item).records()).hasSize(10);
+    assertThat(processor.process(item, OBSERVED_AT).records()).hasSize(10);
   }
 
   @Test
@@ -166,13 +198,13 @@ class ItemProcessorBoundaryUnitTest {
     LabelSubItemsProcessor processor = new LabelSubItemsProcessor(registry());
     LabelSubItemsXML item = new LabelSubItemsXML();
 
-    assertThat(processor.process(item)).isNull();
+    assertThat(processor.process(item, OBSERVED_AT)).isNull();
     item.setId(-1);
-    assertThat(processor.process(item)).isNull();
+    assertThat(processor.process(item, OBSERVED_AT)).isNull();
     item.setId(1);
     item.setLabelSubLabels(null);
     item.setUrls(null);
-    assertThat(processor.process(item).records()).isEmpty();
+    assertThat(processor.process(item, OBSERVED_AT).records()).isEmpty();
 
     LabelSubItemsXML.LabelSubLabelXML existing = new LabelSubItemsXML.LabelSubLabelXML();
     existing.setSubLabelId(1);
@@ -181,7 +213,7 @@ class ItemProcessorBoundaryUnitTest {
     item.setLabelSubLabels(listWithNull(existing, missing, existing));
     item.setUrls(listWithNull(" https://example.test ", " ", "https://example.test"));
 
-    assertThat(processor.process(item).records()).hasSize(4);
+    assertThat(processor.process(item, OBSERVED_AT).records()).hasSize(4);
   }
 
   @Test
@@ -189,16 +221,16 @@ class ItemProcessorBoundaryUnitTest {
     MasterSubItemsProcessor processor = new MasterSubItemsProcessor(registry());
     MasterSubItemsXML item = new MasterSubItemsXML();
 
-    assertThat(processor.process(item)).isNull();
+    assertThat(processor.process(item, OBSERVED_AT)).isNull();
     item.setId(0);
-    assertThat(processor.process(item)).isNull();
+    assertThat(processor.process(item, OBSERVED_AT)).isNull();
     item.setId(1);
-    assertThat(processor.process(item).records()).isEmpty();
+    assertThat(processor.process(item, OBSERVED_AT).records()).isEmpty();
     item.setMasterArtists(List.of());
     item.setMasterVideos(List.of());
     item.setGenres(List.of());
     item.setStyles(List.of());
-    assertThat(processor.process(item).records()).isEmpty();
+    assertThat(processor.process(item, OBSERVED_AT).records()).isEmpty();
 
     MasterSubItemsXML.MasterArtistXML artist = new MasterSubItemsXML.MasterArtistXML();
     artist.setArtistId(1);
@@ -212,7 +244,7 @@ class ItemProcessorBoundaryUnitTest {
     item.setGenres(listWithNull(" Rock ", "Missing", "Rock"));
     item.setStyles(listWithNull(" House ", "Missing", "House"));
 
-    assertThat(processor.process(item).records()).hasSize(8);
+    assertThat(processor.process(item, OBSERVED_AT).records()).hasSize(8);
   }
 
   @Test
@@ -220,13 +252,13 @@ class ItemProcessorBoundaryUnitTest {
     ReleaseItemSubItemsProcessor processor = new ReleaseItemSubItemsProcessor(registry());
     ReleaseItemSubItemsXML item = new ReleaseItemSubItemsXML();
 
-    assertThat(processor.process(item)).isNull();
+    assertThat(processor.process(item, OBSERVED_AT)).isNull();
     item.setId(0);
-    assertThat(processor.process(item)).isNull();
+    assertThat(processor.process(item, OBSERVED_AT)).isNull();
     item.setId(1);
-    assertThat(processor.process(item).records()).isEmpty();
+    assertThat(processor.process(item, OBSERVED_AT).records()).isEmpty();
     setEmptyReleaseRelations(item);
-    assertThat(processor.process(item).records()).isEmpty();
+    assertThat(processor.process(item, OBSERVED_AT).records()).isEmpty();
 
     ReleaseItemSubItemsXML.ReleaseAlbumArtist albumArtist =
         new ReleaseItemSubItemsXML.ReleaseAlbumArtist();
@@ -284,7 +316,7 @@ class ItemProcessorBoundaryUnitTest {
     item.setGenres(listWithNull(" Rock ", " ", "Missing", "Rock"));
     item.setStyles(listWithNull(" House ", " ", "Missing", "House"));
 
-    assertThat(processor.process(item).records()).hasSize(22);
+    assertThat(processor.process(item, OBSERVED_AT).records()).hasSize(22);
   }
 
   @Test
@@ -302,7 +334,7 @@ class ItemProcessorBoundaryUnitTest {
     compact.setCategoryNotation(" SK026 ");
     item.setLabelReleaseLabels(List.of(spaced, compact));
 
-    assertThat(processor.process(item).records())
+    assertThat(processor.process(item, OBSERVED_AT).records())
         .extracting(record -> record.get("category_notation"))
         .containsExactly("SK 026", "SK026");
   }

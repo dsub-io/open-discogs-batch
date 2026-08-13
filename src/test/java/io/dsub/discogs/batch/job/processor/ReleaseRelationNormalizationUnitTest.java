@@ -33,7 +33,8 @@ class ReleaseRelationNormalizationUnitTest {
     item.setLabelReleaseLabels(
         List.of(label(null), label(null), label("SK 026"), label(" SK026 ")));
 
-    RelationSet result = new ReleaseItemSubItemsProcessor(registry).process(item);
+    RelationSet result =
+        new ReleaseItemSubItemsProcessor(registry).process(item, java.time.LocalDateTime.MIN);
 
     assertThat(result.records()).filteredOn(ReleaseItemGenreRecord.class::isInstance).hasSize(2);
     assertThat(result.records()).filteredOn(ReleaseItemStyleRecord.class::isInstance).hasSize(2);
@@ -72,7 +73,8 @@ class ReleaseRelationNormalizationUnitTest {
         new ReleaseItemSubItemsXML.ReleaseFormat();
     item.setReleaseFormats(List.of(described, blank, missingDescriptions));
 
-    RelationSet result = new ReleaseItemSubItemsProcessor(registry).process(item);
+    RelationSet result =
+        new ReleaseItemSubItemsProcessor(registry).process(item, java.time.LocalDateTime.MIN);
 
     assertThat(result.records()).filteredOn(ReleaseItemFormatRecord.class::isInstance).hasSize(1);
   }

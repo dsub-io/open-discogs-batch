@@ -23,6 +23,7 @@ import io.dsub.discogs.batch.job.reader.SourceChunkItemStreamReader;
 import io.dsub.discogs.batch.job.tasklet.FileFetchTasklet;
 import io.dsub.discogs.batch.util.FileUtil;
 import io.dsub.discogs.batch.job.writer.DurableRelationItemWriterFactory;
+import io.dsub.discogs.batch.job.writer.ProcessedChunkItemWriter;
 import io.dsub.opendiscogs.jooq.tables.records.ArtistRecord;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,7 +38,6 @@ import org.springframework.batch.core.job.flow.support.SimpleFlow;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.infrastructure.item.ItemProcessor;
 import org.springframework.batch.infrastructure.item.ItemWriter;
-import org.springframework.batch.infrastructure.item.support.SynchronizedItemStreamReader;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -57,11 +57,12 @@ public class ArtistStepConfig extends AbstractStepConfig {
   public static final String ARTIST_FILE_FETCH_STEP = "artist file fetch step";
   public static final String ARTIST_FILE_CLEAR_STEP = "artist file clear step";
 
-  private final SynchronizedItemStreamReader<ArtistXML> artistStreamReader;
+  private final SourceChunkItemStreamReader<ArtistXML> artistStreamReader;
   private final SourceChunkItemStreamReader<ArtistSubItemsXML> artistSubItemsStreamReader;
   private final ItemProcessor<SourceChunk<ArtistSubItemsXML>, ProcessedChunk<RelationSet>>
       artistSubItemsProcessor;
-  private final ItemProcessor<ArtistXML, ArtistRecord> artistCoreProcessor;
+  private final ItemProcessor<SourceChunk<ArtistXML>, ProcessedChunk<ArtistRecord>>
+      artistCoreProcessor;
   private final ItemWriter<UpdatableRecord<?>> entityItemWriter;
   private final DurableRelationItemWriterFactory durableRelationItemWriterFactory;
   private final ImportProgressStore importProgressStore;
@@ -98,13 +99,13 @@ public class ArtistStepConfig extends AbstractStepConfig {
             .fail()
             .from(artistFileFetchStep())
             .on(ANY)
-            .to(artistCoreInsertionStep(null))
+            .to(artistCoreInsertionStep())
 
             // from core insert
-            .from(artistCoreInsertionStep(null))
+            .from(artistCoreInsertionStep())
             .on(FAILED)
             .fail()
-            .from(artistCoreInsertionStep(null))
+            .from(artistCoreInsertionStep())
             .on(ANY)
             .to(artistSubItemsInsertionStep(null, null, null))
 
@@ -130,13 +131,14 @@ public class ArtistStepConfig extends AbstractStepConfig {
 
   @Bean
   @JobScope
-  public Step artistCoreInsertionStep(@Value(CHUNK) Integer chunkSize) {
+  public Step artistCoreInsertionStep() {
     return new StepBuilder(ARTIST_CORE_INSERTION_STEP, jobRepository)
-        .<ArtistXML, UpdatableRecord<?>>chunk(chunkSize)
+        .<SourceChunk<ArtistXML>, ProcessedChunk<ArtistRecord>>chunk(
+            TRACKED_CHUNKS_PER_TRANSACTION)
         .transactionManager(transactionManager)
         .reader(artistStreamReader)
         .processor(artistCoreProcessor)
-        .writer(entityItemWriter)
+        .writer(new ProcessedChunkItemWriter<>(entityItemWriter))
         .faultTolerant()
         .retryLimit(100)
         .retry(PessimisticLockingFailureException.class)
