@@ -88,8 +88,7 @@ public abstract class AbstractJooqItemWriter<T extends UpdatableRecord<?>> imple
               .filter(
                   field ->
                       !hashIdentity
-                          || field.getName().equals("last_modified_at")
-                          || field.getName().equals("ordinal"))
+                          || field.getName().equals("last_modified_at"))
               .toList();
         });
   }

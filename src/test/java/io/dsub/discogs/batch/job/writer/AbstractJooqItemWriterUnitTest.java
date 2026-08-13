@@ -3,7 +3,6 @@ package io.dsub.discogs.batch.job.writer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import io.dsub.opendiscogs.jooq.tables.records.DiscogsDumpRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ArtistRecord;
 import io.dsub.opendiscogs.jooq.tables.records.GenreRecord;
 import io.dsub.opendiscogs.jooq.tables.records.MasterRecord;
@@ -57,9 +56,7 @@ class AbstractJooqItemWriterUnitTest {
 
     assertThat(names(writer.constraintFields(format)))
         .containsExactly("release_item_id", "hash");
-    assertThat(names(writer.constraintFields(image)))
-        .containsExactly("release_item_id", "hash");
-    assertThatThrownBy(() -> writer.constraintFields(new DiscogsDumpRecord()))
+    assertThatThrownBy(() -> writer.constraintFields(image))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("no registered canonical conflict key");
     assertThat(names(writer.constraintFields(artist))).containsExactly("id");
@@ -100,16 +97,16 @@ class AbstractJooqItemWriterUnitTest {
         .contains("last_modified_at", "name")
         .doesNotContain("id", "created_at");
     assertThat(names(writer.updateFields(master))).doesNotContain("main_release_id");
-    assertThat(names(writer.updateFields(video))).containsExactly("last_modified_at", "ordinal");
-    assertThat(names(writer.businessUpdateFields(video))).containsExactly("ordinal");
+    assertThat(names(writer.updateFields(video))).containsExactly("last_modified_at");
+    assertThat(names(writer.businessUpdateFields(video))).isEmpty();
     assertThat(names(writer.updateFields(format)))
-        .containsExactly("last_modified_at", "ordinal");
-    assertThat(names(writer.businessUpdateFields(format))).containsExactly("ordinal");
+        .containsExactly("last_modified_at");
+    assertThat(names(writer.businessUpdateFields(format))).isEmpty();
     assertThat(writer.updateFields(format)).isSameAs(writer.updateFields(format));
     assertThat(writer.businessUpdateFields(format))
         .isSameAs(writer.businessUpdateFields(format));
     assertThat(writer.bindValues(format))
-        .hasSize(writer.insertFields(format).size() + writer.updateFields(format).size())
+        .hasSize(writer.insertFields(format).size())
         .contains(NOW, 2, "Vinyl");
   }
 

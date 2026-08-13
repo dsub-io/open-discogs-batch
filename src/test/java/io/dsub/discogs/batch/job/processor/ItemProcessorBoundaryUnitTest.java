@@ -22,7 +22,6 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
-import org.jooq.UpdatableRecord;
 import org.junit.jupiter.api.Test;
 
 class ItemProcessorBoundaryUnitTest {
@@ -148,29 +147,13 @@ class ItemProcessorBoundaryUnitTest {
     group.setGroupId(1);
     ArtistSubItemsXML.ArtistMemberXML member = new ArtistSubItemsXML.ArtistMemberXML();
     member.setMemberId(1);
-    ArtistSubItemsXML.ArtistMemberXML missingMember = new ArtistSubItemsXML.ArtistMemberXML();
-    missingMember.setMemberId(2);
     item.setAliases(listWithNull(alias, null, missingAlias, alias));
     item.setGroups(listWithNull(group, null, group));
-    item.setMembers(listWithNull(member, null, missingMember, member));
+    item.setMembers(listWithNull(member, null, member));
     item.setNameVariations(listWithNull(" Name ", null, " ", "Name"));
     item.setUrls(listWithNull(" https://example.test ", null, "", "https://example.test"));
 
-    RelationSet result = processor.process(item, OBSERVED_AT);
-    assertThat(result.records()).hasSize(10);
-    assertThat(ordinals(result, io.dsub.opendiscogs.jooq.tables.records.ArtistAliasRecord.class))
-        .containsExactly(0, 3);
-    assertThat(ordinals(result, io.dsub.opendiscogs.jooq.tables.records.ArtistGroupRecord.class))
-        .containsExactly(0, 2);
-    assertThat(ordinals(result, io.dsub.opendiscogs.jooq.tables.records.ArtistMemberRecord.class))
-        .containsExactly(0, 3);
-    assertThat(
-            ordinals(
-                result,
-                io.dsub.opendiscogs.jooq.tables.records.ArtistNameVariationRecord.class))
-        .containsExactly(0, 3);
-    assertThat(ordinals(result, io.dsub.opendiscogs.jooq.tables.records.ArtistUrlRecord.class))
-        .containsExactly(0, 3);
+    assertThat(processor.process(item, OBSERVED_AT).records()).hasSize(10);
   }
 
   @Test
@@ -193,12 +176,7 @@ class ItemProcessorBoundaryUnitTest {
     item.setLabelSubLabels(listWithNull(existing, null, missing, existing));
     item.setUrls(listWithNull(" https://example.test ", null, " ", "https://example.test"));
 
-    RelationSet result = processor.process(item, OBSERVED_AT);
-    assertThat(result.records()).hasSize(4);
-    assertThat(ordinals(result, io.dsub.opendiscogs.jooq.tables.records.LabelSubLabelRecord.class))
-        .containsExactly(0, 3);
-    assertThat(ordinals(result, io.dsub.opendiscogs.jooq.tables.records.LabelUrlRecord.class))
-        .containsExactly(0, 3);
+    assertThat(processor.process(item, OBSERVED_AT).records()).hasSize(4);
   }
 
   @Test
@@ -229,16 +207,7 @@ class ItemProcessorBoundaryUnitTest {
     item.setGenres(listWithNull(" Rock ", null, "Missing", "Rock"));
     item.setStyles(listWithNull(" House ", null, "Missing", "House"));
 
-    RelationSet result = processor.process(item, OBSERVED_AT);
-    assertThat(result.records()).hasSize(8);
-    assertThat(ordinals(result, io.dsub.opendiscogs.jooq.tables.records.MasterArtistRecord.class))
-        .containsExactly(0, 3);
-    assertThat(ordinals(result, io.dsub.opendiscogs.jooq.tables.records.MasterVideoRecord.class))
-        .containsExactly(0, 2);
-    assertThat(ordinals(result, io.dsub.opendiscogs.jooq.tables.records.MasterGenreRecord.class))
-        .containsExactly(0, 3);
-    assertThat(ordinals(result, io.dsub.opendiscogs.jooq.tables.records.MasterStyleRecord.class))
-        .containsExactly(0, 3);
+    assertThat(processor.process(item, OBSERVED_AT).records()).hasSize(8);
   }
 
   @Test
@@ -270,10 +239,6 @@ class ItemProcessorBoundaryUnitTest {
     ReleaseItemSubItemsXML.ReleaseCreditedArtist missingCreditedArtist =
         new ReleaseItemSubItemsXML.ReleaseCreditedArtist();
     missingCreditedArtist.setArtistId(2);
-    ReleaseItemSubItemsXML.ReleaseCreditedArtist blankCreditedArtist =
-        new ReleaseItemSubItemsXML.ReleaseCreditedArtist();
-    blankCreditedArtist.setArtistId(1);
-    blankCreditedArtist.setRole(" ");
     ReleaseItemSubItemsXML.LabelItemRelease label =
         new ReleaseItemSubItemsXML.LabelItemRelease();
     label.setLabelId(1);
@@ -288,77 +253,34 @@ class ItemProcessorBoundaryUnitTest {
     company.setWork("Pressed By");
     ReleaseItemSubItemsXML.ReleaseWork missingCompany = new ReleaseItemSubItemsXML.ReleaseWork();
     missingCompany.setId(2);
-    ReleaseItemSubItemsXML.ReleaseWork blankCompany = new ReleaseItemSubItemsXML.ReleaseWork();
-    blankCompany.setId(1);
-    blankCompany.setWork(" ");
     ReleaseItemSubItemsXML.ReleaseFormat format = new ReleaseItemSubItemsXML.ReleaseFormat();
     format.setName("Vinyl");
     format.setDescriptions(listWithNull(" LP ", " "));
-    ReleaseItemSubItemsXML.ReleaseFormat blankFormat = new ReleaseItemSubItemsXML.ReleaseFormat();
     ReleaseItemSubItemsXML.ReleaseIdentifier identifier =
         new ReleaseItemSubItemsXML.ReleaseIdentifier();
     identifier.setType("Barcode");
     identifier.setValue("1");
-    ReleaseItemSubItemsXML.ReleaseIdentifier emptyIdentifier =
-        new ReleaseItemSubItemsXML.ReleaseIdentifier();
     ReleaseItemSubItemsXML.ReleaseTrack track = new ReleaseItemSubItemsXML.ReleaseTrack();
     track.setPosition("A1");
     track.setTitle("Track");
-    ReleaseItemSubItemsXML.ReleaseTrack emptyTrack = new ReleaseItemSubItemsXML.ReleaseTrack();
     ReleaseItemSubItemsXML.ReleaseVideo video = new ReleaseItemSubItemsXML.ReleaseVideo();
     video.setUrl("https://video");
     ReleaseItemSubItemsXML.ReleaseVideo invalidVideo = new ReleaseItemSubItemsXML.ReleaseVideo();
     invalidVideo.setUrl(null);
     item.setReleaseAlbumArtists(
-        listWithNull(albumArtist, null, invalidAlbumArtist, nullAlbumArtist, albumArtist));
+        listWithNull(albumArtist, invalidAlbumArtist, nullAlbumArtist, albumArtist));
     item.setReleaseCreditedArtists(
-        listWithNull(
-            creditedArtist, null, missingCreditedArtist, blankCreditedArtist, creditedArtist));
-    item.setLabelReleaseLabels(listWithNull(label, null, invalidLabel, zeroLabel, label));
-    item.setCompanies(listWithNull(company, null, missingCompany, blankCompany, company));
-    item.setReleaseFormats(listWithNull(format, null, blankFormat, format));
-    item.setReleaseIdentifiers(listWithNull(identifier, null, emptyIdentifier, identifier));
-    item.setReleaseTracks(listWithNull(track, null, emptyTrack, track));
-    item.setReleaseVideos(listWithNull(video, null, invalidVideo, video));
-    item.setGenres(listWithNull(" Rock ", null, " ", "Missing", "Rock"));
-    item.setStyles(listWithNull(" House ", null, " ", "Missing", "House"));
+        listWithNull(creditedArtist, missingCreditedArtist, creditedArtist));
+    item.setLabelReleaseLabels(listWithNull(label, invalidLabel, zeroLabel, label));
+    item.setCompanies(listWithNull(company, missingCompany, company));
+    item.setReleaseFormats(listWithNull(format, format));
+    item.setReleaseIdentifiers(listWithNull(identifier, identifier));
+    item.setReleaseTracks(listWithNull(track, track));
+    item.setReleaseVideos(listWithNull(video, invalidVideo, video));
+    item.setGenres(listWithNull(" Rock ", " ", "Missing", "Rock"));
+    item.setStyles(listWithNull(" House ", " ", "Missing", "House"));
 
-    RelationSet result = processor.process(item, OBSERVED_AT);
-    assertThat(result.records()).hasSize(22);
-    assertThat(
-            ordinals(result, io.dsub.opendiscogs.jooq.tables.records.ReleaseItemArtistRecord.class))
-        .containsExactly(0, 4);
-    assertThat(
-            ordinals(result, io.dsub.opendiscogs.jooq.tables.records.ReleaseItemWorkRecord.class))
-        .containsExactly(0, 4);
-    assertThat(
-            ordinals(
-                result,
-                io.dsub.opendiscogs.jooq.tables.records.ReleaseItemCreditedArtistRecord.class))
-        .containsExactly(0, 4);
-    assertThat(
-            ordinals(result, io.dsub.opendiscogs.jooq.tables.records.ReleaseItemFormatRecord.class))
-        .containsExactly(0, 3);
-    assertThat(
-            ordinals(result, io.dsub.opendiscogs.jooq.tables.records.ReleaseItemGenreRecord.class))
-        .containsExactly(0, 3, 4);
-    assertThat(
-            ordinals(result, io.dsub.opendiscogs.jooq.tables.records.ReleaseItemStyleRecord.class))
-        .containsExactly(0, 3, 4);
-    assertThat(
-            ordinals(
-                result,
-                io.dsub.opendiscogs.jooq.tables.records.ReleaseItemIdentifierRecord.class))
-        .containsExactly(0, 3);
-    assertThat(
-            ordinals(result, io.dsub.opendiscogs.jooq.tables.records.LabelReleaseItemRecord.class))
-        .containsExactly(0, 4);
-    assertThat(
-            ordinals(result, io.dsub.opendiscogs.jooq.tables.records.ReleaseItemTrackRecord.class))
-        .containsExactly(0, 3);
-    assertThat(
-            ordinals(result, io.dsub.opendiscogs.jooq.tables.records.ReleaseItemVideoRecord.class))
-        .containsExactly(0, 3);
+    assertThat(processor.process(item, OBSERVED_AT).records()).hasSize(22);
   }
 
   @Test
@@ -392,14 +314,6 @@ class ItemProcessorBoundaryUnitTest {
               return "Rock".equals(value) || "House".equals(value);
             });
     return registry;
-  }
-
-  private List<Integer> ordinals(
-      RelationSet relationSet, Class<? extends UpdatableRecord<?>> recordType) {
-    return relationSet.records().stream()
-        .filter(recordType::isInstance)
-        .map(record -> (Integer) record.get("ordinal"))
-        .toList();
   }
 
   @SafeVarargs

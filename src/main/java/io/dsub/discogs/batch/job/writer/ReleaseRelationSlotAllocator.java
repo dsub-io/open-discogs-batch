@@ -3,7 +3,6 @@ package io.dsub.discogs.batch.job.writer;
 import static io.dsub.opendiscogs.jooq.tables.ReleaseItemCreditedArtist.RELEASE_ITEM_CREDITED_ARTIST;
 import static io.dsub.opendiscogs.jooq.tables.ReleaseItemFormat.RELEASE_ITEM_FORMAT;
 import static io.dsub.opendiscogs.jooq.tables.ReleaseItemIdentifier.RELEASE_ITEM_IDENTIFIER;
-import static io.dsub.opendiscogs.jooq.tables.ReleaseItemImage.RELEASE_ITEM_IMAGE;
 import static io.dsub.opendiscogs.jooq.tables.ReleaseItemTrack.RELEASE_ITEM_TRACK;
 import static io.dsub.opendiscogs.jooq.tables.ReleaseItemVideo.RELEASE_ITEM_VIDEO;
 import static io.dsub.opendiscogs.jooq.tables.ReleaseItemWork.RELEASE_ITEM_WORK;
@@ -52,10 +51,6 @@ final class ReleaseRelationSlotAllocator {
                       RELEASE_ITEM_IDENTIFIER.TYPE,
                       RELEASE_ITEM_IDENTIFIER.DESCRIPTION,
                       RELEASE_ITEM_IDENTIFIER.VALUE)),
-          RELEASE_ITEM_IMAGE.getName(),
-              new RelationDescriptor(
-                  ReleaseRelationIdentity.Relation.IMAGE,
-                  List.of(RELEASE_ITEM_IMAGE.FILE_NAME)),
           RELEASE_ITEM_TRACK.getName(),
               new RelationDescriptor(
                   ReleaseRelationIdentity.Relation.TRACK,
@@ -76,15 +71,6 @@ final class ReleaseRelationSlotAllocator {
                   List.of(RELEASE_ITEM_WORK.WORK)));
 
   private ReleaseRelationSlotAllocator() {
-  }
-
-  static void allocate(List<? extends RelationSet> relationSets, EntityType entityType) {
-    assignCanonicalDigests(relationSets, entityType);
-    allocateAssignedDigests(
-        relationSets,
-        entityType,
-        UNSIGNED_INT_COUNT,
-        ReleaseRelationIdentity::compatibilitySlot);
   }
 
   static void allocate(

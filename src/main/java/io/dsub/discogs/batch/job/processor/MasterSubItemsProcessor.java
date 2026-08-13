@@ -33,55 +33,43 @@ public class MasterSubItemsProcessor
       return null;
     }
 
-    List<String> sourceGenres = master.getGenres();
-    List<String> sourceStyles = master.getStyles();
     ReflectionUtil.normalizeStringFields(master);
 
     List<UpdatableRecord<?>> items = new ArrayList<>();
     Integer masterId = master.getId();
 
     if (master.getMasterArtists() != null) {
-      for (int ordinal = 0; ordinal < master.getMasterArtists().size(); ordinal++) {
-        MasterSubItemsXML.MasterArtistXML artist = master.getMasterArtists().get(ordinal);
-        if (artist != null && isExistingArtist(artist.getArtistId())) {
-          items.add(artist.getRecord(masterId, observedAt).setOrdinal(ordinal));
-        }
-      }
+      master.getMasterArtists().stream()
+          .filter(Objects::nonNull)
+          .filter(masterArtist -> isExistingArtist(masterArtist.getArtistId()))
+          .map(xml -> xml.getRecord(masterId, observedAt))
+          .forEach(items::add);
     }
 
     if (master.getMasterVideos() != null) {
-      for (int ordinal = 0; ordinal < master.getMasterVideos().size(); ordinal++) {
-        MasterSubItemsXML.MasterVideoXML video = master.getMasterVideos().get(ordinal);
-        if (video != null && video.getUrl() != null) {
-          items.add(getMasterVideoRecord(masterId, video, ordinal, observedAt));
-        }
-      }
+      master.getMasterVideos().stream()
+          .filter(Objects::nonNull)
+          .filter(video -> video.getUrl() != null)
+          .map(video -> getMasterVideoRecord(masterId, video, observedAt))
+          .forEach(items::add);
     }
 
-    if (sourceGenres != null) {
-      for (int ordinal = 0; ordinal < sourceGenres.size(); ordinal++) {
-        String sourceGenre = sourceGenres.get(ordinal);
-        if (sourceGenre == null) {
-          continue;
-        }
-        String genre = sourceGenre.trim();
-        if (isExistingGenre(genre)) {
-          items.add(getMasterGenreRecord(masterId, genre, ordinal, observedAt));
-        }
-      }
+    if (master.getGenres() != null) {
+      master.getGenres().stream()
+          .filter(Objects::nonNull)
+          .map(String::trim)
+          .filter(this::isExistingGenre)
+          .map(genre -> getMasterGenreRecord(masterId, genre, observedAt))
+          .forEach(items::add);
     }
 
-    if (sourceStyles != null) {
-      for (int ordinal = 0; ordinal < sourceStyles.size(); ordinal++) {
-        String sourceStyle = sourceStyles.get(ordinal);
-        if (sourceStyle == null) {
-          continue;
-        }
-        String style = sourceStyle.trim();
-        if (isExistingStyle(style)) {
-          items.add(getMasterStyleRecord(masterId, style, ordinal, observedAt));
-        }
-      }
+    if (master.getStyles() != null) {
+      master.getStyles().stream()
+          .filter(Objects::nonNull)
+          .map(String::trim)
+          .filter(this::isExistingStyle)
+          .map(style -> getMasterStyleRecord(masterId, style, observedAt))
+          .forEach(items::add);
     }
 
     return new RelationSet(
@@ -101,35 +89,29 @@ public class MasterSubItemsProcessor
   }
 
   private MasterGenreRecord getMasterGenreRecord(
-      Integer masterId, String genre, int ordinal, LocalDateTime observedAt) {
+      Integer masterId, String genre, LocalDateTime observedAt) {
     return new MasterGenreRecord()
         .setMasterId(masterId)
-        .setOrdinal(ordinal)
         .setGenre(genre)
         .setLastModifiedAt(observedAt);
   }
 
   private MasterStyleRecord getMasterStyleRecord(
-      Integer masterId, String style, int ordinal, LocalDateTime observedAt) {
+      Integer masterId, String style, LocalDateTime observedAt) {
     return new MasterStyleRecord()
         .setMasterId(masterId)
-        .setOrdinal(ordinal)
         .setStyle(style)
         .setLastModifiedAt(observedAt);
   }
 
   private MasterVideoRecord getMasterVideoRecord(
-      Integer masterId,
-      MasterSubItemsXML.MasterVideoXML video,
-      int ordinal,
-      LocalDateTime observedAt) {
+      Integer masterId, MasterSubItemsXML.MasterVideoXML video, LocalDateTime observedAt) {
     String hashSrc =
         (video.getTitle() == null ? "" : video.getTitle())
             + (video.getDescription() == null ? "" : video.getDescription())
             + video.getUrl();
     return new MasterVideoRecord()
         .setMasterId(masterId)
-        .setOrdinal(ordinal)
         .setTitle(video.getTitle())
         .setDescription(video.getDescription())
         .setUrl(video.getUrl())
