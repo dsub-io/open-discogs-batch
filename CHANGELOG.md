@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.4](https://github.com/dsub-io/open-discogs-batch/compare/v1.2.3...v1.2.4) (2026-08-13)
+
+
+### Performance Improvements
+
+* consume model 0.3.2 query index ([#50](https://github.com/dsub-io/open-discogs-batch/issues/50)) ([3f95814](https://github.com/dsub-io/open-discogs-batch/commit/3f95814fe1a184e91036de302b53faf4c564184c))
+
 ## [1.2.3](https://github.com/dsub-io/open-discogs-batch/compare/v1.2.2...v1.2.3) (2026-08-13)
 
 
