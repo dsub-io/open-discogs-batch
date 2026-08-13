@@ -319,6 +319,11 @@ class CanonicalRelationBatchUnitTest {
                     List.of(binary, integer, integer, binary),
                     record))
         .isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(
+            () ->
+                RelationTableRegistry.RelationIdentity.create(
+                    ReleaseItemFormat.RELEASE_ITEM_FORMAT, List.of(binary, binary), record))
+        .isInstanceOf(IllegalStateException.class);
   }
 
   @Test

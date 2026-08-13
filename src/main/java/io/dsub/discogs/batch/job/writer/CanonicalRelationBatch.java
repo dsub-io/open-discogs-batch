@@ -24,26 +24,22 @@ final class CanonicalRelationBatch {
       List<? extends RelationSet> relationSets, EntityType entityType) {
     RelationSlotAllocator.assignCanonicalDigests(relationSets, entityType);
     List<RelationSet> semanticSets =
-        collapseByIdentity(relationSets, entityType, IdentityKind.SEMANTIC);
+        collapseBySemanticIdentity(relationSets, entityType);
     RelationSlotAllocator.allocateAssignedDigests(semanticSets, entityType);
-    List<RelationSet> physicalSets =
-        collapseByIdentity(semanticSets, entityType, IdentityKind.PHYSICAL);
 
     Map<Table<?>, List<TableRecord<?>>> recordsByTable = new LinkedHashMap<>();
-    physicalSets.stream()
+    semanticSets.stream()
         .flatMap(relationSet -> relationSet.records().stream())
         .forEach(
             record ->
                 recordsByTable
                     .computeIfAbsent(record.getTable(), ignored -> new ArrayList<>())
                     .add(record));
-    return new CanonicalBatch(physicalSets, recordsByTable);
+    return new CanonicalBatch(semanticSets, recordsByTable);
   }
 
-  private static List<RelationSet> collapseByIdentity(
-      List<? extends RelationSet> relationSets,
-      EntityType entityType,
-      IdentityKind identityKind) {
+  private static List<RelationSet> collapseBySemanticIdentity(
+      List<? extends RelationSet> relationSets, EntityType entityType) {
     List<List<TableRecord<?>>> canonicalRecords = new ArrayList<>(relationSets.size());
     for (int index = 0; index < relationSets.size(); index++) {
       canonicalRecords.add(new ArrayList<>());
@@ -57,8 +53,7 @@ final class CanonicalRelationBatch {
         RelationTableRegistry.RelationTable relationTable =
             RelationTableRegistry.require(entityType, record.getTable());
         relationTable.requireRoot(record, relationSet.rootId());
-        RelationTableRegistry.RelationIdentity identity =
-            identityKind.identity(relationTable, record);
+        RelationTableRegistry.RelationIdentity identity = relationTable.semanticIdentity(record);
         CanonicalRecord existing = recordsByIdentity.get(identity);
         if (existing == null) {
           recordsByIdentity.put(identity, new CanonicalRecord(record));
@@ -67,8 +62,7 @@ final class CanonicalRelationBatch {
           throw new IllegalArgumentException(
               "conflicting persisted payload for " + relationTable.table().getName()
                   + " (" + relationTable.describeSemanticIdentity(record) + ")");
-        } else if (identityKind == IdentityKind.SEMANTIC
-            && !relationTable.hasSameLegacyHash(existing.record(), record)) {
+        } else if (!relationTable.hasSameLegacyHash(existing.record(), record)) {
           throw new IllegalArgumentException(
               "conflicting legacy hash for " + relationTable.table().getName()
                   + " (" + relationTable.describeSemanticIdentity(record) + ")");
@@ -103,26 +97,4 @@ final class CanonicalRelationBatch {
   private record CanonicalRecord(TableRecord<?> record) {
   }
 
-  private enum IdentityKind {
-    SEMANTIC {
-      @Override
-      RelationTableRegistry.RelationIdentity identity(
-          RelationTableRegistry.RelationTable relationTable, TableRecord<?> record) {
-        return relationTable.semanticIdentity(record);
-      }
-
-    },
-    PHYSICAL {
-      @Override
-      RelationTableRegistry.RelationIdentity identity(
-          RelationTableRegistry.RelationTable relationTable, TableRecord<?> record) {
-        return relationTable.identity(record);
-      }
-
-    };
-
-    abstract RelationTableRegistry.RelationIdentity identity(
-        RelationTableRegistry.RelationTable relationTable, TableRecord<?> record);
-
-  }
 }

@@ -257,10 +257,6 @@ final class RelationTableRegistry {
       payloadFields = List.copyOf(payloadFields);
     }
 
-    RelationIdentity identity(TableRecord<?> record) {
-      return RelationIdentity.create(table, keys, record);
-    }
-
     RelationIdentity semanticIdentity(TableRecord<?> record) {
       return RelationIdentity.create(table, semanticKeys(), record);
     }
@@ -413,15 +409,13 @@ final class RelationTableRegistry {
           IntegerBinaryIdentity,
           IntegerTextIdentity,
           IntegerIntegerTextIdentity,
-          IntegerIntegerBinaryIdentity,
-          IntegerTripleBinaryIdentity {
+          IntegerIntegerBinaryIdentity {
 
     static RelationIdentity create(
         Table<?> table, List<RelationKey> keys, TableRecord<?> record) {
       return switch (keys.size()) {
         case 2 -> twoKeyIdentity(table, keys, record);
         case 3 -> threeKeyIdentity(table, keys, record);
-        case 4 -> fourKeyIdentity(table, keys, record);
         default -> throw unsupportedShape();
       };
     }
@@ -463,20 +457,6 @@ final class RelationTableRegistry {
       };
     }
 
-    private static RelationIdentity fourKeyIdentity(
-        Table<?> table, List<RelationKey> keys, TableRecord<?> record) {
-      requireType(keys.get(0), RelationKeyType.INTEGER);
-      requireType(keys.get(1), RelationKeyType.INTEGER);
-      requireType(keys.get(2), RelationKeyType.INTEGER);
-      requireType(keys.get(3), RelationKeyType.BINARY);
-      return new IntegerTripleBinaryIdentity(
-          table,
-          keys.get(0).integerValue(record),
-          keys.get(1).integerValue(record),
-          keys.get(2).integerValue(record),
-          keys.get(3).binaryValue(record));
-    }
-
     private static void requireType(RelationKey key, RelationKeyType required) {
       if (key.type() != required) {
         throw unsupportedShape();
@@ -507,11 +487,6 @@ final class RelationTableRegistry {
 
   record IntegerIntegerBinaryIdentity(
       Table<?> table, Integer first, Integer second, BinaryKey third)
-      implements RelationIdentity {
-  }
-
-  record IntegerTripleBinaryIdentity(
-      Table<?> table, Integer first, Integer second, Integer third, BinaryKey fourth)
       implements RelationIdentity {
   }
 
