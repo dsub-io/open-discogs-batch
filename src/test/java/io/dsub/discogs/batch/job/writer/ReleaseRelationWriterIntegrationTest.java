@@ -9,6 +9,7 @@ import io.dsub.discogs.batch.dump.EntityType;
 import io.dsub.discogs.batch.domain.release.ReleaseRelationIdentity;
 import io.dsub.discogs.batch.job.processor.RelationSet;
 import io.dsub.opendiscogs.jooq.tables.records.ArtistRecord;
+import io.dsub.opendiscogs.jooq.tables.records.ArtistUrlRecord;
 import io.dsub.opendiscogs.jooq.tables.records.LabelReleaseItemRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemArtistRecord;
 import io.dsub.opendiscogs.jooq.tables.records.ReleaseItemCreditedArtistRecord;
@@ -435,6 +436,55 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
     }
   }
 
+  @Test
+  void changedDumpConvergesRootAndRelations() throws Exception {
+    ItemWriter<RelationSet> relationWriter = writer();
+    relationWriter.write(
+        new Chunk<>(
+            List.of(
+                new RelationSet(
+                    EntityType.ARTIST,
+                    ARTIST_ID,
+                    List.of(
+                        artistUrl("https://a.example", 0, FIRST_WRITE),
+                        artistUrl("https://b.example", 1, FIRST_WRITE))))));
+
+    ArtistRecord changedRoot =
+        new ArtistRecord()
+            .setId(ARTIST_ID)
+            .setCreatedAt(SECOND_WRITE)
+            .setLastModifiedAt(SECOND_WRITE)
+            .setName("Changed Artist");
+    new DefaultLJooqItemWriter<ArtistRecord>(mappedContext())
+        .write(new Chunk<>(List.of(changedRoot)));
+    relationWriter.write(
+        new Chunk<>(
+            List.of(
+                new RelationSet(
+                    EntityType.ARTIST,
+                    ARTIST_ID,
+                    List.of(
+                        artistUrl("https://b.example", 0, SECOND_WRITE),
+                        artistUrl("https://c.example", 1, SECOND_WRITE))))));
+
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "select name from artist where id = ?", String.class, ARTIST_ID))
+        .isEqualTo("Changed Artist");
+    assertThat(
+            jdbcTemplate.queryForList(
+                "select url from artist_url where artist_id = ? order by ordinal",
+                String.class,
+                ARTIST_ID))
+        .containsExactly("https://b.example", "https://c.example");
+    assertThat(
+            jdbcTemplate.queryForList(
+                "select ordinal from artist_url where artist_id = ? order by ordinal",
+                Integer.class,
+                ARTIST_ID))
+        .containsExactly(0, 1);
+  }
+
   private static void executeMigration(JdbcTemplate template, String resource) throws Exception {
     String source =
         new ClassPathResource(resource).getContentAsString(StandardCharsets.UTF_8);
@@ -531,6 +581,16 @@ class ReleaseRelationWriterIntegrationTest extends PostgreSQLIntegrationSupport 
     return new ReleaseItemArtistRecord()
         .setReleaseItemId(RELEASE_ID)
         .setArtistId(ARTIST_ID)
+        .setLastModifiedAt(modifiedAt);
+  }
+
+  private ArtistUrlRecord artistUrl(
+      String url, int ordinal, LocalDateTime modifiedAt) {
+    return new ArtistUrlRecord()
+        .setArtistId(ARTIST_ID)
+        .setHash(url.hashCode())
+        .setUrl(url)
+        .setOrdinal(ordinal)
         .setLastModifiedAt(modifiedAt);
   }
 
