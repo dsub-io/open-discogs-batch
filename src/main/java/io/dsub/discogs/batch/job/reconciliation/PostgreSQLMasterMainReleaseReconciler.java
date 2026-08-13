@@ -19,8 +19,7 @@ public final class PostgreSQLMasterMainReleaseReconciler
       with desired as materialized (
         select distinct on (release_item.master_id)
                release_item.master_id,
-               release_item.id as release_id,
-               release_item.last_modified_at as observed_at
+               release_item.id as release_id
         from release_item
         where release_item.is_master is true
           and release_item.master_id is not null
@@ -29,18 +28,16 @@ public final class PostgreSQLMasterMainReleaseReconciler
                  release_item.id desc
       ),
       stale as materialized (
-        select target.id,
-               current_release.last_modified_at as observed_at
+        select target.id
         from master target
-        join release_item current_release on current_release.id = target.main_release_id
         left join desired on desired.master_id = target.id
         where target.main_release_id is distinct from desired.release_id
+          and target.main_release_id is not null
         order by target.id
         for update of target
       )
       update master target
-      set main_release_id = null,
-          last_modified_at = stale.observed_at
+      set main_release_id = null
       from stale
       where target.id = stale.id
       """;
@@ -50,8 +47,7 @@ public final class PostgreSQLMasterMainReleaseReconciler
       with desired as materialized (
         select distinct on (release_item.master_id)
                release_item.master_id,
-               release_item.id as release_id,
-               release_item.last_modified_at as observed_at
+               release_item.id as release_id
         from release_item
         where release_item.is_master is true
           and release_item.master_id is not null
@@ -61,8 +57,7 @@ public final class PostgreSQLMasterMainReleaseReconciler
       ),
       pending as materialized (
         select target.id,
-               desired.release_id,
-               desired.observed_at
+               desired.release_id
         from desired
         join master target on target.id = desired.master_id
         where target.main_release_id is distinct from desired.release_id
@@ -70,8 +65,7 @@ public final class PostgreSQLMasterMainReleaseReconciler
         for update of target
       )
       update master target
-      set main_release_id = pending.release_id,
-          last_modified_at = pending.observed_at
+      set main_release_id = pending.release_id
       from pending
       where target.id = pending.id
       """;

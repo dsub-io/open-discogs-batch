@@ -20,6 +20,8 @@ class PostgreSQLMasterMainReleaseReconcilerIntegrationTest
   private static final int RELEASE_A = 10;
   private static final int RELEASE_B = 20;
   private static final int RELEASE_C = 30;
+  private static final LocalDateTime MASTER_OBSERVATION =
+      LocalDateTime.of(2026, 1, 1, 0, 0);
   private static final LocalDateTime SECOND_OBSERVATION =
       LocalDateTime.of(2026, 8, 2, 0, 0);
   private static final LocalDateTime THIRD_OBSERVATION =
@@ -68,6 +70,8 @@ class PostgreSQLMasterMainReleaseReconcilerIntegrationTest
     transaction.executeWithoutResult(ignored -> reconciler.reconcile());
     assertThat(mainReleaseId(MASTER_A)).isEqualTo(RELEASE_A);
     assertThat(mainReleaseId(MASTER_C)).isEqualTo(RELEASE_B);
+    assertThat(lastModifiedAt(MASTER_A)).isEqualTo(MASTER_OBSERVATION);
+    assertThat(lastModifiedAt(MASTER_C)).isEqualTo(MASTER_OBSERVATION);
 
     updateRelease(RELEASE_A, MASTER_B, true, SECOND_OBSERVATION);
     transaction.executeWithoutResult(ignored -> reconciler.reconcile());
