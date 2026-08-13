@@ -3,7 +3,7 @@
 These are bounded measurements of named changes, not forecasts for a full dump
 or different hardware. They also do not approve a production import: both
 batch implementations still require release and cross-language validation
-against canonical `open-discogs-model` v0.3.1.
+against canonical `open-discogs-model` v0.3.2.
 
 ## Results at a glance
 

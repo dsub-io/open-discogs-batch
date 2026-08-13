@@ -4,7 +4,7 @@ Stream Discogs monthly public data dumps into PostgreSQL with Spring Batch,
 bounded memory, durable progress, and idempotent recovery.
 
 This release consumes canonical
-[`open-discogs-model`](https://github.com/dsub-io/open-discogs-model) v0.3.1.
+[`open-discogs-model`](https://github.com/dsub-io/open-discogs-model) v0.3.2.
 Java and Go therefore apply the same migration bytes and import contracts. This
 is an independent project and is not endorsed by Discogs.
 

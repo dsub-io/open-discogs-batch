@@ -25,7 +25,7 @@ ext {
     set('classGraphVersion', '4.8.186')
     set('jooqVersion', '3.21.7')
     set('pbVersion', '0.10.2')
-    set('openDiscogsModelVersion', '0.3.1')
+    set('openDiscogsModelVersion', '0.3.2')
     set('postgresqlVersion', '42.7.13')
 }
 
