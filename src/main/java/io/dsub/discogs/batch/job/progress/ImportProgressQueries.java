@@ -33,6 +33,18 @@ final class ImportProgressQueries {
         and processed_items = total_items
       """;
 
+  static final String SHOULD_SEED_MASTER_MAIN_RELEASES =
+      """
+      select exists (
+        select 1
+        from discogs_catalog_entity_state
+        where entity_type = 'release'
+          and status = 'importing'
+          and operation = 'bootstrap'
+          and active_import_run_id = ?
+      )
+      """;
+
   static final String RECORD_CHUNK =
       """
       with active_run as (

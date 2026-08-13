@@ -58,7 +58,11 @@ class ItemProcessorBoundaryUnitTest {
     assertThat(masterProcessor.process(master, OBSERVED_AT)).isNull();
     master.setId(1);
     master.setTitle(" Master ");
+    master.setMainReleaseId(10);
     assertThat(masterProcessor.process(master, OBSERVED_AT).getTitle()).isEqualTo("Master");
+    assertThat(masterProcessor.process(master, OBSERVED_AT).getMainReleaseId()).isNull();
+    assertThat(new MasterCoreProcessor(true).process(master, OBSERVED_AT).getMainReleaseId())
+        .isEqualTo(10);
   }
 
   @Test

@@ -49,6 +49,7 @@ public class MasterXML implements BaseXML<MasterRecord> {
         .setTitle(title)
         .setYear(year)
         .setDataQuality(dataQuality)
+        .setMainReleaseId(mainReleaseId)
         .setCreatedAt(observedAt)
         .setLastModifiedAt(observedAt);
   }

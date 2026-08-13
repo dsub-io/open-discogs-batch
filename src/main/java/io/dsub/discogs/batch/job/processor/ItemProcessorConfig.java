@@ -6,6 +6,8 @@ import io.dsub.discogs.batch.domain.label.LabelSubItemsXML;
 import io.dsub.discogs.batch.domain.label.LabelXML;
 import io.dsub.discogs.batch.domain.master.MasterSubItemsXML;
 import io.dsub.discogs.batch.domain.master.MasterXML;
+import io.dsub.discogs.batch.job.ImportJobParameters;
+import io.dsub.discogs.batch.job.progress.ImportProgressStore;
 import io.dsub.discogs.batch.domain.release.ReleaseItemSubItemsXML;
 import io.dsub.discogs.batch.job.TransactionBoundaries;
 import io.dsub.discogs.batch.job.progress.ProcessedChunk;
@@ -15,6 +17,7 @@ import io.dsub.opendiscogs.jooq.tables.records.ArtistRecord;
 import io.dsub.opendiscogs.jooq.tables.records.LabelRecord;
 import io.dsub.opendiscogs.jooq.tables.records.MasterRecord;
 import org.springframework.batch.core.configuration.annotation.StepScope;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.batch.infrastructure.item.ItemProcessor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -64,8 +67,12 @@ public class ItemProcessorConfig {
 
   @Bean
   @StepScope
-  public ItemProcessor<SourceChunk<MasterXML>, ProcessedChunk<MasterRecord>> masterCoreProcessor() {
-    return new SourceChunkItemProcessor<>(new MasterCoreProcessor(), processingOperations);
+  public ItemProcessor<SourceChunk<MasterXML>, ProcessedChunk<MasterRecord>> masterCoreProcessor(
+      ImportProgressStore progressStore,
+      @Value("#{jobParameters['" + ImportJobParameters.RUN_ID + "']}") Long runId) {
+    return new SourceChunkItemProcessor<>(
+        new MasterCoreProcessor(progressStore.shouldSeedMasterMainReleases(runId)),
+        processingOperations);
   }
 
   @Bean

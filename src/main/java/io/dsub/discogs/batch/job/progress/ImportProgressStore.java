@@ -84,6 +84,14 @@ public class ImportProgressStore {
     return OptionalLong.of(completedItems.getFirst());
   }
 
+  public boolean shouldSeedMasterMainReleases(long runId) {
+    return Boolean.TRUE.equals(
+        jdbcTemplate.queryForObject(
+            ImportProgressQueries.SHOULD_SEED_MASTER_MAIN_RELEASES,
+            Boolean.class,
+            runId));
+  }
+
   public void recordCompletedChunk(
       long runId, EntityType entityType, int chunkSize, ChunkRange chunk)
       throws ImportExecutionException {

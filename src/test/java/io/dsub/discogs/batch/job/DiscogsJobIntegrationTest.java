@@ -42,6 +42,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 import javax.sql.DataSource;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterAll;
@@ -83,6 +85,8 @@ public abstract class DiscogsJobIntegrationTest {
   private static final AtomicLong TEST_MANIFEST_SEQUENCE = new AtomicLong();
   private static final String GO_BATCH_PROCESSOR = "go-open-discogs-batch";
   private static final String CROSS_LANGUAGE_TEST_VERSION = "cross-language-test";
+  private static final String FIRST_MASTER_MAIN_RELEASE =
+      "    <main_release>1</main_release>\n";
 
   @Autowired
   JobOperatorTestUtils jobOperatorTestUtils;
@@ -349,6 +353,7 @@ public abstract class DiscogsJobIntegrationTest {
             EntityType.LABEL,
             EntityType.MASTER,
             EntityType.RELEASE);
+    removeFirstMasterMainReleaseFromDump();
     executeSql("update master set main_release_id = null");
     executeSql(
         """
@@ -419,6 +424,19 @@ public abstract class DiscogsJobIntegrationTest {
     assertThat(
         scalarLong("select count(*) from master where id = 1 and main_release_id = 1"),
         is(1L));
+  }
+
+  private void removeFirstMasterMainReleaseFromDump() throws IOException {
+    File masterDump = dumpFiles.get(EntityType.MASTER);
+    String content;
+    try (GZIPInputStream input = new GZIPInputStream(Files.newInputStream(masterDump.toPath()))) {
+      content = new String(input.readAllBytes(), StandardCharsets.UTF_8);
+    }
+    try (GZIPOutputStream output =
+        new GZIPOutputStream(Files.newOutputStream(masterDump.toPath()))) {
+      output.write(content.replaceFirst(FIRST_MASTER_MAIN_RELEASE, "")
+          .getBytes(StandardCharsets.UTF_8));
+    }
   }
 
   final void runIdempotentRefreshScenario() throws Exception {
