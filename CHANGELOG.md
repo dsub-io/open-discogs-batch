@@ -7,6 +7,36 @@
 
 * preserve canonical dump data and bound full imports ([#48](https://github.com/dsub-io/open-discogs-batch/issues/48)) ([30bde02](https://github.com/dsub-io/open-discogs-batch/commit/30bde020b0975051c831131ba8da4aa560bbd43e))
 
+### Data Correctness and Recovery
+
+* consume canonical model `0.3.1`, preserve distinct rows that collide under
+  legacy 32-bit hashes, collapse exact duplicates, retain release format
+  quantity text when it exceeds the integer range, and use the same relation
+  identities and migration history as the Go batch
+* keep chunk commits, import ownership, stale-relation reconciliation, and
+  backlink updates restart-safe across process termination and PostgreSQL
+  interruption; a production resume skipped `34,489,698` already committed
+  roots instead of rewriting them
+
+### Measured Performance and Validation
+
+* on the same production database and unchanged dump, backlink reconciliation
+  fell from `61.027 s` to `8.584 s` (`85.9%` lower) with `0` changed rows and
+  `0` WAL bytes for the unchanged pass
+* seed fresh master backlinks during the initial insert instead of issuing the
+  former second update pass; the observed legacy pass updated `2,579,769` rows
+  in `289.960 s` and generated `4,379,751,749` WAL bytes, while a fresh
+  production-scale measurement of the new bootstrap path remains pending
+* pass the clean Gradle build, `100.0%` line and branch coverage gates,
+  PostgreSQL interruption/resume E2E, and cross-language state checks with no
+  residual test container, network, or volume
+
+### Distribution
+
+* publish the executable JAR and SHA-256 checksum plus non-root
+  `linux/amd64` and `linux/arm64` GHCR images through the protected release
+  workflow
+
 ## [1.2.2](https://github.com/dsub-io/open-discogs-batch/compare/v1.2.1...v1.2.2) (2026-08-12)
 
 
