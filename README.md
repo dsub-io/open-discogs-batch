@@ -4,14 +4,14 @@ Stream Discogs monthly public data dumps into PostgreSQL with Spring Batch,
 bounded memory, durable progress, and idempotent recovery.
 
 This release consumes canonical
-[`open-discogs-model`](https://github.com/dsub-io/open-discogs-model) v0.3.2.
+[`open-discogs-model`](https://github.com/dsub-io/open-discogs-model) v0.4.0.
 Java and Go therefore apply the same migration bytes and import contracts. This
 is an independent project and is not endorsed by Discogs.
 
 > [!CAUTION]
-> **Production import is not approved yet.** Publish both batch implementations
-> against model v0.3.1 and complete cross-language migration, recovery, and
-> full-dump validation before starting or resuming a production import.
+> Stop every Go and Java importer before applying model v0.4.0. Upgrade both
+> implementations before resuming imports; an older artifact rejects a database
+> whose canonical migration ledger is newer than its bundled model.
 
 - [Import safety and recovery](docs/import-safety.md)
 - [Performance measurements](docs/performance.md)
@@ -77,7 +77,7 @@ the importer never creates the database.
 | Existing schema | `USAGE` and `CREATE` on the schema, table writes, and migration DDL authority |
 | Restricted batch role | A DBA prepares the schema, extension, and grants first |
 
-Model v0.3.1 migrations packaged in the model dependency are the only schema
+Model v0.4.0 migrations packaged in the model dependency are the only schema
 source of truth. Migration V007 uses
 `CREATE EXTENSION IF NOT EXISTS pg_trgm`; allow the migration role to install
 this trusted extension or have a DBA pre-install it in a stable schema visible
