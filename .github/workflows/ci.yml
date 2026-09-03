@@ -75,7 +75,7 @@ jobs:
                 esac
               done
             fi
-            git diff --check "$change_range"
+            git -c core.whitespace=cr-at-eol diff --check "$change_range"
           fi
 
           echo "heavy=$heavy" >> "$GITHUB_OUTPUT"
