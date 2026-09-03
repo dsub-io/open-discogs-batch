@@ -1,0 +1,172 @@
+name: CI
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - edited
+  push:
+    branches:
+      - main
+  merge_group:
+  schedule:
+    - cron: '33 2 * * 4'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Classify changes
+        id: changes
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+          PUSH_HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          change_range=
+          case "$EVENT_NAME" in
+            pull_request)
+              change_range="$PR_BASE_SHA..$PR_HEAD_SHA"
+              ;;
+            push)
+              if [[ "$PUSH_BEFORE_SHA" != "0000000000000000000000000000000000000000" ]] &&
+                git cat-file -e "$PUSH_BEFORE_SHA^{commit}" 2>/dev/null; then
+                change_range="$PUSH_BEFORE_SHA..$PUSH_HEAD_SHA"
+              fi
+              ;;
+          esac
+
+          heavy=true
+          if [[ -n "$change_range" ]]; then
+            mapfile -t changed_files < <(git diff --name-only "$change_range")
+            if (( ${#changed_files[@]} > 0 )); then
+              heavy=false
+              for changed_file in "${changed_files[@]}"; do
+                case "$changed_file" in
+                  README.md|CHANGELOG.md|LICENSE|NOTICE|docs/*|.github/ISSUE_TEMPLATE/*|.github/PULL_REQUEST_TEMPLATE.md)
+                    ;;
+                  *)
+                    heavy=true
+                    break
+                    ;;
+                esac
+              done
+            fi
+            git diff --check "$change_range"
+          fi
+
+          echo "heavy=$heavy" >> "$GITHUB_OUTPUT"
+          echo "range=$change_range" >> "$GITHUB_OUTPUT"
+
+      - name: Validate Conventional Commits
+        if: github.event_name == 'pull_request' || github.event_name == 'push'
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_HEAD_REF: ${{ github.head_ref }}
+          CHANGE_RANGE: ${{ steps.changes.outputs.range }}
+        run: |
+          set -euo pipefail
+
+          pattern='^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([a-z0-9._/-]+\))?(!)?: .+'
+          branch_pattern='^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)/[a-z0-9._/-]+$'
+
+          validate_subject() {
+            local label="$1"
+            local subject="$2"
+            if [[ ! "$subject" =~ $pattern ]]; then
+              echo "::error::$label is not a Conventional Commit: $subject"
+              return 1
+            fi
+          }
+
+          failed=0
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            validate_subject "Pull request title" "$PR_TITLE" || failed=1
+            normalized_head_ref="${PR_HEAD_REF,,}"
+            if [[ ! "$normalized_head_ref" =~ $branch_pattern ]] &&
+              [[ ! "$normalized_head_ref" =~ ^dependabot/ ]] &&
+              [[ ! "$normalized_head_ref" =~ ^release-please-- ]]; then
+              echo "::error::Pull request branch is not Conventional: $PR_HEAD_REF"
+              failed=1
+            fi
+          fi
+
+          range="${CHANGE_RANGE:-HEAD^..HEAD}"
+          while IFS= read -r subject; do
+            [[ -z "$subject" ]] && continue
+            validate_subject "Commit subject" "$subject" || failed=1
+          done < <(git log --no-merges --format=%s "$range")
+
+          exit "$failed"
+
+      - name: Set up Java
+        if: steps.changes.outputs.heavy == 'true'
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Validate the Gradle wrapper
+        if: steps.changes.outputs.heavy == 'true'
+        uses: gradle/actions/wrapper-validation@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
+
+      - name: Set up Gradle
+        if: steps.changes.outputs.heavy == 'true'
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
+        with:
+          cache-disabled: true
+
+      - name: Initialize CodeQL
+        if: steps.changes.outputs.heavy == 'true'
+        uses: github/codeql-action/init@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4.37.4
+        with:
+          languages: java-kotlin
+          build-mode: none
+
+      - name: Verify release policy
+        if: steps.changes.outputs.heavy == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq empty release-please-config.json
+          for type in build chore ci docs refactor style test; do
+            jq -e \
+              --arg type "$type" \
+              'any(.["changelog-sections"][]; .type == $type and .hidden == true)' \
+              release-please-config.json >/dev/null
+          done
+
+      - name: Build, test, and enforce coverage
+        if: steps.changes.outputs.heavy == 'true'
+        run: ./gradlew clean build --no-daemon --warning-mode=fail
+
+      - name: Analyze with CodeQL
+        if: steps.changes.outputs.heavy == 'true'
+        uses: github/codeql-action/analyze@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4.37.4
+        with:
+          category: /language:java-kotlin
