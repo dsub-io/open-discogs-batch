@@ -1,0 +1,47 @@
+version: 2
+
+updates:
+  - package-ecosystem: gradle
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '03:30'
+      timezone: Asia/Seoul
+    groups:
+      gradle-dependencies:
+        patterns:
+          - '*'
+    commit-message:
+      prefix: build
+      include: scope
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '03:45'
+      timezone: Asia/Seoul
+    groups:
+      github-actions:
+        patterns:
+          - '*'
+    commit-message:
+      prefix: ci
+      include: scope
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '04:00'
+      timezone: Asia/Seoul
+    groups:
+      docker-images:
+        patterns:
+          - '*'
+    commit-message:
+      prefix: build
+      include: scope
