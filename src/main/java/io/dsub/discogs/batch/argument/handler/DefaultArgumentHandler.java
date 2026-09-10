@@ -38,7 +38,6 @@ public class DefaultArgumentHandler implements ArgumentHandler {
   private final EnvironmentArgumentProvider environmentArgumentProvider;
   private final DatabaseUrlArgumentExpander databaseUrlArgumentExpander;
   private final SeparatedArgumentCoalescer separatedArgumentCoalescer;
-  private final LegacyDatabaseArgumentRejector legacyDatabaseArgumentRejector;
   /**
    * Splits multiple values for OPTIONS into individual entries. It will pass through the
    * NonOptional arguments even if it has several arguments with ',' delimiters.
@@ -83,7 +82,6 @@ public class DefaultArgumentHandler implements ArgumentHandler {
     this.environmentArgumentProvider = new EnvironmentArgumentProvider(environment);
     this.databaseUrlArgumentExpander = new DatabaseUrlArgumentExpander();
     this.separatedArgumentCoalescer = new SeparatedArgumentCoalescer();
-    this.legacyDatabaseArgumentRejector = new LegacyDatabaseArgumentRejector();
   }
 
   /**
@@ -96,7 +94,6 @@ public class DefaultArgumentHandler implements ArgumentHandler {
    */
   @Override
   public String[] resolve(String[] args) throws InvalidArgumentException {
-    legacyDatabaseArgumentRejector.validate(args);
     String[] coalesced = separatedArgumentCoalescer.coalesce(args);
     String[] withEnvironment = environmentArgumentProvider.apply(coalesced);
     String[] expanded = databaseUrlArgumentExpander.expand(withEnvironment);
