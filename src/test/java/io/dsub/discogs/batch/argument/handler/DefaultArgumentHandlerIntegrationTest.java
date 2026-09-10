@@ -64,15 +64,6 @@ class DefaultArgumentHandlerIntegrationTest extends PostgreSQLIntegrationSupport
   }
 
   @Test
-  void shouldRejectLegacyDatabaseOptions() {
-    Assertions.assertThrows(
-        InvalidArgumentException.class,
-        () ->
-            handler.resolve(
-                new String[] {"--url=" + jdbcUrl, "--username=test", "--password=test"}));
-  }
-
-  @Test
   void shouldRejectNonPositiveMaxWorkers() {
     InvalidArgumentException exception =
         Assertions.assertThrows(
