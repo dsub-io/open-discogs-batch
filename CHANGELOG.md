@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.6](https://github.com/dsub-io/open-discogs-batch/compare/v1.2.5...v1.2.6) (2026-09-03)
+
+
+### Bug Fixes
+
+* accept CRLF in diff validation ([#59](https://github.com/dsub-io/open-discogs-batch/issues/59)) ([a4c7b34](https://github.com/dsub-io/open-discogs-batch/commit/a4c7b34a8107c06e063a7e55b269cd328f0b43a3))
+
 ## [1.2.5](https://github.com/dsub-io/open-discogs-batch/compare/v1.2.4...v1.2.5) (2026-08-14)
 
 
