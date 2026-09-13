@@ -1,4 +1,4 @@
-FROM eclipse-temurin:21-jdk-jammy AS build
+FROM eclipse-temurin:25-jdk-jammy AS build
 
 WORKDIR /workspace
 COPY gradle ./gradle
@@ -14,7 +14,7 @@ RUN ./gradlew clean bootJar \
     "build/libs/open-discogs-batch-${VERSION}.jar" \
     /out/open-discogs-batch.jar
 
-FROM eclipse-temurin:21-jre-jammy
+FROM eclipse-temurin:25-jre-jammy
 
 RUN groupadd --gid 65532 nonroot && \
     useradd --uid 65532 --gid 65532 --create-home nonroot && \
