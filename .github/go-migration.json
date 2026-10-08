@@ -1,0 +1,6 @@
+{
+  "repository": "dsub-io/open-discogs-batch",
+  "replacement": "dsub-io/go-open-discogs-batch",
+  "replacement_name": "Go OpenDiscogs Batch",
+  "description": "Deprecated Java importer. Use dsub-io/go-open-discogs-batch for OpenDiscogs imports."
+}

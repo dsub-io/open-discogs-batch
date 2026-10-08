@@ -1,12 +1,19 @@
-# Java OpenDiscogs Batch
+# Java OpenDiscogs Batch (deprecated)
+
+Use [Go OpenDiscogs Batch](https://github.com/dsub-io/go-open-discogs-batch).
+This Java implementation is deprecated.
+
+- [Run the Go importer](https://github.com/dsub-io/go-open-discogs-batch#quick-start)
+- [Go Batch releases](https://github.com/dsub-io/go-open-discogs-batch/releases)
+- [Migrate an existing Java deployment](docs/migration-to-go.md)
+
+Use the Go importer with [Go OpenDiscogs API](https://github.com/dsub-io/go-open-discogs-api).
+The instructions below describe existing Java deployments.
+
+## Existing Java importer
 
 Stream Discogs monthly public data dumps into PostgreSQL with Spring Batch,
 bounded memory, durable progress, and idempotent recovery.
-
-This is the legacy Java importer. For new deployments, use
-[Go OpenDiscogs Batch](https://github.com/dsub-io/go-open-discogs-batch) with
-[Go OpenDiscogs API](https://github.com/dsub-io/go-open-discogs-api). The following
-instructions describe the Java implementation.
 
 This release consumes canonical
 [`open-discogs-model`](https://github.com/dsub-io/open-discogs-model) v0.4.0.
@@ -22,7 +29,7 @@ is an independent project and is not endorsed by Discogs.
 - [Performance measurements](docs/performance.md)
 - [Releases](https://github.com/dsub-io/open-discogs-batch/releases)
 
-## Quick start
+## Run the Java importer
 
 The PostgreSQL database must already exist. The importer creates the selected
 schema when permitted, applies canonical migrations, resolves and downloads the
