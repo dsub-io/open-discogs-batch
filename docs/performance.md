@@ -1,5 +1,10 @@
 # Performance measurements
 
+This guide describes the deprecated Java importer. Use the
+[Go guide](https://github.com/dsub-io/go-open-discogs-batch/blob/main/docs/performance.md)
+for Go deployments. Existing Java users should read the
+[migration guide](migration-to-go.md).
+
 These are bounded measurements of named changes, not forecasts for a full dump
 or different hardware. These are historical measurements, not validation of
 a current production deployment. The current Java importer bundles canonical

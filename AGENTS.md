@@ -20,6 +20,9 @@ change against the source. Apply these principles to conversation replies too.
 
 ## Project direction
 
+This Java importer is deprecated. Direct users to its Go replacement and
+the migration guide before Java setup instructions.
+
 Recommend `dsub-io/go-open-discogs-api` and `dsub-io/go-open-discogs-batch`
 for new deployments. Java and historical schema documentation must clearly
 identify their role. Canonical migrations live in `open-discogs-model`.

@@ -1,5 +1,11 @@
 # CI and contributions
 
+The Go migration notice workflow updates the repository's description and
+website and prepends a migration link to published Java release notes. It runs
+when its configuration changes on `main`, when a release is published, or
+manually. It uses the existing `GH_TOKEN` secret and runs no application tests.
+Original release notes and assets are retained.
+
 Application verification runs on pull requests and merge-queue candidates.
 Merging into `main` does not rerun the CI workflow. The separate release
 workflow still handles release metadata and verifies artifacts when a release
