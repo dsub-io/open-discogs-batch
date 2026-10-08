@@ -3,15 +3,20 @@
 Stream Discogs monthly public data dumps into PostgreSQL with Spring Batch,
 bounded memory, durable progress, and idempotent recovery.
 
+This is the legacy Java importer. For new deployments, use
+[Go OpenDiscogs Batch](https://github.com/dsub-io/go-open-discogs-batch) with
+[Go OpenDiscogs API](https://github.com/dsub-io/go-open-discogs-api). The following
+instructions describe the Java implementation.
+
 This release consumes canonical
 [`open-discogs-model`](https://github.com/dsub-io/open-discogs-model) v0.4.0.
 Java and Go therefore apply the same migration bytes and import contracts. This
 is an independent project and is not endorsed by Discogs.
 
 > [!CAUTION]
-> Stop every Go and Java importer before applying model v0.4.0. Upgrade both
-> implementations before resuming imports; an older artifact rejects a database
-> whose canonical migration ledger is newer than its bundled model.
+> Stop all importers before applying model v0.4.0. Upgrade each importer you
+> intend to keep using before resuming imports; an older artifact rejects a
+> database whose canonical migration ledger is newer than its bundled model.
 
 - [Import safety and recovery](docs/import-safety.md)
 - [Performance measurements](docs/performance.md)
@@ -60,11 +65,10 @@ interruption, and resume rules.
 | Not imported | Series membership; per-track artists and extra artists; sub-track/index-track hierarchy; `anv`, `join`, and credit `tracks` metadata not represented by the canonical schema |
 | Images | The audited 2026-08 public release dump has no image elements; no separate image source is used |
 
-Downstream services must review the current
-[Discogs API Terms of Use](https://support.discogs.com/hc/en-us/articles/360009334593-API-Terms-of-Use)
-for every source they combine. A monthly snapshot cannot satisfy live API
-freshness by itself; attribution, refresh, caching, and redistribution remain
-the downstream operator's responsibility.
+The source code license does not grant rights to third-party data. Review the
+terms of every data source your application uses. Applications that also call
+the live Discogs API must review its current
+[Terms of Use](https://support.discogs.com/hc/en-us/articles/360009334593-API-Terms-of-Use).
 
 ## Database setup
 
@@ -178,11 +182,7 @@ sdk env
 coverage. Integration and E2E tests share their PostgreSQL fixture within each
 JVM and clean every owned Docker resource after the lane completes.
 
-On 2026-08-13, with clean project outputs and a warm dependency cache on the
-development machine, unit tests took 16.95 seconds and started no containers,
-integration tests took 21.56 seconds and started one PostgreSQL container, and
-E2E took 15.47 seconds and started one. Every lane left zero owned container,
-network, or volume residue.
+See [CI and contributions](docs/ci.md) for which changes run these checks.
 
 ## License
 

@@ -1,9 +1,9 @@
 # Performance measurements
 
 These are bounded measurements of named changes, not forecasts for a full dump
-or different hardware. They also do not approve a production import: both
-batch implementations still require release and cross-language validation
-against canonical `open-discogs-model` v0.3.2.
+or different hardware. These are historical measurements, not validation of
+a current production deployment. The current Java importer bundles canonical
+`open-discogs-model` v0.4.0; follow [import safety](import-safety.md) when upgrading.
 
 ## Results at a glance
 
@@ -14,7 +14,7 @@ against canonical `open-discogs-model` v0.3.2.
 | Release Master lock candidates | 161 s observed maximum to 158.144 ms; about 1,018× faster | One real 5,000-Release production chunk |
 | Format quantity parser | 89.3–95.0% lower Go median time; Java not timed | Typical and 52-digit values |
 
-Do not compare the two rows directly. Their harnesses and measured paths are
+Do not compare the rows directly. Their harnesses and measured paths are
 different.
 
 ## Reference ID cache
@@ -48,7 +48,7 @@ RSS and allocation deltas are not reported because the isolated process
 includes Gradle and Testcontainers while the fixture is too small to represent
 production memory.
 
-## Release Master lock candidates
+## Historical Release Master lock candidates
 
 The first production retry exposed a full-table scan in the shared Release
 Master lock query. Combining target IDs, current main-release IDs, and an
@@ -58,8 +58,8 @@ each of four workers. The running query reached 161 seconds; each backend used
 PostgreSQL cgroup reached 12.7 GiB.
 
 The production host had 8 vCPUs, 15.62 GiB RAM, rotational PostgreSQL storage,
-PostgreSQL 17.7, `chunk-size=5000`, and `max-workers=4`. Go and Java now use the
-same query shape: union candidate IDs through indexed
+PostgreSQL 17.7, `chunk-size=5000`, and `max-workers=4`. At the time of this
+measurement, Go and Java used the same query shape: union candidate IDs through indexed
 `master.id`, `master.main_release_id`, and `release_item.id` lookups, join those
 IDs to `master`, and lock the resulting rows in ascending order. A real
 5,000-Release production chunk covering IDs 840001--845000 produced 2,275
